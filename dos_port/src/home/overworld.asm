@@ -2534,63 +2534,22 @@ DoBikeSpeedup:
 ; ---------------------------------------------------------------------------
 ; CheckMapConnections — faithful translation.
 ; Pret ref: home/overworld.asm:CheckMapConnections
+; DEVIATION{class=data-model; pret=home/overworld.asm:CheckMapConnections; behavior=an edge crossing with no connection no-ops instead of pret's transition into map $FF garbage; evidence=flat model has no ROM garbage header at $FF to enter and pret's behavior is the glitch-city class, map headers are generated data that ends at the real map count; lifetime=permanent, un-reproducible glitch behavior}
 ; ---------------------------------------------------------------------------
 CheckMapConnections:
     push ebx
     push edx
 
-    ; Edge thresholds
-    mov al, [ebp + wCurMapHeight]
-    add al, al
-    mov [ebp + wCurrentMapHeight2], al
-    mov al, [ebp + wCurMapWidth]
-    add al, al
-    mov [ebp + wCurrentMapWidth2], al
+    ; pret checks west→east→north→south, mutually exclusive
+    ; wCurrentMapHeight2/Width2 are computed in LoadMapHeader (pret :1902-1907), not here
 
-    ; East connection check
-    mov al, [ebp + wXCoord]
-    cmp al, [ebp + wCurrentMapWidth2]
-    jne .checkWest
-    mov al, [ebp + W_EAST_CONNECTED_MAP]
-    cmp al, MAP_NO_CONNECTION
-    je .checkWest
-    mov ebx, W_EAST_CONNECTED_MAP
-    
-    mov [ebp + wCurMap], al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_X_ALIGN]
-    mov [ebp + wXCoord], al
-    mov al, [ebp + wYCoord]
-    mov cl, al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_Y_ALIGN]
-    add cl, al
-    mov [ebp + wYCoord], cl
-    
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR]
-    mov dl, al
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR + 1]
-    mov dh, al
-    
-    shr cl, 1
-    jz .savePointer2
-    
-.pointerAdjustmentLoop2:
-    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    add al, MAP_BORDER * 2
-    movzx eax, al
-    add edx, eax
-    dec cl
-    jnz .pointerAdjustmentLoop2
-.savePointer2:
-    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
-    jmp .loadNewMap
-
-.checkWest:
+    ; West connection check
     mov al, [ebp + wXCoord]
     cmp al, 255
-    jne .checkSouth
+    jne .checkEastMap
     mov al, [ebp + W_WEST_CONNECTED_MAP]
     cmp al, MAP_NO_CONNECTION
-    je .checkSouth
+    je .checkEastMap
     mov ebx, W_WEST_CONNECTED_MAP
     
     mov [ebp + wCurMap], al
@@ -2621,44 +2580,50 @@ CheckMapConnections:
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
     jmp .loadNewMap
 
-.checkSouth:
-    mov al, [ebp + wYCoord]
-    cmp al, [ebp + wCurrentMapHeight2]
-    jne .checkNorth
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP]
+.checkEastMap:
+    mov al, [ebp + wXCoord]
+    cmp al, [ebp + wCurrentMapWidth2]
+    jne .checkNorthMap
+    mov al, [ebp + W_EAST_CONNECTED_MAP]
     cmp al, MAP_NO_CONNECTION
-    je .checkNorth
-    mov ebx, W_SOUTH_CONNECTED_MAP
+    je .checkNorthMap
+    mov ebx, W_EAST_CONNECTED_MAP
     
     mov [ebp + wCurMap], al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_Y_ALIGN]
-    mov [ebp + wYCoord], al
-    mov al, [ebp + wXCoord]
+    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_X_ALIGN]
+    mov [ebp + wXCoord], al
+    mov al, [ebp + wYCoord]
     mov cl, al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_X_ALIGN]
+    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_Y_ALIGN]
     add cl, al
-    mov [ebp + wXCoord], cl
+    mov [ebp + wYCoord], cl
     
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR]
+    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR]
     mov dl, al
-    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR + 1]
+    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_VIEW_PTR + 1]
     mov dh, al
     
     shr cl, 1
-    jz .savePointer4
-    movzx ecx, cl
-    add edx, ecx
-.savePointer4:
+    jz .savePointer2
+    
+.pointerAdjustmentLoop2:
+    mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
+    add al, MAP_BORDER * 2
+    movzx eax, al
+    add edx, eax
+    dec cl
+    jnz .pointerAdjustmentLoop2
+.savePointer2:
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
     jmp .loadNewMap
 
-.checkNorth:
+.checkNorthMap:
     mov al, [ebp + wYCoord]
     cmp al, 255
-    jne .done
+    jne .checkSouthMap
     mov al, [ebp + wNorthConnectedMap]
     cmp al, MAP_NO_CONNECTION
-    je .done
+    je .checkSouthMap
     mov ebx, wNorthConnectedMap
     
     mov [ebp + wCurMap], al
@@ -2683,7 +2648,38 @@ CheckMapConnections:
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
     jmp .loadNewMap
 
-.done:
+.checkSouthMap:
+    mov al, [ebp + wYCoord]
+    cmp al, [ebp + wCurrentMapHeight2]
+    jne .didNotEnterConnectedMap
+    mov al, [ebp + W_SOUTH_CONNECTED_MAP]
+    cmp al, MAP_NO_CONNECTION
+    je .didNotEnterConnectedMap
+    mov ebx, W_SOUTH_CONNECTED_MAP
+    
+    mov [ebp + wCurMap], al
+    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_Y_ALIGN]
+    mov [ebp + wYCoord], al
+    mov al, [ebp + wXCoord]
+    mov cl, al
+    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_X_ALIGN]
+    add cl, al
+    mov [ebp + wXCoord], cl
+    
+    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR]
+    mov dl, al
+    mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_VIEW_PTR + 1]
+    mov dh, al
+    
+    shr cl, 1
+    jz .savePointer4
+    movzx ecx, cl
+    add edx, ecx
+.savePointer4:
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], dx
+    jmp .loadNewMap
+
+.didNotEnterConnectedMap:
     pop edx
     pop ebx
     clc                                        ; CF=0 → no transition
@@ -4472,11 +4468,13 @@ asm_0dbd:
     ; safe here.
     call LoadWildData
 
-    ; pret next doubles wCurMapHeight/Width -> wCurrentMapHeight2/Width2 (:1902-1907).
-    ; DIVERGENCE (verified safe): the port derives those in CheckMapConnections (its ONLY
-    ; consumer), at the top of that routine (set-before-use) — every read of
-    ; wCurrentMapHeight2/WIDTH_2 is inside CheckMapConnections, after the set — so
-    ; LoadMapHeader does not need to compute them here.
+    ; pret :1902-1907 — double wCurMapHeight/Width into wCurrentMapHeight2/Width2
+    mov al, [ebp + wCurMapHeight]
+    add al, al
+    mov [ebp + wCurrentMapHeight2], al
+    mov al, [ebp + wCurMapWidth]
+    add al, al
+    mov [ebp + wCurrentMapWidth2], al
     ; pret LoadMapHeader:1908-1923: load this map's default music (id, ROM bank) from
     ; MapSongBanks[wCurMap] into wMapMusicSoundID/wMapMusicROMBank. PlayDefaultMusic (the
     ; LoadMapData tail + connection crossing) plays it. Real now (OW-A.14); the pops below

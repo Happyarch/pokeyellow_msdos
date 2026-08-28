@@ -391,14 +391,14 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage D — CheckMapConnections realignment (N2)
 
-- [ ] D.1 reorder the four arms to pret: west, east, north, south (renaming the
+- [x] D.1 reorder the four arms to pret: west, east, north, south (renaming the
   port locals to `.checkWestMap` etc.); keep the pointer-adjustment loops and
   `.savePointerN` structure as-is (verified faithful).
-- [ ] D.2 move the `wCurrentMapHeight2/Width2` recompute back into
+- [x] D.2 move the `wCurrentMapHeight2/Width2` recompute back into
   `LoadMapHeader` (pret :1902-1907) and delete it from `CheckMapConnections`;
   drop the free-form "DIVERGENCE (verified safe)" note (S8 overlap — nothing
   diverges any more).
-- [ ] D.3 keep the `MAP_NO_CONNECTION` guards but annotate:
+- [x] D.3 keep the `MAP_NO_CONNECTION` guards but annotate:
   `DEVIATION{class=data-model; pret=home/overworld.asm:CheckMapConnections;
   behavior=an edge crossing with no connection no-ops instead of pret's
   transition into map $FF garbage; evidence=flat model has no ROM garbage
