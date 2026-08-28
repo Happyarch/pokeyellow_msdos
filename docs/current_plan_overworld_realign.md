@@ -408,14 +408,14 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage E — collision & tile-pair details (N3, N4, predef shape)
 
-- [ ] E.1 delete the dead `.blocked`/`.blockedSetCarry`/duplicate-`.passable`
+- [x] E.1 delete the dead `.blocked`/`.blockedSetCarry`/duplicate-`.passable`
   block (`:3442-3467`); verify `DEBUG_NOCLIP` builds assemble again
   (`nasm -D DEBUG_NOCLIP …` on the file or a make target that defines it).
-- [ ] E.2 N4: restore `mov al, [ebp + STANDING_TILE_OFF] / mov [ebp +
+- [x] E.2 N4: restore `mov al, [ebp + STANDING_TILE_OFF] / mov [ebp +
   wTilePlayerStandingOn], al` in `CheckForTilePairCollisions2` (keep the DH
   copy the scan reads), plus the `.displayDialogue` store from B.4 — the WRAM
   byte then tracks the ROM.
-- [ ] E.3 restore pret's internal tile fetch in
+- [x] E.3 restore pret's internal tile fetch in
   `CheckForJumpingAndTilePairCollisions` (`call _GetTileAndCoordsInFrontOfPlayer`
   before `HandleLedges`, caller-precondition comments deleted), removing the
   documented call-order dependency; keep the caller-side `LoadCurrentMapView`

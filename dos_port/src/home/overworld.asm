@@ -3498,28 +3498,6 @@ CollisionCheckOnLand:
     pop eax
     clc
     ret
-.blocked:
-    ; compat alias for old bespoke caller label — now same as .collision
-    jmp .collision
-%ifdef DEBUG_NOCLIP
-.passable:
-    clc
-    ret
-%endif
-    ; pret home/overworld.asm:1259-1264 (.collision): play SFX_COLLISION on the bump,
-    ; unless it's already playing on CHAN5. Done before the pops so PlaySound's clobber
-    ; of eax/ecx/esi is undone by the restores; stc lands after (pop doesn't touch CF).
-    mov al, [ebp + wChannelSoundIDs + CHAN5]        ; sound currently on CHAN5
-    cmp al, SFX_COLLISION                            ; already playing?
-    je .blockedSetCarry                              ; yes → don't retrigger
-    mov al, SFX_COLLISION
-    call PlaySound
-.blockedSetCarry:
-    pop esi
-    pop ecx
-    pop eax
-    stc
-    ret
 %ifdef DEBUG_NOCLIP
 .passable:
     clc
@@ -3560,13 +3538,7 @@ CheckTilePassable:
 ; CheckForJumpingAndTilePairCollisions — pret home/overworld.asm.
 ;
 ; In:  ESI = flat host ptr to the directional tile-pair table (TilePairCollisionsLand
-;            or ...Water); wTileInFrontOfPlayer already set by the caller.
-;            (pret re-runs GetTileAndCoordsInFrontOfPlayer here; both of the
-;            port's callers, CollisionCheckOnLand and CollisionCheckOnWater, set
-;            it via _GetTileAndCoordsInFrontOfPlayer immediately before — so
-;            this port keeps the value rather than re-deriving it. See
-;            regression-overworld-watercollision-stale-tile for why
-;            CollisionCheckOnWater's call order had to move to match.)
+;            or ...Water).
 ; Out: CF = 1 if an illegal tile-pair boundary is crossed (movement blocked).
 ;      May arm a ledge hop (HandleLedges sets BIT_LEDGE_OR_FISHING + simulated joypad);
 ;      in that case CF = 0 (no tile-pair collision) and the caller allows the move.
@@ -3578,7 +3550,8 @@ CheckTilePassable:
 ;   (falls into CheckForTilePairCollisions2)
 ; ---------------------------------------------------------------------------
 CheckForJumpingAndTilePairCollisions:
-    push esi                                       ; preserve the table ptr across HandleLedges
+    push esi
+    call _GetTileAndCoordsInFrontOfPlayer          ; pret: predef GetTileAndCoordsInFrontOfPlayer
     call HandleLedges                              ; may arm a ledge hop
     pop esi
     test byte [ebp + wMovementFlags], (1 << BIT_LEDGE_OR_FISHING)
@@ -3586,7 +3559,9 @@ CheckForJumpingAndTilePairCollisions:
     clc                                            ; jumping a ledge → no tile-pair collision
     ret
 CheckForTilePairCollisions2:
-    mov dh, [ebp + STANDING_TILE_OFF]              ; DH = tile the player stands on (pret wTilePlayerStandingOn)
+    mov al, [ebp + STANDING_TILE_OFF]
+    mov [ebp + wTilePlayerStandingOn], al
+    mov dh, al                                     ; DH = tile the player stands on (pret wTilePlayerStandingOn)
 CheckForTilePairCollisions:
     mov cl, [ebp + wTileInFrontOfPlayer]      ; c = tile in front
 .loop:
@@ -4137,15 +4112,11 @@ CollisionCheckOnWater:
     mov al, [ebp + wSpriteStateData1 + SPRITESTATEDATA1_COLLISIONDATA]
     and al, dl
     jnz .collision
-    ; regression-overworld-watercollision-stale-tile: the port's
-    ; CheckForJumpingAndTilePairCollisions requires wTileInFrontOfPlayer
-    ; preset by the caller -- unlike pret, which re-derives the front tile
-    ; itself via an internal `predef GetTileAndCoordsInFrontOfPlayer` (root
-    ; home/overworld.asm:1284), so pret's own call ordering (tile-pair check
-    ; first, tile fetch after) doesn't matter there. The port deleted that
-    ; internal re-derivation, so the fetch must run BEFORE the tile-pair call
-    ; here too, matching CollisionCheckOnLand -- rebuild the viewport (stale
-    ; within a block) and read the front tile first.
+    ; LoadCurrentMapView is a port constraint (wSurroundingTiles stale
+    ; within a block); CheckForJumpingAndTilePairCollisions now fetches the
+    ; front tile itself via _GetTileAndCoordsInFrontOfPlayer (pret's internal
+    ; predef GetTileAndCoordsInFrontOfPlayer, restored E.3), so the ordering
+    ; is faithful.
     call LoadCurrentMapView
     ; Non-predef entry on purpose (predef wrapper would clobber ESI/EBX via
     ; GetPredefRegisters).
