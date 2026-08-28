@@ -188,12 +188,11 @@ SCRIPT_OVERRIDES = {
     'FuchsiaPokecenterChanseyText':    'PokecenterChanseyText',
     'SaffronPokecenterChanseyText':    'PokecenterChanseyText',
     'CinnabarPokecenterChanseyText':   'PokecenterChanseyText',
-    # Oak's Lab interactive text scripts
+    # Oak's Lab interactive text scripts (only text_asm routines belong here)
     'OaksLabRivalText':                         'OaksLabRivalText',
     'OaksLabEeveePokeBallText':                 'OaksLabEeveePokeBallText',
     'OaksLabOak1Text':                          'OaksLabOak1Text',
     'OaksLabPokedexText':                       'OaksLabPokedexText',
-    'OaksLabOak2Text':                          'OaksLabOak2Text',
     'OaksLabGirlText':                          'OaksLabGirlText',
     'OaksLabScientistText':                     'OaksLabScientistText',
     'OaksLabOakDontGoAwayYetText':              'OaksLabOakDontGoAwayYetText',
@@ -205,13 +204,6 @@ SCRIPT_OVERRIDES = {
     'OaksLabOakBePatientText':                  'OaksLabOakBePatientText',
     'OaksLabRivalReceivedMonText':              'OaksLabRivalReceivedMonText',
     'OaksLabPlayerReceivedMonText':             'OaksLabPlayerReceivedMonText',
-    'OaksLabRivalGrampsText':                   'OaksLabRivalGrampsText',
-    'OaksLabRivalMyPokemonHasGrownStrongerText':'OaksLabRivalMyPokemonHasGrownStrongerText',
-    'OaksLabOakIHaveARequestText':              'OaksLabOakIHaveARequestText',
-    'OaksLabOakMyInventionPokedexText':         'OaksLabOakMyInventionPokedexText',
-    'OaksLabOakGotPokedexText':                 'OaksLabOakGotPokedexText',
-    'OaksLabOakThatWasMyDreamText':             'OaksLabOakThatWasMyDreamText',
-    'OaksLabRivalLeaveItAllToMeText':           'OaksLabRivalLeaveItAllToMeText',
     'OaksLabPikachuDislikesPokeballsText1':     'OaksLabPikachuDislikesPokeballsText1',
     'OaksLabPikachuDislikesPokeballsText2':     'OaksLabPikachuDislikesPokeballsText2',
 }

@@ -2345,6 +2345,8 @@
 %define wDayCareMonName              0xE816   ; day-care mon nickname
 %define wDayCareMonOT                0xE821   ; day-care mon OT name
 %define wPlayerCoins                 0xE371   ; Game Corner coins (BCD, dw)
+%define wToggleableObjectFlags       0xE373   ; toggleable objects bit array (flag_array $100 = 32 bytes)
+%define wMissableObjectFlags         0xE373   ; pret alias
 %define hCoins                       0xFFA0   ; hCoins (dw; union w/ hMoney area)
 
 ; Lowercase pret-name aliases onto pre-existing UPPERCASE defs (CLAUDE.md: keep

@@ -138,6 +138,8 @@ extern FillMemory               ; src/home/copy2.asm — ESI dest, BX count, AL 
 ; play time). Lives in main_menu.asm (package E). Referenced by SaveMenu; report
 ; the extern so root wires main_menu.asm into the link set alongside this file.
 extern PrintSaveScreenText
+extern g_toggleable_flags           ; src/engine/overworld/toggleable_objects.asm
+TOGGLEABLE_FLAG_BYTES equ 30
 
 %ifdef DEBUG_SAVE
 %define SAVE_HARNESS 1
@@ -448,6 +450,18 @@ LoadMainData:
     mov bx, wMainDataEnd - wMainDataStart
     call SramCopyData32
 
+    ; Mirror loaded wToggleableObjectFlags into g_toggleable_flags
+    push esi
+    push edi
+    push ecx
+    lea esi, [ebp + wToggleableObjectFlags]
+    mov edi, g_toggleable_flags
+    mov ecx, TOGGLEABLE_FLAG_BYTES
+    rep movsb
+    pop ecx
+    pop edi
+    pop esi
+
     ; ld hl,wCurMapTileset / set BIT_NO_PREVIOUS_MAP,[hl]
     or byte [ebp + wCurMapTileset], 1 << BIT_NO_PREVIOUS_MAP
 
@@ -640,6 +654,18 @@ OlderFileWillBeErasedText:
 ; ---------------------------------------------------------------------------
 SaveMainData:
     call EnableSRAM
+    ; Mirror g_toggleable_flags into wToggleableObjectFlags before saving wMainData
+    push esi
+    push edi
+    push ecx
+    mov esi, g_toggleable_flags
+    lea edi, [ebp + wToggleableObjectFlags]
+    mov ecx, TOGGLEABLE_FLAG_BYTES
+    rep movsb
+    pop ecx
+    pop edi
+    pop esi
+
     ; ld a,BANK("Save Data") / ld [rRAMB],a — resident SRAM has fixed addresses.
     ; DEVIATION{class=banking; pret=engine/menus/save.asm:SaveMainData; behavior=use SramCopyData32 instead of pret CopyData for resident SRAM destinations above FFFF and ignore the rRAMB bank-select write; evidence=CopyData truncates DE destinations through DX and sPlayerName through sCurBoxData live in bank 1 at 22598 and above; lifetime=permanent flat SRAM model}
     mov esi, wPlayerName

@@ -1174,6 +1174,8 @@ section .text
 global text_engine_init
 
 text_engine_init:
+    mov dword [text_row_stride], 20
+    mov dword [text_msgbox], msgbox_dialog
     ret                             ; sentinel is static .data now; nothing to init
 
 ; ---------------------------------------------------------------------------

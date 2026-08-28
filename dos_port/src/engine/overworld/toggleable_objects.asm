@@ -117,9 +117,11 @@ ToggleableObjectFlagAction:
     je .read
 .set:
     bts [g_toggleable_flags], ecx            ; set "removed" (hidden) bit
+    bts [ebp + wToggleableObjectFlags], ecx  ; mirror to WRAM for save persistence
     ret
 .reset:
     btr [g_toggleable_flags], ecx            ; clear "removed" bit
+    btr [ebp + wToggleableObjectFlags], ecx  ; mirror to WRAM for save persistence
     ret
 .read:
     bt [g_toggleable_flags], ecx             ; CF = current bit
@@ -187,13 +189,10 @@ IsObjectHidden:
 ;
 ; DEVIATION{class=data-model; pret=engine/overworld/toggleable_objects.asm:InitializeToggleableObjectsFlags; behavior=the per-entry ToggleableObjectStates walk that sets a flag for every object marked OFF is replaced by a single copy of a precomputed default-hidden bitmap into the flat g_toggleable_flags array, and the routine additionally zeroes the wEventFlags region which pret does not touch here; evidence=the port precomputes each object global index at generation time in tools/generators/gen_toggleable_objects.py so there is no runtime pointer-difference divide to perform and no wToggleableObjectList to rebuild - see this file header - and the explicit wEventFlags clear exists because a DPMI allocation is not guaranteed zero-filled where a fresh cartridge WRAM effectively is; lifetime=permanent while the toggleable subsystem stays flat-model rather than pret ebp-relative}
 ;
-; Called once at game start (EnterMap, before the first LoadMapData) so default-
-; hidden objects (e.g. Oak in Pallet Town) do not spawn.  Also clears the general
+; Called once at game start (InitPlayerData2 for New Game, or SKIP_TITLE EnterMapBoot)
+; so default-hidden objects (e.g. Oak in Pallet Town) do not spawn. Also clears the general
 ; wEventFlags region — its new-game default is all-zero; explicit so a non-zeroed
 ; DPMI allocation can't leak stale event bits.
-;
-; TODO-GLOBAL-EVENTS: when the save / script engine lands, move this to the real
-; new-game init and let scripts toggle g_toggleable_flags / wEventFlags at runtime.
 ; All registers preserved.
 ; ---------------------------------------------------------------------------
 InitializeToggleableObjectsFlags:
@@ -203,9 +202,14 @@ InitToggleableObjectFlags:               ; port-local alias (pre-2026-08-22 name
     push esi
     push edi
 
-    ; Copy default-hidden bitmap into the persistent flag array.
+    ; Copy default-hidden bitmap into the persistent flag array and WRAM.
     mov esi, toggleable_default_flags   ; flat .data source
     mov edi, g_toggleable_flags         ; flat .bss dest
+    mov ecx, TOGGLEABLE_FLAG_BYTES
+    rep movsb
+
+    mov esi, toggleable_default_flags
+    lea edi, [ebp + wToggleableObjectFlags]
     mov ecx, TOGGLEABLE_FLAG_BYTES
     rep movsb
 

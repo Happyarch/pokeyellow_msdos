@@ -393,12 +393,12 @@ EnterMapBoot:
     lea edi, [ebp + wRivalName]
     mov ecx, PLAYER_NAME_FIELD
     rep movsb
+    call InitializeToggleableObjectsFlags  ; seed global event/visibility flags to defaults when skipping title
 %endif
     ; Initialize the <DONE> sentinel (DONE_SENTINEL_WRAM = TX_END). Normally done by
     ; the title screen; SKIP_TITLE bypasses that, leaving the sentinel as garbage so
     ; any CHAR_DONE-terminated dialog ran off into a bogus TX_BOX → page fault.
     call text_engine_init
-    call InitializeToggleableObjectsFlags  ; seed global event/visibility flags to defaults
     ; EnterMap now lives in its pret mirror src/home/overworld.asm, so the
     ; original fallthrough becomes an explicit tail jump (same semantics,
     ; same stack depth -- EnterMap never returns to EnterMapBoot).

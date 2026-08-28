@@ -166,6 +166,7 @@ section .text
 ; MainMenu — pret ref: engine/menus/main_menu.asm:MainMenu.
 ; ===========================================================================
 MainMenu:
+    mov dword [g_bg_whiteout], 1                ; blank BG during menu load and delay
     ; Check save file
     call InitOptions
     mov byte [ebp + wOptionsInitialized], 0     ; xor a ; ld [wOptionsInitialized],a
@@ -398,6 +399,8 @@ StartNewGameDebug:
     ; Clear the window-model whiteout so the OakSpeech cutscene / new
     ; overworld render on a clean BG (pret has no compositor concept).
     mov dword [g_bg_whiteout], 0
+    mov dword [text_row_stride], 20
+    mov dword [text_msgbox], msgbox_dialog
     call OakSpeech                              ; includes the naming screen (pkg C)
     mov byte [ebp + wPlayerMovingDirection], 0x8   ; ld a,$8 / ld [wPlayerMovingDirection],a
     mov bl, 20
@@ -413,6 +416,8 @@ SpecialEnterMap:
     ; DEVIATION{class=projection; pret=main_menu.asm:SpecialEnterMap; behavior=drop the menu compositor whiteout before entering the overworld; evidence=pret SpecialEnterMap transitions directly from hardware BG state while port menus set g_bg_whiteout; lifetime=permanent window-compositor boundary}
     ; Drop the menu whiteout before entering the overworld.
     mov dword [g_bg_whiteout], 0
+    mov dword [text_row_stride], 20
+    mov dword [text_msgbox], msgbox_dialog
     mov byte [ebp + hJoyPressed], 0           ; xor a / ldh [hJoyPressed],a
     mov byte [ebp + hJoyHeld], 0              ; ldh [hJoyHeld],a
     mov byte [ebp + hJoy5], 0                  ; ldh [hJoy5],a
