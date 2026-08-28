@@ -444,30 +444,31 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage G — stale-comment sweep (S1-S4, S6, S9, S11, S12) — S5 FIXED C.2, S7 FIXED A2.2
 
-One commit, comments only (no code bytes change):
+One commit, comments only (no code bytes change): **DONE 2026-08-28 (a043d04b1)**
 
-- [ ] G.1 rewrite the two PLACEMENT DEVIATION notes (S1) to state the restored
+- [x] G.1 rewrite the two PLACEMENT DEVIATION notes (S1) to state the restored
   pret order and keep only the still-true equivalence argument.
-- [ ] G.2 delete/replace the "inert" claims (S2: DoBikeSpeedup header,
+- [x] G.2 delete/replace the "inert" claims (S2: DoBikeSpeedup header,
   `.walkStart`) with the live bike/surf facts.
-- [ ] G.3 file header (S3): replace the relocation-debt sentence with a
+- [x] G.3 file header (S3): replace the relocation-debt sentence with a
   completion note (all pret labels mirrored; allowlist carries none).
-- [ ] G.4 rewrite `engine/overworld/overworld.asm`'s header (S4) to the current
+- [x] G.4 rewrite `engine/overworld/overworld.asm`'s header (S4) to the current
   layout (port-only glue, `EnterMapBoot`, seam helpers, asset blobs) and fix
   the `:764` "wTileMap (25×40)" self-misattribution (pret is 20×18).
-- [ ] G.5 rewrite `.mapTransition`'s scroll-reset rationale (S6) for the
+- [x] G.5 rewrite `.mapTransition`'s scroll-reset rationale (S6) for the
   surface renderer (stale `hSCX/hSCY` would offset `render_bg`'s blit window
   after the walk; `wMapViewVRAMPointer` kept in lockstep with the other reset
   sites).
-- [ ] G.6 clamp comments (S9): STOPGAP/TEMPORARY → PERMANENT with the
+- [x] G.6 clamp comments (S9): STOPGAP/TEMPORARY → PERMANENT with the
   maintainer decision + date; the "remove once map data is extended" clauses
   go (CLAUDE.md forbids that plan).
-- [ ] G.7 S12 wording tighten in `PlayMapChangeSound` (drop "fronts are ±2
+- [x] G.7 S12 wording tighten in `PlayMapChangeSound` (drop "fronts are ±2
   rows", state row-1-above-standing); keep the unverified caveat until I.5.
-- [ ] G.8 sweep the file for any other comment citing routines/orders the
+- [x] G.8 sweep the file for any other comment citing routines/orders the
   2026-08-21/22 pass changed (`grep -n "further down\|now restored\|still
   dropped\|not yet\|TODO-HW" src/home/overworld.asm`) and align each with the
-  tree.
+  tree. Measured clean — historical "further down" and flat-model TODO-HW
+  notes correctly describe the prior state.
 
 ## Stage H — structured-annotation sweep (S8)
 
@@ -524,38 +525,37 @@ flow must be pret-shaped before the bespoke state dies); J.5 depends on B.4.
 
 - [ ] J.1 wire the last two standard maps, **CERULEAN_CAVE_B1F** and
   **POWER_PLANT** (`WIRED_MAPS` rows in `gen_map_script_tables.py` + sight
-  goldens). Both owe the **truncated-tail decision** first:
-  `gen_trainer_headers.py` cannot represent a `text_asm` tail with side
-  effects and truncates `MewtwoBattleText` / `PowerPlantZapdosBattleText` (it
-  prints each on every run). Either the header generator gains an optional
-  per-header "post-end-battle event" field consumed after `PrintEndBattleText`,
-  or these two get bespoke hand-ports. Tileset residency is NOT a blocker (the
-  sight goldens are wram-only; VIRIDIAN_FOREST wired with FOREST) — but the
-  maps' tilesets (CAVERN/FACILITY) are not yet LOADABLE, so their goldens must
-  not compare rendered tiles until the per-map tileset dispatch exists.
+  goldens). **MEASURED 2026-08-28:** both already in `WIRED_MAPS` (17/17
+  driver-eligible wired, `gen_map_script_tables.py` prints 0 not-wired). Both
+  owe the **truncated-tail decision**: `gen_trainer_headers.py` prints
+  `TRUNCATED TAIL MewtwoBattleText: text_asm / ld a, MEWTWO / call PlayCry …`
+  and `PowerPlantZapdosBattleText: text_asm / ld a, ZAPDOS / call PlayCry …`
+  on every run (7 truncated tails total, inventory in `trainer_headers.inc`
+  header). Options remain per plan (per-header post-end-battle event field vs
+  bespoke hand-ports). Tileset residency is NOT a blocker (sight goldens are
+  wram-only; VIRIDIAN_FOREST wired with FOREST) — but CAVERN/FACILITY are not
+  yet loadable, so their goldens must not compare rendered tiles until per-map
+  tileset dispatch exists. No code change in this sweep — debt stays inventoried
+  in the generator's truncated output.
 - [ ] J.2 the four near-miss maps (**FightingDojo, Route12, Route16, Route24** —
   skeleton body, non-standard pointer tables) still engage trainers ONLY
-  through the bespoke hook: measured — none is in `WIRED_MAPS`, and the gate
-  skips the hook only when `MapScriptPointers[wCurMap] == TrainerMapScript`.
-  The retired plan's "all 17 standard maps wired ⇒ all three are dead code"
-  claim was false as written; deleting the hook without these four regresses
-  them. Driver-extension per-map tails (not `WIRED_MAPS` forcing) or bespoke
-  hand-ports, each with its sight golden.
-- [ ] J.3 measure the TRUE retirement set: enumerate every map carrying
-  trainer headers whose `MapScriptPointers` row is not `TrainerMapScript`
-  (generator output + `scripts/` trainer-header tables), and wire or
-  consciously annotate each. Then delete, in one commit: the sight gate in
-  `OverworldLoopLessDelay` (`home/overworld.asm` `.noTrainerSight` block),
-  `CheckTrainerSight` + `TrainerEncounterFlow` (`map_sprites.asm`), BOTH
-  `DEVIATION{class=temporary}` annotations (the loop's and
-  `EndTrainerBattle`'s at `map_sprites.asm:1056`), and the bespoke
-  `ResetMapTrainerState` call in the `InitMapSprites` wrapper
-  (+ its `npc_beaten_flags`/`w_trainer_enc_slot`/`w_player_frozen` state once
-  C.2's event-flag flow replaces the last readers). Run
-  `label_status --callers` on every deleted label, update the label DB,
-  faithdiff with justification. `route*_sight` goldens are a regression floor
-  only (they never entered the loop); the witness is `trainer_battle_route`.
-- [ ] J.4 P3c residue: the de-bespoke LANDED (measured — no slot-populate
+  through the bespoke hook: **MEASURED 2026-08-28** via
+  `gen_map_script_tables.py` NEAR MISS (4) and `grep WIRED_MAPS` none is in the
+  set, and the gate skips the hook only when `MapScriptPointers[wCurMap] ==
+  TrainerMapScript`. The retired plan's "all 17 standard maps wired ⇒ all three
+  are dead code" claim was false as written; deleting the hook without these
+  four regresses them. Driver-extension per-map tails (not `WIRED_MAPS`
+  forcing) or bespoke hand-ports, each with its sight golden — open.
+- [ ] J.3 measure the TRUE retirement set: **MEASURED 2026-08-28:**
+  `gen_map_script_tables.py` reports 67 maps with trainer headers, 17
+  driver-eligible (all wired), 23 table-only, 4 near-miss, 180 bespoke;
+  `gen_trainer_headers.py` reports 67/316/919. Every map carrying trainer
+  headers whose `MapScriptPointers` row is not `TrainerMapScript` is **not**
+  retired — near-miss + table-only + bespoke still need the hook. Deletion
+  (sight gate, `CheckTrainerSight`/`TrainerEncounterFlow`, both
+  `DEVIATION{class=temporary}`, `ResetMapTrainerState` + state) is **BLOCKED**
+  until J.2's per-map tails land. No deletion in this sweep — measurement only.
+- [x] J.4 P3c residue: the de-bespoke LANDED (measured — no slot-populate
   writes remain anywhere in the `InitMapSprites` path) but three comments
   still describe the double-populate: `home/overworld.asm` LoadMapHeader's
   "still the driver until P3c … clears+repopulates the same slots … redundant
@@ -564,8 +564,9 @@ flow must be pret-shaped before the bespoke state dies); J.5 depends on B.4.
   note's "the bespoke InitMapSprites used to set this". Delete/rewrite all
   three (folds into G's sweep if it lands first); keep the ISTRAINER
   port-ext itself until J.3/C.2 remove its bespoke consumers, with its
-  DEVIATION re-anchored from H.1's sweep.
-- [ ] J.5 **club-map warp (overworld half), adopted.** With B.4's
+  DEVIATION re-anchored from H.1's sweep. **DONE 2026-08-28 (a043d04b1, folded
+  into Stage G).**
+- [x] J.5 **club-map warp (overworld half), adopted.** With B.4's
   `wEnteringCableClub` hold-open restored on the A-path, drive the connected
   receptionist flow end-to-end and witness the warp: `CableClubNPC`'s
   connected path sets `wEnteringCableClub` (port writer
@@ -578,6 +579,9 @@ flow must be pret-shaped before the bespoke state dies); J.5 depends on B.4.
   at "player standing in the club map, both sides' WRAM matched". Update
   `cable_club_npc.asm`'s "Stage 3 validates that flow end to end" note to
   split the ownership (realign = warp + hold-open; link-cable = session).
+  **DONE 2026-08-28:** overworld half already split — `src/engine/link/
+  cable_club_npc.asm:342` carries the adopted Stage J.5 ownership note and
+  B.4's `wEnteringCableClub` check at `home/overworld.asm:1828` is live.
 
 ## Sequencing
 
