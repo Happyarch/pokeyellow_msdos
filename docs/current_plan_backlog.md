@@ -408,8 +408,9 @@ trainer-header tables (it is what the whole map-script sight family and
 scenario 51 run on). What remains of this item is only its TAIL — the
 `npc_beaten_flags` → `TrainerFlagAction` convergence (`npc_beaten_flags` is
 still written in `map_sprites.asm:225`), which is OWNED by
-`docs/current_plan_overworld_events.md` Stage 5a (arbitration 2026-08-04,
-threads 19/20) and shrinks per wired map. Keep the item for the tail; do not
+`docs/current_plan_overworld_realign.md` Stage J (adopted 2026-08-28 from the
+retired overworld-events plan Stage 5a; arbitration 2026-08-04, threads 19/20)
+and shrinks per wired map. Keep the item for the tail; do not
 re-cite the "no generator" premise.
 
 ### 28. Stale in-code prose found during the 2026-08-02 re-measurement
@@ -463,7 +464,8 @@ Makefile**, driving two different scenarios:
   `docs/plans/menu_intro.md`.
 - `DEBUG_OAK_INTRO` (`Makefile:649`) → `RunOakIntroTest`
   (`src/home/overworld.asm:385`, `src/debug/debug_dump.asm:207`) — the **Pallet
-  overworld** Oak cutscene, owned by `docs/current_plan_overworld_events.md`.
+  overworld** Oak cutscene, owned by backlog #37 (moved 2026-08-28 from the
+  retired `docs/plans/overworld_events.md`, which had it as Stage 1).
   **It appears in no manifest row**, so it has no golden coverage.
 
 The overworld plan recorded its scenario as "ENABLED and PASSING" on the strength
@@ -808,7 +810,8 @@ map's blocks index into.
 **This is a shared prerequisite, not a predef-text one.** The same tileset-residency
 work also unblocks the last three standard-shape trainer maps
 (`CERULEAN_CAVE_B1F` = `CAVERN`, `POWER_PLANT` = `FACILITY`, `VIRIDIAN_FOREST` =
-`FOREST` — the tail of `docs/current_plan_overworld_events.md` Stage 5a) and every
+`FOREST` — the tail of retired `docs/plans/overworld_events.md` Stage 5a, now
+`docs/current_plan_overworld_realign.md` Stage J) and every
 Stage 5b story leg that enters a building. Flagged to the maintainer 2026-08-04 as
 a candidate workstream of its own; it is **not** staged, and no plan currently
 owns it.
@@ -1028,3 +1031,27 @@ zero rows, 348 → 0 across the campaign. Full record: stigmergy
 **New relocations are
 forbidden and registry ADDITIONS are refused outright by `.githooks/pre-commit`
 since `3f1b12be`.**
+
+### 37. Overworld-events plan retirement — dormant evidence + rollout tails
+Filed 2026-08-28 when `docs/current_plan_overworld_events.md` was retired to
+`docs/plans/overworld_events.md` (maintainer direction). The overworld-seam
+work was ADOPTED by `docs/current_plan_overworld_realign.md` Stage J
+(trainer-sight hook retirement + Stage 5a wiring, P3c comment residue,
+`wEnteringCableClub` hold-open, club-map warp). What NO plan owns now:
+
+- **Oak-intro Pallet golden** — the `DEBUG_PALLET_OAK` gate exists
+  (`dos_port/Makefile`, drives `RunOakIntroTest` from `src/home/overworld.asm`)
+  and appears in no manifest row. Needs a non-colliding name (the registered
+  `oak_intro` id 29 is the menu-intro Oak SPEECH, a different thing) and a
+  must-hit naming the Pallet script state + scripted-movement consumer.
+- **Field-move must-hit evidence** — Fly, Flash, Dig, Teleport, Softboiled are
+  linked with no scenario naming them (re-measure against the current manifest
+  before acting; the retired plan measured this 2026-08-17 at 85 rows).
+  Includes the warp-scenario family the events plan tracked under Stage 4.
+- **`dex_rating_oak_pc` port-side gate** — golden committed and reproducing;
+  needs only a `RunDexRatingTest`-style gate seeding the two dex bitsets.
+- **Story-ordered map rollout (old Stage 5b)** — Pallet/Viridian partially
+  covered by `docs/current_plan_viridian_parcel.md`; the rest (Forest/Pewter →
+  Indigo, Poké Flute consumption in the Route 12/16 batches, catching tutorial,
+  Ghost Marowak, Safari story) is DORMANT with no owner. Open a dedicated plan
+  when the rollout resumes — do not reopen the archived one.

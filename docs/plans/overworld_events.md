@@ -1,5 +1,50 @@
-# Current Plan: Overworld Events — story scripts and interaction services
+# Plan (ARCHIVED 2026-08-28): Overworld Events — story scripts and interaction services
 
+> **RETIRED 2026-08-28 by maintainer direction ("stale honestly"), not because
+> every stage completed.** Two things happened to this plan after its 2026-08-17
+> rewrite: most of its open items landed underneath it, and the remainder was
+> re-homed. Neither is guesswork — each line below was measured against the tree
+> on retirement day.
+>
+> **Verified done since the rewrite (the plan's prose still said "owed"):**
+> - Stage 2 service scenarios are registered and passing: `pokemart_buy_sell`,
+>   `pokecenter_heal`, `vending_machine`, `prize_corner` (gates
+>   `DEBUG_POKEMART`/`DEBUG_POKECENTER_HEAL`/`DEBUG_VENDING`/`DEBUG_PRIZE_CORNER`
+>   in `src/home/overworld.asm`), `safari_game_over` (id 90), and the manifest
+>   holds 100 scenarios total. `CableClubNPC` is real
+>   (`src/engine/link/cable_club_npc.asm`) with the `cable_club_nolink` golden
+>   (id 91); `TalkToPikachu` is retired into
+>   `src/engine/pikachu/pikachu_emotions.asm`.
+> - The OW-A.2 P3c sprite de-bespoke LANDED: the faithful `_InitMapSprites`
+>   body (`src/engine/overworld/map_sprites.asm`) has no slot-populate writes —
+>   the "bespoke InitMapSprites clears+repopulates the same slots" claim
+>   surviving in `src/home/overworld.asm` (LoadMapHeader) and
+>   `src/engine/overworld/overworld.asm` (InitSprites header) is stale comment
+>   text, cleaned by the realign plan.
+>
+> **Adopted by `docs/current_plan_overworld_realign.md` (Stage J):**
+> - Stage 5a's last two standard maps (CERULEAN_CAVE_B1F, POWER_PLANT, incl. the
+>   truncated-tail decision) and the Stage 5a tail — retiring
+>   `CheckTrainerSight`/`TrainerEncounterFlow` and both `DEVIATION`s. The
+>   retirement condition was extended there: the four near-miss maps
+>   (FightingDojo, Route12, Route16, Route24) are NOT in `WIRED_MAPS`, so they
+>   still engage trainers through the bespoke hook — "all 17 wired ⇒ the hook is
+>   dead code" was false as written, and deleting the hook without wiring them
+>   regresses those maps.
+> - The `wEnteringCableClub` hold-open on the overworld A-path and the
+>   club-map warp's overworld half (the in-club trade/battle sessions stay with
+>   `docs/current_plan_link_cable.md` Stages 3-4).
+> - The P3c comment residue above, plus `ResetMapTrainerState` (retires with the
+>   bespoke sight/interaction stack).
+>
+> **Re-homed to `docs/current_plan_backlog.md` #37 (dormant, unowned):** the
+> Stage 1 Oak-intro Pallet golden (gate exists, unregistered), Stage 4's
+> field-move must-hit evidence (Fly/Flash/Dig/Teleport/Softboiled — linked, no
+> scenario), the `dex_rating_oak_pc` port-side gate, and the Stage 5b
+> story-ordered rollout beyond what `docs/current_plan_viridian_parcel.md` and
+> the wired maps already cover. Stage 6's retirement sweep is discharged by the
+> adopting plans' own gates.
+>
 > **Rewritten 2026-08-17.** The previous revision was 1151 lines, most of it dated
 > session handoffs and retraction-of-a-retraction narratives. Those are deleted, not
 > struck through: they are in git history, and a plan that carries its own diary
@@ -49,6 +94,10 @@ final stub sweep.
 **`[x]` means linked and structurally verified — not executed.** Several bullets are
 `[x]` with runtime evidence openly deferred because nothing in the current build state
 can reach them. Each says so. Do not upgrade one to "working" without its scenario.
+
+**Archive note (retired):** the line below was this plan's own exit criterion;
+it is moot now — the file sits at its archive destination, retired early by the
+maintainer with the remainder re-homed (see the header).
 
 Archive to `docs/plans/overworld_events.md` when the stages below are complete.
 
