@@ -379,11 +379,11 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage C — battle-entry and warp-scan tails (A8, S5)
 
-- [ ] C.1 idle poll: adopt pret's shared tail — `call NewBattle` → `pushf /
+- [x] C.1 idle poll: adopt pret's shared tail — `call NewBattle` → `pushf /
   and movement-flags ~BIT_STANDING_ON_WARP / popf` (both arms; the existing
   post-step idiom) → `jnc CheckWarpsNoCollision` → `jmp .battleOccurred`.
   Update the Stage-1b comment (it documents only the CF=1 arm today).
-- [ ] C.2 A7: beaten trainers print their after-battle text — move
+- [x] C.2 A7: beaten trainers print their after-battle text — move
   `CheckNPCInteraction`'s `npc_beaten_flags` gate from the not-found head into
   the TRAINER TALK dispatch: beaten → print `TRAINER_AFTER_BATTLE_TEXT` via the
   dialog path (battle skipped), exactly pret `TalkToTrainer`; unbeaten flow

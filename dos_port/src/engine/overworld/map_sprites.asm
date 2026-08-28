@@ -88,6 +88,7 @@ extern StartTrainerBattle              ; home/trainers.asm (pret mirror)
 ; Generic trainer talk hook (map-script fidelity plan Stage 2): pret's per-map
 ; `ld hl, <Map>TrainerHeaderN / call TalkToTrainer / jp TextScriptEnd`, kept once.
 extern TrainerTalkHook                 ; src/scripts/trainer_map_script.asm
+extern ReadTrainerHeaderInfo          ; src/home/trainers.asm (C.2 sel 6)
 
 ; ---------------------------------------------------------------------------
 ; Constants
@@ -109,6 +110,7 @@ w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTab
 npc_beaten_flags:     resw 1   ; bit N-1 = NPC slot N beaten; cleared in InitMapSprites
 w_trainer_enc_slot:   resb 1   ; engaging trainer slot byte-offset (0xFF = none)
 w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
+w_check_npc_slot_tmp: resb 1   ; C.2: slot offset for beaten-trainer dispatch (CheckNPCInteraction)
 
 ; wMapSpriteExtraData — port equivalent of pret wMapSpriteExtraData
 ; (ram/wram.asm: "trainer class/item ID, trainer set ID", MAX_OBJECT_EVENTS*2).
@@ -631,16 +633,9 @@ CheckNPCInteraction:
 
 .found_npc:
     ; ── Found: NPC at target block ──────────────────────────────────────────
-
-    ; Beaten-trainer gate: if this is a trainer whose beaten bit is set, return 0.
-    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 0
-    je .not_beaten_trainer
-    mov edx, esi
-    shr dl, 4                           ; slot number (1-15)
-    dec dl                              ; bit index (0-14)
-    bt word [npc_beaten_flags], dx      ; CF=1 if beaten
-    jc .not_found                       ; beaten → no re-talk
-.not_beaten_trainer:
+    ; C.2: beaten-trainer gate moved from here into TRAINER TALK dispatch
+    ; (beaten → after-battle text, not not_found). Unbeaten flow unchanged.
+    mov [w_check_npc_slot_tmp], al           ; save slot number (1-15) for beaten check in dispatch
 
     ; Set hTilePlayerStandingOn so UpdateSpriteImage picks this NPC's VRAM slot.
     ; UpdateSprites leaves hTilePlayerStandingOn = last-slot value after the loop;
@@ -718,8 +713,22 @@ CheckNPCInteraction:
     call ShowTextStream
     jmp .dialog_done
 .run_trainer_talk:
+    ; C.2: if this trainer's BSS beaten bit is set, show after-battle text
+    ; (pret TalkToTrainer sel 6) instead of re-engaging. Unbeaten → TrainerTalkHook.
+    movzx edx, byte [w_check_npc_slot_tmp]  ; slot number (1-15)
+    dec dl                                  ; bit index (0-14)
+    bt word [npc_beaten_flags], dx
+    jc .beaten_trainer
     mov esi, edi                            ; ESI = flat trainer-header ptr (pret: ld hl)
     call TrainerTalkHook
+    jmp .dialog_done
+.beaten_trainer:
+    mov esi, edi
+    mov al, 6
+    call ReadTrainerHeaderInfo              ; sel 6 = after-battle text
+    mov dword [text_msgbox], msgbox_dialog
+    call PrintText
+    call npc_dialog_wait_impl
     jmp .dialog_done
 .run_script:
     call edi                                ; flat text_asm routine

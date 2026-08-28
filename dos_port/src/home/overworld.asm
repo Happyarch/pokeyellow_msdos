@@ -120,7 +120,7 @@ extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (overworld.asm
 extern AnyPartyAlive                      ; src/engine/battle/core.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
-extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm
+extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm — consumes faithful IsSpriteOrSignInFrontOfPlayer result, no block-coord re-scan (S5)
 extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
@@ -1655,8 +1655,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; the battle itself: it SEEDS wCurOpponent and returns, and this poll is what
     ; turns that seed into a battle. NewBattle -> InitBattle -> InitOpponent
     ; (wCurOpponent >= OPP_ID_OFFSET = trainer), and EndOfBattle.resetVariables
-    ; clears wCurOpponent on the way out, so this cannot re-enter. CF=1 means a
-    ; battle ran: take pret's shared .battleOccurred tail.
+    ; clears wCurOpponent on the way out, so this cannot re-enter.
+    ; C.1: now shares post-step's pushf/and/popf/jnc CheckWarpsNoCollision tail
+    ; for both arms (CF=1 → .battleOccurred, CF=0 → CheckWarpsNoCollision),
+    ; exactly pret's .newBattle shared tail.
     ;
     ; It REPLACED the old wIsInBattle==$ff scaffold, which existed only because
     ; StartTrainerBattle used to call InitBattle inline (the retired
@@ -1664,8 +1666,12 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; it, through .battleOccurred's AnyPartyAlive.
     cmp byte [ebp + wCurOpponent], 0
     je .noPendingOpponent
-    call NewBattle                           ; CF=1 → a battle occurred
-    jc .battleOccurred                       ; pret: jp nz, .newBattle -> .battleOccurred
+    call NewBattle
+    pushf
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
+    popf
+    jnc CheckWarpsNoCollision
+    jmp .battleOccurred
 .noPendingOpponent:
 
     ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
