@@ -955,8 +955,10 @@
 %define H_DOWN_ARROW_COUNT1          0xFF86   ; hDownArrowBlinkCount1 — frame countdown (ON→OFF phase)
 %define H_DOWN_ARROW_COUNT2          0xFF87   ; hDownArrowBlinkCount2 — compat; 1 in 60 Hz blink mode
 %define hSoftReset                   0xFF8A   ; hSoftReset
-; 0xFF8B is a UNION of hMapStride / hNorthSouthConnectionStripWidth / hPreviousTileset
+; 0xFF8B is a UNION of hMapStride / hEastWestConnectedMapWidth / hNorthSouthConnectionStripWidth / hPreviousTileset
 %define hMapStride                   0xFF8B   ; hMapStride (= map block row stride = width + 2*MAP_BORDER)
+%define hEastWestConnectedMapWidth   0xFF8B   ; hEastWestConnectedMapWidth (HRAM union with hMapStride, pret ram/hram.asm:56)
+%define hNorthSouthConnectionStripWidth 0xFF8B   ; hNorthSouthConnectionStripWidth (HRAM union with hMapStride, pret ram/hram.asm:57)
 %define hPreviousTileset             0xFF8B   ; hPreviousTileset (HRAM union with hMapStride)
 %define hROMBankTemp                 0xFF8B   ; golden 00:ff8b — PlayAnimation writes 0, unread ("nothing reads this"); no ROM banking in the flat model. UNION with hMapStride/hItemPrice at 0xFF8B; disjoint lifetimes (battle anim entry vs map load / item price).
 %define hBaseTileID                  0xFF8B   ; golden 00:ff8b — base tile ID added by CopyTileIDs (ram/hram.asm). Same $FF8B union as above, and pret intends it: PlayAnimation zeroes hROMBankTemp at entry, CopyPicTiles then writes hBaseTileID and CopyTileIDs reads it back — one byte, ordered, exactly as on hardware.
@@ -966,6 +968,7 @@
                                         ; (.indoorMaps/.goBackOutside); the port mirrors that short window.
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 %define hMapWidth                    0xFF8C   ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
+%define hNorthSouthConnectedMapWidth 0xFF8C   ; hNorthSouthConnectedMapWidth (HRAM union with hMapWidth, pret ram/hram.asm:60)
 %define hSerialReceivedNewData       0xFFA9   ; hram.asm:187 (db; HRAM never shifts — pret's own address, long reserved in prose at the hSwapItemID note below)
 %define hSerialConnectionStatus      0xFFAA   ; hSerialConnectionStatus
 %define hSerialIgnoringInitialData   0xFFAB   ; hram.asm:192 (db; contiguous FFA9-FFAD serial block per ram/hram.asm:187-194)

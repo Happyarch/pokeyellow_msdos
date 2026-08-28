@@ -424,21 +424,21 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage F — label/HRAM semantics & banking bookkeeping (N6, N7, B1, S10)
 
-- [ ] F.1 N7/B2: `gb_memmap.inc`: add `hEastWestConnectedMapWidth equ 0xFF8B`
+- [x] F.1 N7/B2: `gb_memmap.inc`: add `hEastWestConnectedMapWidth equ 0xFF8B`
   (documenting the pret union with hMapStride/hNorthSouthConnectionStripWidth);
   `LoadTileBlockMap` W/E arms store the connected width there;
   `LoadEastWestConnectionsTileMap` reads it. (N/S bytes already match pret.)
-- [ ] F.2 B1: `LoadMapHeader` stores pret's object-data base into
+- [x] F.2 B1: `LoadMapHeader` stores pret's object-data base into
   `W_OBJECT_DATA_PTR_TEMP`; `InitSprites` receives the sprite-count position
   via a port-local (register on entry or a BSS byte) — update both headers and
   the OW-A.2 comment that documents the shift.
-- [ ] F.3 S10: fix `SwitchToMapRomBank`'s contract comment (In: AL = map
+- [x] F.3 S10: fix `SwitchToMapRomBank`'s contract comment (In: AL = map
   NUMBER; the MapHeaderBanks lookup is elided flat-model bookkeeping and
   `hLoadedROMBank` therefore holds the map number, unobservable to its port
   readers); pick one treatment for the dropped calls in `RunMapScript` /
   `LoadTileBlockMap` (call it for line-fidelity like `Reload*` do, or keep
   dropped + commented) and make it consistent.
-- [ ] F.4 N6: restore `LoadMapData`'s `hLoadedROMBank` save/restore bracket
+- [x] F.4 N6: restore `LoadMapData`'s `hLoadedROMBank` save/restore bracket
   (flat no-op `BankswitchCommon` pair, matching `Reload*`), or annotate the
   omission — prefer restoring for line-fidelity.
 

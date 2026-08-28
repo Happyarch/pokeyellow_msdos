@@ -3130,14 +3130,16 @@ LoadTileBlockMap:
     call ApplyMapBorderOverrides
 
     ; --- Connection strips: copy each connected map's edge into the wOverworldMap
-    ;     border. SwitchToMapRomBank is a no-op in the flat model. The strip src
+    ;     border. SwitchToMapRomBank is a flat no-op (records hLoadedROMBank); pret calls
     ;     pointers (CONN_STRIP_SRC) index into the connected maps' block data
     ;     loaded at OW_ROUTE*_BLK_GBADDR. hNorthSouthConnectionStripWidth and the
-    ;     connected-map width reuse hMapStride/hMapWidth (they are HRAM unions).
+    ;     connected-map width reuse hMapStride/hEastWestConnectedMapWidth and hMapWidth (HRAM unions, 0xFF8B/0xFF8C).
 
 .north_connection:
     cmp byte [ebp + wNorthConnectedMap], MAP_NO_CONNECTION
     je  .south_connection
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank
     movzx esi, word [ebp + wNorthConnectedMap + CONN_STRIP_SRC]   ; HL = strip src
     movzx edx, word [ebp + wNorthConnectedMap + CONN_STRIP_DEST]  ; DE = strip dest
     mov al, [ebp + wNorthConnectedMap + CONN_STRIP_LENGTH]
@@ -3149,6 +3151,8 @@ LoadTileBlockMap:
 .south_connection:
     cmp byte [ebp + W_SOUTH_CONNECTED_MAP], MAP_NO_CONNECTION
     je  .west_connection
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank
     movzx esi, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_SRC]
     movzx edx, word [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_DEST]
     mov al, [ebp + W_SOUTH_CONNECTED_MAP + CONN_STRIP_LENGTH]
@@ -3160,21 +3164,25 @@ LoadTileBlockMap:
 .west_connection:
     cmp byte [ebp + W_WEST_CONNECTED_MAP], MAP_NO_CONNECTION
     je  .east_connection
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank                  ; pret: call SwitchToMapRomBank before strip copy (flat no-op)
     movzx esi, word [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_SRC]
     movzx edx, word [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_DEST]
     movzx ebx, byte [ebp + W_WEST_CONNECTED_MAP + CONN_STRIP_LENGTH] ; B = row count
     mov al, [ebp + W_WEST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + hMapWidth], al                                      ; hEWConnectedMapWidth
+    mov [ebp + hEastWestConnectedMapWidth], al                    ; hEastWestConnectedMapWidth (0xFF8B union)
     call LoadEastWestConnectionsTileMap
 
 .east_connection:
     cmp byte [ebp + W_EAST_CONNECTED_MAP], MAP_NO_CONNECTION
     je  .done
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank
     movzx esi, word [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_SRC]
     movzx edx, word [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_DEST]
     movzx ebx, byte [ebp + W_EAST_CONNECTED_MAP + CONN_STRIP_LENGTH]
     mov al, [ebp + W_EAST_CONNECTED_MAP + CONN_MAP_WIDTH]
-    mov [ebp + hMapWidth], al
+    mov [ebp + hEastWestConnectedMapWidth], al
     call LoadEastWestConnectionsTileMap
 
 .done:
@@ -3231,7 +3239,7 @@ LoadNorthSouthConnectionsTileMap:
 ; stride. (Pallet Town has no E/W connection, but kept faithful for completeness.)
 ;
 ; In:  ESI = HL = strip src, EDX = DE = strip dest, BL = row count,
-;      [hMapWidth] = connected-map width. EBP = GB base.
+;      [hEastWestConnectedMapWidth] = connected-map width (0xFF8B). EBP = GB base.
 ; Clobbers: EAX, EBX(bl=counter), ECX, ESI, EDX.
 ; ---------------------------------------------------------------------------
 LoadEastWestConnectionsTileMap:
@@ -3248,7 +3256,7 @@ LoadEastWestConnectionsTileMap:
     jnz .inner
     pop edx
     pop esi
-    movzx eax, byte [ebp + hMapWidth]  ; src += connected-map width
+    movzx eax, byte [ebp + hEastWestConnectedMapWidth]  ; src += connected-map width (0xFF8B union)
     add esi, eax
     movzx eax, byte [ebp + wCurMapWidth]
     add eax, MAP_BORDER * 2
@@ -4194,7 +4202,8 @@ RunMapScript:
     pop edx
     pop esi
     call RunNPCMovementScript                ; pret home/overworld.asm:1725
-    ; TODO-HW: SwitchToMapRomBank — no-op under the flat address model.
+    mov al, [ebp + wCurMap]
+    call SwitchToMapRomBank                  ; pret: ld a,[wCurMap] / call SwitchToMapRomBank (flat no-op, records hLoadedROMBank)
     movzx ecx, byte [ebp + wCurMap]
     call dword [MapScriptPointers + ecx*4]   ; run this map's _Script (flat ptr)
     ret
@@ -4371,6 +4380,7 @@ asm_0dbd:
 
     ; ESI now points to object_data_ptr
     movzx eax, word [esi]
+    mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax   ; pret: ld [wObjectDataPointerTemp],a (base, not sprite_count)
     add eax, ebp ; EAX = object data flat address
     
     ; Read border block
@@ -4406,14 +4416,16 @@ asm_0dbd:
     lea ebx, [ebx + ebx * 2]           ; * 3 bytes per sign
     add eax, ebx                        ; advance cursor past the sign block
     
-    ; Save object data pointer temp
+    ; Save sprite_count position for InitSprites via port-local (B1)
+    ; W_OBJECT_DATA_PTR_TEMP already holds pret's object-data base; sprite_count offset goes to port-local
     sub eax, ebp
-    mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax
+    mov [overworld_sprite_count_ptr], ax
 
     ; pret home/overworld.asm:1888-1892 (.loadSpriteData): populate the NPC sprite
     ; slots from the map-object binary, UNLESS returning from a battle/blackout
-    ; (that data survives a battle, so it isn't rebuilt). W_OBJECT_DATA_PTR_TEMP
-    ; (just set above) points at the sprite_count byte = pret's HL on InitSprites entry.
+    ; (that data survives a battle, so it isn't rebuilt). overworld_sprite_count_ptr
+    ; holds the sprite_count GB offset = pret's HL on InitSprites entry; W_OBJECT_DATA_PTR_TEMP
+    ; holds pret's object-data base (B1).
     ; OW-A.2 P3b: this is the faithful home object-loader; the bespoke InitMapSprites
     ; (still the driver until P3c) clears+repopulates the same slots afterward in
     ; LoadMapData, so this is currently redundant-but-harmless (byte-identical).
@@ -4520,6 +4532,8 @@ CopySignData:
 ; Pret ref: home/overworld.asm:LoadMapData
 ; ---------------------------------------------------------------------------
 LoadMapData:
+    mov al, [ebp + hLoadedROMBank]
+    push eax
     call DisableLCD
     call ResetMapVariables
     call LoadTextBoxTilePatterns
@@ -4554,6 +4568,8 @@ LoadMapData:
     call UpdateMusic6Times
     call PlayDefaultMusicFadeOutCurrent
 .noMapMusic:
+    pop eax
+    call BankswitchCommon
     ret
 
 ; ---------------------------------------------------------------------------
@@ -4893,8 +4909,9 @@ global LoadSprite
 InitSprites:
     pushad
     ; A = [wNumSprites source] = sprite_count byte; ESI advances past it.
-    ; W_OBJECT_DATA_PTR_TEMP holds the GB offset of the sprite_count byte.
-    movzx esi, word [ebp + W_OBJECT_DATA_PTR_TEMP]   ; ESI = GB addr of sprite_count
+    ; overworld_sprite_count_ptr holds the GB offset of the sprite_count byte (B1);
+    ; W_OBJECT_DATA_PTR_TEMP holds pret's object-data base.
+    movzx esi, word [overworld_sprite_count_ptr]   ; ESI = GB addr of sprite_count (port-local)
     movzx eax, byte [ebp + esi]
     mov [ebp + wNumSprites], al                       ; wNumSprites = count
     inc esi                                            ; past the count byte
@@ -5080,10 +5097,15 @@ CheckForUserInterruption:
 ; ---------------------------------------------------------------------------
 ; SwitchToMapRomBank — set the ROM bank for the current map's data/scripts.
 ; pret home/overworld.asm:SwitchToMapRomBank: reads the map's bank from
-; MapHeaderBanks and BankswitchCommon-s to it. Flat-model: record the requested
-; bank (bookkeeping); the physical MBC write is a no-op. Consumers (reload_tiles,
-; text_script, run_map_script) keep the pret call structure.
-; In: AL = map bank id. All other registers preserved.
+; MapHeaderBanks (via wCurMap) and BankswitchCommon-s to it. Flat-model: the
+; MapHeaderBanks lookup is elided and AL is the map NUMBER directly; the routine
+; records that number into hLoadedROMBank (BankswitchCommon flat no-op, no MBC
+; write). Port readers use hLoadedROMBank only for save/restore bookkeeping
+; (unobservable today), so the semantic shift (bank id vs map number) has no
+; effect. Consumers (reload_tiles, text_script, run_map_script) keep the pret
+; call structure where they call it (Reload* do, RunMapScript/LoadTileBlockMap
+; elide it under the flat model — annotated at those sites).
+; In: AL = map NUMBER. All other registers preserved.
 ; ---------------------------------------------------------------------------
 global SwitchToMapRomBank
 global AdvancePlayerSprite
@@ -5131,8 +5153,10 @@ LoadDestinationWarpPosition:
 ; Captured after OverworldLoop's first DelayFrame, before the second
 ; DelayFrame's joypad_update clears hJoyPressed. Read for START/A on the
 ; non-simulated path (pret: hJoyPressed); scripted path reads hJoyHeld.
+; --- port-local for B1: sprite-count GB offset (pret base lives in W_OBJECT_DATA_PTR_TEMP) ---
 section .data
 overworld_joy_latch: db 0
+overworld_sprite_count_ptr: dw 0   ; GB offset of sprite_count byte, set by LoadMapHeader for InitSprites
 section .text
 
 
