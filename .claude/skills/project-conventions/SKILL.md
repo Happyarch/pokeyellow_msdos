@@ -429,9 +429,11 @@ dos_port/tools/project_state --plans
   `current_plan_` prefix, against the archive convention two paragraphs above,
   which is why a `docs/plans/script_engine.md` search finds nothing. The gen-1
   script system (event-gated dialog, per-map `_Script`/`text_asm`, `DisplayTextID`
-  special cases) is owned by **`docs/current_plan_overworld_events.md`**, which is
-  active. Its deferred tails — Oak walk-up cutscene, `_Script` state machines —
-  live there.
+  special cases) was owned by `docs/current_plan_overworld_events.md`, which is
+  **RETIRED (2026-08-28, archived at `docs/plans/overworld_events.md`)**. Its
+  overworld-seam work (trainer-sight hook retirement, Stage 5a wiring,
+  club-map warp) is owned by `docs/current_plan_overworld_realign.md` Stage J;
+  the story-ordered rollout and evidence tails are backlog #37.
 - **Overworld port — COMPLETE & archived** at `docs/plans/overworld_port.md`
   (there is no `docs/current_plan_overworld_port.md`) — **full faithful port of pret
   `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the

@@ -633,8 +633,9 @@ Rules and gotchas:
   (more frames, a different gate), DIFF THE TWO DUMPS — identical output means the
   knob did nothing, which two exit-0s will happily hide.
   Where a scenario's reach is genuinely limited, write the limit down next to the
-  scenario rather than leaving it inferable — `docs/current_plan_overworld_events.md`
-  has a "What the `route*_sight` goldens do NOT cover" subsection doing exactly
+  scenario rather than leaving it inferable — the retired overworld-events plan
+  (`docs/plans/overworld_events.md`) carries a "What the `route*_sight` goldens
+  do NOT cover" subsection doing exactly
   this, and it exists because the limits were discovered the expensive way.
 
 **Live differential debugging (mgba-mcp):** `tools/run_mgba_mcp.sh` launches

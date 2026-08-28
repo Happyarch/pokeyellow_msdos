@@ -13,7 +13,8 @@ before acting; this document is a handoff, not authority.
 
 ### Itemfinder — RESOLVED 2026-07-16 (except runtime evidence)
 
-Cleared by a cross-cut from `docs/current_plan_overworld_events.md` Stage 3:
+Cleared by a cross-cut from the overworld-events plan Stage 3
+(now retired → `docs/plans/overworld_events.md`):
 `HiddenItemCoords` is generated (`tools/generators/gen_hidden_item_coords.py` →
 `assets/hidden_item_coords.inc`, linked via `src/data/hidden_events_data.asm`);
 `src/engine/items/itemfinder.asm` (`HiddenItemNear`/`Sub5ClampTo0`) is linked

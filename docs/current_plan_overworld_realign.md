@@ -22,20 +22,20 @@ tables, `wWarpEntries`-sourced `LoadDestinationWarpPosition`, host-BSS
 the *reason* a line cannot be literal, they get a structured annotation instead.
 The two out-of-map clamps are PERMANENT (maintainer decision 2026-08-16) and stay.
 
-**Out of scope / owned elsewhere** (do not duplicate work, only keep references
-honest):
-- `CheckTrainerSight`/`TrainerEncounterFlow` hook — `DEVIATION{class=temporary}`
-  owned by `docs/current_plan_overworld_events.md` (Stage 5a wiring retires it).
-- Bespoke `InitMapSprites` double-populate of sprite slots — OW-A.2 P3c
-  retirement (documented in `LoadMapHeader`); when P3c lands, drop the slot
-  repopulate so only the pret tile-pattern job remains.
-- `wEnteringCableClub` hold-open on the A-path — latent until the club-map warp
-  is reachable (backlog #17 / link-cable plan); the check exists in
-  `home/text_script.asm` already.
-- The walk cadence is NOT a finding: pret's mid-walk frames return via
-  `.didNotEnterConnectedMap: jp OverworldLoop` (2 DelayFrames per advance), which
-  the port's `jne OverworldLoop` reproduces. `DEBUG_WALKSPEED`'s 16 ticks/tile is
-  the correct pret calibration. Do not "fix" it.
+**Adopted from the retired overworld-events plan (2026-08-28).**
+`docs/current_plan_overworld_events.md` is archived at
+`docs/plans/overworld_events.md`; this plan adopted its overworld-seam work
+(Stage J below): the trainer-sight hook retirement and its Stage 5a wiring
+prerequisites, the P3c comment residue + `ResetMapTrainerState`, the
+`wEnteringCableClub` hold-open on the A-path, and the club-map warp's overworld
+half. Its non-adopted tails (Oak-intro golden, field-move must-hit evidence,
+`dex_rating` gate, story-ordered rollout) moved to backlog #37; the in-club
+trade/battle sessions stay with `docs/current_plan_link_cable.md` Stages 3-4.
+
+**The walk cadence is NOT a finding:** pret's mid-walk frames return via
+`.didNotEnterConnectedMap: jp OverworldLoop` (2 DelayFrames per advance), which
+the port's `jne OverworldLoop` reproduces. `DEBUG_WALKSPEED`'s 16 ticks/tile is
+the correct pret calibration. Do not "fix" it.
 
 ## Gate
 
@@ -355,8 +355,9 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
   convention), `call UpdateSprites`, `bit BIT_TURNING → .checkForOpponent`,
   `bit BIT_SEEN_BY_TRAINER → .checkForOpponent`, standing-tile store
   (`wTilePlayerStandingOn`, N4's dialog half), then the display call, then the
-  `wEnteringCableClub` check → `EnterMap` (leave a pointer note to backlog #17),
-  then `.checkForOpponent`: `cmp wCurOpponent,0 / jne <battle tail> / jmp
+  `wEnteringCableClub` check → `EnterMap` (the club-map warp's overworld
+  trigger — owned here since the events plan retired, see J.5), then
+  `.checkForOpponent`: `cmp wCurOpponent,0 / jne <battle tail> / jmp
   OverworldLoop` — replacing the "restart loop and let the poll catch it"
   path for dialog-seeded battles.
 - [ ] B.5 A-path pret shape before the hidden-event scan: `bit
@@ -513,9 +514,75 @@ One commit, comments only (no code bytes change):
   M7.1/.notSafariZone, WarpScanToMapConnections) against the landed code;
   archive this plan to `docs/plans/overworld_realign.md`.
 
+## Stage J — adopted from the retired overworld-events plan
+
+Source: `docs/plans/overworld_events.md` (retired 2026-08-28; its header
+records the full adoption map). Stage 5a's wiring plus its tail, the P3c
+residue, and the club-map warp's overworld half. J.1/J.2 are generator/script
+work with no dependency on stages A–I; J.3 depends on C.2 (the beaten-trainer
+flow must be pret-shaped before the bespoke state dies); J.5 depends on B.4.
+
+- [ ] J.1 wire the last two standard maps, **CERULEAN_CAVE_B1F** and
+  **POWER_PLANT** (`WIRED_MAPS` rows in `gen_map_script_tables.py` + sight
+  goldens). Both owe the **truncated-tail decision** first:
+  `gen_trainer_headers.py` cannot represent a `text_asm` tail with side
+  effects and truncates `MewtwoBattleText` / `PowerPlantZapdosBattleText` (it
+  prints each on every run). Either the header generator gains an optional
+  per-header "post-end-battle event" field consumed after `PrintEndBattleText`,
+  or these two get bespoke hand-ports. Tileset residency is NOT a blocker (the
+  sight goldens are wram-only; VIRIDIAN_FOREST wired with FOREST) — but the
+  maps' tilesets (CAVERN/FACILITY) are not yet LOADABLE, so their goldens must
+  not compare rendered tiles until the per-map tileset dispatch exists.
+- [ ] J.2 the four near-miss maps (**FightingDojo, Route12, Route16, Route24** —
+  skeleton body, non-standard pointer tables) still engage trainers ONLY
+  through the bespoke hook: measured — none is in `WIRED_MAPS`, and the gate
+  skips the hook only when `MapScriptPointers[wCurMap] == TrainerMapScript`.
+  The retired plan's "all 17 standard maps wired ⇒ all three are dead code"
+  claim was false as written; deleting the hook without these four regresses
+  them. Driver-extension per-map tails (not `WIRED_MAPS` forcing) or bespoke
+  hand-ports, each with its sight golden.
+- [ ] J.3 measure the TRUE retirement set: enumerate every map carrying
+  trainer headers whose `MapScriptPointers` row is not `TrainerMapScript`
+  (generator output + `scripts/` trainer-header tables), and wire or
+  consciously annotate each. Then delete, in one commit: the sight gate in
+  `OverworldLoopLessDelay` (`home/overworld.asm` `.noTrainerSight` block),
+  `CheckTrainerSight` + `TrainerEncounterFlow` (`map_sprites.asm`), BOTH
+  `DEVIATION{class=temporary}` annotations (the loop's and
+  `EndTrainerBattle`'s at `map_sprites.asm:1056`), and the bespoke
+  `ResetMapTrainerState` call in the `InitMapSprites` wrapper
+  (+ its `npc_beaten_flags`/`w_trainer_enc_slot`/`w_player_frozen` state once
+  C.2's event-flag flow replaces the last readers). Run
+  `label_status --callers` on every deleted label, update the label DB,
+  faithdiff with justification. `route*_sight` goldens are a regression floor
+  only (they never entered the loop); the witness is `trainer_battle_route`.
+- [ ] J.4 P3c residue: the de-bespoke LANDED (measured — no slot-populate
+  writes remain anywhere in the `InitMapSprites` path) but three comments
+  still describe the double-populate: `home/overworld.asm` LoadMapHeader's
+  "still the driver until P3c … clears+repopulates the same slots … redundant
+  but harmless", `engine/overworld/overworld.asm` InitSprites header's "Until
+  P3c retires the bespoke InitMapSprites", and the InitSprites ISTRAINER
+  note's "the bespoke InitMapSprites used to set this". Delete/rewrite all
+  three (folds into G's sweep if it lands first); keep the ISTRAINER
+  port-ext itself until J.3/C.2 remove its bespoke consumers, with its
+  DEVIATION re-anchored from H.1's sweep.
+- [ ] J.5 **club-map warp (overworld half), adopted.** With B.4's
+  `wEnteringCableClub` hold-open restored on the A-path, drive the connected
+  receptionist flow end-to-end and witness the warp: `CableClubNPC`'s
+  connected path sets `wEnteringCableClub` (port writer
+  `engine/menus/link_menu.asm:1241` ≡ pret `:795`), the restored post-dialog
+  check re-enters `EnterMap`, `SpecialEnterMap` honors the flag
+  (`engine/menus/main_menu.asm:431` arm ≡ pret's `ret nz` club hold), and the
+  club map loads through the real path. Scenario via the two-instance
+  machinery (linkcheck.sh / nullmodem) or a seeded-peer gate; the in-club
+  trade/battle sessions remain link-cable Stages 3-4's scope — this item ends
+  at "player standing in the club map, both sides' WRAM matched". Update
+  `cable_club_npc.asm`'s "Stage 3 validates that flow end to end" note to
+  split the ownership (realign = warp + hold-open; link-cable = session).
+
 ## Sequencing
 
 A → (B, C, D, E, F in any order, B before C.2's comment fix if convenient) →
 G (after all code stages, so comments describe the final state) → H → I
 (continuous; I.3-I.6 land with their stages). A1 first: B.6/C.1's tails and
-I.4 both depend on the seam's final shape.
+I.4 both depend on the seam's final shape. Stage J runs independently of A–F
+(J.1/J.2 can start immediately); J.3 waits on C.2, J.5 waits on B.4.

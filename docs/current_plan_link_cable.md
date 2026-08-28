@@ -256,7 +256,8 @@ blocks in `src/engine/menus/naming_screen.asm`.
 
 ### Stage 0 — governance + groundwork
 - [x] Directive doc sites updated (done in this plan's landing commit):
-      `docs/current_plan_overworld_events.md`, `docs/current_plan_printer.md`
+      the then-active overworld-events plan (retired 2026-08-28 →
+      `docs/plans/overworld_events.md`) and `docs/current_plan_printer.md`
 - [ ] HOST SESSION: apply the stigmergy edits queued in
       `docs/stigmergy_outbox.jsonl` (the `link-layer-planned-transports`
       rewrite, the regression memory_search fold-back, and the Stage 2

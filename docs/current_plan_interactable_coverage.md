@@ -209,6 +209,7 @@ the faithfulness-review rule "no scenario, no wire" applies there.
 ## Owner / how to read
 
 This is the interactable-coverage plan. Adjacent owners:
-`docs/current_plan_overworld_events.md` (story scripts + interaction services),
+`docs/plans/overworld_events.md` (story scripts + interaction services — RETIRED
+2026-08-28; live successor for the overworld seam: realign Stage J),
 `docs/current_plan_script_linking.md` (map script linking),
 `docs/current_plan_viridian_parcel.md` (parcel + interactable coverage).

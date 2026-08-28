@@ -100,9 +100,12 @@ caller count, and the shared `BattlePartyMenu`/`BattleItemMenu` `ret` body.
   `ItemUsePtrTable`, every `ItemUse*` body, and item-subsystem helpers. This plan
   owns `BattleItemMenu`, battle-context routing, turn consumption, switches, and
   battle-loop consumers.
-- `docs/current_plan_overworld_events.md` owns map/event data and dispatch,
-  story scripts, battle-state seeding, and overworld result consumers. This plan
-  owns trainer-battle activation/exit semantics and special battle-type behavior.
+- Map/event data and dispatch, story scripts, battle-state seeding, and
+  overworld result consumers were owned by `docs/current_plan_overworld_events.md`
+  (retired 2026-08-28 → `docs/plans/overworld_events.md`); the overworld-seam half
+  is now `docs/current_plan_overworld_realign.md` (Stage J), evidence tails are
+  backlog #37. This plan owns trainer-battle activation/exit semantics and
+  special battle-type behavior.
 - Link battles remain Phase 4. Preserve pret's link branches and explicit
   structured stand-ins, but do not make link transport part of this plan.
 
@@ -398,7 +401,8 @@ result gates deliberately stop after initialization and drive one terminal turn.
          remain synthetic oracle gates; id 51 is the live-path witness they
          structurally cannot be.
       2. `npc_beaten_flags` → `TrainerFlagAction` convergence is OWNED BY
-         `docs/current_plan_overworld_events.md` (agreed by mail 2026-08-04, both
+         `docs/current_plan_overworld_realign.md` Stage J (adopted 2026-08-28
+         from the retired overworld-events plan; agreed by mail 2026-08-04, both
          roots) — not this plan's to close, and it is what retires the new
          `TrainerEncounterFlow` DEVIATION. That residual shrinks per wired map:
          on an unwired map `MapScriptPointers[wCurMap]` is the no-op
@@ -424,7 +428,8 @@ result gates deliberately stop after initialization and drive one terminal turn.
       verified post-victory result path. A loss, blackout, or aborted battle must
       leave the trainer armed; victory must advance the script, persist the flag,
       and expose the correct post-battle text. Depends on
-      `docs/current_plan_overworld_events.md` populating `wToggleableObjectList`
+      the retired `docs/plans/overworld_events.md`'s successor work populating
+      `wToggleableObjectList` (backlog #37 / realign Stage J context)
       (`EndTrainerBattle`'s sprite-removal `DEVIATION{class=data-model}` cannot
       close until that builder exists).
 
