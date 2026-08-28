@@ -156,6 +156,7 @@ extern LoadSpinnerArrowTiles               ; src/engine/overworld/spinners.asm (
 extern MarkTownVisitedAndLoadToggleableObjects ; src/engine/overworld/toggleable_objects.asm
 extern LoadToggleableObjectData            ; src/engine/overworld/unused_load_toggleable_object_data.asm
 extern IsSurfingPikachuInParty            ; src/home/map_objects.asm
+extern ApplyOutOfBattlePoisonDamage       ; src/engine/events/poison.asm (A2)
 extern IsTilePassable                     ; src/home/copy2.asm
 extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
 extern PrepareForSpecialWarp              ; src/engine/overworld/special_warps.asm
@@ -773,13 +774,14 @@ EnterMap:
 .seam_frames:
     call UpdateSprites
     call AdvancePlayerSprite
-    pushf                                 ; CF=1 => CheckMapConnections fired
     call DelayFrame
     call SeamLogRecord                    ; one sample per rendered frame
-    popf
-    jc .seam_crossed
     cmp byte [ebp + wWalkCounter], 0
     jne .seam_frames
+    ; tile completed — post-step crossing check (mirrors OverworldLoop's
+    ; WarpScanToMapConnections). Advance no longer returns CF for a crossing.
+    call CheckMapConnections
+    jc .seam_crossed
     pop ecx
     dec ecx
     jnz .seam_step
@@ -875,10 +877,13 @@ EnterMap:
 .wn_frames:
     call UpdateSprites
     call AdvancePlayerSprite
-    jc .wn_crossed                ; CF=1 → CheckMapConnections fired this step
     call DelayFrame
     cmp byte [ebp + wWalkCounter], 0
     jne .wn_frames
+    ; tile completed — post-step crossing check (mirrors OverworldLoop's
+    ; WarpScanToMapConnections). Advance no longer returns CF for a crossing.
+    call CheckMapConnections
+    jc .wn_crossed
     pop ecx
     dec ecx
     jnz .wn_step
@@ -1546,23 +1551,22 @@ OverworldLoop:
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
-    ; pret: call IsSurfingPikachuInParty / call LoadGBPal / call HandleMidJump.
+    ; pret: call IsSurfingPikachuInParty / call LoadGBPal / call HandleMidJump
+    ; (home/overworld.asm:47-49). All three are now faithful:
     ;
-    ; LoadGBPal is RESTORED (2026-08-11). It reloads rBGP/rOBP0/rOBP1 from
+    ; IsSurfingPikachuInParty updates wPikachuSpawnStateFlags.W_SURFING_PIKACHU
+    ; every iteration so the surfing-Pikachu sprite is selected correctly when Surf
+    ; is taught mid-route (A4 — was EnterMap-only, so stale until next map entry).
+    ;
+    ; LoadGBPal was restored 2026-08-11 — it reloads rBGP/rOBP0/rOBP1 from
     ; FadePal4 - wMapPalOffset every overworld frame, which is the ONLY thing that
     ; ever gives rOBP1 a non-zero value on this path (FadePal4 + 2 = dc 3,2,0,0 =
-    ; $E0). Dropped as a "palette-fade path", it left IO_OBP1 at Init's zero for
-    ; the whole run, so CGB OBJ palettes 4-7 -- the four base palettes mapped
-    ; through OBP1 -- collapsed to white. Measured by the cgb_palettes golden
-    ; region: ~229 divergences of the form `OBJ pal4-7 colour2/3: rom=(11,23,31)
-    ; port=(31,31,31)` across 44 scenarios, all one missing call.
-    ;
-    ; IsSurfingPikachuInParty is still dropped (Pikachu-follower path), along with
-    ; the other calls faithdiff reports on this routine -- untouched here.
+    ; $E0). Dropped as a "palette-fade path", it left IO_OBP1 at Init's zero.
     ;
     ; HandleMidJump advances the ledge-hop arc and, when it finishes, tears down
     ; BIT_LEDGE_OR_FISHING / BIT_SCRIPTED_MOVEMENT_STATE / wJoyIgnore. No live
     ; ZF/CF crosses these calls: the wWalkCounter cmp below produces its own flags.
+    call IsSurfingPikachuInParty
     call LoadGBPal
     call HandleMidJump
 
@@ -1932,20 +1936,22 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     and byte [ebp + wMiscFlags], ~(1 << BIT_TURNING) & 0xFF  ; res BIT_TURNING, [hl]
     mov byte [ebp + wPikachuCollisionCounter], 0
     call DoBikeSpeedup
-    call AdvancePlayerSprite
-    jc .mapTransition
+    call AdvancePlayerSprite                   ; CF always 0 now — crossing moved to post-step WarpScan
+    ; pret .moveAhead2:245-247 — `ld a,[wWalkCounter] / and a / jp nz, CheckMapConnections`
+    ; Port uses WarpScanToMapConnections (the callable wrapper around CheckMapConnections);
+    ; mid-walk coords can never match so it is a dead scan that returns to OverworldLoop.
     cmp byte [ebp + wWalkCounter], 0
-    jne OverworldLoop
+    jne WarpScanToMapConnections
 %ifdef DEBUG_WALKSPEED
     call WalkSpeedSample                       ; tile just completed → record ticks/tile
 %endif
-    ; --- M7.1/OW-A.6: step count + wild-encounter gate (pret home/overworld.asm:249-268) ---
-    ; The tile step just finished. pret runs StepCountCheck here, then (after
-    ; poison/safari, deferred) NewBattle, taking the warp checks only when no battle
-    ; occurred. StepCountCheck decrements the WRAM step counters — including
-    ; wNumberOfNoRandomBattleStepsLeft, the post-battle 3-step encounter-free window
-    ; that NewBattle's DetermineWildOpponent gate reads. Wild encounters are LIVE
-    ; (the WILD_ENCOUNTERS_LIVE gate is retired).
+    ; --- M7.1/OW-A.6: step count + poison + wild-encounter gate (pret home/overworld.asm:249-268) ---
+    ; The tile step just finished. pret runs StepCountCheck → SafariZoneCheckSteps
+    ; → wIsInBattle guard → poison predef → blackout check → NewBattle, taking the
+    ; warp checks only when no battle occurred. StepCountCheck decrements the WRAM
+    ; step counters — including wNumberOfNoRandomBattleStepsLeft, the post-battle
+    ; 3-step encounter-free window that NewBattle's DetermineWildOpponent gate reads.
+    ; Wild encounters are LIVE (the WILD_ENCOUNTERS_LIVE gate is retired).
     call StepCountCheck
     ; --- Safari Zone step countdown (pret home/overworld.asm:249-256) ----------
     ; RESTORED 2026-08-21. This branch was absent: the port went straight from
@@ -1964,6 +1970,14 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     test al, al                               ; pret: and a
     jnz WarpFound2                            ; pret: jp nz, WarpFound2
 .notSafariZone:
+    ; pret :257-264 — out-of-battle poison tick (A2). The routine is fully
+    ; translated and linked (engine/events/poison.asm); it was simply not called
+    ; on the post-step path, so poison never ticked out of battle.
+    cmp byte [ebp + wIsInBattle], 0           ; ld a,[wIsInBattle] / and a
+    jne CheckWarpsNoCollision                 ; pret: jp nz, CheckWarpsNoCollision
+    call ApplyOutOfBattlePoisonDamage         ; pret: predef ApplyOutOfBattlePoisonDamage
+    cmp byte [ebp + wOutOfBattleBlackout], 0  ; ld a,[wOutOfBattleBlackout] / and a
+    jne HandleBlackOut                        ; pret: jp nz, HandleBlackOut
     call NewBattle                            ; CF=1 → a wild/forced battle occurred
     ; pret :265-268: the `res BIT_STANDING_ON_WARP` sits BETWEEN the call and the
     ; branch, so it runs on BOTH arms — SM83 `res` does not touch flags. On x86
@@ -2133,10 +2147,11 @@ CheckWarpsNoCollisionLoop:
 ; there (measured 2026-08-22: ledge_hop, surf_round_trip and safari_game_over all
 ; died before their dump frame).
 ;
-; Re-running it here is harmless as well as faithful: _AdvancePlayerSprite already
-; called it during the step, and if it had fired there the CF would have taken the
-; loop to .mapTransition and never reached a warp scan — so by the time control is
-; here the coords are inside the map and the second call cannot fire either.
+; Stage A (A1.1) removed the early call inside _AdvancePlayerSprite; crossing is
+; now checked only here, after StepCountCheck/Safari/poison/NewBattle, matching
+; pret's order (CheckMapConnections after the post-step checks, home/overworld.asm
+; :247). The mid-walk dead scan (wWalkCounter !=0 → WarpScanToMapConnections)
+; also comes here and cannot fire as coords haven't been committed.
 ;
 ; A port-only descriptive name, not a forked pret one: pret has no routine here at
 ; all, only two `jp CheckMapConnections` instructions.
@@ -2445,10 +2460,11 @@ NewBattle:
 ; walking speed). Inert in today's live build — wWalkBikeSurfState is never 1
 ; until Bicycle item-use / ForceBikeOrSurf links.
 ;
-; PORT NOTE: the port's AdvancePlayerSprite returns CF=1 on a map-connection
-; crossing; this inner call's CF is discarded (pret drops it too — its crossing
-; is caught by CheckMapConnections on the wWalkCounter path). Revisit the
-; crossing-mid-speedup case when biking goes live.
+; PORT NOTE (Stage A): _AdvancePlayerSprite now always returns CF=0 — crossing
+; was removed from it (A1.1) and is checked only in the post-step WarpScan path.
+; This inner call's CF is therefore discarded, exactly as pret discards it (its
+; crossing is caught by CheckMapConnections on the wWalkCounter path). No revisit
+; needed when biking goes live.
 ; ---------------------------------------------------------------------------
 DoBikeSpeedup:
     mov al, [ebp + wWalkBikeSurfState]

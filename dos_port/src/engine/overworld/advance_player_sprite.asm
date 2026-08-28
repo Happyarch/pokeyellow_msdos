@@ -27,7 +27,6 @@ global _AdvancePlayerSprite
 ; port's only caller is _AdvancePlayerSprite in this same file, so they stay
 ; file-local (they were file-local in overworld.asm too).
 
-extern CheckMapConnections                ; src/home/overworld.asm
 extern LoadCurrentMapView                 ; src/home/overworld.asm
 extern RefreshCollisionTileMap            ; src/engine/overworld/overworld.asm
 
@@ -43,8 +42,8 @@ section .text
 ; and schedules the newly exposed row/column for VBlank redraw. Every frame it
 ; scrolls the BG by 2 px (hSCX/hSCY) in the direction of motion.
 ;
-; Remaining Phase-2 omissions vs. pret (inside this body): IsSpinning and the
-; Pikachu overworld-state flag.
+; All pret behaviors in this body are now faithful (Pikachu flag and crossing
+; timing realigned in Stage A; VRAM slide dropped per HAL DEVIATION below).
 ;
 ; b (SM83) = wSpritePlayerStateData1YStepVector → kept in BL  (+1 / -1 / 0)
 ; c (SM83) = wSpritePlayerStateData1XStepVector → kept in CL  (+1 / -1 / 0)
@@ -61,14 +60,16 @@ _AdvancePlayerSprite:
     dec byte [ebp + wWalkCounter]
     jnz .afterUpdateMapCoords
     ; end of animation → commit the player's map coordinates
+    ; pret: ld hl, wPikachuOverworldStateFlags / res 5, [hl]  (the only ROM-wide clear
+    ; of the "Pikachu hidden" bit, engine/overworld/advance_player_sprite.asm:10-11;
+    ; Surf mount/dismount set bit 5 and this is what clears it)
+    and byte [ebp + wPikachuOverworldStateFlags], ~0x20 & 0xFF
     mov al, [ebp + wYCoord]
     add al, bl
     mov [ebp + wYCoord], al
     mov al, [ebp + wXCoord]
     add al, cl
     mov [ebp + wXCoord], al
-    call CheckMapConnections
-    jc .transitionExit                         ; CF=1 → map changed, abort frame
 .afterUpdateMapCoords:
     cmp byte [ebp + wWalkCounter], 7
     jne .scroll                                       ; only the first frame slides the view
@@ -163,16 +164,7 @@ _AdvancePlayerSprite:
     pop ecx
     pop ebx
     pop eax
-    clc                                        ; CF=0 → no transition
-    ret
-
-.transitionExit:
-    ; CheckMapConnections set CF=1 → propagate up to caller
-    pop edx
-    pop ecx
-    pop ebx
-    pop eax
-    stc                                        ; CF=1 → transition occurred
+    clc                                        ; always clear — crossing is now post-step (CheckMapConnections)
     ret
 
 ; ---------------------------------------------------------------------------

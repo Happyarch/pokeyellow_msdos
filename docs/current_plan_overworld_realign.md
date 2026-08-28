@@ -298,36 +298,36 @@ guard → poison predef → blackout check → `NewBattle` → `res
 BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) →
 `CheckMapConnections` (crossing fires HERE, after the checks) → `.loadNewMap`.
 
-- [ ] A1.1 `_AdvancePlayerSprite`: delete `call CheckMapConnections / jc
+- [x] A1.1 `_AdvancePlayerSprite`: delete `call CheckMapConnections / jc
   .transitionExit` and the `.transitionExit` block (restore always-clear CF);
   keep the coord commit at counter==0.
-- [ ] A1.2 loop `.moveAhead2`: replace `jc .mapTransition` + `cmp/jne
+- [x] A1.2 loop `.moveAhead2`: replace `jc .mapTransition` + `cmp/jne
   OverworldLoop` with pret's shape — `cmp wWalkCounter,0 / jne
   WarpScanToMapConnections` (pret's dead-scan path: mid-walk coords can never
   match, same net destination `jp OverworldLoop`).
-- [ ] A1.3 post-step tail now ends `jnc CheckWarpsNoCollision` →
+- [x] A1.3 post-step tail now ends `jnc CheckWarpsNoCollision` →
   `WarpScanToMapConnections` holds the only crossing exit (`jc
   OverworldLoopLessDelay.mapTransition`); confirm `.mapTransition` is reached
   exactly where pret's `.loadNewMap` runs (after the checks, once).
-- [ ] A1.4 rewire the CF-reading debug harnesses (`DEBUG_SEAMWALK`
+- [x] A1.4 rewire the CF-reading debug harnesses (`DEBUG_SEAMWALK`
   `.seam_crossed`, `DEBUG_WALK_NORTH` `.wn_crossed`, SEAMLOG's `pushf/jc`) to
   detect the crossing by `wCurMap` change (or WarpScanToMapConnections CF at
   its new owner); keep the 3 FRAME.BIN baselines byte-identical.
-- [ ] A1.5 update the `WarpScanToMapConnections` header (its "if it had fired
+- [x] A1.5 update the `WarpScanToMapConnections` header (its "if it had fired
   there" paragraph now describes the removed call) and DoBikeSpeedup's
   "crossing-mid-speedup" note (inner CF discarded = pret).
-- [ ] A2.1 insert the poison seam at `.notSafariZone`: `cmp byte
+- [x] A2.1 insert the poison seam at `.notSafariZone`: `cmp byte
   [wIsInBattle],0 / jne CheckWarpsNoCollision` → `call
   ApplyOutOfBattlePoisonDamage` (flat direct call; verify its register contract
   against the pret predef clobber set — nothing live across the seam) → `cmp
   byte [wOutOfBattleBlackout],0 / jne HandleBlackOut`.
-- [ ] A2.2 fix the M7.1 seam comment (range now actually covered) and
+- [x] A2.2 fix the M7.1 seam comment (range now actually covered) and
   poison.asm's header/cross-ref (S7) in the same commit.
-- [ ] A3.1 `_AdvancePlayerSprite` completion branch: `and byte
+- [x] A3.1 `_AdvancePlayerSprite` completion branch: `and byte
   [wPikachuOverworldStateFlags], ~0x20 & 0xFF` placed before the coord commit
   (pret order); drop the "Pikachu overworld-state flag" admission from the
   header (IsSpinning is already back).
-- [ ] A4.1 restore `call IsSurfingPikachuInParty` at the top of
+- [x] A4.1 restore `call IsSurfingPikachuInParty` at the top of
   `OverworldLoopLessDelay` (after `DelayFrame`, before `LoadGBPal`); rewrite
   the `:1549` comment.
 

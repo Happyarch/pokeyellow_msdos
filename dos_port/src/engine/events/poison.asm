@@ -11,12 +11,11 @@
 ; and the .countPoisonedLoop counters) are each either inside pret's own
 ; push de / pop de, or past the point where the de walker is dead.
 ;
-; NOT YET WIRED: pret calls this from home/overworld.asm:260
-; (`predef ApplyOutOfBattlePoisonDamage`) inside OverworldLoopLessDelay. The port's
-; OverworldLoop has that seam marked "poison/safari, deferred"
-; (src/home/overworld.asm:1492) and does not call it, so the routine is defined and
-; linked but not reached. Wiring it is an overworld-loop change, not a change to
-; this file.
+; WIRED 2026-08-28 (Stage A2): pret calls this from home/overworld.asm:260
+; (`predef ApplyOutOfBattlePoisonDamage`) inside OverworldLoopLessDelay's post-step
+; tail. The port now calls it at src/home/overworld.asm:.notSafariZone via a flat
+; direct call (see the DEVIATION in this file for the predef→direct mapping), and
+; the M7.1 seam comment there notes the full pret order.
 ;
 ; Build: nasm -f coff -I include/ -I . -o poison.o src/engine/events/poison.asm
 
