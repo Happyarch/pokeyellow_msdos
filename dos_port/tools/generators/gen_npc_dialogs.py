@@ -124,7 +124,6 @@ def local_tail_is_standard(script_text, label):
     """
     return any(m.group(1) == label for m in LOCAL_TAIL.finditer(script_text))
 SCRIPT_OVERRIDES = {
-    'PalletTownOakText': 'PalletTownOakText',
     # Link receptionists (docs/current_plan_link_cable.md Stage 2): pret
     # routes TX_SCRIPT_CABLE_CLUB_RECEPTIONIST ($f6) through DisplayTextID;
     # the port's NPC-talk path dispatches SCRIPT table entries, so every
@@ -143,17 +142,6 @@ SCRIPT_OVERRIDES = {
     'SilphCo1FLinkReceptionistText':            'CableClubReceptionistScript',
     'VermilionPokecenterLinkReceptionistText':  'CableClubReceptionistScript',
     'ViridianPokecenterLinkReceptionistText':   'CableClubReceptionistScript',
-    # In-game trade NPC (docs/current_plan_link_cable.md Stage 3 step 4): the
-    # Gameboy Kid's text is a text_asm script (wWhichTrade = TRADE_FOR_MILES ->
-    # DoInGameTradeDialogue) hand-ported in src/scripts/Route2TradeHouse.asm.
-    # Without this row the generator emitted a plain placeholder stream, so the
-    # A-press showed a stub dialog and the trade flow was unreachable (measured
-    # 2026-08-23: the in_game_trade goldencheck's state-gated dump never fired).
-    'Route2TradeHouseGameboyKidText':           'Route2TradeHouseGameboyKidText',
-    # Summer Beach House printer (docs/current_plan_printer.md Stage 3):
-    # SummerBeachHousePrinterText is a text_asm script hand-ported in
-    # src/scripts/SummerBeachHouse.asm (Func_f23d0 -> PrintSurfingMinigameHighScore).
-    'SummerBeachHousePrinterText':              'SummerBeachHousePrinterText',
     # Pokémon Center nurses (overworld-services Stage 5): every NurseText label
     # uses TX_SCRIPT_POKECENTER_NURSE ($ef), which routes through DisplayTextID →
     # DisplayPokemonCenterDialogue_ in pret. The port's NPC-talk path dispatches
@@ -188,24 +176,6 @@ SCRIPT_OVERRIDES = {
     'FuchsiaPokecenterChanseyText':    'PokecenterChanseyText',
     'SaffronPokecenterChanseyText':    'PokecenterChanseyText',
     'CinnabarPokecenterChanseyText':   'PokecenterChanseyText',
-    # Oak's Lab interactive text scripts (only text_asm routines belong here)
-    'OaksLabRivalText':                         'OaksLabRivalText',
-    'OaksLabEeveePokeBallText':                 'OaksLabEeveePokeBallText',
-    'OaksLabOak1Text':                          'OaksLabOak1Text',
-    'OaksLabPokedexText':                       'OaksLabPokedexText',
-    'OaksLabGirlText':                          'OaksLabGirlText',
-    'OaksLabScientistText':                     'OaksLabScientistText',
-    'OaksLabOakDontGoAwayYetText':              'OaksLabOakDontGoAwayYetText',
-    'OaksLabRivalIllTakeYouOnText':             'OaksLabRivalIllTakeYouOnText',
-    'OaksLabRivalSmellYouLaterText':            'OaksLabRivalSmellYouLaterText',
-    'OaksLabRivalFedUpWithWaitingText':         'OaksLabRivalFedUpWithWaitingText',
-    'OaksLabOakChooseMonText':                  'OaksLabOakChooseMonText',
-    'OaksLabRivalWhatAboutMeText':              'OaksLabRivalWhatAboutMeText',
-    'OaksLabOakBePatientText':                  'OaksLabOakBePatientText',
-    'OaksLabRivalReceivedMonText':              'OaksLabRivalReceivedMonText',
-    'OaksLabPlayerReceivedMonText':             'OaksLabPlayerReceivedMonText',
-    'OaksLabPikachuDislikesPokeballsText1':     'OaksLabPikachuDislikesPokeballsText1',
-    'OaksLabPikachuDislikesPokeballsText2':     'OaksLabPikachuDislikesPokeballsText2',
 }
 
 # ---------------------------------------------------------------------------
