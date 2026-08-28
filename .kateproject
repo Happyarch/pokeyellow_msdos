@@ -1,0 +1,32 @@
+{
+    "name": "pokeyellow_msdos",
+    "files": [
+        {
+            "git": 1
+        }
+    ],
+    "lspclient": {
+        "servers": {
+            "nasm-lsp": {
+                "command": [
+                    "asm-lsp"
+                ],
+                "rootIndicationFileNames": [
+                    ".asm-lsp.toml"
+                ],
+                "highlightingModeRegex": "^(Intel x86 \\(NASM\\)|.*[aA]ssembl.*)$"
+            },
+            "rgbds-lsp": {
+                "command": [
+                    "rgbds-lsp"
+                ],
+                "rootIndicationFileNames": [
+                    "pokeyellow.sym",
+                    "layout.link",
+                    "rgbdscheck.asm"
+                ],
+                "highlightingModeRegex": "^(Intel x86 \\(NASM\\)|.*[aA]ssembl.*|.*Z80.*)$"
+            }
+        }
+    }
+}

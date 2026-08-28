@@ -1,0 +1,14 @@
+version = "0.1"
+assembler = "nasm"
+instruction_set = "x86"
+
+[opts]
+compiler = "nasm"
+compile_flags_txt = [
+  "-f", "coff",
+  "-I", "include/",
+  "-I", ".",
+  "-O0"
+]
+diagnostics = true
+default_diagnostics = true

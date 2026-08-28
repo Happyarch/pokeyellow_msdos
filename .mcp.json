@@ -14,6 +14,18 @@
         "mcp"
       ],
       "command": "stigmergy"
+    },
+    "nasm-lsp": {
+      "command": "python3",
+      "args": [
+        "dos_port/tools/asm_lsp_mcp/server.py"
+      ]
+    },
+    "rgbds-lsp": {
+      "command": "python3",
+      "args": [
+        "tools/rgbds_lsp_mcp/server.py"
+      ]
     }
   }
 }
