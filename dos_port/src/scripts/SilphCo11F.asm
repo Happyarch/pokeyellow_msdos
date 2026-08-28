@@ -32,7 +32,7 @@ extern SilphCo11TrainerHeader0    ; assets/trainer_headers.inc
 extern SilphCo11TrainerHeaders    ; assets/trainer_headers.inc
 
 global SilphCo11FDefaultScript
-global SilphCo10FGiovanniILostAgainText
+global SilphCo11FGiovanniILostAgainText
 global SilphCo11FBeautyText
 global SilphCo11FGateCallbackScript
 global SilphCo11FGiovanniAfterBattleScript
@@ -401,8 +401,8 @@ SilphCo11FGiovanniStartBattleScript:
     mov esi, wStatusFlags3
     or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
     or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
-    mov esi, SilphCo10FGiovanniILostAgainText
-    mov edx, SilphCo10FGiovanniILostAgainText   ; pret: ld de, SilphCo10FGiovanniILostAgainText — SaveEndBattleTextPointers takes it in EDX
+    mov esi, SilphCo11FGiovanniILostAgainText
+    mov edx, SilphCo11FGiovanniILostAgainText   ; pret: ld de, SilphCo11FGiovanniILostAgainText — SaveEndBattleTextPointers takes it in EDX
     call SaveEndBattleTextPointers
     mov al, [ebp + hSpriteIndex]
     mov [ebp + wSpriteIndex], al
@@ -775,8 +775,8 @@ SilphCo11FBeautyText:
 SilphCo11FGiovanniText:
     text_far _SilphCo11FGiovanniText
     text_end
-SilphCo10FGiovanniILostAgainText:
-    text_far _SilphCo10FGiovanniILostAgainText
+SilphCo11FGiovanniILostAgainText:
+    text_far _SilphCo11FGiovanniILostAgainText
     text_end
 SilphCo11FGiovanniYouRuinedOurPlansText:
     text_far _SilphCo11FGiovanniYouRuinedOurPlansText

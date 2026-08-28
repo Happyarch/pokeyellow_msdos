@@ -473,12 +473,31 @@
 %define MOD_EVASION                  5
 %define NUM_STAT_MODS                8   ; const_value after const_skip 2
 
+; --- battle classes (wIsInBattle values, constants/battle_constants.asm) ---
+%define WILD_BATTLE                  1
+%define TRAINER_BATTLE               2
+%define LOST_BATTLE                  0xFF
+
 ; --- battle type constants (wBattleType values) ---
 %define BATTLE_TYPE_NORMAL           0
 %define BATTLE_TYPE_OLD_MAN          1
 %define BATTLE_TYPE_SAFARI           2
 %define BATTLE_TYPE_RUN              3
 %define BATTLE_TYPE_PIKACHU          4
+
+; --- tileset constants (constants/tileset_constants.asm) ---
+%define MAP_TILESET_SIZE             0x60
+
+; --- trainer data structure fields (constants/trainer_data_constants.asm) ---
+%define TRAINER_EVENT_FLAG_BIT       0
+%define TRAINER_VIEW_RANGE           1
+%define TRAINER_EVENT_FLAG_POINTER   2
+%define TRAINER_BEFORE_BATTLE_TEXT   4
+%define TRAINER_AFTER_BATTLE_TEXT    6
+%define TRAINER_WON_BATTLE_TEXT      8
+%define TRAINER_LOST_BATTLE_TEXT     10
+%define TRAINER_STRUCT_SIZE          12
+
 
 ; --- damage limits before type effectiveness ---
 %define MIN_NEUTRAL_DAMAGE           2

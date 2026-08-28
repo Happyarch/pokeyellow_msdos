@@ -406,7 +406,7 @@ HandlePartyMenuInput:
 .swappingPokemon:
     test bl, PAD_B                              ; bit B_PAD_B,b
     jz .handleSwap
-.cancelSwap:                                    ; the B button was pressed
+    ; cancel swap if the B button was pressed
     call ErasePartyMenuCursors
     xor al, al
     mov [ebp + wMenuItemToSwap], al
