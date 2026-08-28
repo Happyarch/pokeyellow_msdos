@@ -333,13 +333,13 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
 
 ## Stage B — input, dialog and idle-path structure (A5, A6, A9, N1, N5)
 
-- [ ] B.1 delete the top-of-loop `call UpdateSprites`; restore pret's four
+- [x] B.1 delete the top-of-loop `call UpdateSprites`; restore pret's four
   sites: `.noDirection` (after the res/zero block), `.walkStart` head
   (.noDirectionChange position — before the surf-state test), `.moveAhead`
   (after `IsSpinning`), and the dialog path (B.4). Drop `.handleDirection`'s
   direct facing/anim writes (`mov [W_SPRITE_PLAYER_FACING_DIR], dh` and the
   `.checkPADDown` dh setup) — pret lets the next `UpdateSprites` derive facing.
-- [ ] B.2 snapshot the joypad edge for the loop: capture `hJoyPressed` into a
+- [x] B.2 snapshot the joypad edge for the loop: capture `hJoyPressed` into a
   port-local latch right after `OverworldLoop`'s first `DelayFrame` (before the
   second `DelayFrame`'s `joypad_update` clears it), and read START/A from that
   latch on the non-simulated path (pret: `hJoyPressed`), from `hJoyHeld` on the
@@ -347,10 +347,10 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
   `DiscardButtonPresses` mirror (joypad-level) as the DISABLE_JOYPAD answer and
   delete the whole-branch `.checkJoyDisable` gate once B.4's A-path gates
   exist (lockstep equivalence verified — see ledger A6).
-- [ ] B.3 during `BIT_SCRIPTED_MOVEMENT_STATE`, run the START check (pret's
+- [x] B.3 during `BIT_SCRIPTED_MOVEMENT_STATE`, run the START check (pret's
   scripted arm reads `hJoyHeld` and does NOT skip it); A still falls to the
   D-pad path via the restored `IsPlayerCharacterBeingControlledByGame` gate.
-- [ ] B.4 restore the `.displayDialogue` tail shared by START and A paths:
+- [x] B.4 restore the `.displayDialogue` tail shared by START and A paths:
   `call GetTileAndCoordsInFrontOfPlayer` (predef → direct-entry per port
   convention), `call UpdateSprites`, `bit BIT_TURNING → .checkForOpponent`,
   `bit BIT_SEEN_BY_TRAINER → .checkForOpponent`, standing-tile store
@@ -360,21 +360,21 @@ BIT_STANDING_ON_WARP` (both arms) → `jp nc, CheckWarpsNoCollision` → (scan) 
   `.checkForOpponent`: `cmp wCurOpponent,0 / jne <battle tail> / jmp
   OverworldLoop` — replacing the "restart loop and let the poll catch it"
   path for dialog-seeded battles.
-- [ ] B.5 A-path pret shape before the hidden-event scan: `bit
+- [x] B.5 A-path pret shape before the hidden-event scan: `bit
   BIT_UNKNOWN_5_2 → .noDirection` (or rely on the joypad mirror — pick one,
   annotate), `call IsPlayerCharacterBeingControlledByGame / jnz
   .checkForOpponent`, then the scan. Keep the DoSignInteraction /
   CheckNPCInteraction split (DEVIATION{temporary} already on DoSignInteraction).
-- [ ] B.6 no-op outcomes return like pret: hidden-event handled → `jmp
+- [x] B.6 no-op outcomes return like pret: hidden-event handled → `jmp
   OverworldLoop` (frame consumed); scan found nothing → `jmp OverworldLoop`
   (pret `jp z, OverworldLoop`), NOT fall-through to D-pad; delete
   `.waitAReleased` and the `.interactionDone` stall (edge latch makes them
   unnecessary). Keep the DEBUG dump hooks (re-point them at the new tail).
-- [ ] B.7 N1 `.noDirection`: add `and byte [wMiscFlags], ~(1<<BIT_TURNING)
+- [x] B.7 N1 `.noDirection`: add `and byte [wMiscFlags], ~(1<<BIT_TURNING)
   & 0xFF`, `mov byte [wPikachuCollisionCounter], 0`, and make the lastStop
   save conditional (`mov al,[wPlayerMovingDirection] / test al,al / jz
   .overworldLoop` shape).
-- [ ] B.8 refresh the loop-header comment block (`:1502-1513`) and the
+- [x] B.8 refresh the loop-header comment block (`:1502-1513`) and the
   trade_golden dump note (it leans on the top-of-loop UpdateSprites).
 
 ## Stage C — battle-entry and warp-scan tails (A8, S5)

@@ -47,6 +47,8 @@ TILESET_SHIP_PORT   equ 14          ; Vermilion Port
 W_D472                      equ 0xE240   ; [WRAM-expansion shifted]
 W_PIKACHU_SPAWN_STATE_FLAGS equ 0xE23F   ; [WRAM-expansion shifted]
 OVERWORLD_DOOR_TILE         equ 0x0B   ; pret: door tile in tileset 0 (PlayMapChangeSound)
+; N4: wTilePlayerStandingOn pret 0xCF0E -> port 0xDCDC (WRAM growth: +0xDCE)
+%define wTilePlayerStandingOn 0xDCDC
 
 extern DelayFrame                    ; src/home/vblank.asm
 extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/rOBP1
@@ -60,6 +62,7 @@ extern HandleLedges                    ; src/engine/overworld/ledges.asm
 extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real, linked — OW-A.6)
 extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/player_state.asm
 extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/player_state.asm
+extern DisplayTextID                    ; src/home/text_script.asm (B.4)
 extern MapScriptPointers                  ; assets/map_scripts.inc
 extern TrainerMapScript                   ; src/scripts/trainer_map_script.asm (Stage 1b sight gate)
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
@@ -1507,35 +1510,40 @@ EnterMap:
 
 ; ---------------------------------------------------------------------------
 ; OverworldLoop — player-movement frame loop.
-; Pret ref: home/overworld.asm:OverworldLoop / OverworldLoopLessDelay (the
-; movement-relevant subset; no menus, warps, NPCs, battles, or scripts yet).
-;
-; Cadence matches the original: two DelayFrame calls per iteration, then one
-; AdvancePlayerSprite (2 px scroll) — so a 16 px step takes ~16 frames.
+; Pret ref: home/overworld.asm:OverworldLoop / OverworldLoopLessDelay.
+; Faithful cadence: two DelayFrames per iteration (one at OverworldLoop head,
+; one at OverworldLoopLessDelay head), then one AdvancePlayerSprite per
+; wWalkCounter tick (2 px scroll, 8 ticks/tile → 16 frames/tile).
 ;
 ; State machine:
-;   - mid-walk (wWalkCounter != 0): keep advancing the sprite.
-;   - idle: read held D-pad; on a press, set the step vector + facing, run the
-;     land collision check, and (if passable) start an 8-frame walk.
+;   - mid-walk (wWalkCounter != 0): IsSpinning → UpdateSprites → DoBikeSpeedup
+;     → AdvancePlayerSprite → dead WarpScan.
+;   - idle: JoypadOverworld → Safari/ script-warp / fly-warp / wCurOpponent poll
+;     → trainer-sight gate → joy latch → START/A (with .displayDialogue tail
+;     shared) → D-pad → turn-delay / collision → walk.
+; UpdateSprites is NOT called at the top; pret calls it at four late sites
+; (.noDirection, .noDirectionChange/.walkStart, .moveAhead, .displayDialogue)
+; — B.1, A5.
 ; ---------------------------------------------------------------------------
 OverworldLoop:
-    ; pret's OverworldLoop is `call DelayFrame` and nothing else. Two of the three
-    ; things the port had here MOVED on 2026-08-22 to the positions pret gives
-    ; them: the wCurOpponent battle-entry poll is now right after the
-    ; fly/dungeon-warp test (pret :65-67), and JoypadOverworld (pret :49) took over
-    ; the step-vector clears plus ForceBikeDown / AreInputsSimulated.
-    ; UpdateSprites advance player facing + walk animation
-    call UpdateSprites
+    ; pret: OverworldLoop is `call DelayFrame` and nothing else (home/overworld.asm:43).
     call DelayFrame
+    ; B.2: snapshot hJoyPressed (edge) before OverworldLoopLessDelay's
+    ; joypad_update clears it. Non-simulated START/A reads this latch;
+    ; scripted path reads hJoyHeld.
+    mov al, [ebp + hJoyPressed]
+    mov [overworld_joy_latch], al
 %ifdef DEBUG_TRADE_GOLDEN
     ; in_game_trade golden photograph (armed by the Route2TradeHouse script shim
     ; the instant DoInGameTradeDialogue returned): taken HERE, one full loop
-    ; iteration later — UpdateSprites above has recomputed the image indices the
-    ; dialog left at $FF (hidden) and the DelayFrame republished OAM, so the
-    ; frame matches the mGBA golden's "closing box dismissed, stable idle
-    ; overworld, sprites visible" dump point (measured 2026-08-23: dumping at
-    ; the A-release point photographed wUpdateSpritesEnabled=1 but every
-    ; state1 IMAGEINDEX still $FF and an empty $FE00).
+    ; iteration after the dialog's .displayDialogue tail — that tail's
+    ; UpdateSprites (B.1/B.4) has recomputed the image indices the dialog left
+    ; at $FF (hidden) and the following DelayFrame (OverworldLoop head) has
+    ; republished OAM, so the frame matches the mGBA golden's "closing box
+    ; dismissed, stable idle overworld, sprites visible" dump point (measured
+    ; 2026-08-23: dumping at the old A-release stall photographed
+    ; wUpdateSpritesEnabled=1 but every state1 IMAGEINDEX still $FF and an
+    ; empty $FE00 — B.6 removed that stall, the recompute is now in the tail).
     cmp byte [trade_golden_dump_armed], 1
     jne .noTradeGoldenDump
     call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
@@ -1710,131 +1718,153 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; 2026-08-22 as ledge_hop, surf_round_trip and route17_trainer_battle each
     ; landing the player exactly one tile short of the golden, with ledge_hop's
     ; wSimulatedJoypadStatesEnd drained to 0 where the ROM still held PAD_DOWN.
-    movzx eax, byte [ebp + hJoyHeld]
+    ; B.2: select joy source — pret reads hJoyPressed when not simulating,
+    ; hJoyHeld when simulating. Port snapshots hJoyPressed at OverworldLoop
+    ; top (overworld_joy_latch) before second DelayFrame clears it.
     test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
-    jnz .checkPADDown                               ; scripted step: skip START/A, go to D-pad
-.checkJoyDisable:
-    test byte [ebp + wStatusFlags5], (1 << BIT_DISABLE_JOYPAD)
-    jnz .noDirection                            ; input suppressed during warp-arrival window
-
-    ; START-press: open the start menu (pret: OverworldLoopLessDelay TEXT_START_MENU).
-    ; Read from hJoyHeld like the A-press below; DisplayStartMenu's close path waits
-    ; for START release before returning, so a held START can't re-open it next frame.
+    jnz .scriptedJoy
+    mov al, [overworld_joy_latch]                ; edge (hJoyPressed snapshot)
+    jmp .gotJoy
+.scriptedJoy:
+    mov al, [ebp + hJoyHeld]                     ; level, scripted uses held
+.gotJoy:
+    ; B.3: START is checked even when scripted (pret does not skip it)
     test al, PAD_START
     jz .checkAPress
-    call DisplayStartMenu
-    jmp OverworldLoop
+    ; START pressed — pret: xor a / ldh [hTextID],a / jp .displayDialogue
+    xor al, al
+    mov [ebp + hTextID], al
+    jmp .displayDialogue
 .checkAPress:
-
-    ; A-press: check for NPC or sign. EAX = hJoyHeld (level-triggered, reliable).
     test al, PAD_A
     jz .checkPADDown
-    ; pret order: on A-press CheckForHiddenEventOrBookshelfOrCardKeyDoor runs FIRST
-    ; (home/overworld.asm:OverworldLoop). hItemAlreadyFound == 0 → a hidden event or
-    ; bookshelf consumed the press: return to OverworldLoop without the sprite/sign
-    ; scan. $ff → nothing found (or a card-key door), so fall through to the scan.
+    ; A pressed — B.5 gates: BIT_UNKNOWN_5_2 → .noDirection,
+    ; IsPlayerCharacterBeingControlledByGame → .checkForOpponent
+    test byte [ebp + wStatusFlags5], (1 << BIT_UNKNOWN_5_2)
+    jnz .noDirection
+    call IsPlayerCharacterBeingControlledByGame
+    jnz .checkForOpponent
     call CheckForHiddenEventOrBookshelfOrCardKeyDoor
     cmp byte [ebp + hItemAlreadyFound], 0
-    jz .interactionDone                        ; hidden event/bookshelf handled → skip scan
-    ; pret order (OverworldLoop A-press): zero wd435, run the complete
-    ; IsSpriteOrSignInFrontOfPlayer (sign branch, counter-range extension, then
-    ; the sprite scan), gate on [hTextID] != 0 — pret home/overworld.asm:95-99.
-    ; (pret then runs Func_0ffe / IsPlayerTalkingToPikachu and DisplayTextID;
-    ; the port's display split below is the documented dispatcher deviation —
-    ; see DoSignInteraction's DEVIATION{class=temporary}.)
-    mov byte [ebp + wd435], 0                  ; xor a / ld [wd435], a
+    je OverworldLoop                             ; pret: jp z, OverworldLoop (handled)
+    mov byte [ebp + wd435], 0                    ; xor a / ld [wd435],a
     call IsSpriteOrSignInFrontOfPlayer
     call Func_0ffe
-    mov al, [ebp + hTextID]                    ; ldh a, [hTextID]
-    test al, al                                ; and a
-    jz .checkPADDown                           ; jp z, OverworldLoop — nothing found
-    ; Route by id — pret DisplayTextID's sprite-vs-textID rule (cp wNumSprites:
-    ; id <= wNumSprites → sprite slot, else a sign/board text id).
-    cmp al, [ebp + wNumSprites]
-    jbe .checkNPC
-    call DoSignInteraction
-    jmp .interactionDone
-.checkNPC:
-    call CheckNPCInteraction                   ; the port's display half (re-detects, then displays)
+    mov al, [ebp + hTextID]
     test al, al
-    jz .checkPADDown                           ; scan disagreement → fall to D-pad
-.interactionDone:
+    jz OverworldLoop                             ; pret: jp z, OverworldLoop (nothing)
+    ; fall through to shared tail — sign vs NPC dispatch inside .displayDialogue
+    jmp .displayDialogue
+; --- B.4 shared tail -----------------------------------------------------
+.displayDialogue:
+    ; pret: predef GetTileAndCoordsInFrontOfPlayer / call UpdateSprites
+    call _GetTileAndCoordsInFrontOfPlayer        ; pret predef GetTileAndCoordsInFrontOfPlayer → direct entry
+    call UpdateSprites                           ; B.1 fourth site
+    test byte [ebp + wMiscFlags], (1 << BIT_TURNING)
+    jnz .checkForOpponent
+    test byte [ebp + wMiscFlags], (1 << BIT_SEEN_BY_TRAINER)
+    jnz .checkForOpponent
+    mov al, [ebp + STANDING_TILE_OFF]
+    mov [ebp + wTilePlayerStandingOn], al        ; N4 dialog half
+    ; display dispatch — pret: call DisplayTextID
+    mov al, [ebp + hTextID]
+    test al, al
+    jz .displayStartMenu
+    cmp al, [ebp + wNumSprites]
+    jbe .displayNPC
+    call DoSignInteraction
+    jmp .afterDisplay
+.displayStartMenu:
+    call DisplayStartMenu
+    jmp .afterDisplay
+.displayNPC:
+    call CheckNPCInteraction
+    jmp .afterDisplay
+.afterDisplay:
+    ; DEBUG hooks re-pointed at new tail (B.6) — no stall
 %ifdef DEBUG_PRINT_SURF_CANCEL
     cmp byte [print_surf_dump_armed], 1
-    jne .waitAReleased
+    jne .noPrintSurfDump
     call UpdateSprites
     call DelayFrame
     call DumpBackbuffer
+.noPrintSurfDump:
 %endif
 %ifdef DEBUG_POKECENTER_HEAL
     cmp byte [pokecenter_heal_dump_armed], 1
-    jne .waitAReleased
+    jne .noPokeHealDump
     call UpdateSprites
     call DelayFrame
     call DumpBackbuffer
+.noPokeHealDump:
 %endif
 %ifdef DEBUG_VENDING
     cmp byte [vending_dump_armed], 1
-    jne .waitAReleased
+    jne .noVendingDump
     call UpdateSprites
     call DelayFrame
     call DumpBackbuffer
+.noVendingDump:
 %endif
 %ifdef DEBUG_PRIZE_CORNER
     cmp byte [prize_corner_dump_armed], 1
-    jne .waitAReleased
+    jne .noPrizeDump
     call UpdateSprites
     call DelayFrame
     call DumpBackbuffer
+.noPrizeDump:
 %endif
 %ifdef DEBUG_POKEMART
     cmp byte [pokemart_dump_armed], 1
-    jne .waitAReleased
+    jne .noPokemartDump
     call UpdateSprites
     call DelayFrame
     call DumpBackbuffer
+.noPokemartDump:
 %endif
-    ; Interaction handled. Wait for A to be released before restarting to prevent
-    ; the next OverworldLoop iteration from re-triggering while A is still held.
-.waitAReleased:
-    call DelayFrame
-    test byte [ebp + hJoyHeld], PAD_A
-    jnz .waitAReleased
-    jmp OverworldLoop
+    cmp byte [ebp + wEnteringCableClub], 0
+    je .checkForOpponent
+    mov byte [ebp + wEnteringCableClub], 0
+    jmp EnterMap
+.checkForOpponent:
+    cmp byte [ebp + wCurOpponent], 0
+    je OverworldLoop
+    call NewBattle
+    pushf
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
+    popf
+    jnc CheckWarpsNoCollision
+    jmp .battleOccurred
 
-.checkPADDown:                                  ; EAX = hJoyHeld from above
+.checkPADDown:                                  ; AL = joy for this frame (latch or held)
     test al, PAD_DOWN
     jz .checkUp
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 1
     mov dl, PLAYER_DIR_DOWN
-    mov dh, SPRITE_FACING_DOWN
     jmp .handleDirection
 .checkUp:
     test al, PAD_UP
     jz .checkLeft
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0xFF   ; -1
     mov dl, PLAYER_DIR_UP
-    mov dh, SPRITE_FACING_UP
     jmp .handleDirection
 .checkLeft:
     test al, PAD_LEFT
     jz .checkRight
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0xFF   ; -1
     mov dl, PLAYER_DIR_LEFT
-    mov dh, SPRITE_FACING_LEFT
     jmp .handleDirection
 .checkRight:
     test al, PAD_RIGHT
     jz .noDirection                          ; nothing held → idle (stop animating)
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 1
     mov dl, PLAYER_DIR_RIGHT
-    mov dh, SPRITE_FACING_RIGHT
 
 .handleDirection:
-    ; Always commit the new direction/facing — this happens even on turn-only presses.
+    ; B.1: pret lets UpdateSprites derive facing/anim from wPlayerDirection;
+    ; handleDirection only commits the direction. The facing writes and dh
+    ; setup were port-added and are removed.
     mov [ebp + wPlayerDirection],         dl
-    mov [ebp + wPlayerMovingDirection],  dl
-    mov [ebp + W_SPRITE_PLAYER_FACING_DIR], dh
 
     ; pret: bit BIT_SCRIPTED_MOVEMENT_STATE, a / jr nz, .noDirectionChange
     ; Scripted movement bypasses the 180° turn-delay. The bit is NOT consumed
@@ -1869,10 +1899,17 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp OverworldLoop                         ; turn only — no step
 
 .walkStart:
-    ; OW-A.6 (pret .noDirectionChange, home/overworld.asm:203-226): while surfing
-    ; (wWalkBikeSurfState == 2) collision routes through CollisionCheckOnWater;
-    ; on land through CollisionCheckOnLand. Inert in today's live build — nothing
-    ; sets state 2 until Surf item-use / ForceBikeOrSurf links (player_gfx.asm).
+    ; Pret: .noDirectionChange (home/overworld.asm:201-204) — B.1 second site.
+    ; wPlayerDirection → wPlayerMovingDirection, then UpdateSprites (derives
+    ; facing/anim). Facing is NOT set directly in .handleDirection any more.
+    mov al, [ebp + wPlayerDirection]
+    mov [ebp + wPlayerMovingDirection], al
+    call UpdateSprites
+    ; OW-A.6 (pret .noDirectionChange tail, home/overworld.asm:205-226): while
+    ; surfing (wWalkBikeSurfState == 2) collision routes through
+    ; CollisionCheckOnWater; on land through CollisionCheckOnLand. Inert in
+    ; today's live build — nothing sets state 2 until Surf item-use /
+    ; ForceBikeOrSurf links (player_gfx.asm).
     cmp byte [ebp + wWalkBikeSurfState], 2 ; surfing?
     jne .collisionOnLand
     call CollisionCheckOnWater                ; CF=1 → blocked on water
@@ -1905,13 +1942,20 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp .moveAhead2                            ; pret: jr .moveAhead2 — advance immediately, no extra delay
 
 .noDirection:
-    ; Save the last-used moving direction so the next press can check for a turn.
-    ; (Pret: .noDirectionButtonsPressed — saves wPlayerMovingDirection to
-    ; wPlayerLastStopDirection, zeroes moving dir, sets wCheckFor180DegreeTurn=1.)
-    mov al, [ebp + wPlayerMovingDirection]
-    mov [ebp + wPlayerLastStopDirection], al
-    mov byte [ebp + wPlayerMovingDirection], 0
-    mov byte [ebp + W_CHECK_FOR_TURN], 1
+    ; Pret: .noDirectionButtonsPressed (home/overworld.asm:125-141)
+    ; B.1: UpdateSprites restored here (first of four pret sites).
+    ; B.7/N1: res BIT_TURNING, zero wPikachuCollisionCounter, and make the
+    ; lastStop save conditional (pret ands and jzs; port was unconditional).
+    call UpdateSprites
+    and byte [ebp + wMiscFlags], ~(1 << BIT_TURNING) & 0xFF ; res BIT_TURNING,[hl]
+    mov byte [ebp + wPikachuCollisionCounter], 0          ; xor a / ld [wPikachuCollisionCounter],a
+    mov byte [ebp + W_CHECK_FOR_TURN], 1                  ; ld a,1 / ld [wCheckFor180DegreeTurn],a
+    mov al, [ebp + wPlayerMovingDirection]                ; ld a,[wPlayerMovingDirection]
+    test al, al
+    jz .noDirectionDone
+    mov [ebp + wPlayerLastStopDirection], al              ; ld [wPlayerLastStopDirection],a
+    mov byte [ebp + wPlayerMovingDirection], 0            ; xor a / ld [wPlayerMovingDirection],a
+.noDirectionDone:
     jmp OverworldLoop
 
 .moveAhead:
@@ -1922,12 +1966,9 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; spinner-tile blink that carries the player across a Rocket HQ / Viridian Gym
     ; floor — had nowhere to be called from and the translated LoadSpinnerArrowTiles
     ; sat with zero callers.
-    ;
-    ; pret's second call here, `call UpdateSprites`, is NOT restored: the port
-    ; already runs UpdateSprites once per iteration at the top of OverworldLoop
-    ; (a pre-existing placement deviation, not one introduced here), so calling it
-    ; again would advance the walk animation twice on every mid-walk frame.
+    ; B.1: UpdateSprites restored here (third site, after IsSpinning).
     call IsSpinning
+    call UpdateSprites
 .moveAhead2:
     ; pret .moveAhead2 head (home/overworld.asm:243-248): clear the in-place-turn
     ; flag + Pikachu-collision grace counter, then the bike double-step, then
@@ -5110,5 +5151,13 @@ LoadDestinationWarpPosition:
     pop esi
     pop eax
     ret
+
+; --- port-local latch for B.2: hJoyPressed snapshot (edge) -------------------
+; Captured after OverworldLoop's first DelayFrame, before the second
+; DelayFrame's joypad_update clears hJoyPressed. Read for START/A on the
+; non-simulated path (pret: hJoyPressed); scripted path reads hJoyHeld.
+section .data
+overworld_joy_latch: db 0
+section .text
 
 
