@@ -1,4 +1,4 @@
-# Current Plan: home/overworld.asm pret realignment
+# Plan: home/overworld.asm pret realignment (completed 2026-08-29)
 
 > Born 2026-08-28 from a full-file audit: pret `home/overworld.asm` (2,325 lines)
 > and `dos_port/src/home/overworld.asm` (5,098 lines) read end-to-end and compared
