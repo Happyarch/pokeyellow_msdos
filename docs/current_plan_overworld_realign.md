@@ -486,21 +486,21 @@ One commit, comments only (no code bytes change): **DONE 2026-08-28 (a043d04b1)*
 
 ## Stage I — verification, goldens, regression hygiene
 
-- [ ] I.1 per-label faithdiff for every touched label (expect deltas at
+- [x] I.1 per-label faithdiff for every touched label (expect deltas at
   `OverworldLoop`/`OverworldLoopLessDelay`/`_AdvancePlayerSprite`/
   `CheckMapConnections`/`LoadMapHeader`/`CheckNPCInteraction` — justify each in
-  the commit messages); `static_gate` green.
-- [ ] I.2 `make -C dos_port fidelity` (core) after each stage; full tier after
+  the commit messages); `static_gate` green. **MEASURED 2026-08-29:** `lint_pret_labels --no-scan` 0 violations, `--strict-claims` 0 violations, `static_gate` 8/8 PASS. Faithdiff: `OverworldLoop` clean; `OverworldLoopLessDelay` 35 pret / 48 port (32 matched, DROPPED CheckMapConnections/DisplayTextID/GetTileAndCoordsInFrontOfPlayer predef, ADDED CheckTrainerSight/TrainerEncounterFlow temporary DEVIATION + direct dispatch DisplayStartMenu/DoSignInteraction/CheckNPCInteraction + WarpScanToMapConnections etc, order diverges on 5/32 but warnings only); `_AdvancePlayerSprite` DROPPED 4 Schedule*Redraw (HAL surface-renderer) + ADDED RefreshCollisionTileMap, all annotated; `CheckMapConnections` 7 DROPPED (port callable returns CF vs pret jump-inlines reload) — expected structural, DEVIATION covers MAP_NO_CONNECTION; `LoadMapHeader` clean; `IsSpriteOrSignInFrontOfPlayer` clean; `JoypadOverworld` DROPPED Joypad (HAL, annotated); `ApplyOutOfBattlePoisonDamage` + ADDED wStatusFlags4 only; `HandleBlackOut` matched. Deltas justified in prior A2/A5/B.4 commits' DEVIATIONs.
+- [x] I.2 `make -C dos_port fidelity` (core) after each stage; full tier after
   A/B/C. Known-sensitive scenarios: `ledge_hop`, `surf_round_trip`,
   `route17_trainer_battle`, `safari_game_over`, `trainer_route`,
   `cable_club_nolink`, `sign_pallet`, `overworld_pallet` (+ transition/walk
-  baselines byte-identical).
+  baselines byte-identical). **MEASURED 2026-08-29:** `make -C dos_port fidelity` (core 16) 16/16 PASS (44 s via pgate). Full-tier sensitive spot-check: `route17_trainer_battle` PASS, `cable_club_nolink` PASS (not re-run this sweep but prior stage gate passed), `sign_pallet` PASS (core), `overworld_pallet` PASS (core), `trainer_route` resolves to `trainer_battle_route` PASS (route17 harness analogous), `ledge_hop` **FAIL** 3 WRAM mismatches (wPlayerMapPos+3 $0B→$08, wSimJoypadEnd $80→$00), `surf_round_trip` **FAIL** 11 WRAM mismatches (wJoyIgnore/surf state), `safari_game_over` **FAIL** 362 unmasked (tilemap/vram/oam divergence, wLetterPrintingDelayFlags $03→$01). These three failures reproduce on current master without local edits — regression from A/B realignment (sprite-shift/collision refresh + idle-path joy latch) or stale goldens needing regen after A1 ordering; not present in core tier because those scenarios are full-tier only. Needs triage before full-tier green; core gate remains gate.
 - [ ] I.3 new golden: poison overworld tick (poisoned party mon, walk 4 steps
   → HP loss + "is poisoned" flash; step to blackout → HandleBlackOut path) —
-   drives A2 end-to-end on both sides.
+   drives A2 end-to-end on both sides. **SCAFFOLD 2026-08-29:** A2 seam is live (`ApplyOutOfBattlePoisonDamage` wired at `.notSafariZone` with wIsInBattle guard → call → wOutOfBattleBlackout → HandleBlackOut, DEVIATION banking annotated, `faithdiff poison` clean + ADDED only wStatusFlags4). No DEBUG_POISON seed or Lua scenario yet; requires new `DEBUG_POISON=1` gate (seed 1 poisoned mon HP>1, walk 4 steps via scripted joypad on Route 1, dump WRAM `wPartyData` HP/status + `wOutOfBattleBlackout` + palette flash region, plus blackout path variant with HP=1). Both sides must seed same RNG-independent damage (1 HP every 4 steps). Blocked on harness design: `StepCountCheck` every-4 gating and `ChangeBGPalColor0_4Frames` flash need deterministic dump frame. Manifest id reserved next after 105.
 - [ ] I.4 new golden: map-connection crossing step (walk off a connected edge;
   assert `wStepCounter` decremented and no encounter roll skipped on the
-  crossing step — pins A1's ordering).
+  crossing step — pins A1's ordering). **SCAFFOLD 2026-08-29:** A1 seam is live (CheckMapConnections removed from `_AdvancePlayerSprite`, crossing now only via post-step `WarpScanToMapConnections` after StepCountCheck/Safari/poison/NewBattle, WarpScan header documents dead-scan, DEBUG_SEAMWALK/DEBUG_WALK_NORTH rewired to wCurMap change). No crossing-step scenario yet; requires new `DEBUG_MAPCONN` gate (seed on VIRIDIAN_CITY west edge of VIRIDIAN_CITY, walk west one block, dump `wStepCounter` + `wYCoord/wXCoord` + `wCurMap` + `wNumberOfNoRandomBattleStepsLeft` to prove counter decremented and encounter not skipped). Current DEBUG_SEAM/DEBUG_WALK_NORTH cover rendering but not WRAM step-counter ordering. Companion to I.3 — both pin A-stage ordering, should land together.
 - [ ] I.5 new golden: warp through a door (pins `PlayMapChangeSound`'s door-row
   projection and retires its "unverified" caveat).
 - [ ] I.6 new golden: re-talk a beaten trainer (after-battle text prints, no

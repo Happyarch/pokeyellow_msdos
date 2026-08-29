@@ -695,12 +695,9 @@ From `docs/plans/menus.md`. Manual walk-throughs that no golden scenario covers.
 
 ## Overworld
 
-### 16. The two out-of-map clamps + the map-data extension
-From CLAUDE.md, "Temporary scaffold". The block-ID clamp in `DrawTileBlock` and
-the block-map address clamp in `LoadCurrentMapView` are both **stopgaps**. The
-real fix is extending the map data so the extended viewport reads real blocks;
-both clamps then become dead code and should be deleted. CLAUDE.md is the record
-of this work because no other file tracks it — keep it that way until it lands.
+### 16. The two out-of-map clamps + the map-data extension — **RETIRED 2026-08-16, PERMANENT (maintainer decision)**
+From AGENTS.md / CLAUDE.md, "Two out-of-map clamps — PERMANENT". The block-ID clamp in `DrawTileBlock` and
+the block-map address clamp in `LoadCurrentMapView` are **permanent rendering decisions for cells pret never shows**, not stopgaps. The earlier plan to extend map data to retire them was rejected (see AGENTS.md: "Do not remove them, and do not propose extending the map data to retire them" — verified via FRAME.BIN baseline / north-transition / walk-to-edge that out-of-map renders as clean border blocks). Map-editing tools stay for modders, not for clamp retirement. Previous wording ("stopgaps", "real fix is extending map data") measured stale 2026-08-29.
 
 ### 17. Cable-club warp seam — **CLOSED 2026-08-21 (link-cable Stage 0)**
 From `docs/plans/menus.md` (S10 item 4: "LinkMenu's `SpecialEnterMap`/
