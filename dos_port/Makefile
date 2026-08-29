@@ -5228,6 +5228,9 @@ check:
 	    $(NASM) $(NASMFLAGS) -o /dev/null $$src || exit 1; \
 	done
 	@echo "All files assembled successfully."
+	@echo "Checking DEBUG_NOCLIP smoke (N3 regression)..."
+	@$(NASM) $(NASMFLAGS) -D DEBUG_NOCLIP -o /dev/null src/home/overworld.asm || exit 1
+	@echo "DEBUG_NOCLIP smoke passed."
 
 clean:
 	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP) pkmn.sym
