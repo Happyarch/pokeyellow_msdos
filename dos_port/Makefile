@@ -1392,6 +1392,38 @@ MAPSCRIPT_MAP ?= 0x20
 MAPSCRIPT_Y   ?= 71
 MAPSCRIPT_X   ?= 7
 endif
+# Near-miss set (overworld-realign Stage J) — the four maps with skeleton body
+# but non-standard pointer tables (4 vs 5 pointers). Each has its own
+# _Script (FightingDojo_Script etc.) and its own wMapCurScript, but the sight
+# harness (lib/sight.lua) is shared — only the map/width/y/x/cur_script differ.
+ifdef DEBUG_MAPSCRIPT_SIGHT_FIGHTING_DOJO
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_FIGHTING_DOJO
+MAPSCRIPT_MAP ?= 0xB1
+MAPSCRIPT_Y   ?= 4
+MAPSCRIPT_X   ?= 5
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R12
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R12
+MAPSCRIPT_MAP ?= 0x17
+MAPSCRIPT_Y   ?= 31
+MAPSCRIPT_X   ?= 12
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R16
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R16
+MAPSCRIPT_MAP ?= 0x1B
+MAPSCRIPT_Y   ?= 12
+MAPSCRIPT_X   ?= 15
+endif
+ifdef DEBUG_MAPSCRIPT_SIGHT_R24
+DEBUG_MAPSCRIPT_SIGHT := 1
+NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT_R24
+MAPSCRIPT_MAP ?= 0x23
+MAPSCRIPT_Y   ?= 18
+MAPSCRIPT_X   ?= 5
+endif
 ifdef DEBUG_MAPSCRIPT_SIGHT
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D DEBUG_MAPSCRIPT_SIGHT

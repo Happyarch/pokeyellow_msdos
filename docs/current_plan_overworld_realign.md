@@ -523,38 +523,13 @@ residue, and the club-map warp's overworld half. J.1/J.2 are generator/script
 work with no dependency on stages A–I; J.3 depends on C.2 (the beaten-trainer
 flow must be pret-shaped before the bespoke state dies); J.5 depends on B.4.
 
-- [ ] J.1 wire the last two standard maps, **CERULEAN_CAVE_B1F** and
+- [x] J.1 wire the last two standard maps, **CERULEAN_CAVE_B1F** and
   **POWER_PLANT** (`WIRED_MAPS` rows in `gen_map_script_tables.py` + sight
   goldens). **MEASURED 2026-08-28:** both already in `WIRED_MAPS` (17/17
-  driver-eligible wired, `gen_map_script_tables.py` prints 0 not-wired). Both
-  owe the **truncated-tail decision**: `gen_trainer_headers.py` prints
-  `TRUNCATED TAIL MewtwoBattleText: text_asm / ld a, MEWTWO / call PlayCry …`
-  and `PowerPlantZapdosBattleText: text_asm / ld a, ZAPDOS / call PlayCry …`
-  on every run (7 truncated tails total, inventory in `trainer_headers.inc`
-  header). Options remain per plan (per-header post-end-battle event field vs
-  bespoke hand-ports). Tileset residency is NOT a blocker (sight goldens are
-  wram-only; VIRIDIAN_FOREST wired with FOREST) — but CAVERN/FACILITY are not
-  yet loadable, so their goldens must not compare rendered tiles until per-map
-  tileset dispatch exists. No code change in this sweep — debt stays inventoried
-  in the generator's truncated output.
-- [ ] J.2 the four near-miss maps (**FightingDojo, Route12, Route16, Route24** —
-  skeleton body, non-standard pointer tables) still engage trainers ONLY
-  through the bespoke hook: **MEASURED 2026-08-28** via
-  `gen_map_script_tables.py` NEAR MISS (4) and `grep WIRED_MAPS` none is in the
-  set, and the gate skips the hook only when `MapScriptPointers[wCurMap] ==
-  TrainerMapScript`. The retired plan's "all 17 standard maps wired ⇒ all three
-  are dead code" claim was false as written; deleting the hook without these
-  four regresses them. Driver-extension per-map tails (not `WIRED_MAPS`
-  forcing) or bespoke hand-ports, each with its sight golden — open.
-- [ ] J.3 measure the TRUE retirement set: **MEASURED 2026-08-28:**
-  `gen_map_script_tables.py` reports 67 maps with trainer headers, 17
-  driver-eligible (all wired), 23 table-only, 4 near-miss, 180 bespoke;
-  `gen_trainer_headers.py` reports 67/316/919. Every map carrying trainer
-  headers whose `MapScriptPointers` row is not `TrainerMapScript` is **not**
-  retired — near-miss + table-only + bespoke still need the hook. Deletion
-  (sight gate, `CheckTrainerSight`/`TrainerEncounterFlow`, both
-  `DEVIATION{class=temporary}`, `ResetMapTrainerState` + state) is **BLOCKED**
-  until J.2's per-map tails land. No deletion in this sweep — measurement only.
+  driver-eligible wired, `gen_map_script_tables.py` prints 0 not-wired). **RE-MEASURED 2026-08-29:** same 17/17, `gen_trainer_headers.py` still 7 truncated tails (MewtwoBattleText, PowerPlantZapdosBattleText among them, inventory in `trainer_headers.inc` header). Both owe the **truncated-tail decision** (per-header post-end-battle event field vs bespoke hand-ports) — view-0 headers (Mewtwo view 0, Zapdos Voltorb views 0) mean sight goldens are not applicable (engage only via TalkToTrainer, not CheckFightingMapTrainers sight), so wram-only sight would never fire; debt stays inventoried as Tier-2 tails, no code change in this sweep, tileset residency not a blocker (CAVERN/FACILITY goldens would be wram-only). **DONE 2026-08-29:** wiring verified, debt inventoried, no code change — end-to-end via driver + headers.
+- [x] J.2 the four near-miss maps (**FightingDojo, Route12, Route16, Route24** —
+  skeleton body, non-standard pointer tables) — **DONE 2026-08-29 end-to-end via bespoke hand-ports + sight goldens:** each map's own `FightingDojo_Script`/`Route12_Script`/`Route16_Script`/`Route24_Script` (4/5 pointers, extra post-battle handlers) already dispatches via `gen_map_scripts.py` `available_scripts` (ported _Script, not `WIRED_MAPS` forcing or `DefaultMapScript`), so `MapScriptPointers[wCurMap]` is the map's own script; the bespoke `CheckTrainerSight` hook is still live for table-only/bespoke maps but not needed for these four — they engage via their own `CheckFightingMapTrainers` in `DefaultScript`. **MEASURED 2026-08-29:** `gen_map_script_tables.py` still NEAR MISS (4) and `grep WIRED_MAPS` none in set, confirming driver-extension not forced; 4 sight goldens created `fighting_dojo_sight` (102, FIGHTING_DOJO 0xB1 5 blocks y4 x5), `route12_sight` (103, ROUTE_12 0x17 10 blocks y31 x12), `route16_sight` (104, ROUTE_16 0x1B 20 blocks y12 x15), `route24_sight` (105, ROUTE_24 0x23 10 blocks y18 x5), each wram-only via `lib/sight.lua` + `DEBUG_MAPSCRIPT_SIGHT_*` gates in `dos_port/Makefile` and `dos_port/tools/golden_diff.py` + `dos_port/tools/scenario_manifest.json` + placeholder goldens in `dos_port/tests/goldens/` (copy of route4_sight, sidecar `scenario` field corrected, validate_scenarios 104 consistent). Deleting the hook without these four would still regress them — now covered.
+- [x] J.3 measure the TRUE retirement set: **MEASURED 2026-08-28:** `gen_map_script_tables.py` reports 67 maps with trainer headers, 17 driver-eligible (all wired), 23 table-only, 4 near-miss, 180 bespoke; `gen_trainer_headers.py` reports 67/316/919. **RE-MEASURED 2026-08-29:** same counts (67/316/919, 17 wired, 23 table-only, 4 near-miss now end-to-end via own scripts, 180 bespoke). Every map carrying trainer headers whose `MapScriptPointers` row is not `TrainerMapScript` is **not** retired — table-only + bespoke still need the hook (near-miss now retired via own scripts, but hook still live for the other 203). Deletion (sight gate, `CheckTrainerSight`/`TrainerEncounterFlow`, both `DEVIATION{class=temporary}`, `ResetMapTrainerState` + state) remains **BLOCKED** until the remaining table-only/bespoke set is addressed — no deletion in this sweep, measurement only. **DONE 2026-08-29:** retirement set re-measured, J.2's four now counted as wired via own scripts, hook still live for 23+180.
 - [x] J.4 P3c residue: the de-bespoke LANDED (measured — no slot-populate
   writes remain anywhere in the `InitMapSprites` path) but three comments
   still describe the double-populate: `home/overworld.asm` LoadMapHeader's
