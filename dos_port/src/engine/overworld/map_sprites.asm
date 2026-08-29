@@ -49,6 +49,15 @@ extern MakeNPCFacePlayer
 extern LoadFontTilePatterns
 extern LoadPlayerSpriteGraphics
 extern HandleDownArrowBlinkTiming
+extern CeladonPrizeMenu                 ; src/engine/events/prize_menu.asm
+extern TextScript_GameCornerPrizeMenu   ; src/home/map_objects.asm
+extern DisplayPokemartDialogue          ; src/home/text_script.asm
+%ifdef DEBUG_PRIZE_CORNER
+extern prize_corner_dump_armed          ; src/debug/debug_dump.asm
+%endif
+%ifdef DEBUG_POKEMART
+extern pokemart_dump_armed              ; src/debug/debug_dump.asm
+%endif
 %ifdef DEBUG_SIGNTEXT
 extern DumpBackbuffer                   ; src/debug/debug_dump.asm — FRAME.BIN + GBSTATE.BIN, then exit
 %endif
@@ -710,9 +719,23 @@ CheckNPCInteraction:
     je .run_script
     cmp ebx, 0xFFFFFFFE
     je .run_trainer_talk
+    mov al, [edi]
+    cmp al, TX_SCRIPT_PRIZE_VENDOR
+    je .run_prize_vendor
+    cmp al, TX_SCRIPT_MART
+    je .run_mart
     mov esi, edi                            ; flat src ptr
     call ShowTextStream
     jmp .dialog_done
+.run_prize_vendor:
+    popad
+    push 0
+    jmp TextScript_GameCornerPrizeMenu
+.run_mart:
+    mov esi, edi                            ; ESI = TX_SCRIPT_MART byte
+    popad
+    push 0
+    jmp DisplayPokemartDialogue
 .run_trainer_talk:
     ; C.2: if this trainer's BSS beaten bit is set, show after-battle text
     ; (pret TalkToTrainer sel 6) instead of re-engaging. Unbeaten → TrainerTalkHook.
@@ -732,6 +755,9 @@ CheckNPCInteraction:
     call npc_dialog_wait_impl
     jmp .dialog_done
 .run_script:
+    mov al, [edi]
+    cmp al, TX_SCRIPT_MART
+    je .run_mart
     call edi                                ; flat text_asm routine
     mov al, [ebp + wDoNotWaitForButtonPressAfterDisplayingText]
     test al, al

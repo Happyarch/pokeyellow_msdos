@@ -548,7 +548,7 @@ DisplayChooseQuantityMenu:
     ; the hardware instead.
     call DelayFrame
     call JoypadLowSensitivity
-    movzx eax, byte [ebp + hJoyPressed]        ; newly pressed
+    movzx eax, byte [ebp + hJoy5]              ; pret: ldh a, [hJoy5]
     test al, PAD_A
     jnz .buttonAPressed
     test al, PAD_B

@@ -75,8 +75,8 @@ global kbd_text_edit
 ; ---------------------------------------------------------------------------
 ; Imported symbols
 ; ---------------------------------------------------------------------------
-extern g_kbd_text_mode     ; src/input/joypad.asm -- byte, gates kbd_isr's ring push
-extern kbd_ring_pop        ; src/input/joypad.asm -- AL=scancode AH=shift ZF=1 empty
+extern g_kbd_text_mode     ; src/input/kbd_isr.asm -- byte, gates kbd_isr's ring push
+extern kbd_ring_pop        ; src/input/kbd_isr.asm -- AL=scancode AH=shift ZF=1 empty
 extern DelayFrame          ; src/home/vblank.asm -- all registers preserved
 extern PlaceString         ; src/home/text.asm -- ESI=GB-space dest, EAX=flat src;
                             ; out: EBX=GB-space cursor pos after the terminator

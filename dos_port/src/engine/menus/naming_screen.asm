@@ -115,17 +115,17 @@ extern g_tilecache_dirty               ; ppu/ppu.asm — VRAM tile writes must s
 ; entry below and the SHA1 proof in the commit message.
 ; ---------------------------------------------------------------------------
 %if KBD_NAMING
-extern g_kbd_text_mode      ; src/input/joypad.asm — byte, gates kbd_isr's ring push
-extern kbd_ring_pop         ; src/input/joypad.asm — AL=scancode AH=shift ZF=1 empty
-extern pad_buttons          ; src/input/joypad.asm — byte, PAD_*_BIT held mask
-extern pad_dpad             ; src/input/joypad.asm — byte, PAD_*_BIT held mask
+extern g_kbd_text_mode      ; src/input/kbd_isr.asm — byte, gates kbd_isr's ring push
+extern kbd_ring_pop         ; src/input/kbd_isr.asm — AL=scancode AH=shift ZF=1 empty
+extern pad_buttons          ; src/input/kbd_isr.asm — byte, PAD_*_BIT held mask
+extern pad_dpad             ; src/input/kbd_isr.asm — byte, PAD_*_BIT held mask
 extern KbdScancodeMap       ; assets/kbd_scancode_map.inc, global'd under this same
                             ; flag by gen_kbd_naming.py (defined in src/input/
                             ; kbd_text.o, which links unconditionally)
 extern KbdScancodeMapShift  ; ditto
 extern KbdPickerChars       ; ditto — $FF-terminated KBD_NAMING picker charset
 
-SC_ENTER_KEY     equ 0x1C   ; also Start in joypad mode (src/input/joypad.asm
+SC_ENTER_KEY     equ 0x1C   ; also Start in joypad mode (src/input/kbd_isr.asm
                             ; SC_ENTER) — harmless overlap: Enter always exits
                             ; via .submitNickname, so no later JoypadLowSensitivity
                             ; call in this routine could double-fire on it

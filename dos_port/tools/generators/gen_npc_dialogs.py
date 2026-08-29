@@ -176,6 +176,22 @@ SCRIPT_OVERRIDES = {
     'FuchsiaPokecenterChanseyText':    'PokecenterChanseyText',
     'SaffronPokecenterChanseyText':    'PokecenterChanseyText',
     'CinnabarPokecenterChanseyText':   'PokecenterChanseyText',
+    # Poke Mart clerks (tools/generators/gen_marts.py / src/data/items/marts.asm):
+    # each clerk is a TX_SCRIPT_MART data stream dispatched through DisplayPokemartDialogue.
+    'ViridianMartClerkText':           'ViridianMartClerkText',
+    'PewterMartClerkText':             'PewterMartClerkText',
+    'CeruleanMartClerkText':           'CeruleanMartClerkText',
+    'VermilionMartClerkText':          'VermilionMartClerkText',
+    'LavenderMartClerkText':           'LavenderMartClerkText',
+    'CeladonMart2FClerk1Text':         'CeladonMart2FClerk1Text',
+    'CeladonMart2FClerk2Text':         'CeladonMart2FClerk2Text',
+    'CeladonMart4FClerkText':          'CeladonMart4FClerkText',
+    'CeladonMart5FClerk1Text':         'CeladonMart5FClerk1Text',
+    'CeladonMart5FClerk2Text':         'CeladonMart5FClerk2Text',
+    'FuchsiaMartClerkText':            'FuchsiaMartClerkText',
+    'CinnabarMartClerkText':           'CinnabarMartClerkText',
+    'SaffronMartClerkText':            'SaffronMartClerkText',
+    'IndigoPlateauLobbyClerkText':     'IndigoPlateauLobbyClerkText',
 }
 
 # ---------------------------------------------------------------------------

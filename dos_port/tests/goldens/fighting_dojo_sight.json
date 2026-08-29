@@ -1,5 +1,5 @@
 {
-  "description": "Route 4, player at (3,65) two tiles right of ROUTE4_COOLTRAINER_F2 (faces RIGHT, view 3) \u2014 the def_trainers-start-bit-2 header/object pairing",
+  "description": "FightingDojo, player at (4,5) two tiles right of FIGHTINGDOJO_BLACKBELT1 (faces RIGHT, view 4) — near-miss 4-pointer map, smallest width",
   "frame": 5126,
   "regions": [
     {

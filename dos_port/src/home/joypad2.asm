@@ -62,6 +62,7 @@ extern DelayFrames                    ; src/home/delay.asm — BL = frame count
 extern WaitForSoundToFinish           ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm — AL = sound id
 extern CableClub_Run                  ; src/engine/link/cable_club.asm — pret predef (Stage 3)
+extern Joypad                         ; src/home/joypad.asm — pret Joypad wrapper
 
 section .text
 
@@ -72,25 +73,7 @@ section .text
 ; Clobbers: AL, flags (mirrors pret, which only touches A/flags here).
 ; ---------------------------------------------------------------------------
 JoypadLowSensitivity:
-    ; pret opens with `call Joypad`, which computes the newly-pressed EDGE at read
-    ; time against hJoyLast. The port instead computes that edge inside
-    ; joypad_update, which runs once per DelayFrame — but every JoypadLowSensitivity
-    ; caller (options, town map, pokedex, title) does read-then-N×DelayFrame, so a
-    ; press that lands on any but the last of those frames has its edge overwritten
-    ; to 0 before the loop's next top-of-iteration read. Symptom: "holding won't
-    ; even advance one", laggy / inconsistent taps. Fix (port equivalent of pret's
-    ; `call Joypad`): recompute the edge HERE against a JoypadLowSensitivity-private
-    ; snapshot updated ONLY on JoypadLowSensitivity calls — so it survives the
-    ; caller's DelayFrames. hJoyHeld is refreshed every frame by joypad_update and
-    ; is authoritative for the current held state.
-    push ebx
-    mov al, [ebp + hJoyHeld]      ; current held buttons (fresh each DelayFrame)
-    mov bl, [jls_prev]              ; JLS's own previous snapshot
-    mov [jls_prev], al              ; snapshot updated only here (pret: hJoyLast)
-    xor bl, al
-    and bl, al                      ; pressed = (prev ^ held) & held
-    mov [ebp + hJoyPressed], bl   ; edge that survives the caller's DelayFrames
-    pop ebx
+    call Joypad
 
     mov al, [ebp + hJoy7]          ; ldh a, [hJoy7]   ; flag
     and al, al                      ; and a  — newly-pressed only, or held?
@@ -170,14 +153,9 @@ WaitForTextScrollButtonPress:
     mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
-    ; pret: predef CableClub_Run — THE entry hook into the whole cable-club
-    ; engine: CableClubLeftGameboy/RightGameboy set wLinkState = START_TRADE/
-    ; START_BATTLE during JustAMomentText, and this poll (running while that
-    ; text waits for A/B) is what dispatches into CableClub_DoBattleOrTrade.
-    ; Single-player cost: one wLinkState compare per scroll-wait frame.
-    ; DEVIATION{class=banking; pret=home/joypad2.asm:WaitForTextScrollButtonPress; behavior=call the linked CableClub_Run directly instead of through the predef dispatch table; evidence=pret predef CableClub_Run at data/predef_pointers.asm:58 and the flat single-address-space port which has no predef jump table for code predefs; lifetime=permanent flat-code boundary}
+    call JoypadLowSensitivity                   ; pret: call JoypadLowSensitivity
     call CableClub_Run
-    test byte [ebp + hJoyPressed], PAD_A | PAD_B
+    test byte [ebp + hJoy5], PAD_A | PAD_B      ; pret: ldh a, [hJoy5] / and PAD_A | PAD_B
     jz .wait
     mov al, [wtsbp_saved_c1]                      ; pret: pop af / ldh [hDownArrowBlinkCount1]
     mov [ebp + H_DOWN_ARROW_COUNT1], al
@@ -237,7 +215,6 @@ wtsbp_arrow_pos: dd (wTileMap + ARROW_OFF)
 
 section .bss
 align 1
-jls_prev:   resb 1
 ; WaitForTextScrollButtonPress: saved down-arrow blink counters (pret push af x2)
 wtsbp_saved_c1: resb 1
 wtsbp_saved_c2: resb 1

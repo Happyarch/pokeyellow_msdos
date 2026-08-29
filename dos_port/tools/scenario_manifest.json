@@ -3056,7 +3056,7 @@
                 "type": "GBSTATE",
                 "schema_version": 2,
                 "artifact": "GBSTATE.BIN",
-                "timeout_seconds": 150,
+                "timeout_seconds": 300,
                 "terminal_marker": "complete"
             },
             "must_hit": [

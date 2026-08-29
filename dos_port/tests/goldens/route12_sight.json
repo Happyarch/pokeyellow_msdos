@@ -1,6 +1,6 @@
 {
-  "description": "Route 4, player at (3,65) two tiles right of ROUTE4_COOLTRAINER_F2 (faces RIGHT, view 3) \u2014 the def_trainers-start-bit-2 header/object pairing",
-  "frame": 5126,
+  "description": "Route12, player at (31,12) two tiles left of ROUTE12_FISHER1 (faces LEFT, view 4) — near-miss 4-pointer map, mid-width LEFT case",
+  "frame": 5128,
   "regions": [
     {
       "file_offset": 0,

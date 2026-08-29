@@ -32,6 +32,7 @@ bits 32
 ; See menu-fidelity finding M-2 (corrected) / row 24.
 
 extern DelayFrame
+extern JoypadLowSensitivity          ; src/home/joypad2.asm — menu joypad sampler (home/window.asm:27)
 extern AnimatePartyMon                 ; src/engine/gfx/mon_icons.asm — icon bob (ends in DelayFrame)
 extern text_row_stride                 ; text.asm — current wTileMap row stride
 extern PlaySound                       ; src/home/audio.asm — sound id in AL
@@ -350,7 +351,8 @@ HandleMenuInput_:
 .noPartyMonAnim:
     call DelayFrame
 .getJoypadState:
-    movzx eax, byte [ebp + hJoyPressed]
+    call JoypadLowSensitivity       ; pret home/window.asm:27 (call JoypadLowSensitivity)
+    movzx eax, byte [ebp + hJoy5]   ; pret home/window.asm:28 (ldh a, [hJoy5])
     test al, al
     jnz .keyPressed
     ; no key this frame — blink the down arrow (pret: hlcoord 18,11 /

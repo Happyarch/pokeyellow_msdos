@@ -30,8 +30,8 @@ GB_TOTAL_SIZE   equ GB_SRAM_END                    ; 0x28000 (160 KiB)
 extern video_init        ; boot/video.asm
 extern pit_init          ; boot/timing.asm
 extern pit_restore       ; boot/timing.asm
-extern joypad_init       ; src/input/joypad.asm
-extern joypad_restore    ; src/input/joypad.asm
+extern input_init         ; src/input/input_hal.asm
+extern input_restore      ; src/input/input_hal.asm
 extern audio_init        ; src/audio/audio_hal.asm
 extern NetInit           ; src/net/net_hal.asm — link-cable transport bind
 extern NetShutdown       ; src/net/net_hal.asm — UART vector/PIC restore
@@ -163,7 +163,7 @@ start:
 
     call video_init          ; set VGA mode 13h
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR
-    call joypad_init         ; hook IRQ 1 (keyboard) → GB joypad state
+    call input_init          ; load POKEMON.CFG, hook IRQ 1 (keyboard) → GB joypad state
     call audio_init          ; enable the engine + GB power-on audio state
     call NetInit             ; bind the /COMx link transport (no flag: no-op)
 
@@ -846,7 +846,7 @@ cleanup:
     push eax
     call NetShutdown         ; restore the UART vector/PIC state (no-op if unbound)
     call audio_shutdown
-    call joypad_restore
+    call input_restore
     call pit_restore
     mov ax, 0x0003
     int 0x10

@@ -87,7 +87,7 @@ Acceptance criteria:
   - Background tilemap render (32×32 tilemap, SCX/SCY scroll)
   - OAM/sprite renderer (40 sprites, 8×8 and 8×16, priority)
   - Window layer
-- Joypad: DOS keyboard/INT 9h → emulated JOYP register
+- Joypad: DOS keyboard/INT 9h + DOS Game Port (0x201) → Virtual Joypad HAL (`input_hal.asm`, `kbd_isr.asm`, `gamepad_hal.asm`), extensible on-disk key rebinding via `POKEMON.CFG` (`input_cfg.asm`), and faithful pret `_Joypad`/`ReadJoypad` engine (`src/engine/joypad.asm`).
 - Save/load: DOS file I/O (INT 21h) behind resident emulated SRAM; `.dsv` v2
   format defined and shipping
 - All critical bugs categorized (`BUG_FIX_LEVEL=1` has meaningful effect)

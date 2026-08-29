@@ -98,6 +98,7 @@ extern CableClubNPC                     ; callfar
 ;   src/home/textbox.asm (linked), calling the real DisplayTextBoxID_
 ;   (src/engine/menus/text_box.asm). The interim definition here is gone.
 extern DisplayTextBoxID
+extern Joypad                           ; src/home/joypad.asm
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 
@@ -323,9 +324,8 @@ AfterDisplayingTextID:
 
 ; loop to hold the dialogue box open as long as the player keeps holding A
 HoldTextDisplayOpen:
-    ; call Joypad ; ldh a,[hJoyHeld]; bit B_PAD_A,a; jr nz,HoldTextDisplayOpen.
-    ; The port's ISR-backed joypad state is refreshed by DelayFrame.
     call DelayFrame
+    call Joypad                         ; pret: call Joypad
     mov al, [ebp + hJoyHeld]
     test al, PAD_A
     jnz HoldTextDisplayOpen
@@ -478,6 +478,9 @@ PokecenterNurseScript:
     mov [ebp + hItemPrice + 2], al
     call DisplayPokemonCenterDialogue_
     mov byte [ebp + wDoNotWaitForButtonPressAfterDisplayingText], 1
+%ifdef DEBUG_POKECENTER_HEAL
+    mov byte [pokecenter_heal_dump_armed], 1
+%endif
     ret
 
 ; ─────────────────────────────────────────────────────────────────────────────

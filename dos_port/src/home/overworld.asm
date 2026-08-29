@@ -53,6 +53,7 @@ extern DelayFrame                    ; src/home/vblank.asm
 extern LoadGBPal                     ; src/home/fade.asm — reload rBGP/rOBP0/rOBP1
                                      ; from FadePal4 - wMapPalOffset
 extern JoypadLowSensitivity          ; src/home/joypad2.asm — writes hJoy5
+extern Joypad                        ; src/home/joypad.asm — pret Joypad wrapper
 extern BankswitchCommon              ; home/bankswitch2.asm — AL = bank (flat no-op)
 extern GetTileAndCoordsInFrontOfPlayer ; engine/overworld/player_state.asm (predef
 extern BikeRidingTilesets                    ; src/data/tilesets/bike_riding_tilesets.asm
@@ -258,7 +259,7 @@ extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
 extern _AdvancePlayerSprite               ; src/engine/overworld/advance_player_sprite.asm
 extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
 extern g_audio_engine_online              ; src/home/audio.asm
-extern pad_noclip                         ; src/input/joypad.asm
+extern pad_noclip                         ; src/input/kbd_isr.asm
 extern seam_reseat                        ; src/engine/overworld/overworld.asm
 extern seam_seeded                        ; src/engine/overworld/overworld.asm
 %ifdef DEBUG_TRAINER_ROUTE
@@ -1320,7 +1321,6 @@ EnterMap:
 
     ; xor a / ld [wJoyIgnore], a
     mov byte [ebp + wJoyIgnore], 0
-    mov byte [overworld_joy_latch], 0
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate. Placed HERE, at the very end of EnterMap, not beside the
     ; other gates further up: everything above is part of entering a map, and the
@@ -1606,11 +1606,6 @@ EnterMap:
 OverworldLoop:
     ; pret: OverworldLoop is `call DelayFrame` and nothing else (home/overworld.asm:43).
     call DelayFrame
-    ; B.2: snapshot hJoyPressed (edge) across both DelayFrames into
-    ; overworld_joy_latch. Non-simulated START/A reads this latch;
-    ; scripted path reads hJoyHeld.
-    mov al, [ebp + hJoyPressed]
-    mov [overworld_joy_latch], al
 %ifdef DEBUG_TRADE_GOLDEN
     ; in_game_trade golden photograph (armed by the Route2TradeHouse script shim
     ; the instant DoInGameTradeDialogue returned): taken HERE, one full loop
@@ -1624,6 +1619,8 @@ OverworldLoop:
     ; empty $FE00 — B.6 removed that stall, the recompute is now in the tail).
     cmp byte [trade_golden_dump_armed], 1
     jne .noTradeGoldenDump
+    call UpdateSprites
+    call DelayFrame
     call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
 .noTradeGoldenDump:
 %endif
@@ -1633,12 +1630,42 @@ OverworldLoop:
     call DumpBackbuffer                    ; FRAME.BIN + GBSTATE.BIN, then exits
 .noPrintSurfDump:
 %endif
+%ifdef DEBUG_POKECENTER_HEAL
+    cmp byte [pokecenter_heal_dump_armed], 1
+    jne .noPokeHealDump
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+.noPokeHealDump:
+%endif
+%ifdef DEBUG_VENDING
+    cmp byte [vending_dump_armed], 1
+    jne .noVendingDump
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+.noVendingDump:
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+    cmp byte [prize_corner_dump_armed], 1
+    jne .noPrizeDump
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+.noPrizeDump:
+%endif
+%ifdef DEBUG_POKEMART
+    cmp byte [pokemart_dump_armed], 1
+    jne .noMartDump
+    call UpdateSprites
+    call DelayFrame
+    call DumpBackbuffer
+.noMartDump:
+%endif
 
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
-    mov al, [ebp + hJoyPressed]
-    or [overworld_joy_latch], al
     ; pret: call IsSurfingPikachuInParty / call LoadGBPal / call HandleMidJump
     ; (home/overworld.asm:47-49). All three are now faithful:
     ;
@@ -1802,12 +1829,9 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     ; 2026-08-22 as ledge_hop, surf_round_trip and route17_trainer_battle each
     ; landing the player exactly one tile short of the golden, with ledge_hop's
     ; wSimulatedJoypadStatesEnd drained to 0 where the ROM still held PAD_DOWN.
-    ; B.2: select joy source — pret reads hJoyPressed when not simulating,
-    ; hJoyHeld when simulating. Port snapshots hJoyPressed at OverworldLoop
-    ; top (overworld_joy_latch) before second DelayFrame clears it.
     test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
     jnz .scriptedJoy
-    mov al, [overworld_joy_latch]                ; edge (hJoyPressed snapshot)
+    mov al, [ebp + hJoyPressed]                  ; edge (faithful pret: ldh a, [hJoyPressed])
     jmp .gotJoy
 .scriptedJoy:
     mov al, [ebp + hJoyHeld]                     ; level, scripted uses held
@@ -2253,8 +2277,11 @@ CheckWarpsNoCollisionLoop:
     ; --- the extra check passed -------------------------------------- pret :393
     test byte [ebp + wStatusFlags7], (1 << BIT_FORCED_WARP)
     jnz WarpFound1                             ; a forced warp ignores the input test
-    ; pret: push de / push bc / call Joypad / pop bc / pop de.
-    ; DEVIATION{class=HAL; pret=home/overworld.asm:CheckWarpsNoCollision; behavior=the `call Joypad` before the held-direction test is dropped; evidence=the port `Joypad` recomputes the edge layer from hJoyInput which only ReadJoypad_ writes and which nothing in the frame loop calls, while joypad_update already runs the same pret _Joypad edge layer once per DelayFrame from the live pad state - so the call would read a stale hJoyInput and ZERO hJoyHeld, making this test never pass, and hJoyHeld is already fresh without it - the same reason every other ported `call Joypad` site drops it, see JoypadLowSensitivity in src/home/joypad2.asm; lifetime=permanent while input is polled from the PIT/keyboard ISR rather than a joypad register}
+    push edx
+    push ebx
+    call Joypad                                ; pret: push de / push bc / call Joypad / pop bc / pop de
+    pop ebx
+    pop edx
     test byte [ebp + hJoyHeld], PAD_CTRL_PAD
     jz CheckWarpsNoCollisionRetry2             ; not pressing a direction -> don't warp
     jmp WarpFound1
@@ -4060,14 +4087,12 @@ DrawTileBlock:
 ; 0, and ForceBikeDown / AreInputsSimulated ran AFTER the Safari, script-warp and
 ; fly-warp tests instead of before them.
 ;
-; DEVIATION{class=HAL; pret=home/overworld.asm:JoypadOverworld; behavior=pret's `call Joypad` is dropped; evidence=the port `Joypad` recomputes the edge layer from hJoyInput which only ReadJoypad_ writes and which nothing in the frame loop calls, while joypad_update runs that same pret _Joypad edge layer once per DelayFrame from the live pad state - calling it here would zero hJoyHeld and hJoyPressed for the rest of the iteration - and this is the established treatment of `call Joypad` across the port, see JoypadLowSensitivity in src/home/joypad2.asm; lifetime=permanent while input is polled from the PIT and keyboard ISR rather than a joypad register}
-; ---------------------------------------------------------------------------
 global JoypadOverworld
 JoypadOverworld:
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0  ; wSpritePlayerStateData1YStepVector
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0  ; wSpritePlayerStateData1XStepVector
     call RunMapScript                                  ; pret: call RunMapScript (runs only when wWalkCounter == 0)
-    ; call Joypad — dropped (port reads joypad in main loop)
+    call Joypad                                        ; pret: call Joypad (computes hJoyPressed edge across loop)
     ; Order matters: ForceBikeDown must not clobber a simulated step, and pret
     ; guarantees that by running it first.
     call ForceBikeDown
@@ -5185,13 +5210,8 @@ LoadDestinationWarpPosition:
     pop eax
     ret
 
-; --- port-local latch for B.2: hJoyPressed snapshot (edge) -------------------
-; Captured after OverworldLoop's first DelayFrame, before the second
-; DelayFrame's joypad_update clears hJoyPressed. Read for START/A on the
-; non-simulated path (pret: hJoyPressed); scripted path reads hJoyHeld.
 ; --- port-local for B1: sprite-count GB offset (pret base lives in W_OBJECT_DATA_PTR_TEMP) ---
 section .data
-overworld_joy_latch: db 0
 overworld_sprite_count_ptr: dw 0   ; GB offset of sprite_count byte, set by LoadMapHeader for InitSprites
 section .text
 

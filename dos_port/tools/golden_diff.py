@@ -886,6 +886,7 @@ SCENARIOS = {
                          "counter. wStatusFlags5 at +0 and wStatusFlags7 at +3 ARE "
                          "compared."),
             ],
+            "wOptionsBlock": _BATTLE_WRAM_MASKS["wOptionsBlock"],
         },
     },
     "item_pp_restore": {

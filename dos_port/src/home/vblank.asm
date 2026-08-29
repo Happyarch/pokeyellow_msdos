@@ -51,7 +51,7 @@ extern g_obj_over_window        ; src/ppu/ppu.asm — OBJ-vs-window z-order (GB 
 extern g_surface_redraw_cb      ; src/ppu/ppu.asm — cinematic per-frame surface-mirror hook
 extern draw_player_marker
 extern present
-extern joypad_update
+extern ReadJoypad               ; src/home/joypad.asm — pret VBlank joypad sampler (home/vblank.asm:44)
 extern pad_quit
 extern cleanup
 extern PrepareOAMData
@@ -182,7 +182,7 @@ DelayFrame:
     ; correlated at the moment of the step check — wild encounters fired only very
     ; rarely (observed: ~1 per 3 minutes of walking in grass). Restored 2026-07-10.
     call Random
-    call joypad_update
+    call ReadJoypad
 %ifdef DEBUG_AUTOKEY
     call AutoKeyDrive                   ; scripted joypad: replay a button sequence
 %endif

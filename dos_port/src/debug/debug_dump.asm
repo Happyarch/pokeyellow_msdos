@@ -78,8 +78,8 @@ LBC_CANCELLED    equ 5
 extern kbdnamecheck_marks        ; src/engine/menus/naming_screen.asm (harness)
 %endif
 %ifdef AUTOKEY_KBDSCRIPT
-extern kbd_ring_push             ; src/input/joypad.asm — In: AL=scancode AH=shift
-extern g_kbd_text_mode           ; src/input/joypad.asm — byte, 1 while a keyboard
+extern kbd_ring_push             ; src/input/kbd_isr.asm — In: AL=scancode AH=shift
+extern g_kbd_text_mode           ; src/input/kbd_isr.asm — byte, 1 while a keyboard
                                   ; text field is actually polling the ring
 %endif
 extern pal_rgb_table, bg_slot_pal, obj_slot_pal
@@ -7452,6 +7452,7 @@ BC_COLOSSEUM_MAP equ 0xF0                  ; COLOSSEUM (assets/map_dims.inc; not
     and al, dl                          ; pressed = held & ~prev
     mov [ebp + hJoyPressed], al
     mov [ebp + hJoyHeld], dl
+    mov [ebp + hJoyInput], dl
     mov [autokey_prev], dl
     popad
     ret

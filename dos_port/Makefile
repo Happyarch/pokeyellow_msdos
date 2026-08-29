@@ -499,7 +499,10 @@ HOME_SRCS := \
 
 HAL_SRCS := \
     src/ppu/ppu.asm \
-    src/input/joypad.asm \
+    src/input/input_hal.asm \
+    src/input/input_cfg.asm \
+    src/input/kbd_isr.asm \
+    src/input/gamepad_hal.asm \
     src/input/kbd_text.asm \
     src/engine/joypad.asm
 
