@@ -495,6 +495,8 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (home YES/NO)  | (14, 7) | 6×5   | anchor=top-right, X+20, Y+0 | 279 | 56 | 48  | 96  | yes_no.asm (YesNoChoice, mode 0; = bag YES/NO) |
 | overworld-ui (WIDE YES/NO)  | (12, 7) | 8×5   | anchor=top-right, X+20, Y+0 | 263 | 56 | 64  | 96  | yes_no.asm (WideYesNoChoice) |
 | overworld-ui (HEAL/CANCEL)  | (11, 6) | 9×6   | anchor=top-right, X+20, Y+0 | 255 | 48 | 72  | 96  | yes_no.asm (YesNoChoicePokeCenter) |
+| overworld-ui (save info)    | (4, 0)  | 16×10 | anchor=top-right, X+20, Y+0 | 199 | 0  | 128 | 80  | main_menu.asm (PrintSaveScreenText, UI_SAVE_INFO_*) |
+| overworld-ui (save YES/NO)  | (0, 7)  | 6×5   | anchor=top-right, X+20, Y+0 | 167 | 56 | 48  | 96  | save.asm (SaveTheGame_YesOrNo, yn_box_col=0, yn_box_row=7, mode 0) |
 | overworld-ui (list menu)    | (4, 2)  | 16×11 | anchor=top-right, X+20, Y+0 | 199 | 16 | 128 | 104 | list_menu.asm (generic; reuses bag LIST_* anchor) |
 | overworld-ui (list quantity)| (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | list_menu.asm (DisplayChooseQuantityMenu) |
 | overworld-ui (mart BUY/SELL/QUIT) | (0, 0) | 11×7 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 88 | 56 | pokemart.asm (BUY_SELL_QUIT_MENU_TEMPLATE, data/text_boxes.asm) |

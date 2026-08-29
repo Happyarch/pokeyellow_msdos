@@ -93,13 +93,15 @@ CHAR_TERMINATOR         equ 0x50        ; '@' — string terminator
 ; ---------------------------------------------------------------------------
 ; GB→canvas projection macros (cite the UI_* equates; NOT bare literals).
 ;   MM(x,y): pret hlcoord (x,y) inside the CONTINUE/NEW GAME box  → 40-canvas offset
-;   CI(x,y): pret hlcoord (x,y) inside the save-info panel        → 40-canvas offset
-; Both anchors share the center/top projection (canvas_x = gbx + (COL-GBX),
-; canvas_y = gby + (ROW-GBY)); CI's ROW-GBY == 0 lets PrintSaveScreenText's top
-; panel (GB row 0) reuse the same basis.
+;   CI(x,y): pret hlcoord (x,y) inside the continue-info panel    → 40-canvas offset
+;   SI(x,y): pret hlcoord (x,y) inside the save-info panel        → 40-canvas offset
+; MM and CI share the center/top projection (canvas_x = gbx + (COL-GBX),
+; canvas_y = gby + (ROW-GBY)); SI uses the right/top overworld projection
+; (UI_SAVE_INFO_*, X+20/Y+0) matching the START menu basis.
 ; ---------------------------------------------------------------------------
 %define MM(x,y) (wTileMap + ((y) - UI_MAIN_MENU_GBY + UI_MAIN_MENU_ROW) * SCREEN_TILES_W + ((x) - UI_MAIN_MENU_GBX + UI_MAIN_MENU_COL))
 %define CI(x,y) (wTileMap + ((y) - UI_CONTINUE_INFO_GBY + UI_CONTINUE_INFO_ROW) * SCREEN_TILES_W + ((x) - UI_CONTINUE_INFO_GBX + UI_CONTINUE_INFO_COL))
+%define SI(x,y) (wTileMap + ((y) - UI_SAVE_INFO_GBY + UI_SAVE_INFO_ROW) * SCREEN_TILES_W + ((x) - UI_SAVE_INFO_GBX + UI_SAVE_INFO_COL))
 
 MM_TOTAL_W  equ UI_MAIN_MENU_X2 - UI_MAIN_MENU_COL + 1        ; 15 tiles wide
 CI_TOTAL_W  equ UI_CONTINUE_INFO_X2 - UI_CONTINUE_INFO_COL + 1 ; 16 tiles wide
@@ -474,31 +476,28 @@ DisplayContinueGameInfo:
 ; PrintSaveScreenText — pret ref: main_menu.asm:PrintSaveScreenText.
 ; The START-menu SAVE screen's identical PLAYER/BADGES/#DEX/TIME panel, at the top
 ; of the screen (hlcoord 4,0). Called by engine/menus/save.asm (package H).
-; FIXED: this panel's window plumbing and dedicated UI_SAVE_INFO element now
-; exist in the SAVE screen pipeline. The draw is ported here faithfully into the
-;   canvas via the CI() projection (its ROW-GBY offset is 0, so the top-of-screen
-;   box reuses the same center-anchored basis). See report: needs UI_SAVE_INFO.
-; ; PROJ menus: fields project via the UI_CONTINUE_INFO_* center anchor.
+; Right-anchored via UI_SAVE_INFO_* to match the overworld START-menu coordinate basis.
+; ; PROJ menus: fields project via the UI_SAVE_INFO_* right anchor (X+20, Y+0).
 ; ===========================================================================
 PrintSaveScreenText:
     mov dword [text_row_stride], SCREEN_TILES_W
     mov byte [ebp + hAutoBGTransferEnabled], 0  ; xor a / ldh [hAutoBGTransferEnabled],a
-    mov esi, CI(4, 0)                           ; hlcoord 4,0
+    mov esi, SI(4, 0)                           ; hlcoord 4,0
     mov bx, (8 << 8) | 14                       ; lb bc, 8, 14
     call TextBoxBorder
     call LoadTextBoxTilePatterns
     call UpdateSprites
-    mov esi, CI(5, 2)                           ; hlcoord 5,2
+    mov esi, SI(5, 2)                           ; hlcoord 5,2
     mov eax, SaveScreenInfoText
     call PlaceString
-    mov esi, CI(12, 2)                          ; hlcoord 12,2
+    mov esi, SI(12, 2)                          ; hlcoord 12,2
     lea eax, [ebp + wPlayerName]
     call PlaceString
-    mov esi, CI(17, 4)                          ; hlcoord 17,4
+    mov esi, SI(17, 4)                          ; hlcoord 17,4
     call PrintNumBadges
-    mov esi, CI(16, 6)                          ; hlcoord 16,6
+    mov esi, SI(16, 6)                          ; hlcoord 16,6
     call PrintNumOwnedMons
-    mov esi, CI(13, 8)                          ; hlcoord 13,8
+    mov esi, SI(13, 8)                          ; hlcoord 13,8
     call PrintPlayTime
     mov byte [ebp + hAutoBGTransferEnabled], 1  ; ld a,$1 / ldh [hAutoBGTransferEnabled],a
     mov bl, 30                                  ; ld c,30
