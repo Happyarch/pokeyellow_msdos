@@ -1,3 +1,5 @@
+> **SUPERSEDED / STALE — archived 2026-08-29.** This plan is superseded by the focused audit **`docs/current_plan_battle_core_realign.md`** (engine/battle/core.asm pret realignment, 2026-08-29). That audit read pret and port core.asm end-to-end, re-verified every claim against supporting code and `faithdiff` over all 207 pret labels, and replaces this file's Stage 3 / battle-core estimates, missing-label inventories and fidelity claims as ground truth. Do not use this file for sequencing, counts, or gate expectations — its 32-open-item checklist, 283-missing inventory and 13-stub survey are snapshots from 2026-08-03/08-02 that the new audit has re-measured. Kept in `docs/plans/` for history only; see `docs/current_plan_battle_core_realign.md` for the current ledger and gate. `git mv` from `docs/current_plan_battle_completion.md` on 2026-08-29.
+
 # Current Plan: Battle Engine Completion
 
 > **Gate — the linter is MANDATORY. Rewritten 2026-08-02 against the tooling

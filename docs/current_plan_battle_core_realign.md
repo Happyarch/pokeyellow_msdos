@@ -165,23 +165,23 @@ are all structurally blind to it — a wrong immediate is a faithful-looking
 `cmp`. This is precisely the "a translation whose behaviour drifts can pass
 every gate" case the `asm-translation` skill opens with.
 
-- [ ] A.1 fix `METRONOME_MOVE` → `0x76`; delete the local `equ` at `core.asm:8541` and add
+- [x] A.1 fix `METRONOME_MOVE` → `0x76`; delete the local `equ` at `core.asm:8541` and add
       `%define METRONOME 0x76` to `gb_constants.inc`'s move-id block, repointing
-      the three call sites at the pret name.
-- [ ] A.2 fix `MIRROR_MOVE` → `0x77`; same treatment (delete the file-local
-      `equ`, add the shared name, repoint `core.asm:6733`).
-- [ ] A.3 delete `SELFDESTRUCT_MOVE` and use the existing
-      `gb_constants.inc` `SELFDESTRUCT`.
-- [ ] A.4 delete `EXPLOSION_MOVE` and use the existing `gb_constants.inc`
-      `EXPLOSION`.
-- [ ] A.5 delete `STRUGGLE_MOVE` (`core.asm:8542`) and use the existing
+      the three call sites at the pret name. **DONE 2026-08-29 (912877372): moved to shared `gb_constants.inc`, repointed MainInBattleLoop+MetronomePickMove x3.**
+- [x] A.2 fix `MIRROR_MOVE` → `0x77`; same treatment (delete the file-local
+      `equ`, add the shared name, repoint `core.asm:6733`). **DONE 2026-08-29 (912877372): local equ 0x4D deleted, shared 0x77 used at MirrorMoveCopyMove.**
+- [x] A.3 delete `SELFDESTRUCT_MOVE` and use the existing
+      `gb_constants.inc` `SELFDESTRUCT`. **DONE 2026-08-29 (912877372).**
+- [x] A.4 delete `EXPLOSION_MOVE` and use the existing `gb_constants.inc`
+      `EXPLOSION`. **DONE 2026-08-29 (912877372): both repointed at HandleExplodingAnimation.**
+- [x] A.5 delete `STRUGGLE_MOVE` (`core.asm:8542`) and use the existing
       `STRUGGLE`; also delete the duplicated dangling comment line at `8545`
       ("ids >= STRUGGLE are not real moves…" appears at `8542-8543` and again
-      verbatim at `8545`).
-- [ ] A.6 housekeeping: `%define EXP_ALL 0x4B` sits in
+      verbatim at `8545`). **DONE 2026-08-29 (912877372).**
+- [x] A.6 housekeeping: `%define EXP_ALL 0x4B` sits in
       `gb_constants.inc`'s **"field-move ids"** block (`:702`) although it is an
       item id from `constants/item_constants.asm`. Move it to an item block.
-      Value verified correct.
+      Value verified correct. **DONE 2026-08-29 (912877372): moved to item block.**
 - [ ] A.7 golden: a must-hit scenario that stages Metronome in the player's
       slot and asserts (i) Metronome's own animation plays, (ii) Metronome is
       never the picked move over N rolls, (iii) Solarbeam's animation does not
@@ -193,7 +193,7 @@ every gate" case the `asm-translation` skill opens with.
 Each of these is also a `faithdiff` DROPPED line, so the tool was already
 saying it; what was missing was the reading.
 
-- [ ] **B.1** `RemoveFaintedPlayerMon` drops pret's
+- [x] **B.1** `RemoveFaintedPlayerMon` drops pret's
       `hlcoord 9,7 / lb bc,5,11 / call ClearScreenArea` (pret `core.asm:1039`,
       between `call ReadPlayerMonCurHPAndStatus` at `:1036` and the
       `SlideDownFaintedMonPic` at `:1040`). Insert point in the port is after
@@ -209,7 +209,7 @@ saying it; what was missing was the reading.
       "Restored 2026-08-13" note at `core.asm:7189`) — those notes are accurate
       and this one is the same bug left standing. Use `BCOORD(9,7)`, `bh=5`,
       `bl=11`.
-- [ ] **B.2** `DisplayBattleMenu` drops pret's `call
+- [x] **B.2** `DisplayBattleMenu` drops pret's `call
       PlaceUnfilledArrowMenuCursor` at `.AButtonPressed` (pret `core.asm:2219`,
       the first statement of the label). The port's `.AButtonPressed`
       (`core.asm:709`) goes straight to the `BATTLE_TYPE_RUN` test.
@@ -219,7 +219,7 @@ saying it; what was missing was the reading.
       omission, not a boundary. `faithdiff DisplayBattleMenu` reports
       `- DROPPED PlaceUnfilledArrowMenuCursor (call)`. **Effect:** the selected
       battle-menu item never gets its '▷' marker.
-- [ ] **B.3** `AttackSubstitute` drops pret's substitute-break animation AND
+- [x] **B.3** `AttackSubstitute` drops pret's substitute-break animation AND
       the HUD redraw that closes the routine.
       (a) pret `core.asm:5052-5065` flips `hWhoseTurn`, `callfar Func_79929`
       (the substitute-break animation), flips back. The port carries
@@ -238,7 +238,7 @@ saying it; what was missing was the reading.
       stale HUD. `faithdiff AttackSubstitute` reports both
       (`- DROPPED DrawHUDsAndHPBars (jp)`, `- DROPPED Func_79929 (callfar)`).
       Split the tail: `ret` on survive, `jmp DrawHUDsAndHPBars` on break.
-- [ ] **B.4** `HasMonFainted` drops pret's `NoWillText` branch entirely
+- [x] **B.4** `HasMonFainted` drops pret's `NoWillText` branch entirely
       (pret `core.asm:1519-1527`: on a fainted mon, if
       `wFirstMonsNotOutYet == 0`, `ld hl, NoWillText / call PrintText` before
       `xor a / ret`). Self-admitted at `core.asm:5237` as "that text path is a
@@ -249,7 +249,7 @@ saying it; what was missing was the reading.
       no explanation. `NoWillText` is not currently emitted by
       `gen_battle_text.py` (grepped: zero hits tree-wide) — add it to the
       generator, do not hand-encode it (two-tier rule).
-- [ ] **B.5** `BattleMenu_RunWasSelected` drops pret's
+- [x] **B.5** `BattleMenu_RunWasSelected` drops pret's
       `ld a, 0 / ld [wForcePlayerToChooseMon], a` (pret `core.asm:2559-2560`,
       immediately after the `TryRunningFromBattle` call, before `ret c`). The
       port (`core.asm:3765-3782`) goes straight from the call to the CF test.
@@ -261,7 +261,7 @@ saying it; what was missing was the reading.
       the port it stays armed until the party menu happens to consume it, so a
       later party menu opens with B masked off (A-only watched keys) when pret
       would allow cancel.
-- [ ] **B.6** `TryRunningFromBattle`'s trainer-battle test narrows the
+- [x] **B.6** `TryRunningFromBattle`'s trainer-battle test narrows the
       condition. pret `core.asm:1544-1546` is `ld a,[wIsInBattle] / dec a /
       jr nz, .trainerBattle` — i.e. **any** value ≠ 1, including 0. The port
       (`core.asm:7537`) is `cmp byte [ebp + wIsInBattle], 2 / je .trainerBattle`
@@ -269,7 +269,7 @@ saying it; what was missing was the reading.
       (the routine is only entered from a live battle), but it is a logic
       difference and it is unannotated; write pret's shape
       (`dec al / jnz .trainerBattle`) and the divergence disappears.
-- [ ] **B.7** `TryRunningFromBattle`'s run-attempt add loop widens pret's
+- [x] **B.7** `TryRunningFromBattle`'s run-attempt add loop widens pret's
       8-bit counter: `movzx ecx, byte [ebp + wNumRunAttempts]` + `dec ecx`
       (`core.asm:7586-7593`) for pret's `ld c,a / .loop: dec c / jr z`
       (`core.asm:1593-1605`). This is the single most-repeated translation
@@ -279,7 +279,7 @@ saying it; what was missing was the reading.
       0xFF→0x00 after 256 attempts in one battle, and at that boundary pret
       loops 255 times where the port loops ~4 billion. Fix is one instruction:
       `dec cl`. No `DEVIATION` needed once narrowed.
-- [ ] **B.8** `DrawEnemyHUDAndHPBar` draws the HUD frame **last**
+- [x] **B.8** `DrawEnemyHUDAndHPBar` draws the HUD frame **last**
       (`call PlaceEnemyHUDTiles` at `core.asm:7407`, after the HP bar and the
       colour publish) where pret draws it **second**, immediately after the
       `ClearScreenArea` (pret `core.asm:1956-1958`). Its mirror
@@ -289,7 +289,7 @@ saying it; what was missing was the reading.
       half never got the same treatment, and its own comment block
       (`core.asm:7336-7346`) discusses only the draw-then-colour order, never
       the frame position. Realign to pret's order so the two mirrors match.
-- [ ] **B.9** `FaintEnemyPokemon`'s trainer-faint SFX block is a bare
+- [x] **B.9** `FaintEnemyPokemon`'s trainer-faint SFX block is a bare
       `TODO-HW` (`core.asm:7823-7826`: `wFrequencyModifier`/`wTempoModifier`
       zeroing, `PlaySoundWaitForCurrent SFX_FAINT_FALL`, the CHAN5 wait loop,
       `PlaySound SFX_FAINT_THUD`, `WaitForSoundToFinish` — pret
@@ -302,6 +302,8 @@ saying it; what was missing was the reading.
       `PlaySound` and the CHAN5 poll are live; if they are, the TODO is stale
       and the block lands. If the CHAN5 poll genuinely cannot terminate under
       the audio HAL, that is a `DEVIATION{class=HAL}` and must say so.
+
+> **DONE 2026-08-29 (0448f790d):** B.1-B.9 all landed and verified (build + faithdiff + lint 0/0). See commit 0448f790d for per-item narrative.
 
 ### Stage C — stale and measurably false comments
 
