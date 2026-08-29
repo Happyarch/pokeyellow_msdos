@@ -351,6 +351,8 @@
 %define BIDE                         0x75
 %define ROAR                         0x2E
 %define SOLARBEAM                    0x4C
+%define MIRROR_MOVE                  0x77   ; constants/move_constants.asm ; 77 = hex (see battle_core_realign A.2). Was core.asm MIRROR_MOVE equ 0x4D (=77 dec, POISONPOWDER) — pret hex comment misread as decimal.
+%define METRONOME                    0x76   ; constants/move_constants.asm ; 76 = hex (see battle_core_realign A.1). Was core.asm METRONOME_MOVE equ 0x4C (=76 dec, SOLARBEAM) — pret hex comment misread as decimal.
 %define SKULL_BASH                   0x82
 %define SKY_ATTACK                   0x8F
 ; move ids referenced by the battle-animation dispatch tables (SpecialEffectPointers /
@@ -392,6 +394,7 @@
 %define X_SPECIAL                    0x44
 %define ITEMFINDER                   0x47
 %define BICYCLE                      0x06   ; StartMenu_Item special-cases it (skips the USE/TOSS box)
+%define EXP_ALL                      0x4B   ; constants/item_constants.asm:87 (item id, not a field move; was misplaced in field-move block — see battle_core_realign A.6)
 
 ; --- wStatusFlags4/6 bits used by the START menu / bag (constants/ram_constants.asm) ---
 %define BIT_TEXT_PREDEF              0   ; wTextPredefFlag: PrintPredefTextID table active
@@ -699,7 +702,6 @@
 %define CUT                          0x0F
 %define FLY                          0x13
 %define SURF                         0x39
-%define EXP_ALL                      0x4B   ; constants/item_constants.asm (was a file-local equ in core.asm)
 %define PAY_DAY                      0x06   ; constants/move_constants.asm
 %define WRAP                         0x23   ; constants/move_constants.asm (trapping move)
 %define STRENGTH                     0x46

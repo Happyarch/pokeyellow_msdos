@@ -55,7 +55,7 @@ bits 32
 ; carried in with CalculateDamage (was core_damage.asm)
 EFFECT_1E equ 0x1E                     ; unused move effect, special-cased in CalculateDamage
 ; carried in with the unit-C faint/send-out cluster
-MIRROR_MOVE       equ 0x4D
+; MIRROR_MOVE now uses shared gb_constants.inc %define 0x77 (was local equ 0x4D = POISONPOWDER — see battle_core_realign A.2)
 HP_BAR_RED        equ 2       ; constants/gfx_constants.asm
 
 ; battle menu geometry — the generated battle UI layout (Tier 1,
@@ -463,7 +463,7 @@ MainInBattleLoop:
     mov al, [ebp + esi]
     ; pret: "a MIRROR MOVE check is missing, might lead to a desync in link
     ; battles when combined with multi-turn moves" — faithfully kept missing.
-    cmp al, METRONOME_MOVE              ; cp METRONOME (move id — file-local equ below)
+    cmp al, METRONOME                   ; cp METRONOME
     jne .specialMoveNotUsed
     mov [ebp + wPlayerSelectedMove], al
 .specialMoveNotUsed:
@@ -8537,12 +8537,8 @@ HandleBuildingRage:
 
                               ; EDX = dest struct offset (wPlayerMoveNum/wEnemyMoveNum).
 
-; move ids (pret constants.asm move_constants.asm)
-METRONOME_MOVE  equ 0x4C     ; METRONOME
-STRUGGLE_MOVE   equ 0xA5     ; STRUGGLE — pret ASSERT NUM_ATTACKS == STRUGGLE;
-                              ; ids >= STRUGGLE are not real moves and are rejected.
-
-                              ; ids >= STRUGGLE are not real moves and are rejected.
+; move ids — now shared via gb_constants.inc (battle_core_realign A.1/A.5):
+; METRONOME 0x76, STRUGGLE 0xA5; local equs retired and dangling duplicate comment removed
 
 ; ===========================================================================
 ; MetronomePickMove — pret core.asm:5184. Picks a random move (not METRONOME,
@@ -8551,7 +8547,7 @@ STRUGGLE_MOVE   equ 0xA5     ; STRUGGLE — pret ASSERT NUM_ATTACKS == STRUGGLE;
 MetronomePickMove:
     xor al, al
     mov [ebp + wAnimationType], al      ; xor a / ld [wAnimationType], a
-    mov al, METRONOME_MOVE              ; ld a, METRONOME
+    mov al, METRONOME                   ; ld a, METRONOME
     ; pret plays Metronome's own subanim here
     ; (xor a / ld [wAnimationType],a / ld a, METRONOME / call PlayMoveAnimation).
     ; PlayMoveAnimation is the real interpreter as of Stage 2b — faithful call.
@@ -8567,19 +8563,15 @@ MetronomePickMove:
     call BattleRandom                   ; call BattleRandom -> AL
     and al, al
     jz .pickMoveLoop                    ; and a / jr z, .pickMoveLoop (reject 0)
-    cmp al, STRUGGLE_MOVE               ; cp STRUGGLE
+    cmp al, STRUGGLE                    ; cp STRUGGLE
     jae .pickMoveLoop                   ; jr nc, .pickMoveLoop (reject id >= STRUGGLE)
-    cmp al, METRONOME_MOVE              ; cp METRONOME
+    cmp al, METRONOME                   ; cp METRONOME
     je .pickMoveLoop                    ; jr z, .pickMoveLoop (reject Metronome itself)
     mov [ebp + esi], al                 ; ld [hl], a
     jmp ReloadMoveData                  ; jr ReloadMoveData (tail jump; DE/AL set as pret leaves them)
 
 ; --- was src/engine/battle/exploding_animation.asm ---
 
-; Numeric ids not present as named constants in gb_constants.inc — literal + comment,
-; per the swarm's numeric-id convention (matches poison.asm's TOXIC/POISON_EFFECT style).
-%define SELFDESTRUCT_MOVE 0x4E      ; SELFDESTRUCT move id
-%define EXPLOSION_MOVE     0x63     ; EXPLOSION move id
 %define MEGA_PUNCH_ANIM    0x05     ; MEGA_PUNCH animation id — pret ASSERTs this ==
                                      ; ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT (5)
 
@@ -8611,9 +8603,9 @@ HandleExplodingAnimation:
     mov edx, wEnemyBattleStatus1    ; de = wEnemyBattleStatus1 (verbatim pret quirk, see above)
     mov al, [ebp + wEnemyMoveNum]
 .player:
-    cmp al, SELFDESTRUCT_MOVE
+    cmp al, SELFDESTRUCT
     je .isExplodingMove
-    cmp al, EXPLOSION_MOVE
+    cmp al, EXPLOSION
     jne .ret                        ; ret nz — not an exploding move, no animation
 .isExplodingMove:
     mov al, [ebp + edx]
