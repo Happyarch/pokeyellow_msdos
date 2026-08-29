@@ -217,6 +217,7 @@ extern TrainerAI                       ; trainer_ai.asm (CF if AI used item/swit
 extern UpdateHPBar2                    ; engine/gfx/hp_bar.asm — pret animated HP-bar engine (ESI = bar coord)
 extern SaveScreenTilesToBuffer1        ; src/home/tilemap.asm
 extern RetreatMon                      ; engine/battle/common_text.asm — switch-out line
+extern NoWillText                      ; assets/battle_text.inc — HasMonFainted faint feedback
 extern SaveScreenTilesToBuffer2        ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2      ; src/home/tilemap.asm
 extern DisplayPartyMenu                ; src/home/pokemon.asm — CF=0 iff a mon was chosen
@@ -335,6 +336,7 @@ extern ClearScreen                     ; home/copy2.asm
 extern ClearScreenArea                 ; src/home/copy2.asm — ESI=wTileMap dest, BH=rows, BL=width
                                        ; (hoisted here 2026-08-11: HandlePlayerBlackOut
                                        ; uses it ~1000 lines before the old declaration)
+extern Func_79929                      ; engine/battle/animations.asm — substitute-break animation
 extern ClearSprites                    ; home/clear_sprites.asm
 extern IsItemInBag                     ; src/home/map_objects.asm
 extern PrintSendOutMonMessage          ; engine/battle/common_text.asm
@@ -707,6 +709,9 @@ DisplayBattleMenu:
     add al, 2
     mov [ebp + wCurrentMenuItem], al
 .AButtonPressed:
+    ; pret core.asm:2219 — draw the selected battle-menu item's '▷' marker, restored
+    ; here (battle_core_realign B.2). Provider is live (called at PartyMenuOrRockOrRun's A-press).
+    call PlaceUnfilledArrowMenuCursor
     ; pret 2225-2227: the unused BATTLE_TYPE_RUN arm is tested FIRST, before the
     ; Safari one. It is the "Hurry, get away!" forced-run battle -- unused in the
     ; shipped game, but it is a real branch of this routine and its absence was
@@ -2889,8 +2894,14 @@ AttackSubstitute:
     and byte [ebp + ebx], ~(1 << HAS_SUBSTITUTE_UP) & 0xFF   ; clear the substitute bit
     mov esi, SubstituteBrokeText
     call PrintText
-    ; TODO(anim): pret flips hWhoseTurn around callfar Func_79929 (substitute-break
-    ; anim) then flips back — a no-op here (anim deferred, Master B), so skipped.
+    ; pret core.asm:5052-5065 — flip hWhoseTurn around callfar Func_79929 (substitute-break animation), then flip back
+    mov al, [ebp + hWhoseTurn]
+    xor al, 1
+    mov [ebp + hWhoseTurn], al
+    call Func_79929
+    mov al, [ebp + hWhoseTurn]
+    xor al, 1
+    mov [ebp + hWhoseTurn], al
     ; nullify the attacker's move effect (pret core.asm:5066-5072)
     mov esi, wPlayerMoveEffect           ; player turn
     cmp byte [ebp + hWhoseTurn], 0
@@ -2901,6 +2912,7 @@ AttackSubstitute:
     ; BUG{class=data-model; pret=engine/battle/core.asm:AttackSubstitute; behavior=substitute overflow damage uses stale wDamage rather than the substitute's pre-hit HP; evidence=pret source AttackSubstitute damage flow; lifetime=permanent Gen-1 behavior}
     ; wDamage is NOT updated with the substitute's pre-hit HP on a
     ; break (pret core.asm:5050-5051) — preserved verbatim.
+    jmp DrawHUDsAndHPBars                ; pret jp DrawHUDsAndHPBars — tail jump, HUD redraw is part of the broke path's contract (battle_core_realign B.3b)
 .subDone:
     ret
 
@@ -3768,6 +3780,7 @@ BattleMenu_RunWasSelected:
     mov esi, wBattleMonSpeed            ; ld hl, wBattleMonSpeed
     mov edx, wEnemyMonSpeed             ; ld de, wEnemyMonSpeed
     call TryRunningFromBattle           ; CF = escaped; sets wActionResultOrTookBattleTurn
+    mov byte [ebp + wForcePlayerToChooseMon], 0  ; pret core.asm:2559-2560 — clear forced-switch flag (battle_core_realign B.5)
     jc  .escaped
     mov al, [ebp + wActionResultOrTookBattleTurn]
     and al, al
@@ -5234,8 +5247,10 @@ AIGetTypeEffectiveness:
 ; ===========================================================================
 ; HasMonFainted — pret core.asm:HasMonFainted. Tests whether the mon at
 ; wWhichPokemon has fainted; returns ZF=1 if fainted (HP == 0).
-; (pret also prints NoWillText when wFirstMonsNotOutYet==0; that text path is a
-; TODO — the ZF contract, which the switch loop reads, is exact.)
+; Restored 2026-08-29 (battle_core_realign B.4): pret also prints NoWillText
+; when wFirstMonsNotOutYet==0 before returning, which gives the forced-switch
+; loop its "There's no will to fight!" feedback. ZF contract is exact and was
+; the only part previously restored.
 ; ===========================================================================
 HasMonFainted:
     mov esi, wPartyMon1HP
@@ -5244,6 +5259,13 @@ HasMonFainted:
     call AddNTimes                      ; esi -> this mon's HP word
     mov al, [ebp + esi]
     or  al, [ebp + esi + 1]             ; ZF=1 → fainted
+    jnz .ret                            ; ret nz — not fainted
+    cmp byte [ebp + wFirstMonsNotOutYet], 0
+    jnz .ret                            ; ret nz — first mons still out, silent bounce
+    mov esi, NoWillText
+    call PrintText
+    xor al, al                          ; pret: xor a (ZF=1)
+.ret:
     ret
 
 ; ===========================================================================
@@ -5293,6 +5315,14 @@ RemoveFaintedPlayerMon:
     mov [ebp + wEnemyBideAccumulatedDamage + 1], al
     mov [ebp + wBattleMonStatus], al
     call ReadPlayerMonCurHPAndStatus
+    ; pret core.asm:1039 — clear the player HUD/HP band before sliding the fainted
+    ; mon's pic down (hlcoord 9,7 / lb bc,5,11 / call ClearScreenArea), restored
+    ; here (battle_core_realign B.1). Same defect class as the port's two prior
+    ; ClearScreenArea restores at 7805 and 7189.
+    mov esi, BCOORD(9, 7)                ; PROJ — pret hlcoord 9, 7
+    mov bh, 5                            ; pret: lb bc, 5, 11
+    mov bl, 11
+    call ClearScreenArea
     ; pret `hlcoord 1, 10 / decoord 1, 11 / call SlideDownFaintedMonPic`
     mov esi, BCOORD(1, 10)               ; PROJ — pret hlcoord 1, 10
     mov edx, BCOORD(1, 11)               ; PROJ — pret decoord 1, 11
@@ -7018,6 +7048,7 @@ extern WaitForAPress                   ; src/home/joypad2.asm — alias of pret 
 ; NoRunningText / GotAwayText, local via the %include — through PrintBattleText,
 ; matching pret's PrintText presentation. The runtime strings stay in
 ; battle_menu_runtime_strings.inc for battle_menu.asm's own consumers.)
+extern PlaySound                       ; src/home/audio.asm — sound id in AL
 extern PlaySoundWaitForCurrent         ; src/home/delay.asm — In: AL = sound id
 extern WaitForSoundToFinish            ; src/home/delay.asm
 extern StopAllMusic                    ; src/home/audio.asm
@@ -7315,6 +7346,8 @@ DrawEnemyHUDAndHPBar:
     mov bh, 4                            ; b = rows
     mov bl, 12                           ; c = width
     call ClearScreenArea
+    ; pret draws the frame SECOND, immediately after the clear (1956-1958); the port drew it last (battle_core_realign B.8, mirrors DrawPlayerHUDAndHPBar fix)
+    call PlaceEnemyHUDTiles
     mov esi, wTileMap + E_NAME          ; PlaceString: ESI=dest(GB offset), EAX=src(flat)
     mov edx, wEnemyMonNick               ; pret DrawEnemyHUDAndHPBar:1960 — same centering
     call CenterMonName
@@ -7404,7 +7437,6 @@ DrawEnemyHUDAndHPBar:
     ; green→yellow→red transition immediately.
     mov esi, wEnemyHPBarColor
     call GetBattleHealthBarColor
-    call PlaceEnemyHUDTiles
     ret
 
 ; ---------------------------------------------------------------------------
@@ -7534,8 +7566,9 @@ TryRunningFromBattle:
     je .canEscape                        ; "hurry, get away?" forced-run
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
     je .canEscape                        ; link battle always escapes
-    cmp byte [ebp + wIsInBattle], 2
-    je .trainerBattle
+    mov al, [ebp + wIsInBattle]          ; pret ld a,[wIsInBattle] / dec a / jr nz,.trainerBattle (battle_core_realign B.6) — any value !=1 is a trainer battle
+    dec al
+    jnz .trainerBattle
     inc byte [ebp + wNumRunAttempts]
     ; pret reads the PLAYER speed through hl and the ENEMY speed through de,
     ; both supplied by the caller. The port used to hardcode wBattleMonSpeed /
@@ -7585,7 +7618,7 @@ TryRunningFromBattle:
     jnz .canEscape
     movzx ecx, byte [ebp + wNumRunAttempts]
 .addLoop:
-    dec ecx
+    dec cl                               ; pret dec c — 8-bit counter, not 32-bit (battle_core_realign B.7)
     jz .compareRandom
     mov al, [ebp + hQuotient + 3]
     add al, 30
@@ -7819,10 +7852,19 @@ FaintEnemyPokemon:
     mov al, [ebp + wIsInBattle]
     dec al
     jz .wild_win                              ; wIsInBattle == 1 (wild) -> victory music
-    ; Trainer win: SFX_FAINT_FALL / SFX_FAINT_THUD.
-    ; TODO-HW: trainer faint SFX (wFrequencyModifier/wTempoModifier=0,
-    ; PlaySoundWaitForCurrent SFX_FAINT_FALL, wait CHAN5, PlaySound SFX_FAINT_THUD,
-    ; WaitForSoundToFinish). Trainer battles aren't the live overworld path yet.
+    ; Trainer win: SFX_FAINT_FALL / SFX_FAINT_THUD — pret core.asm:788-800, restored (battle_core_realign B.9); audio HAL is live (PlaySound/PlaySoundWaitForCurrent/WaitForSoundToFinish all linked)
+    xor al, al
+    mov [ebp + wFrequencyModifier], al
+    mov [ebp + wTempoModifier], al
+    mov al, SFX_FAINT_FALL
+    call PlaySoundWaitForCurrent
+.sfxwait:
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    cmp al, SFX_FAINT_FALL
+    je .sfxwait
+    mov al, SFX_FAINT_THUD
+    call PlaySound
+    call WaitForSoundToFinish
     jmp .sfxplayed
 .wild_win:
     call EndLowHealthAlarm                     ; pret: call EndLowHealthAlarm
