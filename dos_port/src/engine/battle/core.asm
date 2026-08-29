@@ -1,11 +1,9 @@
 ; core.asm — faithful translation of pret engine/battle/core.asm (battle loop).
 ;
-; This replaces the bespoke Wave-2 orchestration (battle_menu.asm) with a
-; structure-for-structure translation of pret's battle loop. Per the governing
+; Per the governing
 ; principle (docs/current_plan_battle_pret_alignment.md): the BACKEND is byte-
 ; faithful, and the FRONT END diverges from pret ONLY at the screen-draw primitive
-; (the tile write into our centered 40-wide wTileMap). Move animation is a marked
-; placeholder (HP-bar drain); audio is a no-op stub.
+; (the tile write into our centered 40-wide wTileMap).
 ;
 ; Register map: A=AL, B=BH, C=BL (BC=BX), D=DH, E=DL (DE=EDX), HL=ESI, SP=ESP,
 ; EBP = base of emulated GB memory; GB address X = [ebp+X]. hWhoseTurn: 0=player.
@@ -586,8 +584,6 @@ MainInBattleLoop:
 ; the FIGHT/PKMN/ITEM/RUN box, then run the faithful two-column cursor input and
 ; dispatch. Returns CF=1 if the player escaped (ran). Coord VALUES are projected to
 ; our centered canvas (the sanctioned draw-layer divergence); structure is pret's.
-; Safari / old-man / Pikachu-tutorial / link branches are deferred (TODO: those
-; battle types aren't reachable yet — only normal wild/trainer battles).
 ; ---------------------------------------------------------------------------
 DisplayBattleMenu:
     call LoadScreenTilesFromBuffer1     ; restore saved screen
@@ -834,12 +830,6 @@ DisplayBattleMenu:
 ; PrintMenuItem — pret core.asm:2567-3084, translated structure-for-structure
 ; (menu-fidelity row 22).
 ;
-; Until row 22 the port had ONE routine here: a bespoke MoveSelectionMenu that
-; folded a 0-based cursor loop into the draw, and three of pret's four labels did
-; not exist at all (SelectMenuItem / SwapMovesInMenu / PrintMenuItem read `missing`
-; in translation.db). That shape could not express the Mimic and move-relearn menus
-; (wMoveMenuType 1/2 — the two callers that made this a blocker), the SELECT
-; move-swap, or the disabled-move ▷ marker. It is replaced wholesale below.
 ;
 ; CURSOR INDEX BASE — the load-bearing detail. pret's menu item numbering here is
 ; ONE-based: wCurrentMenuItem is (move index + 1) and wMaxMenuItem is
@@ -1429,8 +1419,6 @@ PrintBattleText:
 ; five live callers depend on the box being (re)drawn: SendOutMon,
 ; EnemySendOutFirstMon, FaintEnemyPokemon, DoUseNextMonDialogue and the
 ; ModifyPikachuHappiness path.
-;
-; RETIRED the ret-only stub in battle_exp_stubs.asm (battle_completion 3d).
 ;
 ; pret writes `jp PrintText`; the port goes through PrintBattleText, which is
 ; PrintText plus the one thing pret does not need — selecting the battle msgbox
@@ -2271,13 +2259,6 @@ DoBattleTransitionAndInitBattleVariables:
     mov byte [ebp + IO_SCX], 0
     mov byte [ebp + IO_SCY], 0
     mov byte [ebp + hTileAnimations], 0
-    ; Stage 4 step-1 audit (2026-08-23): the connection-layer HAL is real
-    ; (src/net/net_hal.asm) and can drive this branch's wLinkState read live on
-    ; two DOSBox-X instances (Stage 3) — not proven statically unreachable the
-    ; way this comment used to claim; not runtime-verified this pass.
-    ; Stage 4 step 2: DisplayLinkBattleVersusTextBox is now REAL (see
-    ; src/engine/battle/link_battle_versus_text.asm, the pret mirror), so the
-    ; annotation that used to stand here recording its drop is retired.
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne .next
