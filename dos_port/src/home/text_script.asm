@@ -462,20 +462,23 @@ DisplayPokemonCenterDialogue:
     jmp AfterDisplayingTextID
 
 ; ─────────────────────────────────────────────────────────────────────────────
-; PokecenterNurseScript — PORT-ONLY glue, no pret counterpart. pret reaches
-; DisplayPokemonCenterDialogue through DisplayTextID's TX_SCRIPT_POKECENTER_NURSE
-; case, which pushed hLoadedROMBank at DisplayTextID's prologue; the port's live
-; NPC-talk path is CheckNPCInteraction's generated SCRIPT table, which dispatches
-; by `call edi` with no such push. CloseTextDisplay's closing `pop af` therefore
-; consumed CheckNPCInteraction's own return address and UpdateSprites' `ret`
-; transferred to the pushad-saved EDI. Supply the dword that pop is entitled to,
-; exactly as slot_machine.asm and hidden_events/town_map.asm already do.
-; DEVIATION{class=projection; pret=home/text_script.asm:DisplayTextID; behavior=the nurse text id dispatches through CheckNPCInteraction's generated SCRIPT table into this shim which pushes hLoadedROMBank before entering DisplayPokemonCenterDialogue instead of that push happening in DisplayTextID's prologue; evidence=the port's overworld NPC-talk path is the generated dialog table map_sprites.asm CheckNPCInteraction and CloseTextDisplay ends in the pop that DisplayTextID's prologue push feeds, a contract slot_machine.asm and hidden_events town_map.asm already satisfy explicitly; lifetime=permanent overworld dialog-dispatch projection}
+; PokecenterNurseScript — PORT-ONLY glue, no pret counterpart.
+; CheckNPCInteraction dispatches SCRIPT entries by calling the flat routine
+; pointer directly (call edi). DisplayPokemonCenterDialogue_ runs the full
+; healing dialogue flow, whose farewell text already waits for a button press
+; (ends in `done` / 0x57). Setting wDoNotWaitForButtonPressAfterDisplayingText = 1
+; signals CheckNPCInteraction to skip npc_dialog_wait_impl and cleanly tear down
+; the dialog via .dialog_done.
+; DEVIATION{class=projection; pret=home/text_script.asm:DisplayTextID; behavior=the nurse text id dispatches through CheckNPCInteraction's generated SCRIPT table into this shim which calls DisplayPokemonCenterDialogue_ directly and returns to CheckNPCInteraction's dialog teardown; evidence=the port's overworld NPC-talk path is the generated dialog table map_sprites.asm CheckNPCInteraction which owns the dialog lifecycle and teardown; lifetime=permanent overworld dialog-dispatch projection}
 ; ─────────────────────────────────────────────────────────────────────────────
 PokecenterNurseScript:
-    movzx eax, byte [ebp + hLoadedROMBank]
-    push eax
-    jmp DisplayPokemonCenterDialogue
+    xor eax, eax
+    mov [ebp + hItemPrice], al
+    mov [ebp + hItemPrice + 1], al
+    mov [ebp + hItemPrice + 2], al
+    call DisplayPokemonCenterDialogue_
+    mov byte [ebp + wDoNotWaitForButtonPressAfterDisplayingText], 1
+    ret
 
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DisplaySafariGameOverText — pret home/text_script.asm:179
