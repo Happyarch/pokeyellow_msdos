@@ -1839,7 +1839,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jnc CheckWarpsNoCollision
     jmp .battleOccurred
 
-.checkPADDown:                                  ; AL = joy for this frame (latch or held)
+.checkPADDown:                                  ; D-pad: pret reads hJoyHeld (held), not edge — latch was only for START/A
+    test byte [ebp + wStatusFlags5], (1 << BIT_SCRIPTED_MOVEMENT_STATE)
+    jnz .padDownSimulated
+    mov al, [ebp + hJoyHeld]                     ; held, not latch: walking needs held, ledge needs held for HandleLedges hJoyHeld check correlation
+.padDownSimulated:
     test al, PAD_DOWN
     jz .checkUp
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 1
