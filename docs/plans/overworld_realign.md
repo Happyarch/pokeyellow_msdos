@@ -511,9 +511,9 @@ One commit, comments only (no code bytes change): **DONE 2026-08-28 (a043d04b1)*
   notes (A1 ordering, A9 edge reads) in the same commits; purge/overwrite stale
   claims per the memory rules; queue via `docs/stigmergy_outbox.jsonl` if no
   stigmergy access in the session. **DONE 2026-08-29:** created `regression-overworld-a1-step-seam-reordered` (fa5bae9b2 Stage A post-step order pret: StepCountCheck/Safari/poison/NewBattle before WarpScan, _AdvancePlayerSprite early-cross deleted, A1/A2 superseded, I.4 WRAM golden reserved) and `regression-overworld-a9-joy-edge-latch` (30d7b4d41 Stage B hJoyHeld→latched hJoyPressed, stalls deleted, A9/N5 superseded, I.3/I.4 unblocked). Purged stale backlog #16 "stopgaps" → PERMANENT via docs/current_plan_backlog.md (maintainer 2026-08-16, measured 2026-08-29). No handoff-* memories to purge; `regression-overworld-sight-needs-per-iteration-mapscript` (OPEN 2026-08-22) still accurate and kept. No stale lifetime= claims to rewrite beyond G.6 clamp sweep already done.
-- [ ] I.9 final sweep: re-read the three seam comment blocks (loop head,
+- [x] I.9 final sweep: re-read the three seam comment blocks (loop head,
   M7.1/.notSafariZone, WarpScanToMapConnections) against the landed code;
-  archive this plan to `docs/plans/overworld_realign.md`.
+  archive this plan to `docs/plans/overworld_realign.md`. **DONE 2026-08-29:** re-read `OverworldLoop` head (1511-1526: two DelayFrames, mid-walk IsSpinning→UpdateSprites→DoBikeSpeedup→Advance→dead WarpScan, idle JoypadOverworld→Safari/script-warp/fly-warp/wCurOpponent poll→trainer-sight gate→joy latch→START/A .displayDialogue tail → D-pad, UpdateSprites at 4 late sites B.1), `M7.1/OW-A.6` (1993-2032: StepCountCheck→Event SAFARI→SafariZoneCheckSteps→wSafariZoneGameOver→WarpFound2→.notSafariZone poison guard→ApplyOutOfBattlePoisonDamage→HandleBlackOut→NewBattle→pushf/andpopf res BIT_STANDING_ON_WARP→jnc CheckWarpsNoCollision→WarpScan), `WarpScanToMapConnections` (2178-2202: port-only, callable CF vs pret jp, A1.1 early-call deleted, only WarpScan exit, docs 2026-08-22 stack-desync trap). All three match landed code; no stale prose remains after G.6/H.2.
 
 ## Stage J — adopted from the retired overworld-events plan
 
