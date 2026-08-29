@@ -270,6 +270,7 @@ extern text_arrow_pos                  ; text.asm — ▼ tile (read by BattlePr
                                        ; published by PrintText from the record)
 extern FormatMovesString               ; misc.asm — wMoves → wMovesString (+ '-' slots)
 extern DelayFrame                      ; src/home/vblank.asm
+extern Joypad                          ; src/home/joypad.asm — pret Joypad (computes hJoyPressed edge)
 extern text_row_stride                 ; text.asm — wTileMap row stride
 extern Serial_ExchangeNybble           ; src/home/serial.asm — LinkBattleExchangeData
 extern Serial_SendZeroByte             ; src/home/serial.asm — LinkBattleExchangeData
@@ -1466,6 +1467,7 @@ section .text
 ; unreachable the way an earlier comment here claimed; whether a live
 ; two-instance session currently reaches it was not runtime-verified in this
 ; pass (static checks only).
+; DEVIATION{class=HAL; pret=engine/battle/core.asm:BattlePromptWait; behavior=compute hJoyPressed edge inline from hJoyInput/hJoyLast without wJoyIgnore/DISABLE masking; evidence=port prompt waits are window-presentation wrappers that bypass pret's Joypad's wJoyIgnore/DISABLE checks as the original port loop did and as AutoKeyDrive's direct injection does; lifetime=permanent window-compositor boundary}
 BattlePromptWait:
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
     jne .interactive
@@ -1478,7 +1480,18 @@ BattlePromptWait:
     mov ecx, ARROW_BLINK
 .wait:
     call DelayFrame
-    test byte [ebp + hJoyPressed], PAD_A | PAD_B
+    ; pret _Joypad edge without wJoyIgnore/DISABLE masking — matches AutoKeyDrive
+    ; and original port loop which bypassed those checks, keeping hJoyLast coherent
+    mov al, [ebp + hJoyInput]
+    mov bl, al
+    mov al, [ebp + hJoyLast]
+    xor al, bl
+    and al, bl
+    mov [ebp + hJoyPressed], al
+    mov al, bl
+    mov [ebp + hJoyLast], al
+    mov [ebp + hJoyHeld], al
+    test al, PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

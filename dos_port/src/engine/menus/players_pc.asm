@@ -542,6 +542,7 @@ PlayerPCPrintText:
 ; would drop this screen's boxes. Modelled on PartyMenuPromptWait (M-29).
 ; All registers preserved (the caller is mid-stream).
 ; ---------------------------------------------------------------------------
+; DEVIATION{class=HAL; pret=engine/menus/players_pc.asm:PlayerPCPromptWait; behavior=compute hJoyPressed edge inline from hJoyInput/hJoyLast without wJoyIgnore/DISABLE masking; evidence=port prompt waits are window-presentation wrappers that bypass pret's Joypad's wJoyIgnore/DISABLE checks as the original port loop did and as AutoKeyDrive's direct injection does; lifetime=permanent window-compositor boundary}
 PlayerPCPromptWait:
     pushad
     call ppc_show_msg_window                ; the finished box exists in the scratch now
@@ -551,7 +552,17 @@ PlayerPCPromptWait:
 .wait:
     call PlayerPCMirror                     ; the ▼ lives in the scratch; show it
     call DelayFrame
-    test byte [ebp + hJoyPressed], PAD_A | PAD_B
+    ; pret _Joypad core edge
+    mov al, [ebp + hJoyInput]
+    mov bl, al
+    mov al, [ebp + hJoyLast]
+    xor al, bl
+    and al, bl
+    mov [ebp + hJoyPressed], al
+    mov al, bl
+    mov [ebp + hJoyLast], al
+    mov [ebp + hJoyHeld], al
+    test al, PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

@@ -205,13 +205,24 @@ MovePicLeft:
 ; so this need not preserve registers.
 ; ---------------------------------------------------------------------------
 global IntroTextWait
+; DEVIATION{class=HAL; pret=engine/movie/oak_speech/oak_speech.asm:IntroTextWait; behavior=compute hJoyPressed edge inline from hJoyInput/hJoyLast without wJoyIgnore/DISABLE masking; evidence=port cinematic prompt is window-presentation wrapper that bypasses pret's Joypad's wJoyIgnore/DISABLE checks as the original port loop did and as AutoKeyDrive's direct injection does; lifetime=permanent projection boundary}
 IntroTextWait:
     mov esi, [text_arrow_pos]
     mov byte [ebp + esi], CHAR_DOWN_ARROW
     mov ecx, ARROW_ON_FRAMES
 .wait:
     call DelayFrame
-    test byte [ebp + hJoyPressed], (PAD_A | PAD_B)
+    ; pret _Joypad core edge
+    mov al, [ebp + hJoyInput]
+    mov bl, al
+    mov al, [ebp + hJoyLast]
+    xor al, bl
+    and al, bl
+    mov [ebp + hJoyPressed], al
+    mov al, bl
+    mov [ebp + hJoyLast], al
+    mov [ebp + hJoyHeld], al
+    test al, (PAD_A | PAD_B)
     jnz .done
     dec ecx
     jnz .wait
