@@ -46,6 +46,7 @@ extern render_window
 extern g_windows
 extern g_window_count
 extern render_sprites
+extern g_bg_whiteout           ; src/ppu/ppu.asm — 1 = blank BG, full-screen takeover
 extern g_obj_over_window        ; src/ppu/ppu.asm — OBJ-vs-window z-order (GB order when set)
 extern g_surface_redraw_cb      ; src/ppu/ppu.asm — cinematic per-frame surface-mirror hook
 extern draw_player_marker
@@ -238,7 +239,14 @@ DelayFrame:
     ; gets the hardware order back. See ppu.asm's declaration.
     cmp dword [g_obj_over_window], 0
     jnz .objOverWindow
+    ; Under default window-over-sprites order, if g_bg_whiteout is active (full
+    ; screen takeover menu like Trainer Card, Options, Pokedex, Bag), the overworld
+    ; is blanked. Suppress overworld sprites so NPCs in the widescreen margins do
+    ; not bleed through around centered windows.
+    cmp dword [g_bg_whiteout], 0
+    jnz .skipSprites
     call render_sprites         ; composite OAM sprites over BG
+.skipSprites:
     PERF_MARK PERF_SPRITES
     call present_windows        ; composite the window descriptor list OVER sprites
     PERF_MARK PERF_WINDOWS
