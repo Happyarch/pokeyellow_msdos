@@ -470,9 +470,9 @@ One commit, comments only (no code bytes change): **DONE 2026-08-28 (a043d04b1)*
   tree. Measured clean — historical "further down" and flat-model TODO-HW
   notes correctly describe the prior state.
 
-## Stage H — structured-annotation sweep (S8)
+## Stage H — structured-annotation sweep (S8) — DONE 2026-08-29
 
-- [ ] H.1 convert each S8 free-form note to `DEVIATION{class=…; pret=…;
+- [x] H.1 convert each S8 free-form note to `DEVIATION{class=…; pret=…;
   behavior=…; evidence=…; lifetime=…}` on one line, no `;`/`}` in values:
   StopMusic ×2 (class=HAL), LoadMapData GBPalNormal (class=HAL),
   ResetMapVariables window reset (class=HAL), InitSprites ISTRAINER
@@ -480,9 +480,9 @@ One commit, comments only (no code bytes change): **DONE 2026-08-28 (a043d04b1)*
   LoadDestinationWarpPosition (class=projection), PlayMapChangeSound door-row
   projection (class=projection), `.mapTransition` port-only resets
   (class=projection), `_AdvancePlayerSprite` wMapViewVRAMPointer-slide drop
-  (extend the existing HAL DEVIATION's behavior field instead of a new one).
-- [ ] H.2 run `lint_pret_labels --no-scan --strict-claims` (zero
-  legacy_annotation / zero violations) and `static_gate`.
+  (extend the existing HAL DEVIATION's behavior field instead of a new one). DONE 2026-08-29: all 9 sites converted, _AdvancePlayerSprite extended in same commit.
+- [x] H.2 run `lint_pret_labels --no-scan --strict-claims` (zero
+  legacy_annotation / zero violations) and `static_gate`. DONE 2026-08-29: lint 0/0, static_gate PASS (8 checks).
 
 ## Stage I — verification, goldens, regression hygiene
 

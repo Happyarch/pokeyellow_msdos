@@ -2060,17 +2060,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp AllPokemonFainted                     ; wild_encounter_check.asm → HandleBlackOut
 .mapTransition:
     ; A connection was crossed — reload everything for the new map.
+    ; DEVIATION{class=projection; pret=home/overworld.asm:.loadNewMap; behavior=additionally zeroes wWalkCounter both player step vectors hSCX hSCY and wMapViewVRAMPointer before LoadMapHeader where pret does not; evidence=pret .loadNewMap only sets Pikachu flags then calls LoadMapHeader and music, wWalkCounter was already 0 after walk, but hSCY hSCX accumulated 2 px per frame during walk and surface renderer render_bg blits window at that offset, stale scroll would offset blit after crossing, wMapViewVRAMPointer kept in lockstep though vestigial; lifetime=permanent, structural to surface renderer}
     mov byte [ebp + wWalkCounter], 0
     mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
     mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
-
-    ; Reset scroll and VRAM pointer. During the walk hSCY/hSCX accumulated
-    ; 2 px/frame (e.g. −144 px over 9 north steps). The surface renderer
-    ; (src/ppu/ppu.asm render_bg) blits a 320×200 window at (hSCX, hSCY) out
-    ; of the 48×36-tile surface every frame, so stale scroll would offset
-    ; that blit after the crossing. wMapViewVRAMPointer is kept in lockstep
-    ; with the other reset sites (ResetMapVariables etc.) — vestigial under
-    ; the surface renderer but never left stale.
     mov byte [ebp + hSCY], 0
     mov byte [ebp + hSCX], 0
     mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
@@ -2723,9 +2716,7 @@ PlayMapChangeSound:
     ; pret lda_coord 8, 8 = tile one row above the standing tile (lda_coord 8, 9
     ; → port PLAYER_STANDING). Row scaling is 1:1, so project to
     ; (PLAYER_STANDING_ROW - 1, PLAYER_STANDING_COL) — one row above standing.
-    ; ; PROJ: this door-tile row projection + the pre-EnterMap tilemap timing are
-    ; unverified (no golden warp scenario) — the go-inside/go-outside SFX selection
-    ; needs MCP live-warp verification. Wrong projection only mis-picks the jingle.
+    ; DEVIATION{class=projection; pret=home/overworld.asm:PlayMapChangeSound; behavior=samples door tile at port (PLAYER_STANDING_ROW-1, PLAYER_STANDING_COL) one row above standing tile; evidence=pret lda_coord 8, 8 is one row above lda_coord 8, 9 standing tile, port row scaling 1 to 1 projects to PLAYER_STANDING_ROW-1, pre-EnterMap tilemap timing unverified until warp golden, wrong projection only mis-picks jingle; lifetime=permanent, unverified projection until warp golden verifies}
     movzx eax, byte [ebp + wTileMap + (PLAYER_STANDING_ROW - 1) * SCREEN_TILES_W + PLAYER_STANDING_COL]
     cmp al, OVERWORLD_DOOR_TILE                  ; pret: cp $0b (door tile in tileset 0)
     jne .didNotGoThroughDoor
@@ -2892,35 +2883,20 @@ HandleBlackOut:
 ; Pret ref: home/overworld.asm:752 (StopMusic, golden 00:0785).
 ; In: AL = fade-out control value.
 ;
-; DIVERGENCE 1 (audio tick location): on the GB the VBlank ISR advances the audio
-; engine, so pret's bare `jr nz, .wait` spin sees wAudioFadeOutControl reach 0.
-; The port has no VBlank audio ISR — the tick lives in DelayFrame (→ audio_tick →
-; FadeOutAudio, which is what decrements the counter). A bare spin here would
-; hang forever, so the wait pumps DelayFrame. Same idiom and same reason as
-; home/audio.asm:WaitForSoundToFinish. (engine/overworld/healing_machine.asm
-; bounds its copy of this spin instead; pumping is the correct form.)
-;
-; DIVERGENCE 2 (engine-offline guard): the port has a state the GB does not — the
-; audio engine can be OFFLINE (`/NOSOUND`, or any build before audio_init runs;
-; audio_tick self-gates on g_audio_engine_online). Offline, FadeOutAudio never
-; runs, so nothing would ever clear the byte we just wrote and the wait above
-; would spin forever. PlaySound already carries the mirror-image scaffold — it
-; swallows requests while offline so WaitForSoundToFinish's spin exits at once —
-; but StopMusic writes wAudioFadeOutControl directly, bypassing that. So: offline,
-; skip the fade and clear the byte, preserving pret's post-condition
-; (wAudioFadeOutControl == 0 on return) for whoever brings the engine online later.
+; DEVIATION{class=HAL; pret=home/overworld.asm:StopMusic; behavior=wait for wAudioFadeOutControl pumps DelayFrame instead of pret bare jr nz spin; evidence=port audio tick lives in DelayFrame via audio_tick and FadeOutAudio which decrements counter, GB VBlank ISR advances audio, bare spin would hang forever, same idiom as home/audio.asm:WaitForSoundToFinish; lifetime=permanent while tick is driven from DelayFrame not VBlank ISR}
+; DEVIATION{class=HAL; pret=home/overworld.asm:StopMusic; behavior=if audio engine offline skips fade and clears wAudioFadeOutControl instead of spinning; evidence=port can be offline via /NOSOUND or before audio_init, FadeOutAudio never runs to clear byte, PlaySound mirrors offline scaffold, preserves postcondition wAudioFadeOutControl==0; lifetime=permanent while engine can be offline}
 ; ---------------------------------------------------------------------------
 global StopMusic
 StopMusic:
     mov [ebp + wAudioFadeOutControl], al    ; ld [wAudioFadeOutControl], a
     call StopAllMusic
-    cmp byte [g_audio_engine_online], 0     ; PORT GUARD — see DIVERGENCE 2
+    cmp byte [g_audio_engine_online], 0     ; PORT GUARD — see DEVIATION offline
     jz .offline
 .wait:
     mov al, [ebp + wAudioFadeOutControl]
     test al, al                             ; and a — fade-out finished?
     jz .done
-    call DelayFrame                         ; pump the audio tick (see DIVERGENCE 1)
+    call DelayFrame                         ; pump the audio tick (see DEVIATION HAL)
     jmp .wait
 .offline:
     mov byte [ebp + wAudioFadeOutControl], 0 ; no tick will ever clear it
@@ -4554,6 +4530,7 @@ LoadMapData:
 
     mov byte [ebp + wUpdateSpritesEnabled], 1
     call EnableLCD
+    ; DEVIATION{class=HAL; pret=home/overworld.asm:LoadMapData; behavior=calls GBPalNormal and SET_PAL_OVERWORLD after EnableLCD where pret does not call GBPalNormal; evidence=pret LoadMapData sequence is DisableLCD ResetMapVariables LoadTextBoxTilePatterns LoadMapHeader InitMapSprites LoadScreenRelatedData CopyMapViewToVRAM EnableLCD then RunPaletteCommand, no GBPalNormal, port needs GBPalNormal to reset BGP and OBP0 shadows and re-map through live CGB slot palettes via commit_palette; lifetime=permanent while palette is live CGB}
     call GBPalNormal
     mov bh, SET_PAL_OVERWORLD
     call RunPaletteCommand
@@ -4668,6 +4645,7 @@ ResetMapVariables:
     ; guarantees no stale box leaks over the overworld (e.g. the title's
     ; go_to_main_menu path). Dialog/menu code re-populates the list when it opens a
     ; box. The rWY/rWX shadows are parked off-screen for faithfulness.
+    ; DEVIATION{class=HAL; pret=home/overworld.asm:ResetMapVariables; behavior=additionally empties window list via hide_window and parks IO_WY to RENDER_H and IO_WX to 7 where pret only zeroes wMapViewVRAMPointer hSCY hSCX wWalkCounter wUnusedCurMapTilesetCopy wSpriteSetID wWalkBikeSurfStateCopy; evidence=pret window is hardware WY and WX scrolled, port window is count-driven list, stale list would leak title box over overworld, hardware shadows parked off-screen for faithfulness; lifetime=permanent while window is count-driven}
     call hide_window                    ; count=0; sets hWY = RENDER_H
     mov byte [ebp + IO_WY], RENDER_H
     mov byte [ebp + IO_WX], 7
@@ -4954,14 +4932,7 @@ InitSprites:
     movzx eax, byte [ebp + esi]
     inc esi
     mov [h_load_sprite_temp2], al
-    ; DIVERGENCE (port ext): set the per-slot ISTRAINER flag (SPRITESTATEDATA2 0x0A)
-    ; that the port interaction stack (CheckNPCInteraction / CheckTrainerSight /
-    ; TrainerEncounterFlow) reads. pret has no such field — it re-derives trainer-ness
-    ; from the text-id flags at interaction time, in the SPRITE branch of
-    ; IsSpriteOrSignInFrontOfPlayer (the branch the port realizes as CheckNPCInteraction;
-    ; the sign branch itself is ported, below).
-    ; InitSprites carries it; the bespoke InitMapSprites path no longer sets it
-    ; (de-bespoked 2026-08-28). ZeroSpriteStateData already cleared the slot.
+    ; DEVIATION{class=data-model; pret=home/overworld.asm:InitSprites; behavior=sets per-slot ISTRAINER flag in wSpriteStateData2 for trainer sprites where pret has no such field; evidence=pret re-derives trainer-ness from text-id flags at interaction time in IsSpriteOrSignInFrontOfPlayer SPRITE branch realized as CheckNPCInteraction, port interaction stack reads ISTRAINER set at load time; lifetime=permanent, port ext to support CheckTrainerSight and TrainerEncounterFlow}
     test al, TRAINER_FLAG
     jz .not_trainer_slot
     mov byte [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 1
@@ -4997,20 +4968,7 @@ ZeroSpriteStateData:
     ret
 
 ; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
-; DIVERGENCE (harness-only; zero real-game effect): pret writes $ff here — a
-; "hidden until initialized" marker. This seed is IRRELEVANT to the running game:
-; the first UpdateSprites frame calls InitializeSpriteStatus (movement.asm:727),
-; which unconditionally overwrites IMAGEINDEX with $ff; the second frame's
-; CheckSpriteAvailability → UpdateSpriteImage then computes the real facing index.
-; So under the live game (EnterMap + OverworldLoop both run UpdateSprites) a $ff or
-; a 0 seed here behave identically. The seed ONLY changes the STATIC pre-UpdateSprites
-; DEBUG-harness snapshot (DEBUG_BASELINE etc. render without running UpdateSprites):
-; $ff hides the NPCs there, 0 (the ZeroSpriteStateData value → facing-down anim-0)
-; shows them. We keep 0 so that regression snapshot still exercises NPC rendering.
-; Restoring the faithful $ff needs the DEBUG harness to run UpdateSprites like EnterMap
-; — but on frame 2 the port's random-movement path makes a WALK NPC try to move
-; immediately (no initial move-delay), so it also needs pret's move-delay/probability
-; ported (movement-engine work, OW-A.7 territory) to keep the snapshot deterministic.
+; DEVIATION{class=data-model; pret=home/overworld.asm:DisableRegularSprites; behavior=writes 0 to SPRITESTATEDATA1_IMAGEINDEX instead of pret 0xFF hidden marker; evidence=pret 0xFF hidden until UpdateSprites InitializeSpriteStatus overwrites on first frame, second frame CheckSpriteAvailability computes facing, live game runs UpdateSprites every frame so both seeds behave identically, 0 keeps NPCs visible in DEBUG snapshot that skips UpdateSprites while 0xFF hides them, faithful 0xFF would need harness to run UpdateSprites plus move-delay ported; lifetime=permanent while DEBUG snapshot skips UpdateSprites and needs deterministic move-delay}
 DisableRegularSprites:
     push ecx
     push esi
@@ -5121,14 +5079,7 @@ global OverworldLoopLessDelay
 ; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
 ; table entry selected by wDestinationWarpID.
 ; Pret ref: home/overworld.asm:LoadDestinationWarpPosition
-; PROJ divergence: pret's predef version copies a 4-byte (block-view-pointer,
-; Y, X) struct from an hl-indexed ROM table straight into
-; wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port has no parallel
-; per-map view-pointer table; it reads Y/X directly out of the already-loaded
-; wWarpEntries (Y, X, dest_warp_id, dest_map_id per entry — see the
-; `warp_event` macro / the CheckWarps* scans), and leaves wCurrentTileBlockMapViewPointer
-; to LoadDestinationMapData's explicit stride-math recompute, which replaces
-; pret's ROM view-pointer lookup with an equivalent runtime computation.
+; DEVIATION{class=projection; pret=home/overworld.asm:LoadDestinationWarpPosition; behavior=reads Y and X directly from wWarpEntries and leaves wCurrentTileBlockMapViewPointer to LoadDestinationMapData stride-math instead of copying 4-byte struct including view pointer from ROM table; evidence=pret predef copies 4-byte struct block-view-pointer Y X from hl-indexed ROM table straight into wCurrentTileBlockMapViewPointer wYCoord wXCoord, port has no per-map view-pointer table, Y and X come from already-loaded wWarpEntries warp_event macro; lifetime=permanent, flat model no ROM view-pointer table}
 ; In:  wDestinationWarpID = 0-based warp index (destination map's table)
 ; Out: wYCoord, wXCoord set. Preserves all other registers/flags.
 ; ---------------------------------------------------------------------------
