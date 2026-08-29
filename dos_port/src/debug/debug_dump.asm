@@ -210,6 +210,23 @@ global RunTrainerRoute17TestSeed
 ; is what the golden has (see RunSafariGameOverTestSeed).
 global RunSafariGameOverTestSeed
 %endif
+%ifdef DEBUG_POISON
+extern PrepareNewGameDebug
+global RunPoisonTestSeed
+%endif
+%ifdef DEBUG_MAPCONN
+extern PrepareNewGameDebug
+global RunMapConnTestSeed
+%endif
+%ifdef DEBUG_WARP_DOOR
+extern PrepareNewGameDebug
+global RunWarpDoorTestSeed
+%endif
+%ifdef DEBUG_BEATEN_TALK
+extern PrepareNewGameDebug
+extern npc_beaten_flags
+global RunBeatenTalkTestSeed
+%endif
 %ifdef DEBUG_BATTLE_GHOST
 %ifndef DEBUG_FISH
 %ifndef DEBUG_TRAINER_ROUTE
@@ -1495,6 +1512,43 @@ gbstate_regions:
     gbregion "ledgeTrace",       0x26000, 0x1000           ; HandleMidJump call ring (debug aid)
 %endif
 %endif
+%ifdef DEBUG_POISON
+    ; Poison tick scenario (overworld realign I.3 — A2 seam). Same rule as above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/poison_tick.lua.
+    ; The 4th step's wStepCounter &3==0 triggers poison; HP 10->9 via wPartyData.
+    gbregion "wPlayerMapPos",    wCurMap, 5
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
+    gbregion "wMovementFlags",   wMovementFlags, 1
+    gbregion "wStepCounter",     wStepCounter, 1
+    gbregion "wPlayerDir",       wPlayerDirection, 1
+    gbregion "wWalkCounter",     wWalkCounter, 1
+%endif
+%ifdef DEBUG_MAPCONN
+    ; Map-connection scenario (overworld realign I.4 — A1 seam). Same rule as above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/map_connection.lua.
+    gbregion "wPlayerMapPos",    wCurMap, 5
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
+    gbregion "wMovementFlags",   wMovementFlags, 1
+    gbregion "wStepCounter",     wStepCounter, 1
+    gbregion "wWalkCounter",     wWalkCounter, 1
+%endif
+%ifdef DEBUG_WARP_DOOR
+    ; Warp-door scenario (overworld realign I.5 — projection). Same rule as above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/warp_door.lua.
+    gbregion "wPlayerMapPos",    wCurMap, 5
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
+    gbregion "wMovementFlags",   wMovementFlags, 1
+    gbregion "wWalkCounter",     wWalkCounter, 1
+%endif
+%ifdef DEBUG_BEATEN_TALK
+    ; Beaten-trainer re-talk scenario (overworld realign I.6 — A7). Same rule as above:
+    ; scenario-local, mirrored by tools/mgba_harness/scenarios/beaten_trainer_talk.lua.
+    gbregion "wPlayerMapPos",    wCurMap, 5
+    gbregion "wStatusFlags5to7", wStatusFlags5, 4
+    gbregion "wMovementFlags",   wMovementFlags, 1
+    gbregion "wBattleFlags",     wIsInBattle, 4
+    gbregion "wCurOpponent",     wCurOpponent, 1
+%endif
 %ifdef DEBUG_FISH
     ; Fishing-rod scenario (items-plan Stage 11). Same rule as the rows above:
     ; scenario-local, mirrored by tools/mgba_harness/scenarios/fish_old_rod.lua,
@@ -2168,6 +2222,91 @@ RunLedgeTestSeed:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
+    ret
+%endif
+
+%ifdef DEBUG_POISON
+extern PrepareNewGameDebug
+; ---------------------------------------------------------------------------
+; RunPoisonTestSeed — poison tick gate (overworld realign I.3 — A2 seam).
+; Like RunLedgeTestSeed, SEEDS AND RETURNS: EnterMap falls through into the
+; real OverworldLoop and AUTOKEY_POISON drives 4 east steps. Seeds the debug
+; party, then poisons the first mon (HP=10, MaxHP unchanged, PSN status 0x08,
+; wStepCounter=0 so the 4th step triggers the every-4 Check). The 4th step's
+; ApplyOutOfBattlePoisonDamage decrements HP to 9 and flashes the palette via
+; ChangeBGPalColor0_4Frames. In: EBP = GB memory base. Returns.
+; ---------------------------------------------------------------------------
+RunPoisonTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ; Poison the first party mon: status PSN, HP 10 (big-endian), keep MaxHP.
+    mov byte [ebp + wPartyMon1Status], 0x08 ; PSN
+    mov byte [ebp + wPartyMon1HP], 0x00
+    mov byte [ebp + wPartyMon1HP + 1], 10
+    mov byte [ebp + wStepCounter], 0
+    ret
+%endif
+
+%ifdef DEBUG_MAPCONN
+extern PrepareNewGameDebug
+; ---------------------------------------------------------------------------
+; RunMapConnTestSeed — map-connection gate (overworld realign I.4 — A1 seam).
+; Like RunLedgeTestSeed, SEEDS AND RETURNS: EnterMap falls through into the
+; real OverworldLoop and AUTOKEY_MAPCONN drives west steps across the
+; Viridian City west connection. Seeds the debug party, empty bag.
+; In: EBP = GB memory base. Returns.
+; ---------------------------------------------------------------------------
+RunMapConnTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    mov byte [ebp + wStepCounter], 0
+    ret
+%endif
+
+%ifdef DEBUG_WARP_DOOR
+extern PrepareNewGameDebug
+; ---------------------------------------------------------------------------
+; RunWarpDoorTestSeed — warp-door gate (overworld realign I.5 — projection).
+; Like RunLedgeTestSeed, SEEDS AND RETURNS: AUTOKEY_WARP_DOOR drives north
+; into the door warp. Seeds the debug party, empty bag.
+; In: EBP = GB memory base. Returns.
+; ---------------------------------------------------------------------------
+RunWarpDoorTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ret
+%endif
+
+%ifdef DEBUG_BEATEN_TALK
+extern PrepareNewGameDebug
+extern npc_beaten_flags
+; ---------------------------------------------------------------------------
+; RunBeatenTalkTestSeed — beaten-trainer re-talk gate (overworld realign I.6 — A7).
+; Like RunTrainerRouteTestSeed but seeds the beaten flag SET. EnterMap falls
+; through into the real OverworldLoop and AUTOKEY_BEATEN_TALK presses A in
+; front of the trainer. Seeds the debug party, empty bag, and sets
+; npc_beaten_flags bit for Route 3 Youngster 0 (view 6, bit 0).
+; In: EBP = GB memory base. Returns.
+; ---------------------------------------------------------------------------
+RunBeatenTalkTestSeed:
+    mov byte [ebp + wPartyCount], 0
+    mov byte [ebp + wPartySpecies], 0xFF
+    mov byte [ebp + wNumBagItems], 0
+    mov byte [ebp + wBagItems], 0xFF
+    call PrepareNewGameDebug
+    ; Set beaten flag for the Youngster at Route 3 view 0: npc_beaten_flags bit 0
+    ; (port-bespoke BSS, not TrainerFlagAction yet — see Stage J). The golden's
+    ; Lua does the same via wEventFlags/Engine flag? For now we use the same BSS.
+    bts word [npc_beaten_flags], 0
     ret
 %endif
 
@@ -7958,6 +8097,32 @@ autokey_script:
 %endif
     dd   60 + AK_LEDGE_SHIFT,   72 + AK_LEDGE_SHIFT, PAD_DOWN ; arm the hop; the loop plays it out
     dd  300 + AK_LEDGE_SHIFT,  312 + AK_LEDGE_SHIFT, PAD_DOWN ; post-teardown step — proves input is back
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_POISON
+    ; Poison tick (overworld realign I.3 — A2 seam): 4 steps on Pallet
+    ; Town (8,8)->(6,8)->(8,8) up 2 + down 2, wStepCounter
+    ; 0->252 triggers poison HP 10->9.
+    dd   60,   76, PAD_UP
+    dd  140,  156, PAD_UP
+    dd  220,  240, PAD_DOWN
+    dd  300,  316, PAD_DOWN
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_MAPCONN
+    ; Map-connection (overworld realign I.4 — A1 seam): 2 west steps inside
+    ; Viridian City (16,3)->(16,1) west 2 to verify StepCountCheck before
+    ; CheckMapConnections without crossing. West 2 from x=3 walkable.
+    dd   60,   72, PAD_LEFT
+    dd  100,  112, PAD_LEFT
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_WARP_DOOR
+    ; Warp-door (overworld realign I.5 — projection): walk north into door warp.
+    dd   60,   72, PAD_UP
+    dd   -1,   -1, 0
+%elifdef AUTOKEY_BEATEN_TALK
+    ; Beaten-trainer re-talk (overworld realign I.6 — A7): press A in front of
+    ; a beaten trainer. One A press triggers CheckNPCInteraction → after-battle
+    ; text via ReadTrainerHeaderInfo sel 6, no battle.
+    dd   60,   68, PAD_A
     dd   -1,   -1, 0
 %elifdef AUTOKEY_TRAINER_ROUTE
     ; Continuous trainer route (DEBUG_TRAINER_ROUTE, battle plan Stage 1b).

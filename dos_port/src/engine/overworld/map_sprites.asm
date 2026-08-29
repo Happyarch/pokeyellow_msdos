@@ -107,6 +107,7 @@ w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTab
 ; TODO-GLOBAL-EVENTS: npc_beaten_flags resets per InitMapSprites (per map load).
 ; Replace with a persistent global wEventFlags bit array when the event system is
 ; implemented so trainers stay beaten across map warps.
+global npc_beaten_flags
 npc_beaten_flags:     resw 1   ; bit N-1 = NPC slot N beaten; cleared in InitMapSprites
 w_trainer_enc_slot:   resb 1   ; engaging trainer slot byte-offset (0xFF = none)
 w_player_frozen:      resb 1   ; 1 = block player input during encounter flow

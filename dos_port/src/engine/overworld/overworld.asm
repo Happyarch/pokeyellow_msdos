@@ -150,6 +150,18 @@ extern ReloadWalkingTilePatterns    ; src/engine/overworld/map_sprites.asm
 %ifdef DEBUG_SAFARI_GAMEOVER
 %define NEED_SEAM_RESEAT
 %endif
+%ifdef DEBUG_POISON
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_MAPCONN
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_WARP_DOOR
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_BEATEN_TALK
+%define NEED_SEAM_RESEAT
+%endif
 %ifdef DEBUG_CABLECLUB
 %define NEED_SEAM_RESEAT
 %endif

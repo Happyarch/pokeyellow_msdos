@@ -2196,6 +2196,50 @@ AUTOKEY_DUMP_FRAME ?= 420
 NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
 endif
 
+# Poison overworld tick (overworld realign I.3 — A2 seam): poisoned party mon walks 4 steps → HP loss + flash; seeded HP=10, PSN status.
+# Spawn Route 1 (10,7) facing east, walk east 4 steps on safe land (col 7 avoids NPCs, no grass). AUTOKEY_POISON drives the walk, dump at 400.
+# make DEBUG_POISON=1 [AUTOKEY_DUMP_FRAME=400]
+ifdef DEBUG_POISON
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_POISON -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_POISON
+AUTOKEY_DUMP_FRAME ?= 450
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
+# Map-connection crossing (overworld realign I.4 — A1 seam): walk off a connected edge, assert step counter decremented and no encounter skipped.
+# Spawn Viridian City west edge (3,16) → walk west into Route 22 via west connection (same tiles as DEBUG_SEAM). One block crossing.
+# make DEBUG_MAPCONN=1 [AUTOKEY_DUMP_FRAME=400]
+ifdef DEBUG_MAPCONN
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_MAPCONN -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_MAPCONN
+AUTOKEY_DUMP_FRAME ?= 400
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
+# Warp-through-door (overworld realign I.5 — PlayMapChangeSound projection): walk into a door warp, verify correct GO_INSIDE vs GO_OUTSIDE jingle.
+# Spawn Pallet Town outside Red's house door (7,6) facing north, walk north into door warp.
+# make DEBUG_WARP_DOOR=1 [AUTOKEY_DUMP_FRAME=400]
+ifdef DEBUG_WARP_DOOR
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_WARP_DOOR -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_WARP_DOOR
+AUTOKEY_DUMP_FRAME ?= 400
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
+# Re-talk beaten trainer (overworld realign I.6 — A7): after-battle text prints, no battle.
+# Spawn Route 3 in sight of Youngster trainer 0, seed beaten flag set, press A to talk, verify dialog not battle.
+# make DEBUG_BEATEN_TALK=1 [AUTOKEY_DUMP_FRAME=400]
+ifdef DEBUG_BEATEN_TALK
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BEATEN_TALK -D DEBUG_SEED_PARTY -D SKIP_TITLE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BEATEN_TALK
+AUTOKEY_DUMP_FRAME ?= 500
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 ifdef DEBUG_BILLSHOUSEPC
 $(eval $(call hiddenobj_gate,DEBUG_BILLSHOUSEPC,0x58,5,1,0x04))
 # BillsHousePC dispatches on event flags, and the branch choice decides whether this

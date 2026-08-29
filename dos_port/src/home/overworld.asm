@@ -226,6 +226,10 @@ extern RunTrainerRouteTestSeed            ; src/debug/debug_dump.asm (Stage 1b c
 extern RunTrainerRoute17TestSeed          ; src/debug/debug_dump.asm (ROUTE_17/ForceBikeDown witness)
 extern RunGhostBattleTestSeed             ; src/debug/debug_dump.asm (4c ghost witness)
 extern RunSafariGameOverTestSeed          ; src/debug/debug_dump.asm (safari walker)
+extern RunPoisonTestSeed                  ; src/debug/debug_dump.asm (poison tick)
+extern RunMapConnTestSeed                 ; src/debug/debug_dump.asm (mapconn)
+extern RunWarpDoorTestSeed                ; src/debug/debug_dump.asm (warp door)
+extern RunBeatenTalkTestSeed              ; src/debug/debug_dump.asm (beaten talk)
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern RunPikaPicTest                     ; src/debug/debug_dump.asm
 extern RunPokedexTest                     ; src/engine/menus/pokedex.asm
@@ -723,6 +727,46 @@ EnterMap:
     mov byte [ebp + wYCoord], 8
     mov byte [ebp + wXCoord], 7
     mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)
+%endif
+%ifdef DEBUG_POISON
+    ; Poison tick gate (overworld realign I.3 — A2 seam): poisoned party mon walks
+    ; 4 steps on Pallet Town (8,8)->(6,8)->(8,8) up 2 + down 2, wStepCounter
+    ; 0->252 triggers poison.
+    mov byte [ebp + wCurMap], PALLET_TOWN
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 8
+    mov byte [ebp + wDestinationWarpID], 0xFF
+%endif
+%ifdef DEBUG_MAPCONN
+    ; Map-connection gate (overworld realign I.4 — A1 seam): walk 2 west steps
+    ; inside Viridian City (10,10)->(10,8) to verify StepCountCheck happens
+    ; before CheckMapConnections (A1 ordering) without needing to cross. Walk
+    ; is inside, no connection, but pins wStepCounter decremented. West 2 from
+    ; x=3 is walkable (proven via DEBUG_SEAM 8-step).
+    mov byte [ebp + wCurMap], VIRIDIAN_CITY
+    mov byte [ebp + wYCoord], 16
+    mov byte [ebp + wXCoord], 3
+    mov byte [ebp + wDestinationWarpID], 0xFF
+%endif
+%ifdef DEBUG_WARP_DOOR
+    ; Warp-door gate (overworld realign I.5 — PlayMapChangeSound projection):
+    ; warp through a door tile to verify the (PLAYER_STANDING_ROW-1,COL) projection
+    ; picks $0B door vs $2C land. Spawn Pallet Town one south of Red's house door
+    ; (8,6) facing north, walk north onto door warp at (7,6). Seeded BEFORE LoadMapData.
+    mov byte [ebp + wCurMap], PALLET_TOWN
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 6
+    mov byte [ebp + wDestinationWarpID], 0xFF
+%endif
+%ifdef DEBUG_BEATEN_TALK
+    ; Beaten-trainer re-talk gate (overworld realign I.6 — A7): after-battle text
+    ; prints, no battle. Spawn Route 3 in Youngster view range at (12,8) east of
+    ; the trainer, seed beaten flag set in RunBeatenTalkTestSeed, press A.
+    ; Seeded BEFORE LoadMapData (same rule as DEBUG_TRAINER_ROUTE).
+    mov byte [ebp + wCurMap], ROUTE_3
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 12
+    mov byte [ebp + wDestinationWarpID], 0xFF
 %endif
 %ifdef DEBUG_BATTLE_GHOST
     ; Ghost-battle gate (battle plan 4c's witness). Spawn on Route 1 column 7 —
@@ -1503,6 +1547,40 @@ EnterMap:
     call SeedDeterministicPlayerIdentity
     call SeamReseatView
     call RunSafariGameOverTestSeed           ; event, balls, wSafariSteps; RETURNS
+%endif
+%ifdef DEBUG_POISON
+    ; Poison tick gate (overworld realign I.3 — A2 seam): poisoned mon walks 4
+    ; steps on safe land to trigger ApplyOutOfBattlePoisonDamage (every 4th
+    ; wStepCounter). Same shape as ledge/surf: seed, then FALL THROUGH into the
+    ; real OverworldLoop. AUTOKEY_POISON drives 4 east steps, dump at 400.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunPoisonTestSeed                   ; party + PSN, HP=10; RETURNS
+%endif
+%ifdef DEBUG_MAPCONN
+    ; Map-connection gate (overworld realign I.4 — A1 seam): walk west off a
+    ; connected edge to trigger CheckMapConnections after StepCountCheck/Safari/
+    ; poison/NewBattle. Same shape as DEBUG_SEAM: seed, then FALL THROUGH.
+    ; AUTOKEY_MAPCONN drives west steps, dump at 400.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunMapConnTestSeed                  ; debug party, empty bag; RETURNS
+%endif
+%ifdef DEBUG_WARP_DOOR
+    ; Warp-door gate (overworld realign I.5 — PlayMapChangeSound projection):
+    ; warp through a door tile to verify (PLAYER_STANDING_ROW-1,COL) projection.
+    ; Seed, then FALL THROUGH. AUTOKEY_WARP_DOOR walks north into door warp.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunWarpDoorTestSeed                 ; debug party, empty bag; RETURNS
+%endif
+%ifdef DEBUG_BEATEN_TALK
+    ; Beaten-trainer re-talk gate (overworld realign I.6 — A7): after-battle text
+    ; prints, no battle. Seed, then FALL THROUGH. AUTOKEY_BEATEN_TALK presses A
+    ; in front of a beaten-trainer NPC; dump after dialog.
+    call SeedDeterministicPlayerIdentity
+    call SeamReseatView
+    call RunBeatenTalkTestSeed               ; party + beaten flag set; RETURNS
 %endif
 
     ; fall through to OverworldLoop

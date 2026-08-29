@@ -950,6 +950,76 @@ SCENARIOS = {
     "route24_sight": {"class": "datastruct",
                        "flags": "DEBUG_MAPSCRIPT_SIGHT_R24=1",
                        **_MAP_SIGHT_COMMON},
+    "poison_tick": {
+        # Route 1 poison tick: PSN mon HP=10 at (10,7) walks 4 east steps to (10,11),
+        # wStepCounter &3==0 triggers ApplyOutOfBattlePoisonDamage HP 10->9 (A2 seam).
+        "class": "datastruct",
+        "flags": "DEBUG_POISON=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3, so the same player position yields a different pointer. "
+                         "wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE compared."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been playing since the new game, the port gate boots straight into the map and never starts the play-time counter. "
+                         "wStatusFlags5 and wStatusFlags7 in the same region ARE compared."),
+            ],
+        },
+    },
+    "map_connection": {
+        # Viridian City west edge (3,16) walks west 2 tiles across west connection to Route 22,
+        # wStepCounter decremented and no encounter skipped (A1 ordering).
+        "class": "datastruct",
+        "flags": "DEBUG_MAPCONN=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3, so the same player position yields a different pointer. "
+                         "wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE compared."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been playing since the new game, the port gate boots straight into the map and never starts the play-time counter. "
+                         "wStatusFlags5 and wStatusFlags7 in the same region ARE compared."),
+            ],
+        },
+    },
+    "warp_door": {
+        # Pallet Town (7,6) walks north into door warp, PlayMapChangeSound samples door tile at ROW-1 correctly (projection I.5).
+        "class": "datastruct",
+        "flags": "DEBUG_WARP_DOOR=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3, so the same player position yields a different pointer. "
+                         "wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE compared."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been playing since the new game, the port gate boots straight into the map and never starts the play-time counter. "
+                         "wStatusFlags5 and wStatusFlags7 in the same region ARE compared."),
+            ],
+        },
+    },
+    "beaten_trainer_talk": {
+        # Route 3 (12,8) re-talks beaten Youngster, after-battle text prints via ReadTrainerHeaderInfo sel 6, no battle (A7).
+        "class": "datastruct",
+        "flags": "DEBUG_BEATEN_TALK=1",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        "wram_masks": {
+            "wPlayerMapPos": [
+                ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
+                         "not pret's 3, so the same player position yields a different pointer. "
+                         "wCurMap at +0 and wYCoord/wXCoord at +3/+4 ARE compared."),
+            ],
+            "wStatusFlags5to7": [
+                ((2, 2), "wStatusFlags6 BIT_GAME_TIMER_COUNTING: the golden has been playing since the new game, the port gate boots straight into the map and never starts the play-time counter. "
+                         "wStatusFlags5 and wStatusFlags7 in the same region ARE compared."),
+            ],
+        },
+    },
     "item_potion_use": {
         # frame 700 = the gate's AUTOKEY_ITEMUSE script done (POTION heal +
         # ANTIDOTE refusal), bag list reopened — the WRAM state is settled there

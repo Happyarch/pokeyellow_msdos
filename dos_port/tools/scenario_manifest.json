@@ -3186,6 +3186,123 @@
                 "masks": "golden_diff.SCENARIOS"
             },
             "verification": "Route24 near-miss 5-pointer map trainer sight: player at (18,5) inside ROUTE24_COOLTRAINER_M2 view UP range 4, only 5-pointer map in set"
+        },
+        {
+            "name": "poison_tick",
+            "id": 106,
+            "tier": "full",
+            "scenario_class": "datastruct",
+            "build_flags": "DEBUG_POISON=1",
+            "port_entry_gate": "DEBUG_POISON",
+            "navigation_script": "tools/mgba_harness/scenarios/poison_tick.lua",
+            "dump": {
+                "type": "GBSTATE",
+                "schema_version": 2,
+                "artifact": "GBSTATE.BIN",
+                "timeout_seconds": 150,
+                "terminal_marker": "complete"
+            },
+            "must_hit": [
+                "RunPoisonTestSeed",
+                "ApplyOutOfBattlePoisonDamage",
+                "ChangeBGPalColor0_4Frames"
+            ],
+            "comparison": {
+                "regions": [
+                    "wram"
+                ],
+                "projection": "golden_diff.SCENARIOS",
+                "masks": "golden_diff.SCENARIOS"
+            },
+            "verification": "Route 1 poison tick: PSN mon HP=10 at (10,7) walks 4 east steps to (10,11), wStepCounter &3==0 triggers poison HP 10->9 (A2 seam)"
+        },
+        {
+            "name": "map_connection",
+            "id": 107,
+            "tier": "full",
+            "scenario_class": "datastruct",
+            "build_flags": "DEBUG_MAPCONN=1",
+            "port_entry_gate": "DEBUG_MAPCONN",
+            "navigation_script": "tools/mgba_harness/scenarios/map_connection.lua",
+            "dump": {
+                "type": "GBSTATE",
+                "schema_version": 2,
+                "artifact": "GBSTATE.BIN",
+                "timeout_seconds": 150,
+                "terminal_marker": "complete"
+            },
+            "must_hit": [
+                "RunMapConnTestSeed",
+                "CheckMapConnections",
+                "WarpScanToMapConnections"
+            ],
+            "comparison": {
+                "regions": [
+                    "wram"
+                ],
+                "projection": "golden_diff.SCENARIOS",
+                "masks": "golden_diff.SCENARIOS"
+            },
+            "verification": "Viridian City west edge (3,16) walks west 2 tiles across west connection to Route 22, wStepCounter decremented and no encounter skipped (A1 ordering)"
+        },
+        {
+            "name": "warp_door",
+            "id": 108,
+            "tier": "full",
+            "scenario_class": "datastruct",
+            "build_flags": "DEBUG_WARP_DOOR=1",
+            "port_entry_gate": "DEBUG_WARP_DOOR",
+            "navigation_script": "tools/mgba_harness/scenarios/warp_door.lua",
+            "dump": {
+                "type": "GBSTATE",
+                "schema_version": 2,
+                "artifact": "GBSTATE.BIN",
+                "timeout_seconds": 150,
+                "terminal_marker": "complete"
+            },
+            "must_hit": [
+                "RunWarpDoorTestSeed",
+                "WarpFound1",
+                "WarpFound2",
+                "PlayMapChangeSound"
+            ],
+            "comparison": {
+                "regions": [
+                    "wram"
+                ],
+                "projection": "golden_diff.SCENARIOS",
+                "masks": "golden_diff.SCENARIOS"
+            },
+            "verification": "Pallet Town (7,6) walks north into door warp, PlayMapChangeSound samples door tile at ROW-1 correctly (projection I.5)"
+        },
+        {
+            "name": "beaten_trainer_talk",
+            "id": 109,
+            "tier": "full",
+            "scenario_class": "datastruct",
+            "build_flags": "DEBUG_BEATEN_TALK=1",
+            "port_entry_gate": "DEBUG_BEATEN_TALK",
+            "navigation_script": "tools/mgba_harness/scenarios/beaten_trainer_talk.lua",
+            "dump": {
+                "type": "GBSTATE",
+                "schema_version": 2,
+                "artifact": "GBSTATE.BIN",
+                "timeout_seconds": 150,
+                "terminal_marker": "complete"
+            },
+            "must_hit": [
+                "RunBeatenTalkTestSeed",
+                "CheckNPCInteraction",
+                "ReadTrainerHeaderInfo"
+            ],
+            "comparison": {
+                "regions": [
+                    "wram"
+                ],
+                "projection": "golden_diff.SCENARIOS",
+                "masks": "golden_diff.SCENARIOS"
+            },
+            "verification": "Route 3 (12,8) re-talks beaten Youngster, after-battle text prints via ReadTrainerHeaderInfo sel 6, no battle (A7)"
         }
     ],
     "disabled_scenarios": []
