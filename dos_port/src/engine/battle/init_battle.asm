@@ -117,6 +117,7 @@ extern WaitForAPress                     ; src/home/joypad2.asm — alias of pre
 extern HideBattlePokeballs               ; pokeballs.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern SendOutMon                        ; core.asm — pret StartBattle.playerSendOutFirstMon send-out
+extern StartBattle                       ; core.asm — pret StartBattle (E.1 restored)
 extern DisplayBattleMenu                 ; core.asm — special-battle menu loop (pret StartBattle .displaySafariZoneBattleMenu)
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
 extern EndBattleScreen                   ; battle_menu.asm — clean terminal
@@ -470,25 +471,11 @@ _InitBattleCommon:
     jne .specialBattleIntro
 
 %ifdef DEBUG_TRAINER_RESULT
-    ; The trainer-result oracles stop right after both battlers are loaded, and
-    ; their own note says presentation stays OUTSIDE these checkpoints. Before
-    ; the send-out block moved below the intro they got that for free — the stop
-    ; fired before any of it ran. Keep it literally true by jumping straight to
-    ; the block: these gates carry no DEBUG_AUTOKEY, so they have no input
-    ; source, and pret's intro now parks at the text stream's own prompt.
-    ; Measured 2026-08-14: without this, trainer_battle_win and
-    ; trainer_battle_loss hang at that prompt and dump nothing.
-    ; The oracles need BOTH battlers loaded, and the enemy's first mon is now
-    ; sent out at pret's post-intro position (skipped by this jump) — so run it
-    ; here, exactly as the old pre-intro hoist did for these gates.
-    cmp byte [ebp + wIsInBattle], 2
-    jne .resultNoEnemySendOut
-    ; Same first-send-out prompt suppression as pret StartBattle:141 — this
-    ; jump skips the live block that sets it.
-    mov byte [ebp + wFirstMonsNotOutYet], 1
-    call EnemySendOutFirstMon
-.resultNoEnemySendOut:
-    jmp .playerSendOut
+    ; E.1: StartBattle now owns the send-out sequence. The oracle needs both
+    ; battlers loaded but no presentation; StartBattle with DEBUG_TRAINER_RESULT
+    ; hits its own stc/ret after LoadBattleMonFromParty and returns to the
+    ; caller (its ret becomes _InitBattleCommon's ret via tail jump).
+    jmp StartBattle
 %endif
 
     ; --- intro scene (proven DEBUG_BATTLE_LIVE order) ---
@@ -532,159 +519,8 @@ _InitBattleCommon:
     mov bl, 10
     call ClearScreenArea
     call HideBattlePokeballs                     ; pret's ClearSprites
-    ; pret StartBattle:136-141 — zero the gain-exp / fought / took-turn flags
-    ; and raise wFirstMonsNotOutYet before the first send-out. RESTORED
-    ; 2026-08-15: the port carried only the CLEARS of wFirstMonsNotOutYet
-    ; (MainInBattleLoop, trainer AI) and never this SET — harmless while the
-    ; send-out switch prompt was unwired, but the moment the faithful prompt
-    ; landed, every trainer battle opened with a "will you change POKeMON?"
-    ; box at BATTLE START (pret suppresses the first-send-out prompt through
-    ; exactly this flag; measured: trainer_battle_route stuck on the box at
-    ; frame 15000 with zero EXP gained).
-    xor al, al                                   ; xor a
-    mov [ebp + wPartyGainExpFlags], al
-    mov [ebp + wPartyFoughtCurrentEnemyFlags], al
-    mov [ebp + wActionResultOrTookBattleTurn], al
-    inc al                                       ; inc a
-    mov [ebp + wFirstMonsNotOutYet], al          ; ld [wFirstMonsNotOutYet], a
-    ; pret StartBattle:142-154 (.findFirstAliveEnemyMonLoop) — find the first
-    ; non-fainted enemy party mon and seed wSerialExchangeNybbleReceiveData
-    ; with its slot index + 4 (d starts at 3, inc before the first test).
-    ; RESTORED 2026-08-23 (link cable Stage 8 sweep): this used to be deferred
-    ; "with that arm (TODO-HW: network HAL, Phase 4)" — but the arm went LIVE
-    ; in Stage 4 step 2 (EnemySendOutFirstMon's link path reads this mailbox
-    ; and subtracts 4 for wWhichPokemon), so without the seed a link battle's
-    ; FIRST send-out read whatever the cable-club exchange last left there.
-    ; pret runs the loop unconditionally (non-link battles never read the
-    ; byte), and mGBA does too, so the write CONVERGES the port with the
-    ; golden ground truth. Unbounded like pret's (assumes >=1 alive enemy
-    ; mon — the battle could not have started otherwise); counter kept 8-bit
-    ; in DH per the width rule.
-    mov esi, wEnemyMon1HP                        ; ld hl, wEnemyMon1HP
-    mov bx, PARTYMON_STRUCT_LENGTH - 1           ; ld bc, PARTYMON_STRUCT_LENGTH - 1
-    mov dh, 3                                    ; ld d, $3
-.findFirstAliveEnemyMonLoop:
-    inc dh                                       ; inc d
-    mov al, [ebp + esi]                          ; ld a, [hli]
-    inc esi
-    or al, [ebp + esi]                           ; or [hl] — ZF feeds the jr nz
-    jnz .foundFirstAliveEnemyMon                 ; jr nz, .foundFirstAliveEnemyMon
-    movzx eax, bx
-    add esi, eax                                 ; add hl, bc (net stride = struct len)
-    jmp .findFirstAliveEnemyMonLoop              ; jr .findFirstAliveEnemyMonLoop
-.foundFirstAliveEnemyMon:
-    mov al, dh                                   ; ld a, d
-    mov [ebp + wSerialExchangeNybbleReceiveData], al
-    ;
-    ; pret StartBattle:155-160 — a TRAINER battle sends out the enemy's first
-    ; mon HERE, after the intro: EnemySendOutFirstMon slides the trainer pic
-    ; off, prints "<TRAINER> sent out <MON>!", decodes + places the mon's front
-    ; pic and draws the HUDs (its .next4 tail), so the separate "replace the
-    ; trainer picture with that mon" block that stood here is retired with the
-    ; hoist — the routine does that placement itself, at pret's instant.
-    cmp byte [ebp + wIsInBattle], 2              ; ld a,[wIsInBattle] / dec a
-    jne .noEnemySendOut                          ; call nz, EnemySendOutFirstMon
-    call EnemySendOutFirstMon
-.noEnemySendOut:
-    mov bl, 40                                   ; ld c, 40
-    call DelayFrames                             ; pret StartBattle:158-159
-    call SaveBattleScreen                        ; pret StartBattle:160
-    ; send-out. pret StartBattle.playerSendOutFirstMon ends
-    ;   call LoadBattleMonFromParty / call LoadScreenTilesFromBuffer1 /
-    ;   call SendOutMon / jr MainInBattleLoop
-    ; and SendOutMon is what draws the HUDs, decodes the sent-out mon's back pic
-    ; (predef LoadMonBackPic), plays POOF_ANIM + AnimateSendingOutMon and the cry.
-    ; This site used to call LoadMonBackPic alone — the back-pic decode only —
-    ; which is why nothing in the port ever reached SetAnimationPalette at battle
-    ; entry and IO_OBP1 stayed 0 (battle_completion 1g).
-    ; ===================================================================
-.playerSendOut:
-    ; PLAYER SEND-OUT — MOVED HERE 2026-08-14 to restore pret's ORDER.
-    ;
-    ; This block used to run BEFORE the intro. pret does all of it in
-    ; StartBattle.playerSendOutFirstMon, which is reached only AFTER
-    ; _InitBattleCommon's intro text (engine/battle/core.asm:135-175 passes
-    ; through .checkAnyPartyAlive / .specialBattle first). The port had
-    ; collapsed StartBattle away and hoisted the block to the top, so
-    ; wBattleMon was fully loaded while the GB still had it zeroed.
-    ;
-    ; MEASURED: with both sides in the same forced battle, hardware holds
-    ; wBattleMon all-zero and the nick '???????????' at the parked intro while
-    ; the port already held SNORLAX — 21 WRAM fields. battle_intro's own golden
-    ; states the same expectation in prose ("wBattleMon is NOT loaded yet — the
-    ; GB loads it at send-out, after this screen"). No RunBattleTest scenario
-    ; can see it, because that staging builds the intro itself and never calls
-    ; LoadBattleMonFromParty first; only live InitBattle entry exposes it, which
-    ; is how the ghost gate found it.
-    ;
-    ; It is not cosmetic: wBattleMonSpecies is the natural "has send-out
-    ; happened" state gate, and while this block ran early that gate fired at
-    ; the intro on the port and post-send-out on hardware.
-    ; ===================================================================
-    ; --- player send-out (pret StartBattle.playerSendOutFirstMon): first non-fainted mon ---
-    ; PROJ(port safety): pret's StartBattle runs AnyPartyAlive→HandlePlayerBlackOut before
-    ; this scan, guaranteeing a live mon; the port collapsed StartBattle away, so bound the
-    ; scan by wPartyCount and fall back to slot 0 rather than run off the party array. The
-    ; overworld can't legitimately reach here all-fainted (a faint blacks you out first).
-    mov byte [ebp + wWhichPokemon], 0
-.findFirstAliveMonLoop:
-    mov al, [ebp + wWhichPokemon]
-    cmp al, [ebp + wPartyCount]
-    jae .allFaintedFallback                    ; scanned every mon, none alive → slot 0
-    call HasMonFainted                        ; ZF=1 → fainted (reads wWhichPokemon)
-    jnz .foundFirstAliveMon                    ; pret: jr nz (not fainted → found)
-    inc byte [ebp + wWhichPokemon]
-    jmp .findFirstAliveMonLoop
-.allFaintedFallback:
-    mov byte [ebp + wWhichPokemon], 0
-.foundFirstAliveMon:
-    mov al, [ebp + wWhichPokemon]
-    mov [ebp + wPlayerMonNumber], al
-    ; wCurPartySpecies = wBattleMonSpecies2 = wPartySpecies[wPlayerMonNumber]
-    ; (pret: ld hl, wPartySpecies-1; ld c, num+1; add hl,bc → wPartySpecies + num)
-    movzx eax, byte [ebp + wWhichPokemon]
-    mov al, [ebp + wPartySpecies + eax]
-    mov [ebp + wCurPartySpecies], al
-    mov [ebp + wBattleMonSpecies2], al
-    ; pret StartBattle:243-247 — restore the clean screen, slide the PLAYER pic
-    ; off to the left (amount 9 from hlcoord 1,5), then re-save. The port folded
-    ; StartBattle into this routine, so this is where those three calls belong.
-    ; The slide's writes stay inside the projected GB window: its shift window is
-    ; anchored to the screen edge (reads GB cols 1-9, writes 0-8), so BCOORD is
-    ; the whole projection — see the routine's header in core.asm.
-    call LoadScreenTilesFromBuffer1
-    mov esi, BCOORD(1, 5)                      ; hlcoord 1, 5
-    mov al, 9                                  ; ld a, $9 — != 8 → slide LEFT
-    call SlideTrainerPicOffScreen
-    call SaveScreenTilesToBuffer1
-    ; flag this mon to gain EXP + as having fought the current enemy
-    mov cl, [ebp + wWhichPokemon]
-    mov bh, FLAG_SET
-    mov esi, wPartyGainExpFlags
-    call FlagAction
-    mov cl, [ebp + wWhichPokemon]
-    mov bh, FLAG_SET
-    mov esi, wPartyFoughtCurrentEnemyFlags
-    call FlagAction
-    call LoadBattleMonFromParty                ; wBattleMon* + player stat mods = $7
-
-%ifdef DEBUG_TRAINER_RESULT
-    ; Trainer-result state oracles start after both active battlers are loaded,
-    ; then drive only the deterministic terminal turn. Presentation and the
-    ; interactive menu loop remain outside these guarded state checkpoints.
-    stc
-    ret
-%endif
-
-    ; R1: species and initial HP-bar colors are now final, so bind the generated
-    ; battle tile slots before the first cache rebuild/slide frame.
-    call SetPal_Battle
-
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:StartBattle; behavior=the port's _InitBattleCommon carries StartBattle's call SendOutMon inline because it already collapses pret's InitWildBattle plus _InitBattleCommon plus StartBattle into one routine, so faithdiff reports SendOutMon as ADDED here and StartBattle as DROPPED, and the same collapse is why StartBattle's other callees - EnemySendOutFirstMon and its 40-frame DelayFrames (StartBattle:157-159), the Safari turn tail's PrintSafariZoneBattleText, EnemyRan, Random, LoadScreenTilesFromBuffer1 and PrintText - also read as ADDED on this routine rather than on StartBattle; evidence=pret StartBattle.playerSendOutFirstMon ends call LoadBattleMonFromParty then call SendOutMon then jr MainInBattleLoop and this site sits in exactly that position with MainInBattleLoop next, and routing it here moved battle_menu and move_selection from 12 palette divergences to 0 by finally reaching SetAnimationPalette; lifetime=until the collapsed StartBattle is restored as its own pret-labeled routine}
-    call SendOutMon
-
-    ; --- the battle itself ---
-    call MainInBattleLoop                       ; menu/turns/damage/faint/EXP/run
+    ; E.1: StartBattle restored in core.asm — call at pret's position.
+    call StartBattle
 .battleFinished:
     call EndOfBattle                             ; win: PayDay/evo/reset; then whiteout
     call SetPal_Overworld                        ; re-zero tile_pal and restore overworld palette mappings
@@ -794,33 +630,10 @@ _InitBattleCommon:
                                        ; battle is this same menu loop
     jmp EnemyRan                       ; jr EnemyRan — b beat the roll
 
-; NASM %ifdef has no OR, so fold both consumers into one helper — the same
-; pattern debug_dump.asm:844 uses for AUTOKEY_STALL_PROBE. BATTLE_TYPE_RUN and
-; BATTLE_TYPE_SAFARI reach the SAME loop: pret's .checkAnyPartyAlive sends RUN
-; to .specialBattle, which falls straight into .displaySafariZoneBattleMenu
-; because wBattleType is non-zero (core.asm:161-178).
-%ifdef DEBUG_BATTLE_SAFARI_RESULT
-%define SPECIAL_BATTLE_LOOP_ENTRY
-%endif
-%ifdef DEBUG_BATTLE_RUNTYPE
-%define SPECIAL_BATTLE_LOOP_ENTRY
-%endif
-%ifdef SPECIAL_BATTLE_LOOP_ENTRY
-; DEVIATION{class=temporary; pret=engine/battle/core.asm:StartBattle.displaySafariZoneBattleMenu; behavior=a harness-only trampoline exports an entry into the special-battle menu loop above so the golden gate can drive PRODUCTION instead of calling DisplayBattleMenu directly and replicating the Safari turn tail; evidence=measured 2026-08-14 with four in-WRAM probe markers that the previous battle_safari gate never reached .specialBattleLoop at all so the port's Safari turn and flee roll were executed by no scenario, and RunBattleTest hand-rolls the battle intro rather than calling _InitBattleCommon so there is no production path into the middle of this routine, the same shape as the EnemyCalcMoveDamage harness entry in battle_menu.asm which carries this class; lifetime=retire when RunBattleTest enters battles through _InitBattleCommon rather than replicating its intro}
-;
-; IT IS A TRAMPOLINE, NOT A LABEL ON THE LOOP, and that was measured rather than
-; chosen: a `global` label written immediately above `.specialBattleLoop` becomes
-; the local-label PARENT for the rest of the routine, so every following `.local`
-; silently re-parents and NASM fails with 18 `changed during code generation`
-; errors on labels as far away as CopyUncompressedPicToHL. Jumping in from
-; outside leaves the routine's own label structure untouched.
-;
-; The name is pret's own label with the dot flattened — inventing a port name
-; here would fork the one symbol this entry exists to point at.
-global StartBattle_displaySafariZoneBattleMenu
-StartBattle_displaySafariZoneBattleMenu:
-    jmp _InitBattleCommon.specialBattleLoop
-%endif
+; E.1: StartBattle_displaySafariZoneBattleMenu now lives in core.asm
+; (StartBattle.displaySafariZoneBattleMenu) — the production Safari loop is
+; owned by StartBattle, not _InitBattleCommon. The harness trampoline is
+; exported from core.asm; this file no longer defines it.
 
 ; ---------------------------------------------------------------------------
 ; _LoadTrainerPic — production trainer-picture loader.

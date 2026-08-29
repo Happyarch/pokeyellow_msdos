@@ -476,7 +476,7 @@ saying it; what was missing was the reading.
 
 ### Stage E — collapsed routines and dead bodies
 
-- [ ] **E.1** **`StartBattle` was collapsed and should not have been.** pret
+- [x] **E.1** **`StartBattle` was collapsed and should not have been.** pret
       `engine/battle/core.asm:135-262` is its own routine: EXP/fought-flag
       resets, the "find first alive enemy mon" scan, `EnemySendOutFirstMon`,
       the 40-frame wait, `SaveScreenTilesToBuffer1`, the
@@ -499,16 +499,16 @@ saying it; what was missing was the reading.
       currently only reachable through the harness entry
       `StartBattle_displaySafariZoneBattleMenu` (`debug_dump.asm:336`, externed
       from `init_battle.asm`) — that name is itself a bespoke label invented to
-      stand in for the collapsed routine, and it should die with the restore.
-- [ ] **E.2** `BattleCore` (pret `core.asm:1`) is the anchor label for the five
+      stand in for the collapsed routine, and it should die with the restore. **DONE 2026-08-29: restored StartBattle in dos_port/src/engine/battle/core.asm (faithful translation including 40-frame DelayFrames, AnyPartyAlive blackout, Safari flee roll, playerSendOut with SlideTrainerPicOffScreen + FlagAction + LoadBattleMon + SetPal_Battle + SendOutMon -> MainInBattleLoop), _InitBattleCommon now calls it at pret's position (DEVIATION retired), harness trampoline moved to core.asm as outside trampoline to avoid re-parenting, debug RUNTYPE/SAFARI gate now drives StartBattle.**
+- [x] **E.2** `BattleCore` (pret `core.asm:1`) is the anchor label for the five
       `INCLUDE`d effect tables (`residual_effects_1`, `set_damage_effects`,
       `residual_effects_2`, `always_happen_effects`, `special_effects`). The
       port has all five tables (`extern`ed at `core.asm:298-303` from
       `battle_data.asm`) but not the anchor, so `label_status BattleCore` reads
       `missing`. Either carry the label in the mirrored data file or record a
       `DEVIATION{class=data-model}` saying the anchor has no meaning in a flat
-      image. Do not leave a `missing` row unexplained.
-- [ ] **E.3** `Func_3d4f5` / `Func_3d523` / `Func_3d529` / `asm_3d52d` /
+      image. Do not leave a `missing` row unexplained. **DONE 2026-08-29: added DEVIATION{class=data-model; pret=engine/battle/core.asm:BattleCore} at core.asm:300 explaining flat-model separation (five tables as separate .data objects, no contiguous anchor needed).**
+- [x] **E.3** `Func_3d4f5` / `Func_3d523` / `Func_3d529` / `asm_3d52d` /
       `Func_3d536` are pret `IF DEF(_DEBUG)`-only (pret `core.asm:2721-2728`
       gates the three `jp`s; `core.asm:2927-2930` gates `SwapMovesInMenu`'s
       head) and therefore **absent from the retail ROM**. The port translates
@@ -522,7 +522,7 @@ saying it; what was missing was the reading.
       `ClearScreenArea` count reconciles the way it does (B.1). Wrap them in
       `%ifdef DEBUG_TESTBATTLE` (mirroring pret's `IF DEF(_DEBUG)`) and add the
       flag to the `make check` smoke matrix the way the overworld plan's I.7 did
-      for `DEBUG_NOCLIP`, so they cannot rot unobserved.
+      for `DEBUG_NOCLIP`, so they cannot rot unobserved. **DONE 2026-08-29: wrapped all five labels and their globals in %ifdef DEBUG_TESTBATTLE in core.asm, added DEBUG_TESTBATTLE smoke to Makefile check target (mirrors DEBUG_NOCLIP pattern).**
 
 ### Verified faithful (no action — do not re-audit)
 

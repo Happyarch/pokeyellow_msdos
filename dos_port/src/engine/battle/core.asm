@@ -120,11 +120,15 @@ section .text
 
 global MainInBattleLoop
 global DisplayBattleMenu
+global StartBattle
+global StartBattle_displaySafariZoneBattleMenu
+%ifdef DEBUG_TESTBATTLE
 global Func_3d4f5
 global Func_3d523
 global Func_3d529
 global asm_3d52d
 global Func_3d536
+%endif
 global MoveSelectionMenu
 global SelectMenuItem
 global SelectMenuItem_CursorUp
@@ -295,7 +299,9 @@ extern DecrementPP                     ; decrement_pp.asm
 extern JumpMoveEffect                  ; effects.asm — MoveEffectPointerTable dispatch
 extern CopyToStringBuffer              ; src/home/copy_string.asm — EDX=src → wStringBuffer
 extern IsInArray                       ; home/array2.asm — AL in [ESI] ($FF-term, stride EDX) → CF
+; DEVIATION{class=data-model; pret=engine/battle/core.asm:BattleCore; behavior=port has no BattleCore anchor label, the five INCLUDEd effect tables are separate flat objects at dos_port/src/data/battle/*.asm rather than contiguous bytes after an anchor; evidence=pret BattleCore is a label at core.asm:1 whose only purpose is to INCLUDE five data files contiguously, the port's linker emits each table as its own .data object with its own symbol (ResidualEffects1 etc) and no flat contiguity is required; lifetime=permanent data-model divergence}
 extern ResidualEffects1                ; battle_data.asm — effect-category arrays
+extern PrintSafariZoneBattleText       ; engine/battle/safari_zone.asm — Safari bait/angry line
 extern SpecialEffectsCont
 extern SetDamageEffects
 extern ResidualEffects2
@@ -1294,6 +1300,7 @@ PrintMenuItem:
 ; what lets one `bit` test serve both. It is an assertion, not behaviour; the port
 ; carries the test itself.
 ; ===========================================================================
+%ifdef DEBUG_TESTBATTLE
 Func_3d4f5:
     ; In: AL = the joypad byte. pret asserts B_PAD_START == BIT_TRAINER_BATTLE and
     ; reuses the bit: START held -> hWhoseTurn = 0, else 1.
@@ -1353,6 +1360,7 @@ Func_3d536:
     jmp PlaceString                     ; jp PlaceString
 .done:
     ret
+%endif
 
 ; ---------------------------------------------------------------------------
 ; AnyMoveToSelect — pret core.asm:AnyMoveToSelect (2876). If every usable move is
@@ -5608,6 +5616,155 @@ HandlePlayerBlackOut:
     ret
 .noBlackOut:
     ret                                  ; pret `ret z`: CF is clear here
+
+; ===========================================================================
+; StartBattle — pret engine/battle/core.asm:StartBattle (135)
+;
+; Faithful translation of pret StartBattle. Restored 2026-08-29
+; (battle_core_realign E.1): the routine was collapsed into
+; _InitBattleCommon (init_battle.asm), which carried its entire body inline
+; (flags, enemy scan, EnemySendOutFirstMon, 40-frame wait, AnyPartyAlive /
+; specialBattle dispatch, Safari menu loop with bait/escape flee roll, and
+; playerSendOutFirstMon with SlideTrainerPicOffScreen + FlagAction +
+; LoadBattleMonFromParty + SendOutMon -> MainInBattleLoop). The collapse is
+; why faithdiff reported SendOutMon, EnemySendOutFirstMon, DelayFrames,
+; PrintSafariZoneBattleText, Random, LoadScreenTilesFromBuffer1 and PrintText
+; as ADDED on _InitBattleCommon and StartBattle as DROPPED.
+; Restored as its own pret-labeled routine in this mirror; _InitBattleCommon
+; now calls it at pret's position (after the intro). Tail-jumps to
+; MainInBattleLoop; its `ret c` Safari-run and Empty-ball paths return to
+; _InitBattleCommon with CF, and EnemyRan tail also returns there.
+; The playerSendOut loop is bounded by wPartyCount (port safety; pret assumes
+; >=1 alive — the checkAnyPartyAlive guard guarantees it, but the overworld
+; can't reach here all-fainted). SetPal_Battle before SendOutMon preserves the
+; R1 palette binding that fixed battle_menu divergence.
+; ===========================================================================
+StartBattle:
+    xor al, al
+    mov [ebp + wPartyGainExpFlags], al
+    mov [ebp + wPartyFoughtCurrentEnemyFlags], al
+    mov [ebp + wActionResultOrTookBattleTurn], al
+    inc al
+    mov [ebp + wFirstMonsNotOutYet], al
+    mov esi, wEnemyMon1HP                    ; ld hl, wEnemyMon1HP
+    mov bx, PARTYMON_STRUCT_LENGTH - 1       ; ld bc, PARTYMON_STRUCT_LENGTH - 1
+    mov dh, 3                                ; ld d, $3
+.findFirstAliveEnemyMonLoop:
+    inc dh                                   ; inc d
+    mov al, [ebp + esi]                      ; ld a, [hli]
+    inc esi
+    or al, [ebp + esi]                       ; or [hl]
+    jnz .foundFirstAliveEnemyMon             ; jr nz
+    movzx eax, bx
+    add esi, eax                             ; add hl, bc
+    jmp .findFirstAliveEnemyMonLoop          ; jr
+.foundFirstAliveEnemyMon:
+    mov al, dh                               ; ld a, d
+    mov [ebp + wSerialExchangeNybbleReceiveData], al
+    mov al, [ebp + wIsInBattle]              ; ld a, [wIsInBattle] / dec a
+    dec al
+    jz .skipEnemySendOut                     ; jr z — wild battle, no send-out
+    call EnemySendOutFirstMon                ; call nz
+.skipEnemySendOut:
+    mov bl, 40                               ; ld c, 40
+    call DelayFrames                         ; call DelayFrames
+    call SaveScreenTilesToBuffer1            ; call SaveScreenTilesToBuffer1
+.checkAnyPartyAlive:
+    mov al, [ebp + wBattleType]              ; ld a, [wBattleType]
+    cmp al, BATTLE_TYPE_RUN                  ; cp BATTLE_TYPE_RUN
+    je .specialBattle                        ; jp z
+    cmp al, BATTLE_TYPE_PIKACHU              ; cp BATTLE_TYPE_PIKACHU
+    je .specialBattle                        ; jp z
+    call AnyPartyAlive                       ; call AnyPartyAlive
+    mov al, dh                               ; ld a, d
+    test al, al                              ; and a
+    jz HandlePlayerBlackOut                  ; jp z — tail (its ret returns to _InitBattleCommon)
+.specialBattle:
+    call LoadScreenTilesFromBuffer1          ; call LoadScreenTilesFromBuffer1
+    mov al, [ebp + wBattleType]              ; ld a, [wBattleType] / and a
+    test al, al
+    jz .playerSendOutFirstMon                ; jp z
+.displaySafariZoneBattleMenu:
+    call DisplayBattleMenu                   ; call DisplayBattleMenu
+    jc .safariRet                            ; ret c — propagate CF to _InitBattleCommon
+    mov al, [ebp + wActionResultOrTookBattleTurn]
+    test al, al                              ; and a
+    jz .displaySafariZoneBattleMenu          ; jr z
+    mov al, [ebp + wNumSafariBalls]
+    test al, al                              ; and a
+    jnz .notOutOfSafariBalls                 ; jr nz
+    call LoadScreenTilesFromBuffer1          ; call LoadScreenTilesFromBuffer1
+    mov eax, _OutOfSafariBallsText           ; ld hl, .outOfSafariBallsText
+    jmp PrintBattleText                      ; jp PrintText — tail (its ret returns to _InitBattleCommon)
+.notOutOfSafariBalls:
+    call PrintSafariZoneBattleText           ; callfar
+    mov al, [ebp + wEnemyMonSpeed + 1]       ; ld a, [wEnemyMonSpeed + 1]
+    add al, al                               ; add a
+    mov bh, al                               ; ld b, a
+    jc EnemyRan                              ; jp c — tail
+    mov al, [ebp + wSafariBaitFactor]        ; ld a, [wSafariBaitFactor] / and a
+    test al, al
+    jz .checkEscapeFactor                    ; jr z
+    shr bh, 1                                ; srl b
+    shr bh, 1                                ; srl b
+.checkEscapeFactor:
+    mov al, [ebp + wSafariEscapeFactor]      ; ld a, [wSafariEscapeFactor] / and a
+    test al, al
+    jz .compareWithRandomValue               ; jr z
+    shl bh, 1                                ; sla b
+    jnc .compareWithRandomValue              ; jr nc
+    mov bh, 0xFF                             ; ld b, $ff
+.compareWithRandomValue:
+    call Random                              ; call Random
+    cmp al, bh                               ; cp b
+    jae .checkAnyPartyAlive                  ; jr nc
+    jmp EnemyRan                             ; jr EnemyRan — tail
+.safariRet:
+    ret                                      ; CF=1 preserved from DisplayBattleMenu
+.playerSendOutFirstMon:
+    mov byte [ebp + wWhichPokemon], 0        ; xor a / ld [wWhichPokemon], a
+.findFirstAliveMonLoop:
+    mov al, [ebp + wWhichPokemon]
+    cmp al, [ebp + wPartyCount]              ; port safety bound (pret: unbounded)
+    jae .allFaintedFallback
+    call HasMonFainted                       ; call HasMonFainted
+    jnz .foundFirstAliveMon                  ; jr nz — not fainted
+    inc byte [ebp + wWhichPokemon]           ; inc [hl]
+    jmp .findFirstAliveMonLoop               ; jr
+.allFaintedFallback:
+    mov byte [ebp + wWhichPokemon], 0
+.foundFirstAliveMon:
+    mov al, [ebp + wWhichPokemon]            ; ld a, [wWhichPokemon] / ld [wPlayerMonNumber], a
+    mov [ebp + wPlayerMonNumber], al
+    movzx eax, byte [ebp + wWhichPokemon]    ; wPartySpecies + index
+    mov al, [ebp + wPartySpecies + eax]      ; ld a, [hl]
+    mov [ebp + wCurPartySpecies], al         ; ld [wCurPartySpecies], a
+    mov [ebp + wBattleMonSpecies2], al       ; ld [wBattleMonSpecies2], a
+    call LoadScreenTilesFromBuffer1          ; call LoadScreenTilesFromBuffer1
+    mov esi, BCOORD(1, 5)                    ; hlcoord 1, 5
+    mov al, 9                                ; ld a, $9
+    call SlideTrainerPicOffScreen            ; call SlideTrainerPicOffScreen
+    call SaveScreenTilesToBuffer1            ; call SaveScreenTilesToBuffer1
+    mov cl, [ebp + wWhichPokemon]            ; ld a, [wWhichPokemon] / ld c, a
+    mov bh, FLAG_SET                         ; ld b, FLAG_SET
+    mov esi, wPartyGainExpFlags              ; ld hl, wPartyGainExpFlags
+    call FlagAction                          ; predef FlagActionPredef
+    mov cl, [ebp + wWhichPokemon]
+    mov bh, FLAG_SET
+    mov esi, wPartyFoughtCurrentEnemyFlags
+    call FlagAction
+    call LoadBattleMonFromParty              ; call LoadBattleMonFromParty
+    call LoadScreenTilesFromBuffer1          ; call LoadScreenTilesFromBuffer1
+    call SetPal_Battle                       ; port R1 palette binding (pre-SendOutMon)
+    call SendOutMon                          ; call SendOutMon
+    jmp MainInBattleLoop                     ; jr MainInBattleLoop — tail
+
+; Harness trampoline for Safari/RUN battle menu loop — placed OUTSIDE StartBattle
+; to avoid re-parenting its locals. See init_battle.asm:645 DEVIATION and the
+; trampoline note there: a global immediately above .displaySafariZoneBattleMenu
+; re-parents every following .local and triggers label-redef-late.
+StartBattle_displaySafariZoneBattleMenu:
+    jmp StartBattle.displaySafariZoneBattleMenu
 
 ; ===========================================================================
 ; EnemyRan — pret core.asm:263.

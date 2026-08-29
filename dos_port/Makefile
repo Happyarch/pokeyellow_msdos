@@ -5278,6 +5278,9 @@ check:
 	@echo "Checking DEBUG_NOCLIP smoke (N3 regression)..."
 	@$(NASM) $(NASMFLAGS) -D DEBUG_NOCLIP -o /dev/null src/home/overworld.asm || exit 1
 	@echo "DEBUG_NOCLIP smoke passed."
+	@echo "Checking DEBUG_TESTBATTLE smoke (battle_core_realign E.3)..."
+	@$(NASM) $(NASMFLAGS) -D DEBUG_TESTBATTLE -o /dev/null src/engine/battle/core.asm || exit 1
+	@echo "DEBUG_TESTBATTLE smoke passed."
 
 clean:
 	rm -f $(ALL_OBJS) $(TARGET) $(NASMFLAGS_STAMP) pkmn.sym
