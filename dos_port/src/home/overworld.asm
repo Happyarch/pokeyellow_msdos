@@ -1320,6 +1320,7 @@ EnterMap:
 
     ; xor a / ld [wJoyIgnore], a
     mov byte [ebp + wJoyIgnore], 0
+    mov byte [overworld_joy_latch], 0
 %ifdef DEBUG_MAPSCRIPT_SIGHT
     ; Map-script sight gate. Placed HERE, at the very end of EnterMap, not beside the
     ; other gates further up: everything above is part of entering a map, and the
@@ -1605,8 +1606,8 @@ EnterMap:
 OverworldLoop:
     ; pret: OverworldLoop is `call DelayFrame` and nothing else (home/overworld.asm:43).
     call DelayFrame
-    ; B.2: snapshot hJoyPressed (edge) before OverworldLoopLessDelay's
-    ; joypad_update clears it. Non-simulated START/A reads this latch;
+    ; B.2: snapshot hJoyPressed (edge) across both DelayFrames into
+    ; overworld_joy_latch. Non-simulated START/A reads this latch;
     ; scripted path reads hJoyHeld.
     mov al, [ebp + hJoyPressed]
     mov [overworld_joy_latch], al
@@ -1636,6 +1637,8 @@ OverworldLoop:
     ; --- OverworldLoop falls through into OverworldLoopLessDelay (pret) ---
 OverworldLoopLessDelay:                      ; pret: home/overworld.asm:OverworldLoopLessDelay
     call DelayFrame
+    mov al, [ebp + hJoyPressed]
+    or [overworld_joy_latch], al
     ; pret: call IsSurfingPikachuInParty / call LoadGBPal / call HandleMidJump
     ; (home/overworld.asm:47-49). All three are now faithful:
     ;
