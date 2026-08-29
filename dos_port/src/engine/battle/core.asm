@@ -241,7 +241,6 @@ extern DisplayListMenuID               ; src/home/list_menu.asm — CF=1 iff can
 extern UseItem                         ; src/home/item.asm
 extern GetItemName                     ; src/home/names.asm
 extern GetName                         ; src/home/names2.asm — wNameListType/wNameListIndex → wNameBuffer
-extern CopyToStringBuffer              ; src/home/copy_string.asm
 extern ItemsCantBeUsedHereText         ; assets/battle_text.inc (generated Tier-1)
 extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
 extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip the tilemap
@@ -357,7 +356,6 @@ extern PlaceEnemyHUDTiles              ; draw_hud_pokeball_gfx.asm (pret mirror)
 extern UpdateCGBPal_OBP0               ; src/home/cgb_palettes.asm — arms g_pal_dirty
 extern UpdateCGBPal_OBP1               ; src/home/cgb_palettes.asm — arms g_pal_dirty
 extern PrintStatusConditionNotFainted  ; home/pokemon.asm -> PrintStatusAilment
-extern ClearScreenArea                 ; home/copy2.asm — BH rows x BL cols of blanks at ESI
 extern PrintLevel                      ; home/pokemon.asm — ':L' + wLoadedMonLevel at ESI
 extern DrawHP                          ; engine/pokemon/status_screen.asm — predef DrawHP
 extern DrawHPBar                       ; src/home/pokemon.asm — ESI coord, DH tiles, DL pixels, BL sliver
@@ -761,7 +759,7 @@ DisplayBattleMenu:
     cmp byte [ebp + wCurrentMenuItem], 3
     je BattleMenu_RunWasSelected        ; jp z
     mov esi, RunAwayText                ; ld hl, .RunAwayText
-    call PrintText
+    call PrintBattleText
     jmp DisplayBattleMenu               ; jp
 .throwSafariBallWasSelected:
     ; pret 2256-2259. Note it is `jp UseBagItem`, NOT a call: UseBagItem owns the
@@ -782,7 +780,7 @@ DisplayBattleMenu:
     jne .notLinkBattle                  ; jr nz
     ; can't use items in link battles
     mov esi, ItemsCantBeUsedHereText
-    call PrintText
+    call PrintBattleText
     jmp DisplayBattleMenu               ; jp
 .notLinkBattle:
     call SaveScreenTilesToBuffer2
@@ -1394,11 +1392,8 @@ AnyMoveToSelect:
 .noMovesLeft:
     mov eax, NoMovesLeftText
     call PrintBattleText
-    mov ecx, 60
-.delay:
-    call DelayFrame
-    dec ecx
-    jnz .delay
+    mov bl, 60
+    call DelayFrames
     xor al, al                          ; ZF=1 → Struggle forced
     ret
 
@@ -1408,6 +1403,11 @@ AnyMoveToSelect:
 ; land in the battle dialog box, ▼ in wTileMap) and runs the one printer, which
 ; draws the box and walks the stream in place, revealing it char-by-char and
 ; self-terminating on prompt/done/text_end.
+;
+; RULE (battle_core_realign D.1): all battle prints in this file go through this
+; wrapper, not bare PrintText. The lone bare `jmp PrintText` below is the printer
+; tail itself. RestoreBattleScreenState's msgbox re-assert is now redundant backup.
+; DEVIATION{class=projection; pret=engine/battle/core.asm:PrintText; behavior=battle prints go through the port-only PrintBattleText wrapper that sets text_msgbox=msgbox_centered before tail-jumping to PrintText; evidence=pret's DisplayTextBoxID fixes the box id inside the routine while the port republishes geometry from [text_msgbox] on every PrintText call, so the wrapper is required to select the battle box; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 PrintBattleText:
     mov esi, eax                        ; flat source stream
@@ -1550,11 +1550,6 @@ section .text
 ; the six IsInArray checkpoints (ResidualEffects1 / SpecialEffectsCont / SetDamage-
 ; Effects / ResidualEffects2 / AlwaysHappenSideEffects / SpecialEffects) decide where
 ; JumpMoveEffect runs relative to damage, preserving the Gen-1 ordering exactly.
-;
-; TODO(faithful, deepen — each currently simplified/skipped, clearly marked):
-;   - PrintGhostText (Pokémon Tower ghosts)         - charging moves (Fly/Dig/SolarBeam)
-;   - HandleCounterMove, multi-hit loop, Mirror Move / Metronome, Explosion handling
-;   - PrintCriticalOHKOText, DisplayEffectiveness, HandleBuildingRage, move-failure text
 ; ---------------------------------------------------------------------------
 ; --- externs for the faithful ExecutePlayerMove flow (Stage 2.5) ---
 extern DisplayEffectiveness            ; display_effectiveness.asm (real)
@@ -1574,8 +1569,6 @@ extern PrintEndBattleText              ; src/home/trainers.asm — class-specifi
 ; labels (PlayerCanExecuteMove/PlayerCalcMoveDamage/HandleIfPlayerMoveMissed/
 ; GetPlayerAnimationType/PlayerCheckIfFlyOrChargeEffect/MirrorMoveCheck) are exposed so
 ; CheckPlayerStatusConditions' multi-turn continuations (Stage 3) land where pret's do.
-; Deferred leaves (Counter/MirrorMove/Metronome/crit+effectiveness text/EXPLODE anim/
-; ghost) are explicit stub CALLs (core_stubs.asm), flag-contract-faithful.
 ExecutePlayerMove:
     mov byte [ebp + hWhoseTurn], 0
     mov al, [ebp + wPlayerSelectedMove]
@@ -1735,7 +1728,7 @@ MirrorMoveCheck:                        ; pret 3369
     jnz GetPlayerAnimationType          ; multi-hit: re-apply until 0 or faint (only 1st hit calcs)
     and byte [ebp + wPlayerBattleStatus1], ~(1 << ATTACKING_MULTIPLE_TIMES) & 0xFF
     mov esi, MultiHitText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wPlayerNumHits], 0
 .executeOtherEffects:                   ; pret 3429 — SpecialEffects catch-all
     mov al, [ebp + wPlayerMoveEffect]
@@ -1907,8 +1900,6 @@ extern UnleashedEnergyText
 ; must `jmp esi` to (pret's `ld hl, X` / `.returnToHL: xor a; ret` / `jp hl`); or
 ; ZF=0 with AL=1 ("mon may move normally", pret `.checkConditionsDone`).
 ; HL→ESI for the working pointers; register map A=AL, [ebp+addr] for GB memory.
-; Stage-2 scope: the can't-move chain + confusion self-hit. The multi-turn lock-ins
-; (Bide/Thrash/Trapping/Rage) fall through to .checkConditionsDone for now — TODO(Stage 3).
 ; ---------------------------------------------------------------------------
 CheckPlayerStatusConditions:
     mov esi, wBattleMonStatus            ; ld hl, wBattleMonStatus
@@ -1924,11 +1915,11 @@ CheckPlayerStatusConditions:
     mov al, SLP_PLAYER_ANIM
     call PlayMoveAnimation
     mov esi, FastAsleepText
-    call PrintText
+    call PrintBattleText
     jmp .sleepDone
 .wakeUp:
     mov esi, WokeUpText
-    call PrintText
+    call PrintBattleText
 .sleepDone:
     mov byte [ebp + wPlayerUsedMove], 0
     mov esi, ExecutePlayerMoveDone       ; can't move this turn
@@ -1953,7 +1944,7 @@ CheckPlayerStatusConditions:
     test byte [ebp + esi], 1 << FRZ
     jz .heldInPlaceCheck
     mov esi, IsFrozenText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wPlayerUsedMove], 0
     mov esi, ExecutePlayerMoveDone
     jmp .returnToHL
@@ -1962,7 +1953,7 @@ CheckPlayerStatusConditions:
     test byte [ebp + wEnemyBattleStatus1], 1 << USING_TRAPPING_MOVE
     jz .flinchedCheck
     mov esi, CantMoveText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecutePlayerMoveDone
     jmp .returnToHL
 
@@ -1971,7 +1962,7 @@ CheckPlayerStatusConditions:
     jz .hyperBeamCheck
     and byte [ebp + wPlayerBattleStatus1], ~(1 << FLINCHED) & 0xFF   ; res FLINCHED
     mov esi, FlinchedText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecutePlayerMoveDone
     jmp .returnToHL
 
@@ -1980,7 +1971,7 @@ CheckPlayerStatusConditions:
     jz .anyMoveDisabledCheck
     and byte [ebp + wPlayerBattleStatus2], ~(1 << NEEDS_TO_RECHARGE) & 0xFF
     mov esi, MustRechargeText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecutePlayerMoveDone
     jmp .returnToHL
 
@@ -1995,7 +1986,7 @@ CheckPlayerStatusConditions:
     mov byte [ebp + wPlayerDisabledMove], 0
     mov byte [ebp + wPlayerDisabledMoveNumber], 0
     mov esi, DisabledNoMoreText
-    call PrintText
+    call PrintBattleText
 
 .confusedCheck:                          ; pret 3579
     test byte [ebp + wPlayerBattleStatus1], 1 << CONFUSED
@@ -2007,11 +1998,11 @@ CheckPlayerStatusConditions:
     jnz .isConfused
     and byte [ebp + wPlayerBattleStatus1], ~(1 << CONFUSED) & 0xFF   ; counter 0 → clear
     mov esi, ConfusedNoMoreText
-    call PrintText
+    call PrintBattleText
     jmp .triedToUseDisabledMoveCheck
 .isConfused:
     mov esi, IsConfusedText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wAnimationType], 0
     mov al, CONF_PLAYER_ANIM
     call PlayMoveAnimation
@@ -2041,7 +2032,7 @@ CheckPlayerStatusConditions:
     cmp al, (25 * 0xFF / 100)            ; 25 percent chance fully paralyzed
     jae .bideCheck
     mov esi, FullyParalyzedText
-    call PrintText
+    call PrintBattleText
 
 .monHurtItselfOrFullyParalysed:          ; pret 3630
     ; clear bide/thrashing/charging-up/trapping (already cleared for confusion damage)
@@ -2093,7 +2084,7 @@ CheckPlayerStatusConditions:
 .unleashEnergy:
     and byte [ebp + wPlayerBattleStatus1], ~(1 << STORING_ENERGY) & 0xFF
     mov esi, UnleashedEnergyText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wPlayerMovePower], 1
     mov al, [ebp + wPlayerBideAccumulatedDamage + 1]   ; lo
     add al, al                           ; *2 (sets CF)
@@ -2120,7 +2111,7 @@ CheckPlayerStatusConditions:
     jz .multiturnMoveCheck
     mov byte [ebp + wPlayerMoveNum], THRASH
     mov esi, ThrashingAboutText
-    call PrintText
+    call PrintBattleText
     mov al, [ebp + wPlayerNumAttacksLeft]
     dec al
     mov [ebp + wPlayerNumAttacksLeft], al
@@ -2139,7 +2130,7 @@ CheckPlayerStatusConditions:
     test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
     jz .rageCheck
     mov esi, AttackContinuesText
-    call PrintText
+    call PrintBattleText
     mov al, [ebp + wPlayerNumAttacksLeft]
     dec al
     mov [ebp + wPlayerNumAttacksLeft], al
@@ -2173,7 +2164,7 @@ CheckPlayerStatusConditions:
 ; ---------------------------------------------------------------------------
 HandleSelfConfusionDamage:
     mov esi, HurtItselfText
-    call PrintText
+    call PrintBattleText
     ; save wEnemyMonDefense (word) and overwrite with wBattleMonDefense (the self-defender)
     mov al, [ebp + wEnemyMonDefense]
     mov dh, al                           ; save hi
@@ -2237,7 +2228,7 @@ PrintMoveIsDisabledText:
     mov [ebp + wNamedObjectIndex], al
     call GetMoveName
     mov esi, MoveIsDisabledText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; ---------------------------------------------------------------------------
 ; DoBattleTransitionAndInitBattleVariables — pret core.asm:6333. Shows the
@@ -2505,8 +2496,7 @@ CheckForDisobedience:
 ; ---------------------------------------------------------------------------
 ; ExecuteEnemyMove — pret engine/battle/core.asm:ExecuteEnemyMove (5639), faithful
 ; mirror of ExecutePlayerMove with the enemy's move fields, applying damage to the
-; player mon. Enemy PP is not decremented (player-only PP, per project scope). Same
-; TODO(faithful) deepening list as ExecutePlayerMove (status/effects/multi-hit/…).
+; player mon. Enemy PP is not decremented (player-only PP, per project scope).
 ; Returns b in BH (0 = player mon fainted, else ExecuteEnemyMoveDone sets b=1).
 ; ---------------------------------------------------------------------------
 ; Faithful port of pret engine/battle/core.asm:ExecuteEnemyMove (5639) — mirror of
@@ -2734,7 +2724,7 @@ EnemyCheckIfMirrorMoveEffect:           ; pret 5782
     jnz GetEnemyAnimationType           ; multi-hit loop
     and byte [ebp + wEnemyBattleStatus1], ~(1 << ATTACKING_MULTIPLE_TIMES) & 0xFF
     mov esi, MultiHitText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wEnemyNumHits], 0
 .eExecuteOtherEffects:
     mov al, [ebp + wEnemyMoveEffect]
@@ -2875,7 +2865,7 @@ ApplyAttackToPlayerPokemonDone:
 ; ---------------------------------------------------------------------------
 AttackSubstitute:
     mov esi, SubstituteTookDamageText
-    call PrintText
+    call PrintBattleText
     mov edx, wEnemySubstituteHP          ; player turn: target = enemy
     mov ebx, wEnemyBattleStatus2
     cmp byte [ebp + hWhoseTurn], 0
@@ -2893,7 +2883,7 @@ AttackSubstitute:
 .subBroke:
     and byte [ebp + ebx], ~(1 << HAS_SUBSTITUTE_UP) & 0xFF   ; clear the substitute bit
     mov esi, SubstituteBrokeText
-    call PrintText
+    call PrintBattleText
     ; pret core.asm:5052-5065 — flip hWhoseTurn around callfar Func_79929 (substitute-break animation), then flip back
     mov al, [ebp + hWhoseTurn]
     xor al, 1
@@ -2920,8 +2910,6 @@ AttackSubstitute:
 ; CheckEnemyStatusConditions — faithful port of pret core.asm:5859 (mirror of
 ; CheckPlayerStatusConditions with the enemy's WRAM). Same ZF/ESI contract:
 ; ZF=1 + ESI=continuation → handled; ZF=0 + AL=1 → enemy may move.
-; The enemy confusion self-hit is inlined (pret 5957-5996). Multi-turn lock-ins
-; fall through to .done for now — TODO(Stage 3).
 ; ---------------------------------------------------------------------------
 CheckEnemyStatusConditions:
     mov esi, wEnemyMonStatus
@@ -2933,14 +2921,14 @@ CheckEnemyStatusConditions:
     and al, al
     jz .eWakeUp
     mov esi, FastAsleepText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wAnimationType], 0
     mov al, SLP_ANIM
     call PlayMoveAnimation
     jmp .eSleepDone
 .eWakeUp:
     mov esi, WokeUpText
-    call PrintText
+    call PrintBattleText
 .eSleepDone:
     mov byte [ebp + wEnemyUsedMove], 0
     mov esi, ExecuteEnemyMoveDone
@@ -2958,7 +2946,7 @@ CheckEnemyStatusConditions:
     test byte [ebp + esi], 1 << FRZ
     jz .eTrappedCheck
     mov esi, IsFrozenText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wEnemyUsedMove], 0
     mov esi, ExecuteEnemyMoveDone
     jmp .eReturnToHL
@@ -2967,7 +2955,7 @@ CheckEnemyStatusConditions:
     test byte [ebp + wPlayerBattleStatus1], 1 << USING_TRAPPING_MOVE
     jz .eFlinchedCheck
     mov esi, CantMoveText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecuteEnemyMoveDone
     jmp .eReturnToHL
 
@@ -2976,7 +2964,7 @@ CheckEnemyStatusConditions:
     jz .eRechargeCheck
     and byte [ebp + wEnemyBattleStatus1], ~(1 << FLINCHED) & 0xFF
     mov esi, FlinchedText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecuteEnemyMoveDone
     jmp .eReturnToHL
 
@@ -2985,7 +2973,7 @@ CheckEnemyStatusConditions:
     jz .eDisabledCheck
     and byte [ebp + wEnemyBattleStatus2], ~(1 << NEEDS_TO_RECHARGE) & 0xFF
     mov esi, MustRechargeText
-    call PrintText
+    call PrintBattleText
     mov esi, ExecuteEnemyMoveDone
     jmp .eReturnToHL
 
@@ -3000,7 +2988,7 @@ CheckEnemyStatusConditions:
     mov byte [ebp + wEnemyDisabledMove], 0
     mov byte [ebp + wEnemyDisabledMoveNumber], 0
     mov esi, DisabledNoMoreText
-    call PrintText
+    call PrintBattleText
 
 .eConfusedCheck:                         ; pret 5931
     test byte [ebp + wEnemyBattleStatus1], 1 << CONFUSED
@@ -3012,11 +3000,11 @@ CheckEnemyStatusConditions:
     jnz .eIsConfused
     and byte [ebp + wEnemyBattleStatus1], ~(1 << CONFUSED) & 0xFF
     mov esi, ConfusedNoMoreText
-    call PrintText
+    call PrintBattleText
     jmp .eTriedDisabledCheck
 .eIsConfused:
     mov esi, IsConfusedText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wAnimationType], 0
     mov al, CONF_ANIM
     call PlayMoveAnimation
@@ -3028,7 +3016,7 @@ CheckEnemyStatusConditions:
     and al, 1 << CONFUSED
     mov [ebp + wEnemyBattleStatus1], al
     mov esi, HurtItselfText
-    call PrintText
+    call PrintBattleText
     ; swap wBattleMonDefense (save) ← wEnemyMonDefense (self-defender); 40-BP typeless self-hit
     mov al, [ebp + wBattleMonDefense]
     mov dh, al
@@ -3079,7 +3067,7 @@ CheckEnemyStatusConditions:
     cmp al, (25 * 0xFF / 100)
     jae .eBideCheck
     mov esi, FullyParalyzedText
-    call PrintText
+    call PrintBattleText
 
 .eMonHurtItselfOrFullyParalysed:         ; pret 6018
     ; BUG{class=data-model; pret=engine/battle/core.asm:ExecuteEnemyMove; behavior=enemy full paralysis or confusion self-hit clears charging without clearing invulnerability; evidence=pret source ExecuteEnemyMove status-bit mask; lifetime=permanent Gen-1 behavior at compatibility level below 2}
@@ -3127,7 +3115,7 @@ CheckEnemyStatusConditions:
 .eUnleashEnergy:
     and byte [ebp + wEnemyBattleStatus1], ~(1 << STORING_ENERGY) & 0xFF
     mov esi, UnleashedEnergyText
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wEnemyMovePower], 1
     mov al, [ebp + wEnemyBideAccumulatedDamage + 1]
     add al, al
@@ -3157,7 +3145,7 @@ CheckEnemyStatusConditions:
     jz .eMultiturnMoveCheck
     mov byte [ebp + wEnemyMoveNum], THRASH
     mov esi, ThrashingAboutText
-    call PrintText
+    call PrintBattleText
     mov al, [ebp + wEnemyNumAttacksLeft]
     dec al
     mov [ebp + wEnemyNumAttacksLeft], al
@@ -3176,7 +3164,7 @@ CheckEnemyStatusConditions:
     test byte [ebp + wEnemyBattleStatus1], 1 << USING_TRAPPING_MOVE
     jz .eRageCheck
     mov esi, AttackContinuesText
-    call PrintText
+    call PrintBattleText
     mov al, [ebp + wEnemyNumAttacksLeft]
     dec al
     mov [ebp + wEnemyNumAttacksLeft], al
@@ -3508,8 +3496,8 @@ UseBagItem:
 ; RestoreBattleScreenState — port-only. Undo the list menu's screen takeover so
 ; the battle screen composites again: drop its window descriptors, clear the
 ; background whiteout, and put the text projection back on the battle record.
-; pret has no counterpart; see the class=projection note on UseBagItem, and the
-; identical trio in PartyMenuOrRockOrRun.
+; pret has no counterpart.
+; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=every path back to the battle screen clears the port-only g_window_count and g_bg_whiteout and re-asserts text_msgbox; evidence=the port draws the bag and party menu through window descriptors over a blanked background, so without the teardown the restored battle screen is composited as a blank frame; lifetime=permanent while the port composites windows over a blankable background}
 ; ---------------------------------------------------------------------------
 RestoreBattleScreenState:
     mov dword [g_window_count], 0
@@ -3577,18 +3565,7 @@ PartyMenuOrRockOrRun:
     ; colour 0 and skips the map entirely. Clearing the window list ALONE is
     ; inert — that was tried and measured — because the whiteout is what blanks
     ; the background.
-    mov dword [g_window_count], 0
-    mov dword [g_bg_whiteout], 0
-    ; ...and re-assert the BATTLE text projection. The party menu scopes
-    ; text_msgbox around its own PrintText and restores it to msgbox_dialog, the
-    ; OVERWORLD record (party_menu.asm:436) — right for its START-menu caller,
-    ; wrong for this one. Left alone, the next battle message (RetreatMon's
-    ; switch-out line, printed through the plain PrintText pret uses) comes out
-    ; with overworld geometry: measured 2026-08-12 at canvas rows 6-8 cols 0-20,
-    ; a stride-20 box at GB(0,12), while the battle's own dialog box sat empty at
-    ; rows 15-20. The record is the caller's to own — party_menu.asm's own
-    ; annotation says as much, putting the choice in the screen that makes it.
-    mov dword [text_msgbox], msgbox_centered
+    call RestoreBattleScreenState
     call LoadScreenTilesFromBuffer2
     call RunDefaultPaletteCommand
     call GBPalNormal
@@ -3705,7 +3682,7 @@ PartyMenuOrRockOrRun:
     jne .notAlreadyOut                      ; jr nz
 ; mon is already out
     mov esi, AlreadyOutText
-    call PrintText
+    call PrintBattleText
     jmp .partyMonDeselected                 ; jp
 .notAlreadyOut:
     call HasMonFainted
@@ -3714,9 +3691,7 @@ PartyMenuOrRockOrRun:
     call GBPalWhiteOut
     call ClearSprites
     call LoadHudTilePatterns
-    mov dword [g_window_count], 0       ; port-only teardown — see .quitPartyMenu
-    mov dword [g_bg_whiteout], 0
-    mov dword [text_msgbox], msgbox_centered  ; battle geometry again — ditto
+    call RestoreBattleScreenState       ; port-only teardown — see .quitPartyMenu
     call LoadScreenTilesFromBuffer1
     call RunDefaultPaletteCommand
     call GBPalNormal
@@ -5263,7 +5238,7 @@ HasMonFainted:
     cmp byte [ebp + wFirstMonsNotOutYet], 0
     jnz .ret                            ; ret nz — first mons still out, silent bounce
     mov esi, NoWillText
-    call PrintText
+    call PrintBattleText
     xor al, al                          ; pret: xor a (ZF=1)
 .ret:
     ret
@@ -5401,7 +5376,7 @@ DoUseNextMonDialogue:
     dec al                               ; wIsInBattle==2 (trainer) → nz
     jnz .ret                             ; ret nz — trainer battle: no prompt
     mov esi, UseNextMonText
-    call PrintText
+    call PrintBattleText
 .displayYesNoBox:
     mov esi, BCOORD(13, 9)               ; PROJ — pret hlcoord 13, 9
     mov bh, 10                           ; lb bc, 10, 14
@@ -5508,16 +5483,14 @@ ChooseNextMon:
 ; every battle golden. Measurement: docs/current_plan_palette_fidelity.md and
 ; memory regression-battle-sendoutmon-animation-tail-dropped.
 ;
-; Two callees are ret-stubs, each with its own STUB annotation at its stub
-; site: PrintSendOutMonMessage and StarterPikachuBattleEntranceAnimation
-; (battle_stubs.asm). IsPlayerPikachuAsleepInParty was the third until
-; 2026-08-13, when it was translated into the mirror
-; engine/pikachu/pikachu_emotions.asm. PlayCry
-; and PrintEmptyString were already linked stubs. The call SHAPE is pret's; the
-; stubs are what remains to retire.
+; All callees are now translated: PrintSendOutMonMessage
+; (engine/battle/common_text.asm), StarterPikachuBattleEntranceAnimation
+; (engine/battle/pikachu_entrance_anim.asm), IsPlayerPikachuAsleepInParty
+; (engine/pikachu/pikachu_emotions.asm), PlayCry (home/pokemon.asm) and
+; PrintEmptyString (this file). The call SHAPE is pret's.
 ; ===========================================================================
 SendOutMon:
-    call PrintSendOutMonMessage          ; callfar PrintSendOutMonMessage (STUB)
+    call PrintSendOutMonMessage          ; callfar PrintSendOutMonMessage
     mov al, [ebp + wEnemyMonHP]          ; ld hl,wEnemyMonHP / ld a,[hli]
     or  al, [ebp + wEnemyMonHP + 1]      ; or [hl] — is enemy mon HP zero?
     jz .skipDrawingEnemyHUDAndHPBar      ; jp z
@@ -5565,7 +5538,7 @@ SendOutMon:
 .starterPikachu:
     mov byte [ebp + hWhoseTurn], 0       ; xor a / ldh [hWhoseTurn],a
     mov byte [ebp + hAutoBGTransferEnabled], 1
-    call StarterPikachuBattleEntranceAnimation ; callfar (STUB)
+    call StarterPikachuBattleEntranceAnimation ; callfar
     call IsPlayerPikachuAsleepInParty    ; callfar — CF=1 when the starter is asleep
     mov dl, 36                           ; ldpikacry e, PikachuCry37 (0-based)
     jc .asm_3cd81                        ; jr c
@@ -5575,7 +5548,7 @@ SendOutMon:
     jmp short .done                      ; jr .done
 .playRegularCry:
     mov al, [ebp + wCurPartySpecies]     ; ld a,[wCurPartySpecies]
-    call PlayCry                         ; (STUB — home_stubs.asm)
+    call PlayCry
 .done:
     call PrintEmptyString                ; REAL (this file, pret core.asm:6720)
     jmp SaveScreenTilesToBuffer1         ; jp SaveScreenTilesToBuffer1
@@ -5889,13 +5862,7 @@ EnemySendOutFirstMon:
 .next7:
     call GBPalWhiteOut
     call LoadHudTilePatterns
-    ; PORT-ONLY TEARDOWN — the party menu is a full-screen takeover (two window
-    ; descriptors over a blanked background) and restores the OVERWORLD msgbox
-    ; record on exit; both are wrong here. Same trio PartyMenuOrRockOrRun and
-    ; RestoreBattleScreenState already carry for the identical reason.
-    mov dword [g_window_count], 0
-    mov dword [g_bg_whiteout], 0
-    mov dword [text_msgbox], msgbox_centered
+    call RestoreBattleScreenState       ; port-only teardown — see RestoreBattleScreenState
     call LoadScreenTilesFromBuffer1
 .next4:
     call ClearSprites
@@ -6007,12 +5974,9 @@ ReplaceFaintedEnemyMon:
     mov [ebp + IO_OBP1], al                        ; ldh [rOBP1], a
     call UpdateCGBPal_OBP0
     call UpdateCGBPal_OBP1
-    ; STILL DROPPED, and for its own reason rather than a blanket TODO:
-    ;   * DrawEnemyPokeballs — now translatable (every callee took its pret name
-    ;     in 337a2b0ab) but NOT yet wired, because pret reaches the screen through
-    ;     a shadow-OAM DMA this port deliberately skips while a ball row is up;
-    ;     wiring it needs the PrepareStaticOAM publish DrawBattlePokeballs
-    ;     carries, and that is a HAL decision, not a translation.
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:ReplaceFaintedEnemyMon; behavior=DrawEnemyPokeballs is not called while a ball row is displayed; evidence=pret reaches the screen through a shadow-OAM DMA this port deliberately skips while a ball row is up, wiring it needs the PrepareStaticOAM publish DrawBattlePokeballs carries and re-measured against draw_hud_pokeball_gfx.asm; lifetime=until the HAL models the OAM DMA publish}
+    ; DrawEnemyPokeballs — now translatable (every callee took its pret name in
+    ; 337a2b0ab) but NOT yet wired for the reason above, not a blanket TODO.
     ; pret core.asm:911-919 — link-battle exchange, gated by wLinkState. FIXED:
     ; branch STRUCTURE restored (it used to drop straight to EnemySendOut
     ; unconditionally, losing even the read of wLinkState). LinkBattleExchangeData
@@ -6237,6 +6201,7 @@ TrainerBattleVictory:
     jz .noVictoryMusic
     call PlayBattleVictoryMusic
 .noVictoryMusic:
+    ; DEVIATION{class=temporary; pret=engine/battle/core.asm:TrainerBattleVictory; behavior=harness build elides TrainerDefeatedText, ScrollTrainerPicAfterBattle, the 40-frame wait, PrintEndBattleText and MoneyForWinningText; evidence=DEBUG_TRAINER_RESULT is harness-only and the blocks are inverted with %ifndef DEBUG_TRAINER_RESULT so production builds match pret; lifetime=permanent while the harness needs a non-interactive victory path}
     ; Only the TEXT/ANIMATION waits are gated below — the link-state early
     ; return stays on both builds so the guard cannot change which battles award
     ; prize money. Harness-only: the Stage-1b state oracle has no input driver,
@@ -6263,6 +6228,7 @@ TrainerBattleVictory:
     mov edx, wPlayerMoney + 2
     mov cl, 3
     call AddBCD
+    ; DEVIATION{class=temporary; pret=engine/battle/core.asm:TrainerBattleVictory; behavior=stores wBattleResult=0 where pret does not; evidence=pret's normal win path already set wBattleResult in FaintEnemyPokemon and the store is disclosed in prose at core.asm:6252 but was previously unannotated; lifetime=permanent port-only store, redundant on the normal path}
     mov byte [ebp + wBattleResult], 0              ; player won
     ret
 .ret:
@@ -6305,8 +6271,9 @@ AnyEnemyPokemonAliveCheck:
     ; (a wild battle: wEnemyPartyCount==0) wraps at 256 and stays inside GB RAM — benign.
     ; This was widened to 32-bit `dec ecx`, so count 0 → ~4 billion iterations, walking
     ; ESI off the ~96 KB allocation → page fault. Restore pret's 8-bit wrap with `dec cl`
-    ; (matches the sibling ChooseNextMon's `dec bl`). Reached only via a wild faint that
-    ; shouldn't hit this routine at all — see the wIsInBattle-guard TODO below.
+    ; (matches the sibling ChooseNextMon's `dec bl`). Callers guard with wIsInBattle
+    ; (HandleEnemyMonFainted / HandlePlayerMonFainted `dec a / jz .ret`) so wild
+    ; battles never reach this routine.
     dec cl                                     ; dec b (8-bit: count 0 wraps at 256, bounded)
     jnz .nextPokemon                           ; jr nz, .nextPokemon
     test al, al                                ; and a — sets ZF from AL, AL unchanged
@@ -6443,7 +6410,7 @@ HandlePoisonBurnLeechSeed:
     jz .poisoned
     mov esi, HurtByBurnText
 .poisoned:
-    call PrintText                  ; deferred UI — print hurt-by-burn/poison text
+    call PrintBattleText                  ; deferred UI — print hurt-by-burn/poison text
 
     ; Play burn/poison animation (wAnimationType=0 = move animation type).
     xor al, al
@@ -6493,7 +6460,7 @@ HandlePoisonBurnLeechSeed:
 
     push esi
     mov esi, HurtByLeechSeedText
-    call PrintText                  ; deferred UI
+    call PrintBattleText                  ; deferred UI
     pop esi                         ; restore HP pointer
 
 .notLeechSeeded:
@@ -6766,7 +6733,7 @@ MirrorMoveCopyMove:
     jnz ReloadMoveData                  ; jr nz, ReloadMoveData (tail jump)
 .mirrorMoveFailed:
     mov esi, MirrorMoveFailedText       ; ld hl, MirrorMoveFailedText
-    call PrintText
+    call PrintBattleText
     xor al, al                          ; xor a  (AL=0, ZF=1 -> failure)
     ret
 
@@ -6895,12 +6862,12 @@ PrintGhostText:
     and al, (1 << FRZ) | SLP_MASK       ; = 0x27
     jnz .ret                            ; ret nz
     mov esi, ScaredText                 ; ld hl, ScaredText
-    call PrintText
+    call PrintBattleText
     xor al, al
     ret
 .Ghost:
     mov esi, GetOutText                 ; ld hl, GetOutText
-    call PrintText
+    call PrintBattleText
     xor al, al
     ret
 .ret:
@@ -6969,7 +6936,7 @@ PrintCriticalOHKOText:
     dec al                              ; a -= 1  (1=crit -> 0, 2=OHKO -> 1)
     movzx eax, al                       ; widen index byte, zero upper bits
     mov esi, [CriticalOHKOTextPointers + eax*4]   ; *4: dd flat-pointer table (was *2 dw in pret)
-    call PrintText
+    call PrintBattleText
     mov byte [ebp + wCriticalHitOrOHKO], 0
 .done:
     mov bl, 20                          ; PORT: DelayFrames reads BL, not C
@@ -6998,6 +6965,7 @@ LoadHudAndHpBarAndStatusTilePatterns:
     call LoadHpBarAndStatusTilePatterns
 
 LoadHudTilePatterns:
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:LoadHudTilePatterns; behavior=collapses pret's LCD-gated FarCopyDataDouble vs CopyVideoDataDouble two-path copy into a single rep movsd pair; evidence=port has no LCD enable state and g_tilecache_dirty is armed first as the skill requires; lifetime=permanent DOS video HAL}
     mov byte [g_tilecache_dirty], 1
     push eax
     push ecx
@@ -7199,6 +7167,7 @@ CenterMonName:
 ; box.
 ; ---------------------------------------------------------------------------
 DrawHUDsAndHPBars:
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DrawHUDsAndHPBars; behavior=clears wLetterPrintingDelayFlags BIT_TEXT_DELAY before drawing HUD names; evidence=port's PlaceString calls PrintLetterDelay and the per-letter delay is set only while a dialog message prints, so without the clear mon names would type out, pret has no such flag; lifetime=permanent text engine boundary}
     ; HUD names are drawn with PlaceString, which (like pret's PlaceNextChar) calls
     ; PrintLetterDelay — so make sure the per-letter delay is OFF here (BIT_TEXT_DELAY is
     ; set only while a dialog MESSAGE prints). Otherwise the mon names would type out.
@@ -7209,6 +7178,7 @@ DrawHUDsAndHPBars:
     ; the battle_menu golden: wLoadedMon = battle mon, level byte = enemy's).
     call DrawPlayerHUDAndHPBar
     call DrawEnemyHUDAndHPBar
+    ; DEVIATION{class=HAL; pret=engine/battle/core.asm:DrawHUDsAndHPBars; behavior=publishes both HP-bar palette slots via SetPal_Battle after drawing both HUDs; evidence=port's two-slot palette publish (bg_slot_pal) has no pret counterpart and the per-HUD GetBattleHealthBarColor republishes are transition-gated, so the joint publish ensures the final colours are committed; lifetime=permanent palette HAL}
     ; Both bars have now refreshed their color IDs; publish their independent
     ; palette slots together (the enemy gauge takes slot 1 via the per-cell
     ; attribute publish in DrawEnemyHUDAndHPBar — the F-19 tile clones are gone).
@@ -7701,7 +7671,7 @@ section .text
 global PrintDoesntAffectText
 PrintDoesntAffectText:
     mov esi, DoesntAffectMonText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; ===========================================================================
 ; UpdateCurMonHPBar — pret engine/battle/core.asm:677 (UpdateCurMonHPBar → predef
@@ -7753,14 +7723,11 @@ TRUE equ 1
 %endif
 
 ; 2. wEnemyStatsToDouble / wEnemyStatsToHalve — now defined directly in
-;    gb_memmap.inc (0xD064/0xD065, = wEnemyBattleStatus1 - 2/-1), so the
+;    gb_memmap.inc (0xDE32/0xDE33, = wEnemyBattleStatus1 - 2/-1), so the
 ;    %ifndef guard below is inert. Kept only as a fallback.
 
-; 3. EXP_ALL — item id constant, not defined anywhere in gb_constants.inc or
-;    dos_port/assets (grepped the whole dos_port/ tree). Value from pret
-;    constants/item_constants.asm:87 (`const EXP_ALL` is the 76th entry in the
-;    0-based `const_value` chain starting at NO_ITEM=$00, i.e. $4B). Move into
-;    gb_constants.inc when integrating.
+; 3. EXP_ALL — item id 0x4B from constants/item_constants.asm:87, now defined in
+;    gb_constants.inc (was mis-claimed as undefined here).
 %ifndef EXP_ALL
 ; EXP_ALL moved to include/gb_constants.inc (the debug gate needs it too)
 %endif
@@ -7958,16 +7925,19 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; EndLowHealthAlarm — pret engine/battle/core.asm:EndLowHealthAlarm.
-; Called on battle win: turn off the low-health alarm and free its SFX channel.
-; DIVERGENCE: pret also sets wLowHealthAlarmDisabled=1 to prevent the alarm from
-; reactivating until the next battle. The port's alarm engine does not consult that
-; flag (no reader exists in the tree), and the alarm can only re-arm while in battle
-; — which is ending here — so the store is inert and omitted (no memmap symbol added).
+; Called on battle win: turn off the low-health alarm, free its SFX channel, and
+; set wLowHealthAlarmDisabled=1 to prevent re-arming for the rest of the battle.
+; Restored 2026-08-29 (battle_core_realign C.1): the disabled-flag store was
+; dropped with the comment "no reader exists"; DrawPlayerHUDAndHPBar reads
+; wLowHealthAlarmDisabled at core.asm:7320 (`and a; ret nz`), so the store is
+; load-bearing — without it a red-HP alarm re-arms after a mid-battle faint.
 ; ---------------------------------------------------------------------------
 EndLowHealthAlarm:
     xor al, al
     mov [ebp + wLowHealthAlarm], al               ; turn off low-health alarm
     mov [ebp + wChannelSoundIDs + CHAN5], al       ; free the alarm's SFX channel
+    inc al
+    mov [ebp + wLowHealthAlarmDisabled], al        ; prevent re-arming (pret: ld [wLowHealthAlarmDisabled], a)
     ret
 
 ; ---------------------------------------------------------------------------
@@ -8387,7 +8357,7 @@ PrintMoveFailureText:
     mov esi, UnaffectedText             ; ld hl, UnaffectedText
 .gotTextToPrint:
     push edx                            ; push de (move-effect ptr survives PrintText)
-    call PrintText
+    call PrintBattleText
     xor al, al
     mov [ebp + wCriticalHitOrOHKO], al
     pop edx                             ; pop de
@@ -8426,7 +8396,7 @@ PrintMoveFailureText:
     mov [ebp + esi], al                 ; ld [hl], a — clamp low byte (== wDamage+1) to 1
 .applyRecoil:
     mov esi, KeptGoingAndCrashedText    ; ld hl, KeptGoingAndCrashedText
-    call PrintText
+    call PrintBattleText
     mov bh, 4                           ; ld b, $4
     call PredefShakeScreenHorizontally  ; pret: predef PredefShakeScreenHorizontally — called
                                         ; directly (the port has no predef dispatcher, so the
@@ -8561,7 +8531,7 @@ HandleBuildingRage:
     mov byte [ebp + esi], ATTACK_UP1_EFFECT
     push esi
     mov esi, BuildingRageText
-    call PrintText
+    call PrintBattleText
     call StatModifierUpEffect
     pop esi                          ; esi = move-effect address
     xor al, al

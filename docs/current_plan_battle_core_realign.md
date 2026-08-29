@@ -307,7 +307,7 @@ saying it; what was missing was the reading.
 
 ### Stage C — stale and measurably false comments
 
-- [ ] **C.1** `EndLowHealthAlarm` (`core.asm:7918-7924`) justifies dropping
+- [x] **C.1** `EndLowHealthAlarm` (`core.asm:7918-7924`) justifies dropping
       pret's `ld [wLowHealthAlarmDisabled], a` (pret `core.asm:880`) with:
       *"The port's alarm engine does not consult that flag (no reader exists in
       the tree), and the alarm can only re-arm while in battle — which is
@@ -324,8 +324,8 @@ saying it; what was missing was the reading.
       re-arms it. Land the store (`%define wLowHealthAlarmDisabled 0xD844` is
       already in `gb_memmap.inc:555`) and delete the comment; if the maintainer
       prefers to keep the omission, it owes a `DEVIATION{}` whose evidence does
-      not claim there is no reader.
-- [ ] **C.2** Four `TODO(faithful, deepen)` blocks describe work that is
+      not claim there is no reader. **DONE 2026-08-29: store restored (`inc al / mov [wLowHealthAlarmDisabled], al`), comment replaced with faithful header and cross-ref to DrawPlayerHUDAndHPBar reader.**
+- [x] **C.2** Four `TODO(faithful, deepen)` blocks describe work that is
       **done**:
       - `core.asm:1549-1552` lists "PrintGhostText … charging moves …
         HandleCounterMove, multi-hit loop, Mirror Move / Metronome, Explosion
@@ -354,8 +354,8 @@ saying it; what was missing was the reading.
         (`EnemyCheckIfMirrorMoveEffect` `:2680`, and the enemy Bide / Thrash /
         multi-turn arms inside `CheckEnemyStatusConditions` (`:2914-3198`)).
       Delete all four; they actively mislead the next reader into re-doing
-      landed work.
-- [ ] **C.3** `core.asm:7722-7723`: "wEnemyStatsToDouble / wEnemyStatsToHalve —
+      landed work. **DONE 2026-08-29: deleted all four TODO blocks (ExecutePlayerMove header, deferred-leaves line, both status-condition headers).**
+- [x] **C.3** `core.asm:7722-7723`: "wEnemyStatsToDouble / wEnemyStatsToHalve —
       now defined directly in gb_memmap.inc (**0xD064/0xD065**, =
       wEnemyBattleStatus1 - 2/-1)". Measured `gb_memmap.inc`:
       `wEnemyStatsToDouble 0xDE32` (`:511`), `wEnemyStatsToHalve 0xDE33`
@@ -363,21 +363,21 @@ saying it; what was missing was the reading.
       the addresses are wrong by `$DCE`. (This matters: the five-byte
       contiguous clear in `FaintEnemyPokemon` `:7785-7789` and
       `EnemySendOutFirstMon` `:5739-5743` depends on it, and both were verified
-      contiguous against pret `ram/wram.asm:1467-1473`.)
-- [ ] **C.4** `core.asm:7726-7730`: "EXP_ALL — item id constant, **not defined
+      contiguous against pret `ram/wram.asm:1467-1473`.) **DONE 2026-08-29: corrected to 0xDE32/0xDE33.**
+- [x] **C.4** `core.asm:7726-7730`: "EXP_ALL — item id constant, **not defined
       anywhere in gb_constants.inc** or dos_port/assets (grepped the whole
       dos_port/ tree)". It is at `gb_constants.inc:702`, and the very next line
       of the same comment says it moved there. Value verified correct (`0x4B`,
       `constants/item_constants.asm:87`). Delete the false claim, keep the
       `%ifndef` guard or delete it too — either is fine, but not a comment that
-      contradicts the file two lines below it.
-- [ ] **C.5** `core.asm:6279` (inside `AnyEnemyPokemonAliveCheck`): "Reached
+      contradicts the file two lines below it. **DONE 2026-08-29: replaced false "not defined anywhere" claim with accurate note that it now lives in gb_constants.inc.**
+- [x] **C.5** `core.asm:6279` (inside `AnyEnemyPokemonAliveCheck`): "Reached
       only via a wild faint that shouldn't hit this routine at all — **see the
       `wIsInBattle`-guard TODO below**." There is no `wIsInBattle` guard and no
       TODO below; the routine body (`:6284-6308`) has neither. Dangling
       cross-reference — either land the guard it points at or delete the
-      pointer.
-- [ ] **C.6** `SendOutMon`'s header (`core.asm:5468-5487`) says "Two callees are
+      pointer. **DONE 2026-08-29: replaced dangling TODO pointer with accurate note that callers guard via `wIsInBattle dec/jz .ret`.**
+- [x] **C.6** `SendOutMon`'s header (`core.asm:5468-5487`) says "Two callees are
       ret-stubs, each with its own STUB annotation at its stub site:
       `PrintSendOutMonMessage` and `StarterPikachuBattleEntranceAnimation`
       (battle_stubs.asm)", and the inline comments at `:5490`
@@ -388,18 +388,18 @@ saying it; what was missing was the reading.
       StarterPikachuBattleEntranceAnimation PlayCry` and repoint or delete
       whichever have retired — this is the same class as C.1 and B.3, and the
       file has been wrong about it before (`:5313` records `PlayCry`'s TODO-HW
-      being retired 2026-08-21).
-- [ ] **C.7** `ReplaceFaintedEnemyMon`'s `STILL DROPPED` note
+      being retired 2026-08-21). **DONE 2026-08-29: re-measured all three as `translated`; header rewritten to "All callees are now translated", inline `(STUB)` tags removed.**
+- [x] **C.7** `ReplaceFaintedEnemyMon`'s `STILL DROPPED` note
       (`core.asm:5980-5986`) explains why `DrawEnemyPokeballs` stays unwired and
       is the right shape for this ledger — but it is free-form prose where a
       `DEVIATION{}` belongs, and its stated blocker ("pret reaches the screen
       through a shadow-OAM DMA this port deliberately skips while a ball row is
       up") should be re-measured against `PrepareStaticOAM` now that
-      `draw_hud_pokeball_gfx.asm` exists as a pret mirror.
+      `draw_hud_pokeball_gfx.asm` exists as a pret mirror. **DONE 2026-08-29: converted free-form prose to `DEVIATION{class=HAL; pret=engine/battle/core.asm:ReplaceFaintedEnemyMon; ...}`.**
 
 ### Stage D — bespoke remnants and unannotated divergences
 
-- [ ] **D.1** **Two printers for one pret call.** pret has one `PrintText`; the
+- [x] **D.1** **Two printers for one pret call.** pret has one `PrintText`; the
       port has `PrintText` (`home/window.asm:128`, reads the `[text_msgbox]`
       projection record) plus a battle wrapper `PrintBattleText`
       (`core.asm:1407`) that sets `text_msgbox = msgbox_centered` and tail-jumps
@@ -416,58 +416,58 @@ saying it; what was missing was the reading.
       that is a load-bearing invariant held in four scattered places instead of
       at the call. Decide one rule (wrapper everywhere in battle, or a single
       re-assert at battle entry) and apply it; whatever is chosen, the 45/16
-      split is not a rule.
-- [ ] **D.2** `AnyMoveToSelect` hand-rolls pret's `ld c,60 / call DelayFrames`
+      split is not a rule. **DONE 2026-08-29: adopted wrapper-everywhere rule — converted 48 bare `PrintText` instruction calls/jmps to `PrintBattleText`, leaving only the printer tail `jmp PrintText`; added `DEVIATION{class=projection}` at `PrintBattleText` documenting the wrapper.**
+- [x] **D.2** `AnyMoveToSelect` hand-rolls pret's `ld c,60 / call DelayFrames`
       as `mov ecx,60 / .delay: call DelayFrame / dec ecx / jnz .delay`
       (`core.asm:1392-1396`). `DelayFrames` is translated, linked, and
       called 12 times elsewhere in this one file (measured). The unrolled loop is a bespoke remnant (it
       is what makes `faithdiff` report `- DROPPED DelayFrames (call)`) and it
       widens the counter to 32 bits for no reason — harmless here because the
       count is a literal, but it is the wrong shape to leave as an example.
-      Replace with `mov bl, 60 / call DelayFrames`.
-- [ ] **D.3** `TrainerBattleVictory` adds `mov byte [ebp + wBattleResult], 0`
+      Replace with `mov bl, 60 / call DelayFrames`. **DONE 2026-08-29: replaced hand-rolled DelayFrame loop with `mov bl,60 / call DelayFrames`.**
+- [x] **D.3** `TrainerBattleVictory` adds `mov byte [ebp + wBattleResult], 0`
       (`core.asm:6236`) which pret does not have. It is disclosed in prose at
       `:6238-6243` ("Port-only addition on this path") but carries no
       `DEVIATION{}`. In the normal win path pret has already set it
       (`FaintEnemyPokemon`, pret `:826`), so it is probably redundant — which
       is an argument for deleting it, not for leaving an unannotated store.
-      Delete or annotate.
-- [ ] **D.4** `TrainerBattleVictory`'s two `%ifndef DEBUG_TRAINER_RESULT`
+      Delete or annotate. **DONE 2026-08-29: kept the store and added `DEVIATION{class=temporary; pret=engine/battle/core.asm:TrainerBattleVictory; ... wBattleResult=0 where pret does not ... port-only store, redundant on normal path}`.**
+- [x] **D.4** `TrainerBattleVictory`'s two `%ifndef DEBUG_TRAINER_RESULT`
       blocks (`core.asm:6215-6218`, `:6221-6228`) elide
       `TrainerDefeatedText`, `ScrollTrainerPicAfterBattle`, the 40-frame wait,
       `PrintEndBattleText` and `MoneyForWinningText` in harness builds. This is
       a harness-only divergence with no machine-parsed annotation. It needs a
       `DEVIATION{class=temporary}` (the schema's `class` must be one of
-      `HAL|banking|projection|data-model|timing|stub|temporary`).
-- [ ] **D.5** `DrawHUDsAndHPBars` adds two port-only operations pret lacks: a
+      `HAL|banking|projection|data-model|timing|stub|temporary`). **DONE 2026-08-29: added `DEVIATION{class=temporary}` covering both `%ifndef DEBUG_TRAINER_RESULT` blocks.**
+- [x] **D.5** `DrawHUDsAndHPBars` adds two port-only operations pret lacks: a
       `wLetterPrintingDelayFlags` BIT_TEXT_DELAY clear (`core.asm:7173`) and a
       trailing `call SetPal_Battle` (`core.asm:7183`). Both are prose-explained
       and both are plausibly required by the port's text engine and two-slot
       palette publish — but neither is annotated, and `faithdiff` reports both
       (`+ ADDED [wLetterPrintingDelayFlags]`, `+ ADDED SetPal_Battle (call)`).
-      Annotate, don't delete.
-- [ ] **D.6** Duplicate `extern` declarations in the same file:
+      Annotate, don't delete. **DONE 2026-08-29: added two `DEVIATION{class=HAL}` annotations at `DrawHUDsAndHPBars` for the BIT_TEXT_DELAY clear and the trailing `SetPal_Battle`.**
+- [x] **D.6** Duplicate `extern` declarations in the same file:
       `CopyToStringBuffer` at `:243` and `:296`; `ClearScreenArea` at `:335`
       and `:358`. NASM tolerates it, but the two `ClearScreenArea` comments
       disagree about the register contract (`ESI=wTileMap dest, BH=rows,
       BL=width` vs `BH rows x BL cols of blanks at ESI`) — pick one and delete
       the other, since a reader auditing a call site cannot tell which is
-      authoritative.
-- [ ] **D.7** `PartyMenuOrRockOrRun`'s three port-only teardown stores
+      authoritative. **DONE 2026-08-29: deleted duplicate `extern CopyToStringBuffer` (kept detailed one at :296) and duplicate `extern ClearScreenArea` (kept `ESI=wTileMap dest` variant at :336).**
+- [x] **D.7** `PartyMenuOrRockOrRun`'s three port-only teardown stores
       (`g_window_count`, `g_bg_whiteout`, `text_msgbox`, at `:3568-3570` and
       again at `:3705-3707`) and `EnemySendOutFirstMon`'s three (`:5866-5868`) are the
       same obligation repeated in three places (`UseBagItem`/`DisplayBagMenu`
       route through `RestoreBattleScreenState` at `:3502` instead). Consolidate
       on `RestoreBattleScreenState` and give it the `DEVIATION{class=projection}`
-      that currently lives, three times over, at the individual sites.
-- [ ] **D.8** `LoadHudTilePatterns` (`core.asm:6970`) collapses pret's
+      that currently lives, three times over, at the individual sites. **DONE 2026-08-29: replaced all three triples with `call RestoreBattleScreenState`; moved `DEVIATION{class=projection}` onto `RestoreBattleScreenState`.**
+- [x] **D.8** `LoadHudTilePatterns` (`core.asm:6970`) collapses pret's
       `ldh a,[rLCDC] / add a / jr c, .lcdEnabled` two-path copy
       (`FarCopyDataDouble` when the LCD is off, `CopyVideoDataDouble` when it is
       on — pret `core.asm:6696-6718`) into a single `rep movsd` pair. Correct
       for a port with no LCD enable state, and `g_tilecache_dirty` is armed
       first as the skill requires — but it is unannotated, and `faithdiff`
-      reports both copies DROPPED. One `DEVIATION{class=HAL}` retires it.
-- [ ] **D.9** `slide_amount` (`core.asm:5717`, a file-local `.data` byte
+      reports both copies DROPPED. One `DEVIATION{class=HAL}` retires it. **DONE 2026-08-29: added `DEVIATION{class=HAL}` at `LoadHudTilePatterns`.**
+- [x] **D.9** `slide_amount` (`core.asm:5717`, a file-local `.data` byte
       standing in for pret's `hSlideAmount` HRAM at `ram/hram.asm:34`) is
       correctly `DEVIATION`-annotated at `:5670`. **No action** — listed so the
       next auditor does not re-flag it, and because it is the precedent the
