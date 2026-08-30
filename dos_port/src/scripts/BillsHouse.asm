@@ -47,6 +47,7 @@ global BillsHouseScript9
 global BillsHouse_CheckMetBill
 global BillsHouse_Script
 global BillsHouse_ScriptPointers
+global BillsHouse_CheckPikachuEmotion
 global BillsHouse_TextPointers
 global PikachuMovement_Confused
 global PikachuMovement_EnterCellSeparatorDown
@@ -58,7 +59,6 @@ global RLE_1e219
 
 extern ApplyPikachuMovementData
 extern Bankswitch
-extern BillsHouse_CheckPikachuEmotion   ; NOT YET DEFINED IN THE PORT
 extern CallFunctionInTable
 extern CheckPikachuFollowingPlayer
 extern CheckPikachuStatusCondition
@@ -548,32 +548,28 @@ BillsHousePrintBillCheckOutMyRarePokemonText:
     text_far _BillsHouseBillCheckOutMyRarePokemonText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[pikachu-table-index] BillsHouse_CheckPikachuEmotion (scripts/BillsHouse_2.asm:85-101) — at scripts/BillsHouse_2.asm:92: ldpikaemotion needs (X_id - Table) / N across object files
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, [wCurMap]
-; PRET| 	cp BILLS_HOUSE
-; PRET| 	jr nz, .noEmotion
-; PRET| 	call CheckPikachuFollowingPlayer
-; PRET| 	jr z, .noEmotion
-; PRET| 	ld a, [wBillsHouseCurScript]
-; PRET| 	cp SCRIPT_BILLSHOUSE_SCRIPT5
-; PRET| 	ldpikaemotion e, PikachuEmotion27
-; PRET| 	ret z
-; PRET| 	cp SCRIPT_BILLSHOUSE_SCRIPT0
-; PRET| 	ldpikaemotion e, PikachuEmotion23
-; PRET| 	ret z
-; PRET| 	CheckEventHL EVENT_MET_BILL_2
-; PRET| 	ldpikaemotion e, PikachuEmotion32
-; PRET| 	ret z
-; PRET| 	ldpikaemotion e, PikachuEmotion31
-; PRET| 	ret
+BillsHouse_CheckPikachuEmotion:
+    mov al, [ebp + wCurMap]
+    cmp al, BILLS_HOUSE
+    jnz .noEmotion
+    call CheckPikachuFollowingPlayer
+    jz .noEmotion
+    mov al, [ebp + wBillsHouseCurScript]
+    cmp al, SCRIPT_BILLSHOUSE_SCRIPT5
+    mov dl, 27                          ; ldpikaemotion e, PikachuEmotion27
+    jz .ret
+    cmp al, SCRIPT_BILLSHOUSE_SCRIPT0
+    mov dl, 23                          ; ldpikaemotion e, PikachuEmotion23
+    jz .ret
+    CheckEventHL EVENT_MET_BILL_2
+    mov dl, 32                          ; ldpikaemotion e, PikachuEmotion32
+    jz .ret
+    mov dl, 31                          ; ldpikaemotion e, PikachuEmotion31
+.ret:
+    ret
 
-%assign event_byte -1
-%assign event_byte_a -1
 .noEmotion:
-    mov dl, 0xff
+    mov dl, 0xFF
     ret
 
 %assign event_byte -1

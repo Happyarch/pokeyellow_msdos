@@ -35,13 +35,14 @@ global Mansion1CheckReplaceSwitchDoorBlocks
 global Mansion1LoadEmptyFloorTileBlock
 global Mansion1LoadHorizontalGateBlock
 global Mansion1ReplaceBlock
+global Mansion1Script_Switches
 global PokemonMansion1FScientistText
 global PokemonMansion1FSwitchText
 global PokemonMansion1F_Script
 
+extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Mansion1Script_Switches
 extern Mansion1TrainerHeader0
 extern Mansion1TrainerHeaders
 extern PlaySound
@@ -128,7 +129,15 @@ Mansion1ReplaceBlock:
     call ReplaceTileBlock
     ret
 
-; Mansion1Script_Switches (scripts/PokemonMansion1F.asm:49-56) — not re-emitted: Mansion1Script_Switches is already defined elsewhere in the port.
+Mansion1Script_Switches:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jnz .ret
+    mov byte [ebp + hJoyHeld], 0
+    mov byte [ebp + hTextID], 4 ; TEXT_POKEMONMANSION1F_SWITCH
+    jmp DisplayTextID
+.ret:
+    ret
 
 ; PokemonMansion1F_ScriptPointers (scripts/PokemonMansion1F.asm:59-75) — not re-emitted: PokemonMansion1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 

@@ -33,6 +33,7 @@ extern Mansion3TrainerHeaders              ; assets/trainer_headers.inc
 extern PokemonMansion3FSuperNerdBattleText ; assets/trainer_headers.inc
 
 global Mansion3CheckReplaceSwitchDoorBlocks
+global Mansion3Script_Switches
 global PokemonMansion3FDefaultScript
 global PokemonMansion3FScientistText
 global PokemonMansion3FSuperNerdText
@@ -42,11 +43,11 @@ global PokemonMansion3F_ScriptPointers
 extern ArePlayerCoordsInArray
 extern CheckFightingMapTrainers
 extern DisplayEnemyTrainerTextAndStartBattle
+extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EndTrainerBattle
 extern ExecuteCurMapScriptInTable
 extern Mansion2ReplaceBlock
-extern Mansion3Script_Switches
 extern Mansion3TrainerHeader0
 extern Mansion3TrainerHeader1
 extern Mansion3TrainerHeaders
@@ -158,9 +159,15 @@ PokemonMansion3FDefaultScript:
     or byte [ebp + esi], (1 << (BIT_ON_DUNGEON_WARP))
     mov esi, wStatusFlags6
     or byte [ebp + esi], (1 << (BIT_DUNGEON_WARP))
+Mansion3Script_Switches:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jnz .ret
+    mov byte [ebp + hJoyHeld], 0
+    mov byte [ebp + hTextID], 6 ; TEXT_POKEMONMANSION3F_SWITCH
+    jmp DisplayTextID
+.ret:
     ret
-
-; Mansion3Script_Switches (scripts/PokemonMansion3F.asm:77-84) — not re-emitted: Mansion3Script_Switches is already defined elsewhere in the port.
 
 ; PokemonMansion3F_TextPointers (scripts/PokemonMansion3F.asm:87-101) — not re-emitted: Mansion3TrainerHeaders is already defined in assets/trainer_headers.inc.
 

@@ -33,13 +33,14 @@ extern PokemonMansion2FSuperNerdBattleText ; assets/trainer_headers.inc
 
 global Mansion2CheckReplaceSwitchDoorBlocks
 global Mansion2ReplaceBlock
+global Mansion2Script_Switches
 global PokemonMansion2FSuperNerdText
 global PokemonMansion2FSwitchText
 global PokemonMansion2F_Script
 
+extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
-extern Mansion2Script_Switches
 extern Mansion2TrainerHeader0
 extern Mansion2TrainerHeaders
 extern PlaySound
@@ -118,9 +119,15 @@ Mansion2CheckReplaceSwitchDoorBlocks:
 Mansion2ReplaceBlock:
     mov [ebp + wNewTileBlockID], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    jmp ReplaceTileBlock
-
-; Mansion2Script_Switches (scripts/PokemonMansion2F.asm:45-52) — not re-emitted: Mansion2Script_Switches is already defined elsewhere in the port.
+Mansion2Script_Switches:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jnz .ret
+    mov byte [ebp + hJoyHeld], 0
+    mov byte [ebp + hTextID], 5 ; TEXT_POKEMONMANSION2F_SWITCH
+    jmp DisplayTextID
+.ret:
+    ret
 
 ; PokemonMansion2F_ScriptPointers (scripts/PokemonMansion2F.asm:55-72) — not re-emitted: PokemonMansion2F_ScriptPointers is already defined in assets/map_script_tables.inc.
 

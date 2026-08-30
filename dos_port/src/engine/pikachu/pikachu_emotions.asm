@@ -79,7 +79,7 @@ extern CheckPikachuStatusCondition                      ; src/engine/pikachu/pik
 extern IsThisPartyMonStarterPikachu                     ; src/engine/pikachu/pikachu_status.asm
 extern AddNTimes                                        ; src/home/array.asm
 extern ApplyPikachuMovementData                         ; src/home/pikachu.asm
-extern BillsHouse_CheckPikachuEmotion                   ; src/engine/pikachu/pikachu_stubs.asm
+extern BillsHouse_CheckPikachuEmotion                   ; src/scripts/BillsHouse.asm
 extern GetPikaPicAnimationScriptIndex                   ; src/engine/pikachu/pikachu_pic_animation.asm
 extern StarterPikachuEmotionCommand_pikapic              ; src/engine/pikachu/pikachu_pic_animation.asm
 

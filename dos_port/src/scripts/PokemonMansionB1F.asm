@@ -31,15 +31,16 @@ extern Mansion4TrainerHeader1             ; assets/trainer_headers.inc
 extern Mansion4TrainerHeaders             ; assets/trainer_headers.inc
 extern PokemonMansionB1FBurglarBattleText ; assets/trainer_headers.inc
 
+global Mansion4Script_Switches
 global MansionB1FCheckReplaceSwitchDoorBlocks
 global PokemonMansionB1FBurglarText
 global PokemonMansionB1FScientistText
 global PokemonMansionB1F_Script
 
+extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern ExecuteCurMapScriptInTable
 extern Mansion2ReplaceBlock
-extern Mansion4Script_Switches
 extern Mansion4TrainerHeader0
 extern Mansion4TrainerHeader1
 extern Mansion4TrainerHeaders
@@ -108,9 +109,15 @@ MansionB1FCheckReplaceSwitchDoorBlocks:
     mov al, 0xe
     mov bx, ((8) << 8) | (8)
     call Mansion2ReplaceBlock
+Mansion4Script_Switches:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP
+    jnz .ret
+    mov byte [ebp + hJoyHeld], 0
+    mov byte [ebp + hTextID], 9 ; TEXT_POKEMONMANSIONB1F_SWITCH
+    jmp DisplayTextID
+.ret:
     ret
-
-; Mansion4Script_Switches (scripts/PokemonMansionB1F.asm:47-54) — not re-emitted: Mansion4Script_Switches is already defined elsewhere in the port.
 
 ; PokemonMansionB1F_ScriptPointers (scripts/PokemonMansionB1F.asm:57-80) — not re-emitted: PokemonMansionB1F_ScriptPointers is already defined in assets/map_script_tables.inc.
 
