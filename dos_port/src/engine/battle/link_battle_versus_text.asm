@@ -31,8 +31,7 @@ global DisplayLinkBattleVersusTextBox
 extern LoadTextBoxTilePatterns         ; src/home/load_font.asm
 extern TextBoxBorder                   ; src/home/text.asm — ESI=top-left, BL=w, BH=h
 extern PlaceString                     ; src/home/text.asm — EAX=flat src, ESI=dest
-extern SetupPlayerAndEnemyPokeballs    ; src/engine/battle/battle_stubs.asm (STUB) —
-                                        ; see its header for why
+extern SetupPlayerAndEnemyPokeballs    ; src/engine/battle/draw_hud_pokeball_gfx.asm
 extern DelayFrames                     ; src/home/delay.asm — BL = frame count
 
 ; constants/charmap.asm — two raw bold-glyph tiles, not a generated string

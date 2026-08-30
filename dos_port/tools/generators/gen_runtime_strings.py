@@ -57,15 +57,13 @@ def db(label, parts, cm, aliases=(), emit_global=False):
 
 
 FILES = {
-    "battle_menu_runtime_strings.inc": [
-        ("BattleMenuText", ["FIGHT ", "<PK><MN>", [0x4E], "ITEM  RUN", [0x50]]),
-        ("str_gotaway", ["Got away safely!", [0x50]]),
-        ("str_cantesc", ["Can't escape!", [0x50]]),
-        ("str_norun1", ["No! There's no", [0x50]]),
-        ("str_norun2", ["running from a", [0x50]]),
-        ("str_norun3", ["trainer battle!", [0x50]]),
-        ("str_attack", ["ATTACK", [0x50]]), ("str_defense", ["DEFENSE", [0x50]]),
-        ("str_speed", ["SPEED", [0x50]]), ("str_special", ["SPECIAL", [0x50]]),
+    "battle_core_runtime_strings.inc": [
+        ("str_miss_text", [[0x00], "Attack got no way!", [0x50, 0x50]]),
+        # pret engine/battle/core.asm:SevenSpacesText — `ds PIC_WIDTH, " "` + "@".
+        # SlideDownFaintedMonPic PlaceStrings it to blank the row the pic just
+        # vacated. A rendered glyph run is Tier-1 data, so it is generated here
+        # rather than hand-encoded (PIC_WIDTH = 7).
+        ("SevenSpacesText", [" " * 7, [0x50]]),
         # Tutorial-battle stand-in names (pret core.asm .oldManName/.profOakName,
         # copied over wPlayerName for the simulated battle menu so battle text
         # reads "PROF.OAK used ...").
@@ -96,18 +94,6 @@ FILES = {
         # as long as .profOakName follows .oldManName.
         ("str_oldman_name", ["OLD MAN", [0x50, 0x8F, 0x91, 0x8E]]),
         ("str_profoak_name", ["PROF.OAK", [0x50, 0xFA, 0x2D]]),
-        # Tutorial-battle one-item bag (pret SimulatedInputBattleItemList):
-        # the box shows the single POKe BALL and its x1 quantity.
-        ("str_pokeball", ["POKé BALL", [0x50]]),
-        ("str_x1", [[0xF1, 0xF7, 0x50]]),  # ×1
-    ],
-    "battle_core_runtime_strings.inc": [
-        ("str_miss_text", [[0x00], "Attack got no way!", [0x50, 0x50]]),
-        # pret engine/battle/core.asm:SevenSpacesText — `ds PIC_WIDTH, " "` + "@".
-        # SlideDownFaintedMonPic PlaceStrings it to blank the row the pic just
-        # vacated. A rendered glyph run is Tier-1 data, so it is generated here
-        # rather than hand-encoded (PIC_WIDTH = 7).
-        ("SevenSpacesText", [" " * 7, [0x50]]),
     ],
     "effectiveness_runtime_strings.inc": [
         ("SuperEffectiveText", [[0x00], "It's super", [0x4F], "effective!", [0x58]]),

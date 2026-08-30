@@ -53,6 +53,9 @@ ClearSprites:
     mov ecx, W_SHADOW_OAM_SIZE
     xor eax, eax
     rep stosb
+    lea edi, [ebp + GB_OAM]
+    mov ecx, W_SHADOW_OAM_SIZE
+    rep stosb
     pop edi
     pop ecx
     pop eax

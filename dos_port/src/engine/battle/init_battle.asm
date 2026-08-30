@@ -112,15 +112,13 @@ extern SlidePlayerAndEnemySilhouettesOnScreen ; core.asm — pret entry point fo
 extern SaveBattleScreen                  ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern ClearScreenArea                   ; src/home/copy2.asm — pret _InitBattleCommon's two clears
 extern DrawEnemyHUDAndHPBar              ; core.asm — wild enemy HUD (pret _InitBattleCommon)
-extern DrawBattlePokeballs               ; pokeballs.asm — party-status ball row
 extern WaitForAPress                     ; src/home/joypad2.asm — alias of pret WaitForTextScrollButtonPress
-extern HideBattlePokeballs               ; pokeballs.asm
+extern ClearSprites                      ; src/home/clear_sprites.asm
 extern MainInBattleLoop                  ; core.asm — the whole battle loop
 extern SendOutMon                        ; core.asm — pret StartBattle.playerSendOutFirstMon send-out
 extern StartBattle                       ; core.asm — pret StartBattle (E.1 restored)
 extern DisplayBattleMenu                 ; core.asm — special-battle menu loop (pret StartBattle .displaySafariZoneBattleMenu)
 extern EndOfBattle                       ; end_of_battle.asm — post-battle (EXP/evo/reset)
-extern EndBattleScreen                   ; battle_menu.asm — clean terminal
 extern GetTrainerInformation             ; src/home/trainers2.asm — name/pic/prize metadata
 extern ReadTrainer                       ; read_trainer_party.asm — generated roster -> enemy party
 extern PrintSafariZoneBattleText         ; engine/battle/safari_zone.asm — bait/angry line
@@ -135,7 +133,7 @@ extern ModifyPikachuHappiness            ; engine/events/pikachu_happiness.asm �
 extern trainer_pic_ptr                   ; src/home/trainers2.asm — flat picture pointer
 extern trainer_pic_len                   ; src/home/trainers2.asm — matching compressed byte length
 extern LoadMonPicToVRAM                  ; src/home/pics.asm — staged compressed pic -> vFrontPic
-extern DrawEmptyDialogBox                ; battle_menu.asm — trainer intro placeholder surface
+extern PrintEmptyString                  ; engine/battle/core.asm — blank dialog box
 extern TryDoWildEncounter                ; wild_encounters.asm — ZF=1 when a roster was selected
 extern DoBattleTransitionAndInitBattleVariables ; core.asm — transition + teardown (pret call sites below)
 extern Delay3                            ; src/home/palettes.asm — 3-frame wait
@@ -518,7 +516,7 @@ _InitBattleCommon:
     mov bh, 4                                    ; lb bc, 4, 10
     mov bl, 10
     call ClearScreenArea
-    call HideBattlePokeballs                     ; pret's ClearSprites
+    call ClearSprites                            ; pret's ClearSprites
     ; E.1: StartBattle restored in core.asm — call at pret's position.
     call StartBattle
 .battleFinished:
@@ -578,7 +576,7 @@ _InitBattleCommon:
     ; battle with NO enemy HUD; with the OLD unconditional DrawHUDsAndHPBars it drew
     ; a phantom PLAYER HUD (:L 0 / 0/ 0) that the real game never shows.
     call DrawEnemyHUDAndHPBar          ; enemy (PIKACHU L5) HUD only — no player mon out
-    call DrawEmptyDialogBox            ; clear intro message interior before saving screen (pret _InitBattleCommon PrintEmptyString)
+    call PrintEmptyString              ; clear intro message interior before saving screen (pret _InitBattleCommon PrintEmptyString)
     call SaveBattleScreen              ; snapshot for menu re-entry (includes enemy HUD + empty dialog box)
     ; pret shows no party-ball row and sends out no player mon in a special
     ; battle — the trainer pic stays on the player's side for its whole length.

@@ -1959,9 +1959,9 @@
 ; Joypad ($FF00) — read-only from game; written by our INT 9h handler
 %define IO_JOYP                      0xFF00   ; rJOYP
 
-; Serial ($FF01/$FF02) — isolated; network HAL not yet implemented
-%define IO_SB                        0xFF01   ; rSB  — TODO-HW: network HAL (Phase 4)
-%define IO_SC                        0xFF02   ; rSC  — TODO-HW: network HAL (Phase 4)
+; Serial ($FF01/$FF02) — network HAL (src/home/serial.asm, src/net/net_hal.asm)
+%define IO_SB                        0xFF01   ; rSB  — network HAL
+%define IO_SC                        0xFF02   ; rSC  — network HAL
 
 ; Divider / Timer — not translated; PIT-based main loop handles timing
 %define IO_DIV                       0xFF04   ; rDIV  — not emulated (read returns 0)

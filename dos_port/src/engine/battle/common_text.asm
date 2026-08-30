@@ -85,7 +85,7 @@ extern PlaySound                    ; src/home/audio.asm
 extern WaitForSoundToFinish         ; src/home/delay.asm
 extern IsPlayerPikachuAsleepInParty ; engine/pikachu/pikachu_emotions.asm
 extern PlayPikachuSoundClip         ; src/audio/pikachu_pcm.asm — DL = clip index
-extern DrawBattlePokeballs          ; engine/battle/pokeballs.asm — port OAM HAL wrapper around pret's DrawAllPokeballs; see the DEVIATION
+extern DrawAllPokeballs             ; engine/battle/draw_hud_pokeball_gfx.asm
 ; Generated Tier-1 streams (assets/battle_text.inc). gen_battle_text FLATTENS
 ; `text_far _X` into a stream emitted under the WRAPPER name X, which is why
 ; these carry no leading underscore — unlike the EXTRA_FAR raw streams above.
@@ -285,18 +285,6 @@ PrintPlayerMon1Text:
 
 ; ---------------------------------------------------------------------------
 ; PrintBeginningBattleText — pret engine/battle/common_text.asm:1.
-;
-; DEVIATION{class=HAL; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=the wild-battle arm calls the port-only wrapper DrawBattlePokeballs where pret does callfar DrawAllPokeballs, so the port additionally pre-clears FE00, publishes the entry count through PrepareStaticOAM and enables OBJ rendering around pret own composition; evidence=DrawAllPokeballs is translated as of 337a2b0ab and this wrapper now does nothing but the port OAM HAL, which pret gets for free from the shadow OAM DMA that update_oam deliberately skips while the ball row is up so that the row is not overwritten; lifetime=retire if the port ever runs the shadow OAM DMA during the battle intro, at which point DrawAllPokeballs can be called directly}
-;
-; THE CLASS AND EVIDENCE ABOVE WERE CORRECTED 2026-08-14, and the old ones are
-; worth recording because they were made false by progress rather than by being
-; wrong when written. This was `class=stub` with `evidence=DrawAllPokeballs is
-; label_status missing …` and `lifetime=retire when the 8 OAM pokeball routines
-; take their pret names`. Those routines took their pret names in 8a238be51,
-; 6ff7f160a, ae684a27e, 72db8892b and 337a2b0ab — the lifetime condition is MET
-; and DrawAllPokeballs is `translated`. But the call cannot simply be swapped:
-; DrawBattlePokeballs is no longer a fork, it is the port OAM HAL, and calling
-; DrawAllPokeballs directly would compose the row and never publish it.
 ; ---------------------------------------------------------------------------
 PrintBeginningBattleText:
     ; DEVIATION{class=projection; pret=engine/battle/common_text.asm:PrintBeginningBattleText; behavior=publishes the battle message-box geometry before the first PrintText where pret publishes nothing; evidence=pret's box id is fixed at MESSAGE_BOX inside DisplayTextBoxID while the port's PrintText republishes geometry from text_msgbox on EVERY call so a bare PrintText draws wherever the last printer left the record - measured 2026-08-14 as 115 unmasked battle_intro divergences with the dialog border drawn over the enemy front pic at rows 4-5 and the pic cells blank - and this is the same wrapper the rest of the battle text uses see PrintBattleText and PrintEmptyString in core.asm; lifetime=until PrintText takes its geometry from a battle-scoped record instead of a global}
@@ -341,7 +329,7 @@ PrintBeginningBattleText:
     and al, al
     jnz .doNotDrawPokeballs              ; jr nz — no ball row in a special battle
     push esi                             ; push hl
-    call DrawBattlePokeballs             ; pret: callfar DrawAllPokeballs (see DEVIATION)
+    call DrawAllPokeballs                ; pret: callfar DrawAllPokeballs
     pop esi                              ; pop hl
 .doNotDrawPokeballs:
     call PrintText

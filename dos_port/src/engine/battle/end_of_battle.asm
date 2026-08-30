@@ -14,10 +14,8 @@
 ; Link-battle presentation is IMPLEMENTED: the wLinkState == LINK_STATE_BATTLING
 ; branch (lines 63-107) fully draws DisplayLinkBattleVersusTextBox, sets the
 ; palette, places YOU WIN/LOSE/DRAW and delays — all wired to generated Tier-1
-; strings (YouWinText/YouLoseText/DrawText, assets/battle_text.inc). The gate is
-; runtime reachability: it requires a live two-instance link cable session
-; (Phase 4 net HAL), so no single-instance scenario exercises it, but the code
-; is present and linked.
+; strings (YouWinText/YouLoseText/DrawText, assets/battle_text.inc). It runs in
+; a live two-instance link cable session (net HAL), fully implemented and linked.
 ;   (The Pay Day award used to be listed as deferred, on three claims that were
 ;   EACH measurably false by 2026-08-11: AddBCD is translated
 ;   (src/engine/math/bcd.asm), PickUpPayDayMoneyText IS generated

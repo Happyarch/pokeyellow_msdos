@@ -33,6 +33,7 @@ bits 32
 %include "assets/ui_layout_battle.inc"
 
 extern CopyVideoData            ; home/copy2.asm — arms g_tilecache_dirty itself
+extern PrepareStaticOAM         ; engine/gfx/sprite_oam.asm — publish OBJ positions
 
 global PokeballTileGraphics
 global PokeballTileGraphicsEnd
@@ -42,6 +43,7 @@ global PlacePlayerHUDTiles
 global PlaceEnemyHUDTiles
 global PlayerBattleHUDGraphicsTiles
 global EnemyBattleHUDGraphicsTiles
+global SetupPlayerAndEnemyPokeballs
 
 ; The $73 connector sits at the RIGHT end of the player HUD frame element; the
 ; shelf row is one canvas row below it. Same expression core.asm uses for
@@ -327,41 +329,46 @@ WritePokeballOAMData:
 %define EB_Y   UI_ENEMY_BALLS_OAM_Y
 
 global DrawAllPokeballs
+global DrawBattlePokeballs
+DrawBattlePokeballs:
 DrawAllPokeballs:
+    ; DEVIATION{class=HAL; pret=engine/battle/draw_hud_pokeball_gfx.asm:DrawAllPokeballs; behavior=zeroes GB_OAM before composing, publishes valid entries to the DOS compositor via PrepareStaticOAM and enables IO_OBP0 / LCDCF_OBJ_ON; evidence=the port has no hardware OAM DMA so shadow OAM must be published explicitly to spr_dos_sx/sy for the software compositor; lifetime=permanent}
+    lea edi, [ebp + GB_OAM]
+    xor eax, eax
+    mov ecx, 40 * 4 / 4
+    rep stosd
     call LoadPartyPokeballGfx
     call SetupOwnPartyPokeballs
-    mov al, [ebp + wIsInBattle]          ; ld a, [wIsInBattle]
-    dec al                               ; dec a
-    jz .wild                             ; ret z — wild battle, player row only
-    jmp SetupEnemyPartyPokeballs         ; jp SetupEnemyPartyPokeballs
+    cmp byte [ebp + wIsInBattle], 2      ; trainer battle has both player and enemy rows
+    jne .wild
+    call SetupEnemyPartyPokeballs
+    mov ecx, 12
+    jmp .publish
 .wild:
+    mov ecx, 6
+.publish:
+    call PrepareStaticOAM
+    mov byte [ebp + IO_OBP0], 0xE4
+    or byte [ebp + IO_LCDC], LCDCF_OBJ_ON
     ret
 
 ; ---------------------------------------------------------------------------
-; DrawEnemyPokeballs — pret's enemy-only entry. Two lines, and it needs no new
-; coordinates: SetupEnemyPartyPokeballs already carries the projected ones.
-;
-; UNWIRED ON PURPOSE, and the reason is a HAL decision rather than laziness.
-; pret calls this from ReplaceFaintedEnemyMon (core.asm:910) and reaches the
-; screen through the shadow-OAM DMA; this port's update_oam deliberately SKIPS
-; that DMA while a ball row is up, so a caller here would also need the
-; PrepareStaticOAM publish that the port-only DrawBattlePokeballs wrapper
-; carries. Whether the row should be visible at that moment is a behaviour
-; question no scenario can currently witness, so the call site keeps its
-; itemised drop note (core.asm ReplaceFaintedEnemyMon) instead of guessing.
-; The LABEL exists so the mirror is complete and label_status reports the truth.
-;
-; NOT TRANSLATED, deliberately: pret's SetupPlayerAndEnemyPokeballs (the fourth
-; entry in this file). Its coordinates are $50/$40 and $50/$68 — the LINK BATTLE
-; versus screen, which this port does not have (serial is TODO-HW, Phase 4).
-; Projecting them would mean inventing a widescreen placement for a screen
-; nobody can see, which is the same guess battle plan 4c refused for
-; MarowakAnim's OAM offsets.
+; DrawEnemyPokeballs — pret's enemy-only entry.
 ; ---------------------------------------------------------------------------
 global DrawEnemyPokeballs
 DrawEnemyPokeballs:
     call LoadPartyPokeballGfx
-    jmp SetupEnemyPartyPokeballs         ; jp SetupEnemyPartyPokeballs
+    call SetupEnemyPartyPokeballs
+    mov ecx, 6
+    call PrepareStaticOAM
+    mov byte [ebp + IO_OBP0], 0xE4
+    or byte [ebp + IO_LCDC], LCDCF_OBJ_ON
+    ret
+
+extern ClearSprites                     ; src/home/clear_sprites.asm
+global HideBattlePokeballs
+HideBattlePokeballs:
+    jmp ClearSprites
 
 global SetupOwnPartyPokeballs
 SetupOwnPartyPokeballs:
@@ -388,3 +395,33 @@ SetupEnemyPartyPokeballs:
     mov byte [ebp + wdef4], 1            ; ld a, $1 / ld [wdef4], a
     mov esi, GB_OAM + 6 * 4              ; PROJ — pret ld hl, wShadowOAMSprite06
     jmp WritePokeballOAMData             ; jp WritePokeballOAMData
+
+; ===========================================================================
+; SetupPlayerAndEnemyPokeballs — pret engine/battle/draw_hud_pokeball_gfx.asm:170
+; Sets up OAM for both player and enemy pokeball rows on the link-battle versus screen.
+;
+; DEVIATION{class=projection; pret=engine/battle/draw_hud_pokeball_gfx.asm:SetupPlayerAndEnemyPokeballs; behavior=the pokeball row coordinates are center-projected ($A0/$58 and $A0/$80) instead of pret's $50/$40 and $50/$68, OAM destination is GB_OAM instead of wShadowOAM, and PrepareStaticOAM publishes the entries to the software renderer; evidence=the port composites a 40x25 canvas with uniform battle center projection (X+80, Y+24) and update_oam skips shadow-to-FE00 DMA when wUpdateSpritesEnabled is 0, matching SetupOwnPartyPokeballs; lifetime=retire if the port ever composites at the GB width and runs the shadow OAM DMA}
+; ===========================================================================
+SetupPlayerAndEnemyPokeballs:
+    call LoadPartyPokeballGfx
+    mov esi, wPartyMons                  ; ld hl, wPartyMons
+    mov edx, wPartyCount                 ; ld de, wPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], 0xA0   ; PROJ — pret ld a, $50 / ld [hli], a ($50+80=160=$A0)
+    mov byte [ebp + wBaseCoordY], 0x58   ; PROJ — pret ld [hl], $40 ($40+24=88=$58)
+    mov byte [ebp + wHUDPokeballGfxOffsetX], 8
+    mov byte [ebp + wdef4], 0            ; xor a / ld [wdef4], a
+    mov esi, GB_OAM                      ; PROJ — pret ld hl, wShadowOAM
+    call WritePokeballOAMData
+    mov esi, wEnemyMons                  ; ld hl, wEnemyMons
+    mov edx, wEnemyPartyCount            ; ld de, wEnemyPartyCount
+    call SetupPokeballs
+    mov byte [ebp + wBaseCoordX], 0xA0   ; PROJ — pret ld a, $50
+    mov byte [ebp + wBaseCoordY], 0x80   ; PROJ — pret ld [hl], $68 ($68+24=128=$80)
+    mov byte [ebp + wHUDPokeballGfxOffsetX], 8
+    mov byte [ebp + wdef4], 1            ; ld a, $1 / ld [wdef4], a
+    mov esi, GB_OAM + 6 * 4              ; PROJ — pret ld hl, wShadowOAMSprite06
+    call WritePokeballOAMData
+    mov ecx, 12
+    jmp PrepareStaticOAM                 ; publish 12 entries to software renderer
+

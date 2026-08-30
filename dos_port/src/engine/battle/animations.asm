@@ -101,10 +101,11 @@ extern g_obj_clip                     ; src/ppu/ppu.asm — OBJ clip rectangle (
 extern g_row_xoff_on                  ; src/ppu/ppu.asm — wavy-screen per-row HAL enable
 extern g_row_xoff                     ; src/ppu/ppu.asm — signed per-screen-row BG X offset
 
-; --- Dispatch targets still stubbed in src/engine/battle/core_stubs.asm ---
-extern TradeHidePokemon
-extern TradeShakePokeball
-extern TradeJumpPokeball
+global TradeHidePokemon
+global TradeShakePokeball
+global TradeJumpPokeball
+global BallMoveDistances1
+global BallMoveDistances2
 
 ; --- routines this file defines ---
 global DrawFrameBlock
@@ -2335,6 +2336,93 @@ DoPoofSpecialEffects:
 ; wSubAnimCounter.
 ; ===========================================================================
 
+; function to make the pokemon disappear at the beginning of the animation
+TradeHidePokemon:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 6
+    jnz .ret
+    mov esi, BCOORD(7, 2)                    ; pret: ld a, 2 * SCREEN_WIDTH + 7 (col 7, row 2)
+    call ClearMonPicFromTileMap              ; make pokemon disappear
+.ret:
+    ret
+
+; function to make a shaking pokeball jump up at the end of the animation
+TradeShakePokeball:
+    mov al, [ebp + wSubAnimCounter]
+    cmp al, 1
+    jnz .ret
+; if it's the end of the animation, make the ball jump up
+    mov edx, BallMoveDistances1
+.loop:
+    mov esi, wShadowOAM
+    mov ecx, 4
+.innerLoop:
+    mov al, [edx]
+    cmp al, -1                               ; 0xFF / -1 end marker
+    jz .done
+    add [ebp + esi], al                      ; add to Y value of OAM entry
+    add esi, 4
+    dec ecx
+    jnz .innerLoop
+    inc edx
+    push edx
+    ; DEVIATION{class=projection; pret=engine/battle/animations.asm:TradeShakePokeball; behavior=publishes wShadowOAM to the renderer via PublishProjectedOAM before Delay3; evidence=the port has no hardware OAM DMA so the modified shadow OAM must be published explicitly; lifetime=permanent, part of the battle-animation projection boundary}
+    mov esi, wShadowOAM
+    mov ecx, 40
+    mov eax, 80
+    mov ebx, 24
+    call PublishProjectedOAM
+    call Delay3
+    pop edx
+    jmp .loop
+.done:
+    call AnimationCleanOAM
+    mov al, SFX_TRADE_MACHINE
+    jmp PlaySound
+.ret:
+    ret
+
+; function to make the pokeball jump up
+TradeJumpPokeball:
+    mov edx, BallMoveDistances2
+.loop:
+    mov esi, wShadowOAM
+    mov ecx, 4
+.innerLoop:
+    mov al, [edx]
+    cmp al, -1                               ; 0xFF / -1 end marker
+    jz .done_clear
+    add [ebp + esi], al
+    add esi, 4
+    dec ecx
+    jnz .innerLoop
+    inc edx
+    push edx
+    mov al, [edx]
+    cmp al, 12
+    jz .playSound
+    cmp al, -1
+    jnz .skipPlayingSound
+.playSound: ; play sound if next move distance is 12 or this is the last one
+    mov al, SFX_SWAP
+    call PlaySound
+.skipPlayingSound:
+    ; DEVIATION{class=projection; pret=engine/battle/animations.asm:TradeJumpPokeball; behavior=publishes wShadowOAM to the renderer via PublishProjectedOAM before DelayFrames; evidence=the port has no hardware OAM DMA so the modified shadow OAM must be published explicitly; lifetime=permanent, part of the battle-animation projection boundary}
+    mov esi, wShadowOAM
+    mov ecx, 40
+    mov eax, 80
+    mov ebx, 24
+    call PublishProjectedOAM
+    mov bl, 5                                ; ld c, 5
+    call DelayFrames
+    mov al, [ebp + hSCX]                     ; background scroll X
+    sub al, 8                                ; scroll to the left
+    mov [ebp + hSCX], al
+    pop edx
+    jmp .loop
+.done_clear:
+    jmp ClearScreen
+
 global DoGrowlSpecialEffects
 DoGrowlSpecialEffects:
     mov esi, wShadowOAM
@@ -3242,6 +3330,14 @@ CopyTileIDsFromList:
 ; as MoveEffectPointerTable does.
 ; ===========================================================================
 section .data
+
+BallMoveDistances1:
+    db -12, -12, -8
+    db -1 ; end
+
+BallMoveDistances2:
+    db 11, 12, -12, -7, 7, 12, -8, 8
+    db -1 ; end
 
 ; Sequence of horizontal line pixel offsets for the wavy screen animation.
 ; This sequence vaguely resembles a sine wave. pret's own inline table, so it

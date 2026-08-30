@@ -138,6 +138,7 @@ global PrintMenuItem
 global AnyMoveToSelect
 global PrintBattleText
 global PrintEmptyString                 ; pret core.asm:6720 — retired its battle_exp_stubs.asm stub
+global SimulatedInputBattleItemList
 extern DisplayUsedMoveText          ; src/engine/battle/used_move_text.asm
 extern AnimationSlideEnemyMonOff       ; engine/battle/animations.asm — EnemyRan's tail
 extern PlaySoundWaitForCurrent         ; src/home/delay.asm — In: AL = sound id (also declared at its other use below)
@@ -240,7 +241,6 @@ extern AnimationSubstitute             ; engine/battle/animations.asm
 extern AnimationMinimizeMon            ; engine/battle/animations.asm
 extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
 extern FillMemory                      ; src/home/copy2.asm — ESI dest, BX count, AL value
-extern ShowSimulatedInputBagBox        ; battle_menu.asm — tutorial one-item box
 extern DisplayListMenuID               ; src/home/list_menu.asm — CF=1 iff cancelled
 extern UseItem                         ; src/home/item.asm
 extern GetItemName                     ; src/home/names.asm
@@ -253,8 +253,6 @@ extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip 
 ; battle_stubs.asm stub is RETIRED (Stage 4 step 2).
 extern UseNextMonText                  ; assets/battle_text.inc (generated Tier-1)
 extern LoadScreenTilesFromBuffer1      ; src/home/tilemap.asm — restore clean screen
-extern DrawEmptyDialogBox              ; pret PrintEmptyString equiv (blank dialog box)
-extern DrawBattleMenuBox               ; DisplayTextBoxID(BATTLE_MENU_TEMPLATE) equiv
 extern HandleMenuInput                 ; home/window.asm
 extern PlaceMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor vertical spacing
@@ -602,7 +600,7 @@ DisplayBattleMenu:
     cmp byte [ebp + wBattleType], 0
     jne .nonstandardbattle
     call DrawHUDsAndHPBars
-    call DrawEmptyDialogBox             ; pret PrintEmptyString — blank dialog box
+    call PrintEmptyString               ; pret PrintEmptyString — blank dialog box
     call SaveScreenTilesToBuffer1
 .nonstandardbattle:
     ; pret 2086-2092 — the menu box, and WHICH box depends on the battle type:
@@ -1564,8 +1562,6 @@ extern DisplayEffectiveness            ; display_effectiveness.asm (real)
 extern HideSubstituteShowMonAnim       ; src/engine/battle/animations.asm
 extern ReshowSubstituteAnim            ; src/engine/battle/animations.asm
 extern DelayFrames                     ; src/home/delay.asm
-extern str_oldman_name                 ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
-extern str_profoak_name                ; battle_menu.asm (assets/battle_menu_runtime_strings.inc)
 extern MultiHitText                    ; battle_text.inc
 extern _ScrollTrainerPicAfterBattle    ; scroll_draw_trainer_pic.asm — pret jpfar target
 extern StatModifierRatios               ; src/data/battle/stat_modifiers.asm (flat Tier-1 table)
@@ -3406,8 +3402,6 @@ CheckNumAttacksLeft:
 ; under the mirror rule, exactly as 2a did for BattlePartyMenu. Nothing about
 ; the item EFFECTS is forked: this calls the same UseItem the overworld bag uses.
 ;
-; DEVIATION{class=data-model; pret=engine/battle/core.asm:BagWasSelected; behavior=the OLD_MAN and PIKACHU tutorial branch keeps the port's one-line POKe BALL presentation instead of pointing wListPointer at pret SimulatedInputBattleItemList and running the list menu over it; evidence=wListPointer is a 16-bit GB address in this port and DisplayListMenuID reads the list through it as [ebp+esi], so a flat program-image table cannot be stored there without first staging a copy into GB memory, and the tutorial flow only ever makes the one scripted selection that presentation already performs; lifetime=until battle_completion 4b stages the simulated-input list into GB memory}
-;
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:UseBagItem; behavior=every path back to the battle screen clears the port-only g_window_count and g_bg_whiteout and re-asserts text_msgbox; evidence=the port draws the bag through the list menu which registers its own window descriptors in list_draw_box_border and blanks the background, so without the teardown the restored battle screen is composited as a blank frame - the same three obligations PartyMenuOrRockOrRun already carries and which start_sub_menus.asm performs for the START-menu bag; lifetime=permanent while the port composites windows over a blankable background}
 ; ---------------------------------------------------------------------------
 BagWasSelected:
@@ -3423,13 +3417,17 @@ BagWasSelected:
     je .simulatedInputBattle
     jmp DisplayPlayerBag                ; jr
 .simulatedInputBattle:
-    ; pret points wListPointer at SimulatedInputBattleItemList (one POKé BALL)
-    ; and lets the simulated input select it. See the class=data-model note
-    ; above for why the port cannot store that flat table in wListPointer; the
-    ; scripted selection is performed directly instead. 4b owns the real list.
-    call ShowSimulatedInputBagBox       ; port-only presentation (was BattleItemMenu)
-    mov byte [ebp + wCurItem], POKE_BALL
-    jmp UseBagItem
+    ; pret: ld hl, SimulatedInputBattleItemList / ld a, l / ld [wListPointer], a / ld a, h / ld [wListPointer+1], a / jr DisplayBagMenu
+    ; Stage the 4-byte SimulatedInputBattleItemList into wBuffer in GB memory space
+    mov eax, [SimulatedInputBattleItemList]
+    mov [ebp + wBuffer], eax
+    mov word [ebp + wListPointer], wBuffer
+    jmp DisplayBagMenu
+
+SimulatedInputBattleItemList:
+    db 1 ; # items
+    db POKE_BALL, 1
+    db -1 ; end
 
 DisplayPlayerBag:
     ; get the pointer to the player's bag when in a normal battle
@@ -4247,7 +4245,7 @@ PlayMoveAnimation:
 ; ---------------------------------------------------------------------------
 
 ; ===========================================================================
-; BattleRandom — battle PRNG. In a link battle (Phase 4) this reads from a
+; BattleRandom — battle PRNG. In a link battle this reads from a
 ; shared seed list; single-player just uses Random. Returns value in AL.
 ;
 ; Link path — pret engine/battle/core.asm:6728-6784, translated verbatim
@@ -4554,7 +4552,7 @@ GetEnemyMonStat:
     mov al, [ebp + wLinkState]
     cmp al, LINK_STATE_BATTLING
     jne .notLinkBattle
-; link battle: read precomputed enemy party stats. TODO-HW: link (Phase 4).
+; link battle: read precomputed enemy party stats.
     mov esi, wEnemyMon1Stats
     dec bl
     shl bl, 1

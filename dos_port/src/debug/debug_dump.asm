@@ -266,17 +266,14 @@ extern DebugLoadEmbeddedEnemyFrontPic
 extern LoadPlayerBackPic
 extern DebugLoadEmbeddedTrainerPic
 extern LoadEmbeddedBackPicFallback
-extern DrawBattleMenu
 extern MainInBattleLoop          ; core.asm — faithful battle loop (replaces bespoke DisplayBattleMenu loop)
 extern MoveSelectionMenu         ; core.asm — the FIGHT sub-menu (DEBUG_MOVEMENU)
 extern SaveBattleScreen          ; src/home/tilemap.asm — alias of the Buffer1 pair
 extern RestoreBattleScreen       ; src/home/tilemap.asm — alias of the Buffer1 pair
-extern EndBattleScreen
 extern EndOfBattle               ; end_of_battle.asm — post-battle evolution + state reset
 ; (wBattleOver is defined at the end of this file — relocated from battle_menu.asm)
 extern WaitForAPress
-extern DrawBattlePokeballs
-extern HideBattlePokeballs
+extern DrawAllPokeballs           ; engine/battle/draw_hud_pokeball_gfx.asm
 ; (DoEnemyAttackDamage is defined at the end of this file — relocated from battle_menu.asm)
 extern DebugLoadWildMonMoves      ; src/debug/debug_battle_moveset.asm — port-only debug harness glue
 extern SelectEnemyMove
@@ -339,9 +336,7 @@ extern SendOutMon                ; engine/battle/core.asm — pret StartBattle's
 extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
 extern DrawEnemyHUDAndHPBar      ; engine/battle/core.asm — special-battle intro (no player mon out)
-extern DrawEmptyDialogBox        ; battle_menu.asm
 extern SaveScreenTilesToBuffer1  ; src/home/tilemap.asm
-extern DrawBattleMenuBox         ; battle_menu.asm
 %ifdef DEBUG_BATTLE_FAINT
 extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
 extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
@@ -3203,7 +3198,7 @@ RunBattleTest:
     ; .specialBattleIntro); it was only this staging that was not.
     cmp byte [ebp + wBattleType], 0
     jne .skipPlayerSendOut
-    call HideBattlePokeballs
+    call ClearSprites
 %ifdef DEBUG_BATTLE_DAMAGE
     mov byte [ebp + wWhichPokemon], 3
     mov byte [ebp + wPlayerMonNumber], 3
@@ -4768,9 +4763,9 @@ anim_show_label:
 %ifdef DEBUG_BATTLE_LIVE
     ; Intro: party-status pokéballs + "Wild <nick> appeared!", wait for A/B (blinking
     ; ▼), then the balls give way to the player HP-bar HUD (DisplayBattleMenu draws it).
-    call DrawBattlePokeballs
+    call DrawAllPokeballs
     call WaitForAPress
-    call HideBattlePokeballs
+    call ClearSprites
     ; send-out: faithfully the player trainer sprite slides OUT, then the mon comes in.
     ; For the starter PIKACHU this is just a SLIDE (it never enters a ball, so there is
     ; no throw/grow animation — Yellow special); every other mon gets the ball-throw +
@@ -4824,7 +4819,7 @@ anim_show_label:
     ; Dump the battle INTRO screen (scene + "Wild <nick> appeared!" + the ▼ advance
     ; arrow + the party-status pokéball row), no menu.
     mov byte [ebp + wTileMap + (19 * 40 + 28)], 0xEE   ; ▼ (verify glyph renders)
-    call DrawBattlePokeballs        ; player party-status balls (OAM sprites)
+    call DrawAllPokeballs           ; player party-status balls (OAM sprites)
     call DelayFrame
     call DumpBackbuffer
 .introhang:
@@ -9241,3 +9236,64 @@ DoEnemyAttackDamage:
     shr eax, 8
     mov [ebp + wBattleMonHP], al
     ret
+
+; ===========================================================================
+; RELOCATED from src/engine/battle/battle_menu.asm 2026-08-30:
+; Legacy debug battle draw primitives, only referenced by debug_dump.asm.
+; ===========================================================================
+
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_battle.inc"
+
+%define BOX_OFF      UI_ACTION_MENU_BOX_OFS
+%define BOX_W        (UI_ACTION_MENU_BOX_GBW - 2)
+%define BOX_H        (UI_ACTION_MENU_BOX_GBH - 2)
+%define TEXT_OFF     UI_ACTION_TEXT_OFS
+%define OUTER_OFF    UI_DIALOG_BOX_OFS
+%define OUTER_W      (UI_DIALOG_BOX_GBW - 2)
+%define OUTER_H      (UI_DIALOG_BOX_GBH - 2)
+
+extern TextBoxBorder                 ; text.asm
+extern PlaceString                   ; text.asm
+extern menu_item_step                ; window.asm
+extern text_row_stride               ; text.asm
+extern BattleMenuText                ; assets/textbox_strings.inc
+
+global DrawEmptyDialogBox
+DrawEmptyDialogBox:
+    and byte [ebp + wLetterPrintingDelayFlags], (~(1 << BIT_TEXT_DELAY)) & 0xFF
+    mov dword [menu_item_step], 2 * 40
+    mov esi, wTileMap + OUTER_OFF
+    mov bh, OUTER_H
+    mov bl, OUTER_W
+    call TextBoxBorder
+    ret
+
+global DrawBattleMenuBox
+DrawBattleMenuBox:
+    mov dword [menu_item_step], 2 * 40
+    mov esi, wTileMap + BOX_OFF
+    mov bh, BOX_H
+    mov bl, BOX_W
+    call TextBoxBorder
+    mov esi, wTileMap + TEXT_OFF
+    mov eax, BattleMenuText
+    call PlaceString
+    mov esi, ebx
+    ret
+
+global DrawBattleMenu
+DrawBattleMenu:
+    call DrawEmptyDialogBox
+    jmp DrawBattleMenuBox
+
+global EndBattleScreen
+EndBattleScreen:
+    mov dword [text_row_stride], 20       ; restore the overworld/GB text stride
+    lea edi, [ebp + wTileMap]
+    mov ecx, SCREEN_AREA
+    mov al, 0x7F
+    rep stosb
+    call DelayFrame
+    ret
+
