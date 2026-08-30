@@ -62,17 +62,18 @@ ScaleFirstThreeSpriteColumnsByTwo:
     mov bx, -(7*8) + 1                 ; scale low nybble, seek to previous output column
     call ScalePixelsByTwo
     mov al, [ebp + edx]
-    dec dx
+    dec edx
     rol al, 4                          ; swap a
     mov bx, 7*8 + 1 - 2                ; scale high nybble, seek back + to next 2 rows
     call ScalePixelsByTwo
     pop ebx
     dec bl
     jnz .inner
-    sub dx, 4                          ; skip 4 unused rows of the input column
+    sub edx, 4                         ; skip 4 unused rows of the input column
     mov al, bh
     mov bx, -7*8                       ; skip the already-written output column
-    add si, bx
+    movsx ebx, bx
+    add esi, ebx
     mov bh, al
     dec bh
     jnz .column
@@ -83,13 +84,13 @@ ScaleLastSpriteColumnByTwo:
     mov byte [hSpriteScaleCtr], 4*8 - 4
 .inner:
     mov al, [ebp + edx]
-    dec dx
+    dec edx
     rol al, 4                          ; swap a — high nybble holds the info
     mov bx, -1
     call ScalePixelsByTwo
     dec byte [hSpriteScaleCtr]
     jnz .inner
-    sub dx, 4
+    sub edx, 4
     ret
 
 ; ScalePixelsByTwo — scale the low 4 bits of AL (4x1 px) to 2 output bytes (8x2 px):
@@ -102,9 +103,10 @@ ScalePixelsByTwo:
     mov al, [DuplicateBitsTable + ecx]
     pop esi
     mov [ebp + esi], al                ; write byte twice (2 px tall)
-    dec si
+    dec esi
     mov [ebp + esi], al
-    add si, bx                         ; advance dest by offset
+    movsx ebx, bx
+    add esi, ebx                       ; advance dest by offset
     ret
 
 ; ---------------------------------------------------------------------------

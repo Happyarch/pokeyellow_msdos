@@ -10,16 +10,13 @@
 ; so this needed no stubs.
 ;
 ; THE TEXT HALF OF PRET'S FILE IS TIER-1 DATA and is NOT here: SafariZoneEatingText
-; and SafariZoneAngryText are generated into assets/battle_text.inc. They did not
-; exist until this change added engine/battle/safari_zone.asm to gen_battle_text.py's
-; BATTLE_SRC scan list — the file had never been scanned, exactly as
-; engine/battle/trainer_ai.asm had not been until 2026-08-11. Hand-encoding them
-; here would violate the two-tier rule.
+; and SafariZoneAngryText are generated into assets/battle_text.inc via
+; gen_battle_text.py (BATTLE_SRC scan list includes this file).
 ;
-; REACHABILITY, STATED RATHER THAN IMPLIED: nothing calls this yet. Its caller is
-; the Safari turn flow, which is the rest of 4d and is NOT in this change. This
-; lands the translation with its faithfulness gates; it is UNWITNESSED by any
-; scenario and that is not something to paper over.
+; Live caller: dos_port/src/engine/battle/init_battle.asm calls
+; PrintSafariZoneBattleText from the Safari turn flow (the .notOutOfSafariBalls
+; path in _InitBattleCommon's special-battle loop). The routine is fully linked
+; and reachable on that path.
 ;
 ; Register map (CLAUDE.md): A=AL, B=BH, C=BL, D=DH, E=DL, HL=ESI,
 ; EBP = GB base, [ebp+addr].

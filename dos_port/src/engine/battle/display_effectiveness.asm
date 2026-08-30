@@ -18,9 +18,9 @@ bits 32
 
 section .data
 
-; --- hand-authored text streams (Tier-2 code; not in generated battle_text.inc) ---
-; TX_START=0x00, <LINE>=0x4F, <PROMPT>=0x58 — bytes as supplied by the swarm
-; coordinator, encoded from pret's charmap for these two literal strings.
+; --- generated Tier-1 text strings (not hand-authored) ---
+; TX_START=0x00, <LINE>=0x4F, <PROMPT>=0x58 — encoded via gb_text.encode into
+; assets/effectiveness_runtime_strings.inc (wired through make assets).
 %include "assets/effectiveness_runtime_strings.inc"
 
 section .text

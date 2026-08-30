@@ -11,15 +11,18 @@
 ; level-up sets wCanEvolveFlags → EndOfBattle clears wForceEvolution and calls
 ; EvolutionAfterBattle → the eligible party mons evolve.
 ;
-; Deferred boundaries (marked inline):
-;   - Link-battle presentation (versus box + YOU WIN/LOSE/DRAW): no networking in
-;     the port (Phase 4). wLinkState is never LINK_STATE_BATTLING here.
-;   (The Pay Day award used to be listed here as deferred, on three claims that
-;   were EACH measurably false by 2026-08-11: AddBCDPredef is translated
+; Link-battle presentation is IMPLEMENTED: the wLinkState == LINK_STATE_BATTLING
+; branch (lines 63-107) fully draws DisplayLinkBattleVersusTextBox, sets the
+; palette, places YOU WIN/LOSE/DRAW and delays — all wired to generated Tier-1
+; strings (YouWinText/YouLoseText/DrawText, assets/battle_text.inc). The gate is
+; runtime reachability: it requires a live two-instance link cable session
+; (Phase 4 net HAL), so no single-instance scenario exercises it, but the code
+; is present and linked.
+;   (The Pay Day award used to be listed as deferred, on three claims that were
+;   EACH measurably false by 2026-08-11: AddBCD is translated
 ;   (src/engine/math/bcd.asm), PickUpPayDayMoneyText IS generated
 ;   (assets/battle_text.inc), and PayDayEffect_ does accumulate into
 ;   wTotalPayDayMoney (move_effects/pay_day.asm). It is implemented below.)
-;   - WaitForSoundToFinish: audio HAL (Phase 3).
 ;
 ; Register map (CLAUDE.md): A=AL; BC=BX; DE=EDX; HL=ESI; EBP=GB base, [ebp+addr].
 ;

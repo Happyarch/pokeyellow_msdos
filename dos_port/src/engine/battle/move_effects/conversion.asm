@@ -25,8 +25,8 @@ ConversionEffect_:
     mov al, [ebp + wPlayerBattleStatus1]
 
 .conversionEffect:
-    bt ax, INVULNERABLE
-    jc PrintButItFailedText
+    test al, 1 << INVULNERABLE
+    jnz PrintButItFailedText
 
     mov al, [ebp + esi]
     inc esi

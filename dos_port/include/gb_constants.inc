@@ -859,6 +859,8 @@
 ; ---------------------------------------------------------------------------
 %define OPP_ID_OFFSET                200
 %define ROCKET                       0x1E   ; trainer class $1E (IsFightingJessieJames)
+%define RIVAL1                       0x19   ; trainer class $19
+%define RIVAL2                       0x2A   ; trainer class $2A
 %define RIVAL3                       0x2B   ; trainer class $2B (TrainerBattleVictory final rival)
 %define OPP_LASS                     (OPP_ID_OFFSET + 0x03)
 %define OPP_JR_TRAINER_F             (OPP_ID_OFFSET + 0x06)

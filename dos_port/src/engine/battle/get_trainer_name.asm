@@ -9,10 +9,8 @@ extern TrainerNames
 extern GetName
 extern CopyData
 ; wNameListType / wPredefBank / wNameBuffer come from gb_memmap.inc;
-; TRAINER_NAME from gb_constants.inc (was a local equ — would now collide).
+; TRAINER_NAME / RIVAL1..3 from gb_constants.inc.
 
-RIVAL1              equ 0x19
-RIVAL2              equ 0x2A
 TRAINER_NAME_LENGTH equ 13
 
 GetTrainerName_:

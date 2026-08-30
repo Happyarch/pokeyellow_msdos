@@ -9,11 +9,9 @@
 ; PORTED 2026-08-12 (battle plan 4c, the animation half). Both labels were
 ; `missing`; every other callee was already translated, so this needed no stubs.
 ;
-; REACHABILITY, STATED RATHER THAN IMPLIED: nothing calls MarowakAnim yet. The
-; rest of 4c — ghost initialization/identity, the unidentified-ghost move
-; refusal, escape rules, the Poké Doll consumer — is what makes it reachable, and
-; is NOT in this change. This lands the translation with its faithfulness gates;
-; it is UNWITNESSED by any scenario and that is not a claim to paper over.
+; Live caller: dos_port/src/engine/battle/common_text.asm calls MarowakAnim
+; (the Pokémon Tower ghost unveiling). Both routines are fully linked and
+; reachable through that call chain.
 ;
 ; Register map (CLAUDE.md): A=AL, B=BH, C=BL, D=DH, E=DL, HL=ESI,
 ; EBP = GB base, [ebp+addr].
