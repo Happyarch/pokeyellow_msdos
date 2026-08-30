@@ -103,4 +103,4 @@ Their underlying functional engines (`HealParty`, `AnimateHealingMachine`, `DoBu
 - [x] Run `dos_port/tools/lint_pret_labels --no-scan --strict-claims`.
 - [x] Run `make -C dos_port static_gate`.
 - [x] Run `make -C dos_port fidelity`.
-- [ ] Author and run golden test scenarios for Pokémon Center healing, Poké Mart purchasing/selling, Vending machines, and Prize Corner.
+- [x] Author and run golden test scenarios for Pokémon Center healing, Poké Mart purchasing/selling, Vending machines, and Prize Corner.

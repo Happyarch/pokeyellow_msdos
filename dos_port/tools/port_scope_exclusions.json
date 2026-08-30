@@ -45,6 +45,12 @@
       "labels": [
         "TitleScreen_PlayPikachuPCM"
       ]
+    },
+    "home/header.asm": {
+      "reason": "Game Boy RST vectors ($0000-$0038), hardware interrupt vectors ($0040 VBlank, $0048 LCDC, $0050 Timer, $0058 Serial, $0060 Joypad) and the cartridge header/entry at $0100 (Start: nop; jp _Start; ds $0150). The port boots as a DOS MZ protected-mode program via boot/entry.asm (CWSDPMI, pit_init, setup_flat_access, vga_base/ds_base), not as a GB ROM, so there is no GB vector table to host these vectors and no $0100 header to patch with rgbfix. Start is the only named label in the file; the rst/interrupt stubs are section vectors. Maintainer decision 2026-08-30 per user request to blacklist header.asm.",
+      "labels": [
+        "Start"
+      ]
     }
   }
 }

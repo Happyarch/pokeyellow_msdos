@@ -7,13 +7,13 @@
 ; BillsPCChangeBox, DisplayMonListMenu, BillsPCMenuText, BoxNoPCText,
 ; KnowsHMMove, HMMoveArray, DisplayDepositWithdrawMenu, DepositPCText,
 ; WithdrawPCText, StatsCancelPCText, and the text_far wrapper block.
-; OpenBillsPCText is here too (pret file order puts it last).
+; OpenBillsPCText and UnusedOpenBillsPC are here too (pret file order puts them
+; last; UnusedOpenBillsPC is pret-unreferenced but ported for bug-compat).
 ; ALSO here as of link plan Stage 3: CableClubLeftGameboy /
 ; CableClubRightGameboy — the Trade Center / Colosseum table-gameboy hidden
 ; events (pret's serial-link tail of this file; their hidden_object_stubs.asm
 ; ret-stubs are retired). JustAMomentText's stream is generated data
-; (assets/predef_text.inc, predef_data $24). Still NOT here:
-; UnusedOpenBillsPC — pret-unreferenced.
+; (assets/predef_text.inc, predef_data $24).
 ;
 ; PORT MODEL:
 ;  * SM83→x86: A=AL, B=BH, C=BL (BC=EBX), D=DH, E=DL (DE=EDX), HL=ESI;
@@ -69,6 +69,7 @@ global DisplayPCMainMenu
 global BillsPC_
 global KnowsHMMove
 global OpenBillsPCText
+global UnusedOpenBillsPC
 global CableClubLeftGameboy     ; hidden-event targets (assets/hidden_events.inc)
 global CableClubRightGameboy
 
@@ -1057,6 +1058,23 @@ BillsPCMirror:
     cmp ebx, 18
     jb .row
     popad
+    ret
+
+; ---------------------------------------------------------------------------
+; UnusedOpenBillsPC — pret engine/pokemon/bills_pc.asm:UnusedOpenBillsPC.
+; Unreferenced in pret (no caller), but ported for bug-compat/completeness
+; (see port_scope_exclusions.json header comment: 'Unused in pret' is NOT a
+; reason to exclude when portable). Checks player facing UP, arms
+; auto-textbox drawing, then dispatches OpenBillsPCText via the predef path.
+; ---------------------------------------------------------------------------
+UnusedOpenBillsPC:
+    mov al, [ebp + wSpritePlayerStateData1FacingDirection] ; ld a, [wSpritePlayerStateData1FacingDirection]
+    cmp al, SPRITE_FACING_UP                 ; cp SPRITE_FACING_UP
+    jne .ret                                 ; ret nz
+    call EnableAutoTextBoxDrawing            ; call EnableAutoTextBoxDrawing
+    tx_pre_id OpenBillsPCText                ; tx_pre_jump OpenBillsPCText
+    jmp PrintPredefTextID
+.ret:
     ret
 
 ; ---------------------------------------------------------------------------

@@ -148,3 +148,7 @@ dos_port/rundir/
 # `make assets` has been run, so they are never committed.
 dos_port/overworld/*.json
 dos_port/overworld/*.md
+
+# Node dependencies
+node_modules/
+dos_port/node_modules/

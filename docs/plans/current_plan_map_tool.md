@@ -169,7 +169,7 @@ checkboxes updated → commit.
   Gates: sentinel ring on Pallet Town visible in FRAME.BIN at map edge;
   unpainted maps byte-identical FRAME.BINs; regen idempotent; `make check`.
 
-- [ ] **Session C4 — clamp retirement.**
+- ~~[ ] **Session C4 — clamp retirement.**~~ OBSOLETE
   (a) Analytic bound: player at tilemap center, 12×9-block wSurroundingTiles —
   worst-case buffer excursion per direction vs `get_connection()` view_start
   formulas (west margin is exactly zero — check off-by-one). (b) Empirical:
