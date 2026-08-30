@@ -470,7 +470,6 @@ BOOT_SRCS := \
     boot/timing.asm
 
 HOME_SRCS := \
-    src/home/home_stubs.asm \
     src/home/serial.asm \
     src/home/copy.asm \
     src/home/overworld.asm \
@@ -610,7 +609,6 @@ GAME_SRCS := \
     src/engine/overworld/movement.asm \
     src/engine/overworld/sprite_collisions.asm \
     src/engine/overworld/map_sprites.asm \
-    src/home/run_map_script.asm \
     src/data/map_scripts.asm \
     src/data/trainer_headers.asm \
     src/data/map_script_tables.asm \
@@ -850,13 +848,11 @@ GAME_SRCS := \
     src/engine/menus/pc.asm \
     src/engine/menus/oaks_pc.asm \
     src/engine/menus/league_pc.asm \
-    src/engine/menus/league_pc_stubs.asm \
     src/engine/menus/options.asm \
     src/engine/menus/players_pc.asm \
     src/engine/menus/display_text_id_init.asm \
     src/engine/menus/unused_input.asm \
     src/engine/menus/main_menu.asm \
-    src/engine/menus/main_menu_stubs.asm \
     src/engine/menus/save.asm \
     src/data/text/dakutens.asm \
     src/engine/menus/naming_screen.asm \
@@ -868,7 +864,6 @@ GAME_SRCS := \
     src/engine/menus/link_menu.asm \
     src/home/reload_sprites.asm \
     src/home/map_objects.asm \
-    src/engine/overworld/overworld_stubs.asm \
     src/engine/overworld/player_animations.asm \
     src/engine/overworld/daycare_exp.asm \
     src/engine/overworld/is_player_just_outside_map.asm \
@@ -888,7 +883,6 @@ GAME_SRCS := \
     src/home/hidden_events.asm \
     src/engine/overworld/hidden_events.asm \
     src/data/hidden_events_data.asm \
-    src/engine/overworld/hidden_object_stubs.asm \
     src/engine/slots/slot_machine.asm \
     src/engine/slots/game_corner_slots.asm \
     src/engine/slots/game_corner_slots2.asm \
@@ -934,7 +928,7 @@ GAME_SRCS := \
     src/engine/overworld/spinners.asm \
     src/engine/overworld/healing_machine.asm \
     src/engine/overworld/unused_load_toggleable_object_data.asm \
-    src/home/player_gfx.asm \
+    src/gfx/sprites.asm \
     src/engine/overworld/player_state.asm \
     src/engine/overworld/field_move_messages.asm \
     src/engine/overworld/special_warps.asm \
@@ -1032,11 +1026,9 @@ POKEMON_SRCS := \
     src/data/pikachu/pikachu_pic_animation.asm \
     src/engine/pikachu/pikachu_pic_animation.asm \
     src/engine/pikachu/respawn_overworld_pikachu.asm \
-    src/engine/pikachu/pikachu_stubs.asm \
     src/engine/movie/evolution.asm \
     src/engine/movie/hall_of_fame.asm \
     src/engine/movie/credits.asm \
-    src/engine/movie/evolution_stubs.asm \
     src/engine/movie/trade.asm \
     src/engine/movie/trade2.asm \
     src/engine/pokemon/learn_move.asm
@@ -3474,9 +3466,7 @@ FRONTEND_SRCS := \
     src/engine/battle/unused_stats_functions.asm \
     src/engine/battle/scale_sprites.asm \
     src/engine/battle/pikachu_entrance_anim.asm \
-    src/engine/battle/battle_menu.asm \
     src/engine/battle/core.asm \
-    src/engine/battle/core_stubs.asm \
     src/engine/battle/display_effectiveness.asm \
     src/engine/battle/effects.asm \
     src/home/names.asm \
@@ -3525,16 +3515,13 @@ FRONTEND_SRCS := \
     src/home/random.asm \
     src/engine/battle/print_type.asm \
     src/debug/debug_battle_moveset.asm \
-    src/engine/battle/pokeballs.asm \
     src/engine/battle/draw_hud_pokeball_gfx.asm \
     src/engine/battle/link_battle_versus_text.asm \
     src/data/trainer_pics.asm \
     src/data/mon_pics.asm \
-    src/engine/battle/battle_stubs.asm \
     src/home/uncompress.asm \
     src/home/pics.asm \
     src/engine/battle/experience.asm \
-    src/engine/battle/battle_exp_stubs.asm \
     src/home/trainers.asm \
     src/home/trainers2.asm \
     src/engine/overworld/trainer_sight.asm \
@@ -3913,12 +3900,12 @@ assets/npc_sprite_data_table.inc:
 
 # Alternate player sprite sheets (bike / surfing) — pret gfx/sprites.asm labels
 # RedBikeSprite / SeelSprite / SurfingPikachuSprite, hosted as data tables in
-# player_gfx.asm and consumed by home/overworld.asm's LoadPlayerSpriteGraphics
+# src/gfx/sprites.asm and consumed by home/overworld.asm's LoadPlayerSpriteGraphics
 # dispatch (wild-live promotion).
 assets/red_bike_sprite.inc assets/seel_sprite.inc assets/surfing_pikachu_sprite.inc:
 	python3 tools/generators/gen_all_assets.py
 
-src/home/player_gfx.o: \
+src/gfx/sprites.o: \
     assets/red_bike_sprite.inc \
     assets/seel_sprite.inc \
     assets/surfing_pikachu_sprite.inc
@@ -4296,8 +4283,8 @@ assets/battle_text.inc: $(wildcard ../data/text/text_*.asm) \
                         ../constants/charmap.asm include/gb_memmap.inc tools/generators/gen_battle_text.py
 	python3 tools/generators/gen_battle_text.py
 
-RUNTIME_STRING_ASSETS := assets/battle_menu_runtime_strings.inc \
-	assets/battle_core_runtime_strings.inc assets/effectiveness_runtime_strings.inc \
+RUNTIME_STRING_ASSETS := assets/battle_core_runtime_strings.inc \
+	assets/effectiveness_runtime_strings.inc \
 	assets/anim_show_strings.inc \
 	assets/battle_intro_runtime_strings.inc assets/stat_mod_runtime_strings.inc \
 	assets/item_runtime_strings.inc assets/status_ailment_runtime_strings.inc \
@@ -4306,7 +4293,6 @@ RUNTIME_STRING_ASSETS := assets/battle_menu_runtime_strings.inc \
 $(RUNTIME_STRING_ASSETS) &: assets/gb_charmap.txt tools/generators/gen_runtime_strings.py \
 		tools/generators/gen_battle_text.py ../constants/charmap.asm
 	python3 tools/generators/gen_runtime_strings.py
-src/engine/battle/battle_menu.o: assets/battle_menu_runtime_strings.inc
 src/debug/debug_dump.o: assets/anim_show_strings.inc
 src/engine/battle/core.o: assets/battle_core_runtime_strings.inc
 src/engine/battle/display_effectiveness.o: assets/effectiveness_runtime_strings.inc
@@ -4929,8 +4915,8 @@ assets/ui_layout_battle.inc: assets/ui_layout_battle_sidecar.json \
 	python3 tools/generators/gen_ui_layout.py battle
 
 src/engine/battle/init_battle.o \
-src/engine/battle/pokeballs.o src/home/pics.o \
-src/engine/battle/core.o src/engine/battle/battle_menu.o: \
+src/engine/battle/draw_hud_pokeball_gfx.o src/home/pics.o \
+src/engine/battle/core.o: \
         assets/ui_layout_battle.inc
 
 # Cinematic (boot movie) UI layout geometry — docs/current_plan_menu_intro.md.

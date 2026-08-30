@@ -63,18 +63,19 @@ extern IsPlayerCharacterBeingControlledByGame ; src/home/npc_movement.asm (real,
 extern IsPlayerFacingEdgeOfMap                    ; src/engine/overworld/player_state.asm
 extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/player_state.asm
 extern DisplayTextID                    ; src/home/text_script.asm (B.4)
+extern EnableAutoTextBoxDrawing         ; src/home/window.asm
 extern MapScriptPointers                  ; assets/map_scripts.inc
 extern TrainerMapScript                   ; src/scripts/trainer_map_script.asm (Stage 1b sight gate)
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
-extern RedBikeSprite                    ; src/home/player_gfx.asm
+extern RedBikeSprite                    ; src/gfx/sprites.asm
 extern RunNPCMovementScript         ; src/home/npc_movement.asm
-extern SeelSprite                    ; src/home/player_gfx.asm
-extern SurfingPikachuSprite                    ; src/home/player_gfx.asm
+extern SeelSprite                    ; src/gfx/sprites.asm
+extern SurfingPikachuSprite                    ; src/gfx/sprites.asm
 extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
 extern _HandleMidJump                    ; src/engine/overworld/player_animations.asm
 extern InitBattle                     ; engine/battle/init_battle.asm — opponent dispatch + full battle
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
-extern player_sprite                ; assets/player_sprite.inc (player_gfx.asm TU) — RedSprite (walking)
+extern player_sprite                ; src/gfx/sprites.asm — RedSprite (walking)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6a) ---
 extern MapBorderOverridePointers          ; assets/map_border_overrides.inc (map_headers.asm TU)
@@ -2550,6 +2551,7 @@ global CheckForTilePairCollisions
 global AreInputsSimulated
 global GetSimulatedInput
 global RunMapScript
+global DefaultMapScript
 global LoadWalkingPlayerSpriteGraphics
 global LoadSurfingPlayerSpriteGraphics2
 global LoadSurfingPlayerSpriteGraphics
@@ -4354,6 +4356,12 @@ RunMapScript:
     movzx ecx, byte [ebp + wCurMap]
     call dword [MapScriptPointers + ecx*4]   ; run this map's _Script (flat ptr)
     ret
+
+; Default _Script for maps without a custom script.
+; DEVIATION{class=projection; pret=scripts/CeladonHotel.asm:CeladonHotel_Script; behavior=one shared port-only default routine stands in for the ~209 pret per-map _Script bodies that are exactly `jp EnableAutoTextBoxDrawing`, referenced by MapScriptPointers[wCurMap] instead of pret's per-map identical labels; evidence=grep across scripts/*.asm counts 209/224 matching this exact body, plus IndigoPlateau_Script as a bare-ret outlier tolerated here; lifetime=retires per map as each map real _Script is ported and wired into MapScriptPointers, shrinking DefaultMapScript's caller set toward zero}
+DefaultMapScript:
+    jmp EnableAutoTextBoxDrawing
+
 LoadWalkingPlayerSpriteGraphics:
     mov byte [ebp + W_D472], 0
     mov esi, player_sprite                  ; RedSprite (walking) — DE in pret
