@@ -969,6 +969,8 @@
 ; 0xFF8C is a UNION of hMapWidth / hNorthSouthConnectedMapWidth
 %define hMapWidth                    0xFF8C   ; hMapWidth (= wCurMapWidth, stored for row-copy inner loop)
 %define hNorthSouthConnectedMapWidth 0xFF8C   ; hNorthSouthConnectedMapWidth (HRAM union with hMapWidth, pret ram/hram.asm:60)
+%define H_LOAD_SPRITE_TEMP1          0xFF8C   ; hLoadSpriteTemp1 (pret 0xFF8D, port uses 0xFF8C union; see Stage B.4)
+%define H_LOAD_SPRITE_TEMP2          0xFF8D   ; hLoadSpriteTemp2 (pret 0xFF8E, port uses 0xFF8D union; see Stage B.4)
 %define hSerialReceivedNewData       0xFFA9   ; hram.asm:187 (db; HRAM never shifts — pret's own address, long reserved in prose at the hSwapItemID note below)
 %define hSerialConnectionStatus      0xFFAA   ; hSerialConnectionStatus
 %define hSerialIgnoringInitialData   0xFFAB   ; hram.asm:192 (db; contiguous FFA9-FFAD serial block per ram/hram.asm:187-194)

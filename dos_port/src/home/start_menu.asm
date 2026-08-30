@@ -78,7 +78,7 @@ extern LoadFontTilePatterns          ; gfx/load_font.asm
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
 extern ReloadWalkingTilePatterns     ; engine/overworld/map_sprites.asm (P3c: was LoadNPCSpriteTiles)
 extern LoadPlayerSpriteGraphics      ; engine/overworld/overworld.asm
-extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
+extern RefreshCollisionTileMap       ; src/ppu/ppu.asm
 extern hide_window                   ; ppu/ppu.asm
 extern text_row_stride               ; text/text.asm
 extern menu_redraw_cb                ; home/window.asm

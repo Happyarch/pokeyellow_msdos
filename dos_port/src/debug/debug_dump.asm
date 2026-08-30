@@ -781,7 +781,7 @@ extern UpdateCGBPal_OBP0
 extern UpdateCGBPal_OBP1
 extern DelayFrames
 extern DelayFrame
-extern RefreshCollisionTileMap
+extern RefreshCollisionTileMap     ; src/ppu/ppu.asm
 extern SnapshotRenderedTileMap     ; src/ppu/ppu.asm
 %define BT_DEMO_DUNGEON_MAP 0x33   ; VIRIDIAN_FOREST (assets/map_dims.inc; not %included here)
 

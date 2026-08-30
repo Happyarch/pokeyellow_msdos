@@ -77,7 +77,7 @@ extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-deco
 extern player_sprite                ; == RedSprite (walking)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6a) ---
-extern ApplyMapBorderOverrides            ; src/engine/overworld/overworld.asm
+extern MapBorderOverridePointers          ; assets/map_border_overrides.inc (overworld.asm TU)
 extern DisableLCD                         ; src/home/lcd.asm
 extern EnableLCD                          ; src/home/lcd.asm
 extern FarCopyData                        ; src/home/copy.asm
@@ -86,14 +86,15 @@ extern GBPalNormal                        ; src/home/palettes.asm
 extern InitMapSprites                     ; src/home/palettes.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
 extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
-extern StageIndoorMapBlk                  ; src/engine/overworld/overworld.asm
+extern IndoorMapBlkPtrs                   ; assets/map_headers.inc (map_headers.asm TU)
+extern IndoorMapBlkSizes                  ; assets/map_headers.inc (map_headers.asm TU)
 extern SafariZoneCheckSteps               ; src/engine/events/hidden_events/safari_game.asm
 extern SafariZoneCheck                    ; src/engine/events/hidden_events/safari_game.asm
 extern LoadWildData                       ; src/engine/overworld/wild_mons.asm
 extern MapTextTablePointers               ; assets/npc_dialogs/all_dialogs.inc
 extern PlayDefaultMusicFadeOutCurrent     ; src/home/audio.asm
 extern PlaySound                          ; src/home/audio.asm
-extern RefreshCollisionTileMap            ; src/engine/overworld/overworld.asm
+extern RefreshCollisionTileMap            ; src/ppu/ppu.asm
 extern ReloadMapSpriteTilePatterns         ; src/home/reload_sprites.asm
 extern RunPaletteCommand                  ; src/home/palettes.asm
 extern SetMapSpecificScriptFlagsOnMapReload ; src/engine/overworld/specific_script_flags.asm
@@ -106,8 +107,6 @@ extern SetPikachuSpawnBackOutside         ; src/engine/pikachu/pikachu_follow.as
 extern IsPlayerStandingOnWarpPadOrHole     ; src/engine/overworld/player_animations.asm
 extern IsPlayerStandingOnWarp              ; src/engine/overworld/player_state.asm (MapEntryAfterBattle)
 extern GBFadeInFromWhite                   ; src/home/fade.asm (MapEntryAfterBattle)
-extern h_load_sprite_temp1                ; src/engine/overworld/overworld.asm
-extern h_load_sprite_temp2                ; src/engine/overworld/overworld.asm
 extern hide_window                        ; src/ppu/ppu.asm
 extern wMapSpriteData                     ; src/engine/overworld/map_sprites.asm
 extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
@@ -120,14 +119,11 @@ extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (overworld.asm
 extern AnyPartyAlive                      ; src/engine/battle/core.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
-extern CheckNPCInteraction                ; src/engine/overworld/map_sprites.asm — consumes faithful IsSpriteOrSignInFrontOfPlayer result, no block-coord re-scan (S5)
 extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
 extern Delay3                             ; src/home/palettes.asm
 extern DelayFrames                        ; src/home/delay.asm
-extern DisplayStartMenu                   ; src/home/start_menu.asm
-extern DoSignInteraction                  ; src/engine/overworld/overworld.asm
 extern DumpBackbuffer                     ; src/debug/debug_dump.asm
 %ifdef DEBUG_TRADE_GOLDEN
 extern trade_golden_dump_armed            ; src/debug/debug_dump.asm — armed by Route2TradeHouse shim
@@ -161,7 +157,6 @@ extern LoadToggleableObjectData            ; src/engine/overworld/unused_load_to
 extern IsSurfingPikachuInParty            ; src/home/map_objects.asm
 extern ApplyOutOfBattlePoisonDamage       ; src/engine/events/poison.asm (A2)
 extern IsTilePassable                     ; src/home/copy2.asm
-extern LoadDestinationMapData                ; src/engine/overworld/overworld.asm
 extern PrepareForSpecialWarp              ; src/engine/overworld/special_warps.asm
 extern PrepareNewGameDebug                ; src/engine/debug/debug_party.asm
 extern ResetStatusAndHalveMoneyOnBlackout ; src/engine/events/black_out.asm
@@ -1014,12 +1009,12 @@ EnterMap:
     mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR], SIGNTEXT_DIR  ; default SPRITE_FACING_LEFT
     ; Run the REAL A-press dispatch, not a bespoke "print this text" shortcut: the
     ; whole point of this scenario is that the sign's text reaches the screen through
-    ; IsSpriteOrSignInFrontOfPlayer → SignLoop → DisplaySignText → ShowTextStream.
+    ; IsSpriteOrSignInFrontOfPlayer → DisplayTextID → PrintText.
     call IsSpriteOrSignInFrontOfPlayer
     cmp byte [ebp + hTextID], 0             ; pret gate: found anything? (the
     je .signtext_nosign                     ; scenario faces a sign, so a hit
                                             ; here is the sign's text id)
-    call DoSignInteraction                  ; never returns: ShowTextStream's DEBUG_SIGNTEXT
+    call DisplayTextID                      ; never returns: PrintText's DEBUG_SIGNTEXT
                                             ; hook dumps once the text is printed
 .signtext_nosign:
     ; No sign in front of the player → dump anyway, with no dialog box on screen, so the
@@ -1874,20 +1869,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jnz .checkForOpponent
     mov al, [ebp + STANDING_TILE_OFF]
     mov [ebp + wTilePlayerStandingOn], al        ; N4 dialog half
-    ; display dispatch — pret: call DisplayTextID
-    mov al, [ebp + hTextID]
-    test al, al
-    jz .displayStartMenu
-    cmp al, [ebp + wNumSprites]
-    jbe .displayNPC
-    call DoSignInteraction
-    jmp .afterDisplay
-.displayStartMenu:
-    call DisplayStartMenu
-    jmp .afterDisplay
-.displayNPC:
-    call CheckNPCInteraction
-    jmp .afterDisplay
+    call DisplayTextID                           ; pret: call DisplayTextID
 .afterDisplay:
     ; DEBUG hooks re-pointed at new tail (B.6) — no stall
 %ifdef DEBUG_PRINT_SURF_CANCEL
@@ -2390,7 +2372,6 @@ WarpFound1:
 ; to EnterMap.
 ;
 ; DEVIATION{class=projection; pret=home/overworld.asm:WarpFound2; behavior=none on the wWarpedFromWhichWarp store itself, which is now pret's own `ld a,[wNumberOfWarps] / sub c` — but on the three entries that are not a warp scan, both Safari game-over arms and the script warp, BL holds whatever the port last left there rather than whatever pret last left in c, so the garbage value written differs from the ROM garbage value; evidence=pret reads c on those arms too and nothing sets it there, so the store is indeterminate in the ROM as well - the value's only readers are the Celadon Mart, Rocket Hideout and Silph Co elevator scripts and all three are entered through a warp TILE where the scan has run and both sides agree; lifetime=permanent, an artifact of pret reading an unset register}
-; DEVIATION{class=projection; pret=home/overworld.asm:WarpFound2; behavior=.done additionally calls LoadDestinationMapData and InitMapSprites and resets wWalkCounter, both player step vectors, hSCX/hSCY and wMapViewVRAMPointer, none of which pret does here; evidence=pret reaches the destination load through the tail `jp EnterMap` -> LoadMapData, and the port must stage it before that tail because PlayMapChangeSound in every branch above reads the SOURCE map's tileset and door tile — loading the destination first makes it read the wrong tileset; lifetime=permanent, structural}
 ; ---------------------------------------------------------------------------
 WarpFound2:
     ; pret WarpFound2 (home/overworld.asm:455-517), restored to its THREE
@@ -2469,36 +2450,9 @@ WarpFound2:
 
 ; --- pret .done ------------------------------------------------------ pret :513
 .done:
-    ; Port-specific arrival work. pret reaches the destination load through
-    ; EnterMap -> LoadMapData; the port stages part of it here. It sits AFTER the
-    ; branches because every branch has already called PlayMapChangeSound, which
-    ; must read the SOURCE map's tileset and door tile (OW-A.14) - loading the
-    ; destination first would make it read the wrong tileset.
-    movzx eax, byte [ebp + wCurMap]
-    lea esi, [MapTextTablePointers]
-    mov esi, [esi + eax*4]
-    mov [w_map_text_table_ptr], esi
-    mov byte [ebp + wWalkCounter], 0
-    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
-    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
-    mov byte [ebp + hSCY], 0
-    mov byte [ebp + hSCX], 0
-    mov word [ebp + wMapViewVRAMPointer], GB_TILEMAP0
-    call LoadDestinationMapData
-    call InitMapSprites                        ; populate NPC slots for the new map
-    ; set BIT_STANDING_ON_DOOR - have the player step out from the door, if any.
-    ; pret :513-514. The .indoorMaps branch cleared both door bits above; this set is
-    ; unconditional in pret and drives RunNPCMovementScript -> PlayerStepOutFromDoor on
-    ; the next idle frame. PlayerStepOutFromDoor re-sets BIT_EXITING_DOOR only when the
-    ; arrival tile really is a door, so stair arrivals leave it clear.
-    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR)
+    or byte [ebp + wMovementFlags], (1 << BIT_STANDING_ON_DOOR) ; ld hl,wMovementFlags / set BIT_STANDING_ON_DOOR,[hl]
     call IgnoreInputForHalfSecond              ; call IgnoreInputForHalfSecond
-    ; OW-A.4(b): pret WarpFound2.done ends `jp EnterMap`. EnterMap re-runs the full
-    ; reset ladder - wJoyIgnore gate, LoadMapData, ClearVariablesOnEnterMap, the
-    ; fly/dungeon-warp and battle-return resets, UpdateSprites, CUR_MAP_LOADED_1/2.
-    ; InitMapSprites above is therefore partly redundant with LoadMapData's sprite
-    ; load, and is a harmless idempotent slot repopulate (MCP live-warp confirmed).
-    jmp EnterMap
+    jmp EnterMap                               ; jp EnterMap
 
 section .text
 
@@ -3150,6 +3104,47 @@ LoadTilesetTilePatternData:
     jmp FarCopyData                                ; tail call
 
 ; ---------------------------------------------------------------------------
+; ---------------------------------------------------------------------------
+; ApplyMapBorderOverrides — write the current map's authored border-ring
+; blocks into wOverworldMap (map-tool plan C3; data from
+; assets/map_border_overrides.inc, painted via tools/map_editor/editor.py).
+;
+; Record format per map: runs of `db row, col, len` + len block bytes,
+; terminated by 0xFF. row/col are padded-grid coords; dest =
+; wOverworldMap + row*(wCurMapWidth + 2*MAP_BORDER) + col.
+;
+; Called from LoadTileBlockMap between the map-data copy and the connection
+; strips (registers are dead there; clobbers EAX/EBX/ECX/EDX/ESI/EDI).
+; ---------------------------------------------------------------------------
+global ApplyMapBorderOverrides
+ApplyMapBorderOverrides:
+    movzx eax, byte [ebp + wCurMap]
+    mov esi, [MapBorderOverridePointers + eax*4]  ; flat ptr to run list
+    test esi, esi
+    jz .done
+    movzx ebx, byte [ebp + wCurMapWidth]
+    add ebx, MAP_BORDER * 2                       ; EBX = padded stride
+.run:
+    movzx eax, byte [esi]                         ; row (0xFF = end)
+    cmp al, 0xFF
+    je .done
+    imul eax, ebx                                 ; row * stride
+    movzx edx, byte [esi + 1]                     ; col
+    add eax, edx
+    lea edi, [eax + wOverworldMap]              ; GB offset of run start
+    movzx ecx, byte [esi + 2]                     ; len
+    add esi, 3
+.copy:
+    mov al, [esi]                                 ; flat src (embedded data)
+    mov [ebp + edi], al                           ; GB dest
+    inc esi
+    inc edi
+    dec ecx
+    jnz .copy
+    jmp .run
+.done:
+    ret
+
 ; LoadTileBlockMap — faithful translation.
 ; Pret ref: home/overworld.asm:LoadTileBlockMap
 ;
@@ -4335,6 +4330,38 @@ LoadPlayerSpriteGraphicsCommon:
 ;  engine/gfx/sprite_oam.asm — relocated-labels grind, 2026-07-24.)
 
 ; ---------------------------------------------------------------------------
+; StageIndoorMapBlk — port-only. Copy wCurMap's .blk into the shared indoor
+; window, or do nothing for an outdoor map.
+;
+; No pret counterpart: pret's indoor maps live at distinct bank addresses and are
+; reached by banking, so there is nothing to stage. The port models memory flat
+; and gives every indoor map ONE window (INDOOR_BLK_GBADDR), so whoever changes
+; wCurMap to an indoor id owns putting that map's blocks there before anything
+; reads them. LoadMapHeader takes blk_ptr straight from the header, which for an
+; indoor map IS INDOOR_BLK_GBADDR — so an unstaged window silently yields the
+; PREVIOUS map's blocks, or zeros on the first entry, and the map renders blank
+; with a correct-sized room. That failure looks like missing map data or a
+; missing tileset; it is neither.
+;
+; DEVIATION{class=banking; pret=home/overworld.asm:LoadMapHeader; behavior=StageIndoorMapBlk stages the indoor map's .blk into the shared INDOOR_BLK_GBADDR window before the header is read; evidence=the port has no ROM banking so indoor maps cannot live at distinct bank addresses and must share one window; lifetime=permanent}
+; In: EBP = GB memory base, wCurMap set. All registers preserved.
+; ---------------------------------------------------------------------------
+global StageIndoorMapBlk
+StageIndoorMapBlk:
+    pushad
+    movzx eax, byte [ebp + wCurMap]
+    cmp eax, FIRST_INDOOR_MAP_ID
+    jb .outdoor                               ; outdoor maps have their own windows
+    sub eax, FIRST_INDOOR_MAP_ID              ; 0-based table index
+    mov esi, [IndoorMapBlkPtrs + eax*4]       ; flat DS label for this map's .blk
+    lea edi, [ebp + INDOOR_BLK_GBADDR]
+    mov ecx, [IndoorMapBlkSizes + eax*4]      ; byte count
+    rep movsb
+.outdoor:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
 ; LoadMapHeader — faithful translation.
 ; Pret ref: home/overworld.asm:LoadMapHeader
 ; ---------------------------------------------------------------------------
@@ -4378,6 +4405,7 @@ Func_0db5:
     ; falls through — pret has no jump either
 global asm_0dbd
 asm_0dbd:
+    call StageIndoorMapBlk                     ; flat-model indoor window staging (banking deviation, see StageIndoorMapBlk)
     ; pret :1800-1801 — `ld a,[wCurMapTileset] / ld [wUnusedCurMapTilesetCopy], a`,
     ; the first two instructions of the shared body. Restored 2026-08-22 with the
     ; label: the port wrote wUnusedCurMapTilesetCopy only from ResetMapVariables
@@ -5037,11 +5065,11 @@ InitSprites:
     ; movement byte 2 -> temp1
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [h_load_sprite_temp1], al
+    mov [ebp + H_LOAD_SPRITE_TEMP1], al
     ; text id + flags -> temp2
     movzx eax, byte [ebp + esi]
     inc esi
-    mov [h_load_sprite_temp2], al
+    mov [ebp + H_LOAD_SPRITE_TEMP2], al
     ; DEVIATION{class=data-model; pret=home/overworld.asm:InitSprites; behavior=sets per-slot ISTRAINER flag in wSpriteStateData2 for trainer sprites where pret has no such field; evidence=pret re-derives trainer-ness from text-id flags at interaction time in IsSpriteOrSignInFrontOfPlayer SPRITE branch realized as CheckNPCInteraction, port interaction stack reads ISTRAINER set at load time; lifetime=permanent, port ext to support CheckTrainerSight and TrainerEncounterFlow}
     test al, TRAINER_FLAG
     jz .not_trainer_slot
@@ -5100,18 +5128,18 @@ DisableRegularSprites:
 LoadSprite:
     push eax
     ; wMapSpriteData[C] = movement byte 2
-    mov al, [h_load_sprite_temp1]
+    mov al, [ebp + H_LOAD_SPRITE_TEMP1]
     mov [wMapSpriteData + ecx], al
     ; pret writes text id+flags to [C+1] here then immediately overwrites it with the
     ; masked value — kept for faithfulness ("this appears pointless").
-    mov al, [h_load_sprite_temp2]
+    mov al, [ebp + H_LOAD_SPRITE_TEMP2]
     mov [wMapSpriteData + ecx + 1], al
-    mov al, [h_load_sprite_temp2]
-    mov [h_load_sprite_temp1], al                       ; temp1 = text id+flags (save for flag test)
+    mov al, [ebp + H_LOAD_SPRITE_TEMP2]
+    mov [ebp + H_LOAD_SPRITE_TEMP1], al                       ; temp1 = text id+flags (save for flag test)
     and al, 0x3f
     mov [wMapSpriteData + ecx + 1], al                  ; wMapSpriteData[C+1] = masked text id
     ; branch on the raw (unmasked) text-id+flags byte
-    mov al, [h_load_sprite_temp1]
+    mov al, [ebp + H_LOAD_SPRITE_TEMP1]
     test al, TRAINER_FLAG
     jnz .trainerSprite
     test al, ITEM_FLAG
@@ -5123,21 +5151,21 @@ LoadSprite:
 .trainerSprite:
     movzx eax, byte [ebp + esi]                         ; trainer class
     inc esi
-    mov [h_load_sprite_temp1], al
+    mov [ebp + H_LOAD_SPRITE_TEMP1], al
     movzx eax, byte [ebp + esi]                         ; trainer number
     inc esi
-    mov [h_load_sprite_temp2], al
-    mov al, [h_load_sprite_temp1]
+    mov [ebp + H_LOAD_SPRITE_TEMP2], al
+    mov al, [ebp + H_LOAD_SPRITE_TEMP1]
     mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = trainer class
-    mov al, [h_load_sprite_temp2]
+    mov al, [ebp + H_LOAD_SPRITE_TEMP2]
     mov [wMapSpriteExtraData + ecx + 1], al             ; ExtraData[C+1] = trainer number
     pop eax
     ret
 .itemBallSprite:
     movzx eax, byte [ebp + esi]                         ; item number
     inc esi
-    mov [h_load_sprite_temp1], al
-    mov al, [h_load_sprite_temp1]
+    mov [ebp + H_LOAD_SPRITE_TEMP1], al
+    mov al, [ebp + H_LOAD_SPRITE_TEMP1]
     mov [wMapSpriteExtraData + ecx], al                 ; ExtraData[C] = item number
     mov byte [wMapSpriteExtraData + ecx + 1], 0         ; ExtraData[C+1] = 0
     pop eax

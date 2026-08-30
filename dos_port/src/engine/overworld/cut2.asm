@@ -13,8 +13,8 @@
 ; Register map (SM83 -> x86): A->AL, B->BH, C->BL, D->DH, E->DL, HL->ESI.
 ; GB memory is [ebp+offset]. All shadow-OAM / wBuffer copies are WRAM->WRAM, so
 ; the real CopyData (EBP-relative on both operands) is used directly. rOBP1 is
-; the virtual OBP1 register ([ebp+IO_OBP1], TODO-HW). The AdjustOAMBlock{X,Y}Pos2
-; primitives (pret engine/battle/animations.asm — UNPORTED) take ESI = GB OAM
+; the virtual OBP1 register ([ebp+IO_OBP1]). The AdjustOAMBlock{X,Y}Pos2
+; primitives (pret engine/battle/animations.asm) take ESI = GB OAM
 ; offset (hl), BL = count (c), and read wCoordAdjustmentAmount.
 ;
 ; Check-only until the battle-animation OAM primitives + palette shim land.
@@ -40,8 +40,8 @@ global AnimCutGrass_SwapOAMEntries
 
 extern DelayFrame                  ; src/home/vblank.asm
 extern UpdateCGBPal_OBP1           ; home/cgb_palettes.asm
-extern AdjustOAMBlockXPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count
-extern AdjustOAMBlockYPos2         ; UNPORTED (pret engine/battle/animations.asm) — ESI=GB OAM off, BL=count
+extern AdjustOAMBlockXPos2         ; src/engine/battle/animations.asm (pret engine/battle/animations.asm)
+extern AdjustOAMBlockYPos2         ; src/engine/battle/animations.asm (pret engine/battle/animations.asm)
 extern CopyData                    ; home/copy.asm (WRAM->WRAM)
 
 section .text

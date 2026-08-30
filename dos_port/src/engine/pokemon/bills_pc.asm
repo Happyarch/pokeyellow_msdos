@@ -95,7 +95,7 @@ extern hide_window              ; ppu/ppu.asm
 extern g_window_count           ; ppu/ppu.asm
 extern g_bg_whiteout            ; ppu/ppu.asm — 1 = blank background (takeover screens)
 extern DelayFrame               ; src/home/vblank.asm
-extern RefreshCollisionTileMap  ; engine/overworld/overworld.asm
+extern RefreshCollisionTileMap  ; src/ppu/ppu.asm
 extern HandleMenuInput          ; home/window.asm — Out: AL = watched keys pressed
 extern PlaceUnfilledArrowMenuCursor ; home/window.asm
 extern PrintText                ; home/window.asm — In: ESI = text stream

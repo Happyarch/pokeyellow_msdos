@@ -102,7 +102,7 @@ extern WaitForSoundToFinish          ; src/home/delay.asm
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2    ; src/home/tilemap.asm
 extern UpdateSprites                 ; src/home/update_sprites.asm
-extern RefreshCollisionTileMap       ; engine/overworld/overworld.asm
+extern RefreshCollisionTileMap       ; src/ppu/ppu.asm
 extern AddItemToInventory            ; src/home/inventory.asm — ESI=count addr; CF=1 room
 extern RemoveItemFromInventory       ; src/home/inventory.asm
 extern IsKeyItem                     ; home/item.asm — [wCurItem] → [wIsKeyItem]

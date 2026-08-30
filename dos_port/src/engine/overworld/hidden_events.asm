@@ -65,9 +65,6 @@ section .text
 ; Pret ref: engine/overworld/hidden_events.asm:CheckForHiddenEvent
 ; Stores $00 in [hDidntFindAnyHiddenEvent] on a match, else $ff; on a match
 ; returns ESI = handler pointer (and wHiddenEventFunctionArgument/RomBank set).
-; DATA: HiddenEventMaps is externed and unresolved (deferred generator — see the
-; extern note); until it lands this routine can't link — it stays under the M72
-; guard. It is faithful and check-verified here.
 ; ---------------------------------------------------------------------------
 CheckForHiddenEvent:
     ; zero the four consecutive HRAM cells hItemAlreadyFound..hDidntFindAnyHiddenEvent

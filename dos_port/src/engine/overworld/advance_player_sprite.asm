@@ -28,7 +28,7 @@ global _AdvancePlayerSprite
 ; file-local (they were file-local in overworld.asm too).
 
 extern LoadCurrentMapView                 ; src/home/overworld.asm
-extern RefreshCollisionTileMap            ; src/engine/overworld/overworld.asm
+extern RefreshCollisionTileMap            ; src/ppu/ppu.asm
 
 section .text
 

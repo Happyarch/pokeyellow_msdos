@@ -40,7 +40,7 @@ global WriteSymmetricMonPartySpriteOAM
 ; ---- ported helpers -------------------------------------------------------
 extern PlaceString, TextBoxBorder, CopyData, FarCopyData
 extern ClearScreen, ClearSprites, UpdateSprites
-extern RefreshCollisionTileMap         ; engine/overworld/overworld.asm — rebuild wTileMap
+extern RefreshCollisionTileMap         ; src/ppu/ppu.asm — rebuild wTileMap
 extern DisableLCD, EnableLCD, Delay3, DelayFrame, DelayFrames
 extern GetMonName                    ; src/home/names.asm
 extern PlaySound                     ; src/home/audio.asm

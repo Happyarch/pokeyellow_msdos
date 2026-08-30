@@ -58,7 +58,7 @@ AnimateBoulderDust:
     mov al, [ebp + wUpdateSpritesEnabled]
     push eax                                    ; push af (save wUpdateSpritesEnabled)
     mov byte [ebp + wUpdateSpritesEnabled], 0xff
-    mov byte [ebp + IO_OBP1], 0xE4              ; %11100100 ; TODO-HW: rOBP1 (virtual OBP1)
+    mov byte [ebp + IO_OBP1], 0xE4              ; %11100100
     call UpdateCGBPal_OBP1
     call LoadSmokeTileFourTimes
     call WriteCutOrBoulderDustAnimationOAMBlock ; pret: farcall (banking elided; OW-3.4 unported)
@@ -71,9 +71,9 @@ AnimateBoulderDust:
     ; passed CL while it was check-only, so the mismatch never linked or ran.
     mov bl, 4                                    ; c = OAM entries to adjust (arg to the func)
     call esi                                     ; pret: ld bc,.ret / push bc / jp hl (manual call)
-    mov al, [ebp + IO_OBP1]                     ; TODO-HW: rOBP1
+    mov al, [ebp + IO_OBP1]
     xor al, 0x64                                ; %01100100 (palette flicker)
-    mov [ebp + IO_OBP1], al                     ; TODO-HW: rOBP1
+    mov [ebp + IO_OBP1], al
     call UpdateCGBPal_OBP1
     call Delay3
     pop ecx                                     ; restore step counter (pret: pop bc)

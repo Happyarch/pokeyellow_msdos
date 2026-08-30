@@ -89,7 +89,7 @@ ShakeElevator:
     xor bl, bl                                  ; ld c, BANK(SFX_Safari_Zone_PA) — flat: irrelevant
     mov al, SFX_SAFARI_ZONE_PA
     call PlayMusic
-    ; DIVERGENCE (bounded): wait for the PA jingle to finish
+    ; DEVIATION{class=timing; pret=engine/overworld/elevator.asm:ShakeElevator; behavior=the sound-channel active wait is bounded by a 600-iteration CPU loop rather than polling audio register hardware directly; evidence=audio channel state on DOS is driven asynchronously by the PIT mixer; lifetime=permanent}
     mov ecx, WAIT_PA_MAX
 .musicLoop:
     mov al, [ebp + wChannelSoundIDs + CHAN5]

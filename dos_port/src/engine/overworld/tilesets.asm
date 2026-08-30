@@ -95,6 +95,7 @@ LoadTilesetHeader:
     mov [ebp + wGrassTile], bl
     mov bl, [TilesetAnimations + eax]
     mov [ebp + hTileAnimations], bl
+    mov byte [ebp + hMovingBGTilesCounter1], 0 ; pret: xor a / ldh [hMovingBGTilesCounter1], a
 
     ; Per-tileset counter ("talking-over") tiles. pret copies these as bytes 7-9 of the
     ; 12-byte tileset header (wTilesetTalkingOverTiles, 3 bytes; part of its $b-byte

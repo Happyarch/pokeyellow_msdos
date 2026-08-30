@@ -269,7 +269,6 @@ global LoadDestinationMapData
 ; LoadPlayerSpriteGraphics moved to engine/overworld/player_gfx.asm (wild-live
 ; promotion) — the scaffold here is retired; player_sprite is exported to it.
 global player_sprite                       ; pret RedSprite; consumed by player_gfx.asm
-global RefreshCollisionTileMap             ; menus S4: home/start_menu.asm restores
 
 ; --- moved to src/home/overworld.asm (pret home/overworld.asm mirror) ---
 extern EnterMap                           ; src/home/overworld.asm
@@ -278,11 +277,10 @@ extern LoadDestinationWarpPosition        ; src/home/overworld.asm
 extern LoadMapHeader                      ; src/home/overworld.asm
 extern LoadTileBlockMap                   ; src/home/overworld.asm
 extern LoadTilesetTilePatternData         ; src/home/overworld.asm
-
-; --- consumed by the relocated pret home/overworld.asm routines ---
-global ApplyMapBorderOverrides
-global h_load_sprite_temp1
-global h_load_sprite_temp2
+extern RefreshCollisionTileMap            ; src/ppu/ppu.asm
+extern StageIndoorMapBlk                  ; src/home/overworld.asm
+extern ApplyMapBorderOverrides            ; src/home/overworld.asm
+global MapBorderOverridePointers
                                            ; the wTileMap mirror around the menu
 
 ; ---------------------------------------------------------------------------
@@ -672,94 +670,6 @@ SetupPlayerSprite:
     ret
 
 ; ---------------------------------------------------------------------------
-; ApplyMapBorderOverrides — write the current map's authored border-ring
-; blocks into wOverworldMap (map-tool plan C3; data from
-; assets/map_border_overrides.inc, painted via tools/map_editor/editor.py).
-;
-; Record format per map: runs of `db row, col, len` + len block bytes,
-; terminated by 0xFF. row/col are padded-grid coords; dest =
-; wOverworldMap + row*(wCurMapWidth + 2*MAP_BORDER) + col.
-;
-; Called from LoadTileBlockMap between the map-data copy and the connection
-; strips (registers are dead there; clobbers EAX/EBX/ECX/EDX/ESI/EDI).
-; ---------------------------------------------------------------------------
-ApplyMapBorderOverrides:
-    movzx eax, byte [ebp + wCurMap]
-    mov esi, [MapBorderOverridePointers + eax*4]  ; flat ptr to run list
-    test esi, esi
-    jz .done
-    movzx ebx, byte [ebp + wCurMapWidth]
-    add ebx, MAP_BORDER * 2                       ; EBX = padded stride
-.run:
-    movzx eax, byte [esi]                         ; row (0xFF = end)
-    cmp al, 0xFF
-    je .done
-    imul eax, ebx                                 ; row * stride
-    movzx edx, byte [esi + 1]                     ; col
-    add eax, edx
-    lea edi, [eax + wOverworldMap]              ; GB offset of run start
-    movzx ecx, byte [esi + 2]                     ; len
-    add esi, 3
-.copy:
-    mov al, [esi]                                 ; flat src (embedded data)
-    mov [ebp + edi], al                           ; GB dest
-    inc esi
-    inc edi
-    dec ecx
-    jnz .copy
-    jmp .run
-.done:
-    ret
-
-; ---------------------------------------------------------------------------
-; RefreshCollisionTileMap — copy the current sub-block window of wSurroundingTiles
-; into wTileMap (the collision / text tile grid).
-;
-; wTileMap is what NPC collision (GetTileSpriteStandsOn → IsTilePassable) and the
-; player collision read. wSurroundingTiles is the block-decoded render source.
-; The window into it is offset by the player's sub-block coords (xBlock/yBlock):
-; each is 0 or 1, shifting the 40×25 window by 0 or 2 tiles.
-;
-; FIXED(walking-NPC wall-clip): the sub-block coords change every step, but the
-; full rebuild (LoadCurrentMapView) only ran on block crossings (every 2 steps),
-; so between crossings wTileMap lagged the player's actual position by up to a
-; tile — NPC collision then tested the wrong cell and walked into rendered walls
-; (verified via the DEBUG_NPC_WALK log: destTile != trueTile). AdvancePlayerSprite
-; now calls this every step so collision always matches the rendered map. Only the
-; collision buffer is touched; wSurroundingTiles and SCX/SCY (render) are untouched.
-;
-; In: EBP = GB base. All registers preserved.
-; ---------------------------------------------------------------------------
-RefreshCollisionTileMap:
-    pushad
-    ; --- Adjust source pointer for sub-block coords ---
-    mov esi, wSurroundingTiles
-    cmp byte [ebp + wYBlockCoord], 0
-    je  .adjust_x_coord
-    add esi, SURROUNDING_WIDTH * 2                 ; skip 2 tile rows (bottom half of block)
-.adjust_x_coord:
-    cmp byte [ebp + wXBlockCoord], 0
-    je  .copy_to_tilemap
-    add esi, BLOCK_WIDTH / 2                       ; skip 2 tiles (right half of block)
-.copy_to_tilemap:
-    mov edx, wTileMap                             ; dest
-    mov bh, SCREEN_HEIGHT                          ; 25 rows
-.copy_row_loop:
-    mov bl, SCREEN_WIDTH                           ; 40 cols
-.copy_col_loop:
-    mov al, byte [ebp + esi]
-    mov byte [ebp + edx], al
-    inc esi
-    inc edx
-    dec bl
-    jnz .copy_col_loop
-    add esi, SURROUNDING_WIDTH - SCREEN_WIDTH      ; next wSurroundingTiles row (+8)
-    dec bh
-    jnz .copy_row_loop
-    popad
-    ret
-
-; ---------------------------------------------------------------------------
 ; CopyMapViewToVRAM — DIVERGENCE (OW-A.5): obsoleted by the native-width renderer.
 ; Pret ref: home/overworld.asm:CopyMapViewToVRAM / CopyMapViewToVRAM2.
 ; pret copies wTileMap (20×18) to vBGMap0 each map load; the port's render_bg
@@ -910,45 +820,6 @@ SeamReseatView:
 ;  mirror routine uses GetTileAndCoordsInFrontOfPlayer as pret does.)
 
 ; ---------------------------------------------------------------------------
-; DoSignInteraction — display the sign text IsSpriteOrSignInFrontOfPlayer resolved
-; into [hTextID].
-;
-; DEVIATION{class=temporary; pret=home/overworld.asm:IsSpriteOrSignInFrontOfPlayer; behavior=port-only DoSignInteraction supplies font and player-state framing before DisplaySignText; evidence=sign_pallet golden-matches through the A-press sign path while DisplayTextID now owns the map-text service dispatcher; lifetime=until the sign interaction path is folded through DisplayTextID}
-; pret has no counterpart for this glue. pret reaches the sign text
-; through DisplayTextID, which sets up the font/player state itself. The port's
-; overworld does not use DisplayTextID on the NPC path either — CheckNPCInteraction
-; is its equivalent, and it both detects and displays — so DisplaySignText
-; (overworld_text.asm) is written to the same contract: it expects its CALLER to have
-; loaded the font and frozen the player, "exactly as CheckNPCInteraction does" (the
-; integration note in hidden_events.asm). This routine is that caller. It mirrors the
-; NPC path's framing rather than DisplayTextID's, so both overworld text paths enter
-; and leave the dialog identically. Retires when signs are routed through DisplayTextID.
-; ---------------------------------------------------------------------------
-DoSignInteraction:
-    pushad
-    ; Font tiles time-share vChars1 with the player/NPC walk tiles, so the walking
-    ; player must be forced to a STANDING pose before the font load or its frozen
-    ; walk-tile index renders font glyphs as the player — the same trap, and the same
-    ; fix, as CheckNPCInteraction (map_sprites.asm).
-    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + wSpritePlayerStateData1ImageIndex], al
-    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
-    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
-
-    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)  ; freezes NPC movement too
-    call LoadFontTilePatterns
-    call DisplaySignText                 ; reads [hTextID]; runs ShowTextStream
-
-    call hide_window
-    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED)
-    call ReloadWalkingTilePatterns       ; font clobbered the walk tiles — restore
-    call LoadPlayerSpriteGraphics
-    call LoadCurrentMapView              ; rebuild the BG the text box covered
-    call DelayFrame
-    popad
-    ret
-
-; ---------------------------------------------------------------------------
 ; GetTileInFrontOfPlayer (port-only fork) was DELETED 2026-07-27.
 ;
 ; It duplicated pret's _GetTileAndCoordsInFrontOfPlayer byte-for-byte in its tile
@@ -974,13 +845,6 @@ DoSignInteraction:
 ; InitSprites is now the sole loader — previously the bespoke path
 ; cleared+repopulated the same slots (redundant but harmless while both ran).
 ; ---------------------------------------------------------------------------
-; hLoadSpriteTemp1/2 (pret HRAM scratch) — carry movement-byte-2 and text-id+flags
-; from InitSprites into LoadSprite, and trainer class/num within LoadSprite.
-; Write-before-read scratch, so the initial value is irrelevant.
-section .data
-h_load_sprite_temp1: db 0    ; pret hLoadSpriteTemp1
-h_load_sprite_temp2: db 0    ; pret hLoadSpriteTemp2
-
 section .text
 ; CheckWarpTile — DELETED 2026-08-22. It was the port's merge of pret's two warp
 ; scans (CheckWarpsNoCollision / CheckWarpsCollision) plus WarpFound1's entry read,
@@ -1022,36 +886,6 @@ section .text
 ; The wCurMap/wLastMap update + BIT_STANDING_ON_DOOR + IgnoreInputForHalfSecond +
 ; jp EnterMap half of WarpFound2 lives in OverworldLoop.warpTransition (OW-A.4(b)).
 ; ---------------------------------------------------------------------------
-; StageIndoorMapBlk — port-only. Copy wCurMap's .blk into the shared indoor
-; window, or do nothing for an outdoor map.
-;
-; No pret counterpart: pret's indoor maps live at distinct bank addresses and are
-; reached by banking, so there is nothing to stage. The port models memory flat
-; and gives every indoor map ONE window (INDOOR_BLK_GBADDR), so whoever changes
-; wCurMap to an indoor id owns putting that map's blocks there before anything
-; reads them. LoadMapHeader takes blk_ptr straight from the header, which for an
-; indoor map IS INDOOR_BLK_GBADDR — so an unstaged window silently yields the
-; PREVIOUS map's blocks, or zeros on the first entry, and the map renders blank
-; with a correct-sized room. That failure looks like missing map data or a
-; missing tileset; it is neither.
-;
-; In: EBP = GB memory base, wCurMap set. All registers preserved.
-; ---------------------------------------------------------------------------
-global StageIndoorMapBlk
-StageIndoorMapBlk:
-    pushad
-    movzx eax, byte [ebp + wCurMap]
-    cmp eax, FIRST_INDOOR_MAP_ID
-    jb .outdoor                               ; outdoor maps have their own windows
-    sub eax, FIRST_INDOOR_MAP_ID              ; 0-based table index
-    mov esi, [IndoorMapBlkPtrs + eax*4]       ; flat DS label for this map's .blk
-    lea edi, [ebp + INDOOR_BLK_GBADDR]
-    mov ecx, [IndoorMapBlkSizes + eax*4]      ; byte count
-    rep movsb
-.outdoor:
-    popad
-    ret
-
 ; ---------------------------------------------------------------------------
 LoadDestinationMapData:
     push eax
@@ -1226,15 +1060,12 @@ extern MapSongBanks                       ; src/data/maps/songs.asm
 extern MapHeaderPointers                  ; assets/map_headers.inc (map_headers.asm TU) — LoadMapHeader
 extern map_headers_data                   ; assets/map_headers.inc (map_headers.asm TU) — LoadOverworldAssets
 extern MAP_HEADERS_DATA_SIZE              ; assets/map_headers.inc (map_headers.asm TU) — LoadOverworldAssets
-extern IndoorMapBlkPtrs                   ; assets/map_headers.inc (map_headers.asm TU) — indoor blk loader
-extern IndoorMapBlkSizes                  ; assets/map_headers.inc (map_headers.asm TU) — indoor blk loader
 extern route23_blk                        ; assets/route23_blk.inc (map_headers.asm TU, via extra_includes.inc)
 extern ROUTE23_BLK_SIZE                   ; assets/route23_blk.inc (map_headers.asm TU, via extra_includes.inc)
 extern indigo_plateau_blk                 ; assets/indigo_plateau_blk.inc (map_headers.asm TU, via extra_includes.inc)
 extern INDIGO_PLATEAU_BLK_SIZE            ; assets/indigo_plateau_blk.inc (map_headers.asm TU, via extra_includes.inc)
 
 ; --- consumed by the relocated pret home/overworld.asm routines ---
-global DoSignInteraction
 global SeamReseatView
 global WalkSpeedSample
 global seam_reseat

@@ -10,7 +10,7 @@
 ; both pointers so successive calls fill sprites 33.. from PokeCenterOAMData.
 ;
 ; Register map (SM83 -> x86): A->AL, B->BH, C->BL, D->DH, HL->ESI, DE cursor->EDX.
-; GB memory is [ebp+offset]. rOBP1 -> [ebp+IO_OBP1] (virtual, TODO-HW).
+; GB memory is [ebp+offset]. rOBP1 -> [ebp+IO_OBP1].
 ; CopyHealingMachineOAM's source (PokeCenterOAMData) is a flat ROM label read via
 ; EDX (flat), its dest (wShadowOAMSprite33) a GB WRAM offset via ESI — both
 ; persist + advance across the party loop (PlaySound preserves ESI/EDX/EBX;
@@ -79,9 +79,9 @@ AnimateHealingMachine:
     push eax                                        ; push af
     mov byte [ebp + wUpdateSpritesEnabled], 0xff
     ; save rOBP1, set it, apply
-    mov al, [ebp + IO_OBP1]                         ; ldh a,[rOBP1] (TODO-HW)
+    mov al, [ebp + IO_OBP1]                         ; ldh a,[rOBP1]
     push eax                                        ; push af
-    mov byte [ebp + IO_OBP1], 0xe0                  ; TODO-HW: rOBP1
+    mov byte [ebp + IO_OBP1], 0xe0
     call UpdateCGBPal_OBP1
     ; build the machine OAM (monitor entry) at wShadowOAMSprite33
     mov esi, wShadowOAMSprite33                      ; ld hl, wShadowOAMSprite33
@@ -129,7 +129,7 @@ AnimateHealingMachine:
     call DelayFrames
     ; restore rOBP1
     pop eax                                           ; pop af
-    mov [ebp + IO_OBP1], al                           ; TODO-HW: rOBP1
+    mov [ebp + IO_OBP1], al
     call UpdateCGBPal_OBP1
     ; restore wUpdateSpritesEnabled
     pop eax                                           ; pop af
@@ -158,9 +158,9 @@ section .text
 FlashSprite8Times:
     mov bh, 8                                         ; ld b, 8
 .loop:
-    mov al, [ebp + IO_OBP1]                           ; ldh a,[rOBP1] (TODO-HW)
+    mov al, [ebp + IO_OBP1]                           ; ldh a,[rOBP1]
     xor al, dh                                        ; xor d
-    mov [ebp + IO_OBP1], al                           ; TODO-HW: rOBP1
+    mov [ebp + IO_OBP1], al
     call UpdateCGBPal_OBP1
     mov bl, 10                                        ; ld c, 10
     call DelayFrames

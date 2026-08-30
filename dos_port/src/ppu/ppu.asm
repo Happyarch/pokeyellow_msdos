@@ -46,6 +46,7 @@ global render_bg
 global render_window
 global render_sprites
 global SnapshotRenderedTileMap
+global RefreshCollisionTileMap
 global draw_player_marker
 global g_player_marker_on
 global g_tilecache_dirty
@@ -774,7 +775,7 @@ render_bg:
 ;
 ; WHY THIS EXISTS. wTileMap is not a mirror of the screen — it is the
 ; player-anchored COLLISION crop. RefreshCollisionTileMap
-; (src/engine/overworld/overworld.asm) copies 40x25 tiles starting at
+; (this file, beside SnapshotRenderedTileMap) copies 40x25 tiles starting at
 ; wSurroundingTiles tile (2*wXBlockCoord, 2*wYBlockCoord), which pins the player's
 ; feet to the fixed cell (PLAYER_STANDING_COL, PLAYER_STANDING_ROW) = (24, 17) that
 ; UpdatePlayerSprite, wild_encounters.asm and ledges.asm all index. render_bg's
@@ -835,6 +836,54 @@ SnapshotRenderedTileMap:
     add esi, SURF_W_TILES - SCREEN_TILES_W         ; next surface row
     dec edx
     jnz .row
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; RefreshCollisionTileMap — copy the current sub-block window of wSurroundingTiles
+; into wTileMap (the collision / text tile grid).
+;
+; wTileMap is what NPC collision (GetTileSpriteStandsOn → IsTilePassable) and the
+; player collision read. wSurroundingTiles is the block-decoded render source.
+; The window into it is offset by the player's sub-block coords (xBlock/yBlock):
+; each is 0 or 1, shifting the 40×25 window by 0 or 2 tiles.
+;
+; FIXED(walking-NPC wall-clip): the sub-block coords change every step, but the
+; full rebuild (LoadCurrentMapView) only ran on block crossings (every 2 steps),
+; so between crossings wTileMap lagged the player's actual position by up to a
+; tile — NPC collision then tested the wrong cell and walked into rendered walls
+; (verified via the DEBUG_NPC_WALK log: destTile != trueTile). AdvancePlayerSprite
+; now calls this every step so collision always matches the rendered map. Only the
+; collision buffer is touched; wSurroundingTiles and SCX/SCY (render) are untouched.
+;
+; In: EBP = GB base. All registers preserved.
+; ---------------------------------------------------------------------------
+RefreshCollisionTileMap:
+    pushad
+    ; --- Adjust source pointer for sub-block coords ---
+    mov esi, wSurroundingTiles
+    cmp byte [ebp + wYBlockCoord], 0
+    je  .adjust_x_coord
+    add esi, SURROUNDING_WIDTH * 2                 ; skip 2 tile rows (bottom half of block)
+.adjust_x_coord:
+    cmp byte [ebp + wXBlockCoord], 0
+    je  .copy_to_tilemap
+    add esi, BLOCK_WIDTH / 2                       ; skip 2 tiles (right half of block)
+.copy_to_tilemap:
+    mov edx, wTileMap                             ; dest
+    mov bh, SCREEN_HEIGHT                          ; 25 rows
+.copy_row_loop:
+    mov bl, SCREEN_WIDTH                           ; 40 cols
+.copy_col_loop:
+    mov al, byte [ebp + esi]
+    mov byte [ebp + edx], al
+    inc esi
+    inc edx
+    dec bl
+    jnz .copy_col_loop
+    add esi, SURROUNDING_WIDTH - SCREEN_WIDTH      ; next wSurroundingTiles row (+8)
+    dec bh
+    jnz .copy_row_loop
     popad
     ret
 

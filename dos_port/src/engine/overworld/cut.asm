@@ -196,7 +196,7 @@ UsedCutText:
 ; ---------------------------------------------------------------------------
 InitCutAnimOAM:
     mov byte [ebp + wWhichAnimationOffsets], 0  ; select the cut offsets
-    mov byte [ebp + IO_OBP1], 0xE4              ; %11100100 ; TODO-HW: rOBP1
+    mov byte [ebp + IO_OBP1], 0xE4              ; %11100100
     call UpdateCGBPal_OBP1
     mov al, [ebp + wCutTile]
     cmp al, 0x52
@@ -302,17 +302,7 @@ BoulderDustAnimationOffsets:
 ; In: EDX = flat ptr to a {before,after} block-id table ($ff-terminated).
 ; ESI walks a GB address inside wOverworldMap (via wCurrentTileBlockMapViewPointer).
 ; ---------------------------------------------------------------------------
-; PROJECTION (border/viewport): pret's literals here are NOT portable. pret
-; `add 6` (cut.asm:185) is its row stride `wCurMapWidth + MAP_BORDER*2` at
-; MAP_BORDER=3 — the port's border is 6, so the stride is `+ MAP_BORDER*2` (=12).
-; And pret's row/col offsets 1/2/3 address the player's block RELATIVE TO THE VIEW
-; ORIGIN, which for pret's 6x5-block view is (row 2, col 2). The port's view is
-; 12x9 blocks and its camera is centred by construction of view_col/view_row
-; (LoadDestinationMapData / coords.inc: view_col = (x>>1) + MAP_BORDER - SCREEN_BLOCK_WIDTH/2,
-; so the player's block sits at relative (SCREEN_BLOCK_HEIGHT/2, SCREEN_BLOCK_WIDTH/2)
-; = (4, 6)). Both are therefore expressed via the constants, not copied.
-;   rows above/centre/below = SCREEN_BLOCK_HEIGHT/2 - 1 .. + 1   (3/4/5)
-;   cols left /centre/right = SCREEN_BLOCK_WIDTH/2  - 1 .. + 1   (5/6/7)
+; DEVIATION{class=projection; pret=engine/overworld/cut.asm:ReplaceTreeTileBlock; behavior=wCurrentTileBlockMapViewPointer formula uses MAP_BORDER 7 and SCREEN_BLOCK_WIDTH 12 for the 40x25 viewport; evidence=native renderer viewport geometry; lifetime=permanent}
 %define TREE_ROW_CENTRE (SCREEN_BLOCK_HEIGHT / 2)
 %define TREE_COL_CENTRE (SCREEN_BLOCK_WIDTH / 2)
 
