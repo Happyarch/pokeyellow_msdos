@@ -88,18 +88,18 @@ For every commit under this plan:
 
 ### Stage D — Dissolve `src/engine/overworld/overworld.asm` (S1, S6)
 
-- [ ] **D.1** Move embedded data asset includes (`overworld_gfx.inc`, `overworld_blocks.inc`, `overworld_coll.inc`, and all outdoor `.blk.inc` files) from `overworld.asm` to [`dos_port/src/data/maps/map_headers.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/data/maps/map_headers.asm).
-- [ ] **D.2** Move `EnterMapBoot`, `SetupPlayerSprite`, and `LoadOverworldAssets` to [`dos_port/src/home/init.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/home/init.asm) as dedicated boot initialization routines.
-- [ ] **D.3** Move debug helpers (`SeamReseatView`, `WalkSpeedSample`, `seam_seeded`, `trroute_seeded`) under `%ifdef DEBUG_*` guards in `src/home/overworld.asm`.
-- [ ] **D.4** Move `player_sprite` asset include (`assets/player_sprite.inc`) to `src/data/sprites/` or `src/home/player_gfx.asm`.
-- [ ] **D.5** Delete [`dos_port/src/engine/overworld/overworld.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/engine/overworld/overworld.asm) entirely and remove its entry from `dos_port/Makefile` (`GAME_SRCS`).
+- [x] **D.1** Move embedded data asset includes (`overworld_gfx.inc`, `overworld_blocks.inc`, `overworld_coll.inc`, and all outdoor `.blk.inc` files) from `overworld.asm` to [`dos_port/src/data/maps/map_headers.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/data/maps/map_headers.asm).
+- [x] **D.2** Move `EnterMapBoot`, `SetupPlayerSprite`, and `LoadOverworldAssets` to [`dos_port/src/home/init.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/home/init.asm) as dedicated boot initialization routines.
+- [x] **D.3** Move debug helpers (`SeamReseatView`, `WalkSpeedSample`, `seam_seeded`, `trroute_seeded`) under `%ifdef DEBUG_*` guards in `src/home/overworld.asm`.
+- [x] **D.4** Move `player_sprite` asset include (`assets/player_sprite.inc`) to `src/data/sprites/` or `src/home/player_gfx.asm`.
+- [x] **D.5** Delete [`dos_port/src/engine/overworld/overworld.asm`](file:///mnt/sdb1/Code/Active%20Code/pokeyellow_msdos/dos_port/src/engine/overworld/overworld.asm) entirely and remove its entry from `dos_port/Makefile` (`GAME_SRCS`).
 
 ---
 
 ### Stage E — Verification, Static Gates & Fidelity Suite
 
-- [ ] **E.1** Run `make -C dos_port check` and verify clean build with zero warnings or undefined symbols.
-- [ ] **E.2** Run `dos_port/tools/static_gate` and `dos_port/tools/lint_pret_labels --no-scan --strict-claims`.
-- [ ] **E.3** Run core fidelity suite: `make -C dos_port fidelity`.
-- [ ] **E.4** Run full fidelity suite: `make -C dos_port fidelity-full` (verifying all 66 scenarios pass 100%).
-- [ ] **E.5** Archive plan to `docs/plans/engine_overworld_realign.md`.
+- [x] **E.1** Run `make -C dos_port check` and verify clean build with zero warnings or undefined symbols.
+- [x] **E.2** Run `dos_port/tools/static_gate` and `dos_port/tools/lint_pret_labels --no-scan --strict-claims`.
+- [x] **E.3** Run core fidelity suite: `make -C dos_port fidelity` — 14/16 PASS with 2 pre-existing hangs (sign_pallet, item_tm_teach) reproduced on HEAD before D; start_menu build fixed (missing extern DisplayStartMenu).
+- [x] **E.4** Run full fidelity suite: `make -C dos_port fidelity-full` — same 2 pre-existing hangs; 64/66 PASS, D dissolution introduces no new divergence (overworld_pallet, title, continue_seed etc. PASS).
+- [x] **E.5** Archive plan to `docs/plans/engine_overworld_realign.md`.

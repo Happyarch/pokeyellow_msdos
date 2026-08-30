@@ -424,10 +424,10 @@ def main():
             bytes(data),
             f"{blk_file.name} block map{note} → [EBP+INDOOR_BLK_GBADDR] "
             f"(indoor) or fixed outdoor slot",
-            # These two travel with src/data/maps/map_headers.asm (via
-            # extra_includes.inc) but LoadOverworldAssets in overworld.asm
-            # consumes them as immediates — the only blk blobs read cross-TU.
-            export=label in ("route23_blk", "indigo_plateau_blk"),
+            # D.1: every blk now lives in src/data/maps/map_headers.asm and
+            # LoadOverworldAssets (src/home/init.asm) consumes the outdoor
+            # subset cross-TU — export all so the label is link-visible.
+            export=True,
         )
 
     # ------------------------------------------------------------------
@@ -440,6 +440,7 @@ def main():
             "player_sprite",
             player_src.read_bytes(),
             "Red overworld sprite 2bpp → [EBP+GB_VCHARS0] ($8000)",
+            export=True,
         )
 
     # ------------------------------------------------------------------

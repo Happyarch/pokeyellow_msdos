@@ -74,10 +74,10 @@ extern TryPushingBoulder            ; src/engine/overworld/push_boulder.asm
 extern _HandleMidJump                    ; src/engine/overworld/player_animations.asm
 extern InitBattle                     ; engine/battle/init_battle.asm — opponent dispatch + full battle
 extern g_tilecache_dirty            ; src/ppu/ppu.asm — arm tile-cache re-decode
-extern player_sprite                ; == RedSprite (walking)
+extern player_sprite                ; assets/player_sprite.inc (player_gfx.asm TU) — RedSprite (walking)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6a) ---
-extern MapBorderOverridePointers          ; assets/map_border_overrides.inc (overworld.asm TU)
+extern MapBorderOverridePointers          ; assets/map_border_overrides.inc (map_headers.asm TU)
 extern DisableLCD                         ; src/home/lcd.asm
 extern EnableLCD                          ; src/home/lcd.asm
 extern FarCopyData                        ; src/home/copy.asm
@@ -113,7 +113,7 @@ extern wMapSpriteExtraData                ; src/engine/overworld/map_sprites.asm
 extern w_map_text_table_ptr               ; src/engine/overworld/map_sprites.asm
 extern MapHeaderPointers            ; assets/map_headers.inc (map_headers.asm TU)
 extern MapSongBanks                 ; src/data/maps/songs.asm (assets/map_songs.inc)
-extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (overworld.asm TU)
+extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (map_headers.asm TU)
 
 ; --- relocated from src/engine/overworld/overworld.asm (unit 6b) ---
 extern AnyPartyAlive                      ; src/engine/battle/core.asm
@@ -242,7 +242,7 @@ extern RunTrainerCardTest                 ; src/engine/menus/start_sub_menus.asm
 extern RunYellowIntroTest                 ; src/engine/movie/intro_yellow.asm
 extern RunYesNoTest                       ; src/debug/debug_dump.asm
 extern SeamLogRecord                      ; src/debug/debug_dump.asm
-extern SeamReseatView                     ; src/engine/overworld/overworld.asm
+extern DisplayStartMenu                   ; src/home/start_menu.asm — DEBUG_STARTMENU harness
 extern SeedDeterministicPlayerIdentity    ; src/engine/debug/debug_party.asm
 extern SpecialEnterMap                    ; src/engine/menus/main_menu.asm
 extern StopAllMusic                       ; src/home/audio.asm
@@ -250,22 +250,89 @@ extern StopAllSounds                      ; src/home/init.asm
 extern TilePairCollisionsWater            ; src/data/tilesets/pair_collision_tile_ids.asm
 extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
 extern UpdateSprites                      ; src/home/update_sprites.asm
-extern WalkSpeedSample                    ; src/engine/overworld/overworld.asm
 extern _AdvancePlayerSprite               ; src/engine/overworld/advance_player_sprite.asm
 extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
 extern g_audio_engine_online              ; src/home/audio.asm
 extern pad_noclip                         ; src/input/kbd_isr.asm
-extern seam_reseat                        ; src/engine/overworld/overworld.asm
-extern seam_seeded                        ; src/engine/overworld/overworld.asm
-%ifdef DEBUG_TRAINER_ROUTE
-extern trroute_seeded                     ; src/engine/overworld/overworld.asm (one-shot spawn seed latch)
-%endif
-%ifdef DEBUG_SEED_PARTY
-%ifndef DEBUG_TRAINER_ROUTE
-extern seed_party_done                    ; src/engine/overworld/overworld.asm (one-shot party seed latch)
-%endif
-%endif
 extern set_single_window                  ; src/ppu/ppu.asm
+; D.3: SeamReseatView / WalkSpeedSample / seam_seeded / trroute_seeded / seed_party_done
+; now live here (were in src/engine/overworld/overworld.asm)
+%ifdef DEBUG_WALKSPEED
+extern tick_count                         ; boot/timing.asm
+%endif
+; NEED_SEAM_RESEAT — any harness that hand-seeds wYCoord/wXCoord must derive the view
+%ifdef DEBUG_SPAWN
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_SIGNTEXT
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_PALLET_OAK
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_MAPSCRIPT_SIGHT
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_SURF
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_LEDGE
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_BATTLE_GHOST
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_FISH
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_PREDEFTEXT
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_HIDDENOBJ
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_TRAINER_ROUTE
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_TRAINER_ROUTE17
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_SAFARI_GAMEOVER
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_POISON
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_MAPCONN
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_WARP_DOOR
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_BEATEN_TALK
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_CABLECLUB
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_TRADE_GOLDEN
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_PRINT_SURF_CANCEL
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_POKECENTER_HEAL
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_VENDING
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_PRIZE_CORNER
+%define NEED_SEAM_RESEAT
+%endif
+%ifdef DEBUG_POKEMART
+%define NEED_SEAM_RESEAT
+%endif
 
 ; ---------------------------------------------------------------------------
 ; EnterMap — faithful map (re-)entry. Pret ref: home/overworld.asm:1-41 (EnterMap).
@@ -5242,5 +5309,96 @@ LoadDestinationWarpPosition:
 section .data
 overworld_sprite_count_ptr: dw 0   ; GB offset of sprite_count byte, set by LoadMapHeader for InitSprites
 section .text
+
+; ---------------------------------------------------------------------------
+; D.3 — Debug helpers relocated from src/engine/overworld/overworld.asm
+; ---------------------------------------------------------------------------
+%ifdef DEBUG_WALKSPEED
+global WalkSpeedSample
+WalkSpeedSample:
+    push eax
+    push edx
+    mov eax, [tick_count]
+    cmp dword [ebp + (W_PORT_SCRATCH + 0x10)], 0
+    jne .have
+    mov [ebp + (W_PORT_SCRATCH + 0x00)], eax
+    mov [ebp + (W_PORT_SCRATCH + 0x04)], eax
+    mov dword [ebp + (W_PORT_SCRATCH + 0x08)], 1
+    mov dword [ebp + (W_PORT_SCRATCH + 0x10)], 1
+    jmp .done
+.have:
+    mov edx, eax
+    sub edx, [ebp + (W_PORT_SCRATCH + 0x04)]
+    mov [ebp + (W_PORT_SCRATCH + 0x04)], eax
+    inc dword [ebp + (W_PORT_SCRATCH + 0x08)]
+    cmp edx, [ebp + (W_PORT_SCRATCH + 0x0C)]
+    jae .done
+    mov [ebp + (W_PORT_SCRATCH + 0x0C)], edx
+.done:
+    pop edx
+    pop eax
+    ret
+%endif
+
+%ifdef DEBUG_SPAWN
+section .data
+seam_seeded: db 0
+global seam_seeded
+seam_reseat: db 0
+global seam_reseat
+section .text
+%endif
+
+%ifdef DEBUG_TRAINER_ROUTE
+section .data
+trroute_seeded: db 0
+global trroute_seeded
+section .text
+%endif
+
+%ifdef DEBUG_SEED_PARTY
+%ifndef DEBUG_TRAINER_ROUTE
+section .data
+seed_party_done: db 0
+global seed_party_done
+section .text
+%endif
+%endif
+
+%ifdef NEED_SEAM_RESEAT
+global SeamReseatView
+SeamReseatView:
+    push eax
+    push ebx
+    push ecx
+    movzx eax, byte [ebp + wCurMapWidth]
+    add eax, MAP_BORDER * 2
+    movzx ebx, byte [ebp + wYCoord]
+    shr ebx, 1
+    add ebx, MAP_BORDER
+    sub ebx, SCREEN_BLOCK_HEIGHT / 2
+    movzx ecx, byte [ebp + wXCoord]
+    shr ecx, 1
+    add ecx, MAP_BORDER
+    sub ecx, SCREEN_BLOCK_WIDTH / 2
+    imul eax, ebx
+    add eax, ecx
+    add eax, wOverworldMap
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    mov al, [ebp + wXCoord]
+    and al, 1
+    mov [ebp + wXBlockCoord], al
+    mov al, [ebp + wYCoord]
+    and al, 1
+    mov [ebp + wYBlockCoord], al
+    call LoadCurrentMapView
+    call RefreshCollisionTileMap
+    and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP)
+    call IsPlayerStandingOnWarp
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+%endif
 
 

@@ -126,7 +126,7 @@ extern LoadFontTilePatterns       ; gfx/load_font.asm
 extern PrintText                  ; src/home/window.asm (ESI=flat text stream)
 extern LoadAnimSpriteGfx          ; src/engine/gfx/mon_icons.asm (linked) — EAX = count, ESI = 12-byte headers
 extern EmotionBubble              ; src/engine/overworld/emotion_bubbles.asm (pret: predef)
-extern player_sprite              ; engine/overworld/player_gfx.asm — == RedSprite (flat)
+extern player_sprite              ; assets/player_sprite.inc (player_gfx.asm TU) — RedSprite (flat)
 extern msgbox_dialog                    ; src/home/text.asm — overworld dialog projection
 extern text_msgbox                      ; src/home/text.asm — active msgbox projection (msgbox.inc)
 

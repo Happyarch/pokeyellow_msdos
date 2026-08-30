@@ -28,6 +28,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_macros.inc"
 %include "assets/audio_constants.inc"  ; AUDIO_BANK_1 (generated, Tier-1)
+%include "assets/map_dims.inc"         ; MAP_ID_PALLET_TOWN (SetupPlayerSprite)
+%include "assets/event_constants.inc"  ; event defs (kept for parity with overworld boot glue)
 
 LCDC_ON_VAL      equ 0x80
 LCDC_DEFAULT_VAL equ 0xE3
@@ -35,6 +37,31 @@ IE_DEFAULT_VAL   equ 0x0D
 CONNECTION_NONE  equ 0xFF
 WRAM0_SIZE       equ 0x1000
 VRAM_SIZE        equ 0x2000
+
+; Map and tileset constants (relocated from src/engine/overworld/overworld.asm D.2)
+TILESET_OVERWORLD           equ 0x00
+PALLET_TOWN_BORDER_BLOCK    equ 0x0B
+TILESET_BANK_FLAT           equ 0x01
+PALLET_TOWN_VIEW_PTR        equ wOverworldMap + (MAP_BORDER) * (PALLET_TOWN_WIDTH + MAP_BORDER * 2) + (MAP_BORDER - 2)
+ROUTE1_BLK_GB_SIZE         equ 180
+ROUTE21_BLK_GB_SIZE        equ 450
+PLAYER_NAME_FIELD equ 11
+%ifndef PLAYER_NAME
+%define PLAYER_NAME 'NINTEN'
+%endif
+%ifndef RIVAL_NAME
+%define RIVAL_NAME 'SONY'
+%endif
+%macro encode_name 1
+%strlen _en_len %1
+%assign _en_i 1
+%rep _en_len
+    %substr _en_ch %1 _en_i
+    db _en_ch + 0x3F
+    %assign _en_i _en_i + 1
+%endrep
+    times (PLAYER_NAME_FIELD - _en_len) db 0x50
+%endmacro
 
 extern FillMemory
 extern StopAllMusic          ; src/home/audio.asm
@@ -46,8 +73,93 @@ extern ClearBgMap
 extern ClearSprites
 extern PrepareTitleScreen
 extern g_window_count        ; src/ppu/ppu.asm — unified window descriptor list count
+extern StageIndoorMapBlk     ; src/home/overworld.asm
+extern InitializeToggleableObjectsFlags ; src/engine/overworld/toggleable_objects.asm
+extern text_engine_init      ; src/home/text.asm
+extern EnterMap              ; src/home/overworld.asm
+extern g_player_marker_on    ; src/ppu/ppu.asm
+; Boot-asset externs — definitions live in src/data/maps/map_headers.asm (D.1)
+extern overworld_gfx
+extern OVERWORLD_GFX_SIZE
+extern overworld_blocks
+extern OVERWORLD_BLOCKS_SIZE
+extern pallet_town_blk
+extern PALLET_TOWN_BLK_SIZE
+extern route1_blk
+extern ROUTE1_BLK_SIZE
+extern route21_blk
+extern ROUTE21_BLK_SIZE
+extern viridian_city_blk
+extern VIRIDIAN_CITY_BLK_SIZE
+extern pewter_city_blk
+extern PEWTER_CITY_BLK_SIZE
+extern cerulean_city_blk
+extern CERULEAN_CITY_BLK_SIZE
+extern lavender_town_blk
+extern LAVENDER_TOWN_BLK_SIZE
+extern vermilion_city_blk
+extern VERMILION_CITY_BLK_SIZE
+extern celadon_city_blk
+extern CELADON_CITY_BLK_SIZE
+extern fuchsia_city_blk
+extern FUCHSIA_CITY_BLK_SIZE
+extern cinnabar_island_blk
+extern CINNABAR_ISLAND_BLK_SIZE
+extern saffron_city_blk
+extern SAFFRON_CITY_BLK_SIZE
+extern route2_blk
+extern ROUTE2_BLK_SIZE
+extern route3_blk
+extern ROUTE3_BLK_SIZE
+extern route4_blk
+extern ROUTE4_BLK_SIZE
+extern route5_blk
+extern ROUTE5_BLK_SIZE
+extern route6_blk
+extern ROUTE6_BLK_SIZE
+extern route7_blk
+extern ROUTE7_BLK_SIZE
+extern route8_blk
+extern ROUTE8_BLK_SIZE
+extern route9_blk
+extern ROUTE9_BLK_SIZE
+extern route10_blk
+extern ROUTE10_BLK_SIZE
+extern route11_blk
+extern ROUTE11_BLK_SIZE
+extern route12_blk
+extern ROUTE12_BLK_SIZE
+extern route13_blk
+extern ROUTE13_BLK_SIZE
+extern route14_blk
+extern ROUTE14_BLK_SIZE
+extern route15_blk
+extern ROUTE15_BLK_SIZE
+extern route16_blk
+extern ROUTE16_BLK_SIZE
+extern route17_blk
+extern ROUTE17_BLK_SIZE
+extern route18_blk
+extern ROUTE18_BLK_SIZE
+extern route19_blk
+extern ROUTE19_BLK_SIZE
+extern route20_blk
+extern ROUTE20_BLK_SIZE
+extern route22_blk
+extern ROUTE22_BLK_SIZE
+extern route24_blk
+extern ROUTE24_BLK_SIZE
+extern route25_blk
+extern ROUTE25_BLK_SIZE
+extern route23_blk
+extern ROUTE23_BLK_SIZE
+extern indigo_plateau_blk
+extern INDIGO_PLATEAU_BLK_SIZE
+extern overworld_coll
+extern OVERWORLD_COLL_SIZE
+extern map_headers_data
+extern MAP_HEADERS_DATA_SIZE
 %ifdef SKIP_TITLE
-extern EnterMapBoot          ; overworld.asm — one-time overworld boot glue → EnterMap
 extern InitPlayerData2       ; engine/movie/oak_speech/init_player_data.asm
 extern InitOptions           ; engine/menus/main_menu.asm
 %endif
@@ -241,6 +353,246 @@ StopAllSounds:
     mov [ebp + wNewSoundID], al
     mov [ebp + wLastMusicSoundID], al
     jmp StopAllMusic
+
+; ---------------------------------------------------------------------------
+; Boot overworld glue — relocated from src/engine/overworld/overworld.asm D.2.
+; EnterMapBoot is the one-time boot staging that both SKIP_TITLE and the
+; title/main-menu SpecialEnterMap path jmp to before the faithful EnterMap.
+; LoadOverworldAssets copies embedded map assets into the GB ROM window;
+; SetupPlayerSprite seeds the player sprite WRAM for the initial map.
+; ---------------------------------------------------------------------------
+section .data
+DefaultPlayerName:
+    encode_name PLAYER_NAME
+DefaultRivalName:
+    encode_name RIVAL_NAME
+
+section .text
+
+global EnterMapBoot
+global LoadOverworldAssets
+global SetupPlayerSprite
+
+EnterMapBoot:
+    call LoadOverworldAssets
+    call SetupPlayerSprite
+    call StageIndoorMapBlk
+%ifdef SKIP_TITLE
+    lea esi, [DefaultPlayerName]
+    lea edi, [ebp + wPlayerName]
+    mov ecx, PLAYER_NAME_FIELD
+    rep movsb
+    lea esi, [DefaultRivalName]
+    lea edi, [ebp + wRivalName]
+    mov ecx, PLAYER_NAME_FIELD
+    rep movsb
+    call InitializeToggleableObjectsFlags
+%endif
+    call text_engine_init
+    jmp EnterMap
+
+LoadOverworldAssets:
+    push esi
+    push edi
+    push ecx
+    mov esi, overworld_gfx
+    lea edi, [ebp + OW_GFX_GBADDR]
+    mov ecx, OVERWORLD_GFX_SIZE
+    rep movsb
+    mov esi, overworld_blocks
+    lea edi, [ebp + OW_BLOCKS_GBADDR]
+    mov ecx, OVERWORLD_BLOCKS_SIZE
+    rep movsb
+    mov esi, pallet_town_blk
+    lea edi, [ebp + OW_PALLET_BLK_GBADDR]
+    mov ecx, PALLET_TOWN_BLK_SIZE
+    rep movsb
+    mov esi, route1_blk
+    lea edi, [ebp + OW_ROUTE1_BLK_GBADDR]
+    mov ecx, ROUTE1_BLK_SIZE
+    rep movsb
+    mov esi, route21_blk
+    lea edi, [ebp + OW_ROUTE21_BLK_GBADDR]
+    mov ecx, ROUTE21_BLK_SIZE
+    rep movsb
+    mov esi, viridian_city_blk
+    lea edi, [ebp + OW_VIRIDIAN_CITY_BLK_GBADDR]
+    mov ecx, VIRIDIAN_CITY_BLK_SIZE
+    rep movsb
+    mov esi, pewter_city_blk
+    lea edi, [ebp + OW_PEWTER_CITY_BLK_GBADDR]
+    mov ecx, PEWTER_CITY_BLK_SIZE
+    rep movsb
+    mov esi, cerulean_city_blk
+    lea edi, [ebp + OW_CERULEAN_CITY_BLK_GBADDR]
+    mov ecx, CERULEAN_CITY_BLK_SIZE
+    rep movsb
+    mov esi, lavender_town_blk
+    lea edi, [ebp + OW_LAVENDER_TOWN_BLK_GBADDR]
+    mov ecx, LAVENDER_TOWN_BLK_SIZE
+    rep movsb
+    mov esi, vermilion_city_blk
+    lea edi, [ebp + OW_VERMILION_CITY_BLK_GBADDR]
+    mov ecx, VERMILION_CITY_BLK_SIZE
+    rep movsb
+    mov esi, celadon_city_blk
+    lea edi, [ebp + OW_CELADON_CITY_BLK_GBADDR]
+    mov ecx, CELADON_CITY_BLK_SIZE
+    rep movsb
+    mov esi, fuchsia_city_blk
+    lea edi, [ebp + OW_FUCHSIA_CITY_BLK_GBADDR]
+    mov ecx, FUCHSIA_CITY_BLK_SIZE
+    rep movsb
+    mov esi, cinnabar_island_blk
+    lea edi, [ebp + OW_CINNABAR_ISLAND_BLK_GBADDR]
+    mov ecx, CINNABAR_ISLAND_BLK_SIZE
+    rep movsb
+    mov esi, saffron_city_blk
+    lea edi, [ebp + OW_SAFFRON_CITY_BLK_GBADDR]
+    mov ecx, SAFFRON_CITY_BLK_SIZE
+    rep movsb
+    mov esi, route2_blk
+    lea edi, [ebp + OW_ROUTE_2_BLK_GBADDR]
+    mov ecx, ROUTE2_BLK_SIZE
+    rep movsb
+    mov esi, route3_blk
+    lea edi, [ebp + OW_ROUTE_3_BLK_GBADDR]
+    mov ecx, ROUTE3_BLK_SIZE
+    rep movsb
+    mov esi, route4_blk
+    lea edi, [ebp + OW_ROUTE_4_BLK_GBADDR]
+    mov ecx, ROUTE4_BLK_SIZE
+    rep movsb
+    mov esi, route5_blk
+    lea edi, [ebp + OW_ROUTE_5_BLK_GBADDR]
+    mov ecx, ROUTE5_BLK_SIZE
+    rep movsb
+    mov esi, route6_blk
+    lea edi, [ebp + OW_ROUTE_6_BLK_GBADDR]
+    mov ecx, ROUTE6_BLK_SIZE
+    rep movsb
+    mov esi, route7_blk
+    lea edi, [ebp + OW_ROUTE_7_BLK_GBADDR]
+    mov ecx, ROUTE7_BLK_SIZE
+    rep movsb
+    mov esi, route8_blk
+    lea edi, [ebp + OW_ROUTE_8_BLK_GBADDR]
+    mov ecx, ROUTE8_BLK_SIZE
+    rep movsb
+    mov esi, route9_blk
+    lea edi, [ebp + OW_ROUTE_9_BLK_GBADDR]
+    mov ecx, ROUTE9_BLK_SIZE
+    rep movsb
+    mov esi, route10_blk
+    lea edi, [ebp + OW_ROUTE_10_BLK_GBADDR]
+    mov ecx, ROUTE10_BLK_SIZE
+    rep movsb
+    mov esi, route11_blk
+    lea edi, [ebp + OW_ROUTE_11_BLK_GBADDR]
+    mov ecx, ROUTE11_BLK_SIZE
+    rep movsb
+    mov esi, route12_blk
+    lea edi, [ebp + OW_ROUTE_12_BLK_GBADDR]
+    mov ecx, ROUTE12_BLK_SIZE
+    rep movsb
+    mov esi, route13_blk
+    lea edi, [ebp + OW_ROUTE_13_BLK_GBADDR]
+    mov ecx, ROUTE13_BLK_SIZE
+    rep movsb
+    mov esi, route14_blk
+    lea edi, [ebp + OW_ROUTE_14_BLK_GBADDR]
+    mov ecx, ROUTE14_BLK_SIZE
+    rep movsb
+    mov esi, route15_blk
+    lea edi, [ebp + OW_ROUTE_15_BLK_GBADDR]
+    mov ecx, ROUTE15_BLK_SIZE
+    rep movsb
+    mov esi, route16_blk
+    lea edi, [ebp + OW_ROUTE_16_BLK_GBADDR]
+    mov ecx, ROUTE16_BLK_SIZE
+    rep movsb
+    mov esi, route17_blk
+    lea edi, [ebp + OW_ROUTE_17_BLK_GBADDR]
+    mov ecx, ROUTE17_BLK_SIZE
+    rep movsb
+    mov esi, route18_blk
+    lea edi, [ebp + OW_ROUTE_18_BLK_GBADDR]
+    mov ecx, ROUTE18_BLK_SIZE
+    rep movsb
+    mov esi, route19_blk
+    lea edi, [ebp + OW_ROUTE_19_BLK_GBADDR]
+    mov ecx, ROUTE19_BLK_SIZE
+    rep movsb
+    mov esi, route20_blk
+    lea edi, [ebp + OW_ROUTE_20_BLK_GBADDR]
+    mov ecx, ROUTE20_BLK_SIZE
+    rep movsb
+    mov esi, route22_blk
+    lea edi, [ebp + OW_ROUTE_22_BLK_GBADDR]
+    mov ecx, ROUTE22_BLK_SIZE
+    rep movsb
+    mov esi, route24_blk
+    lea edi, [ebp + OW_ROUTE_24_BLK_GBADDR]
+    mov ecx, ROUTE24_BLK_SIZE
+    rep movsb
+    mov esi, route25_blk
+    lea edi, [ebp + OW_ROUTE_25_BLK_GBADDR]
+    mov ecx, ROUTE25_BLK_SIZE
+    rep movsb
+    mov esi, route23_blk
+    lea edi, [ebp + OW_ROUTE_23_BLK_GBADDR]
+    mov ecx, ROUTE23_BLK_SIZE
+    rep movsb
+    mov esi, indigo_plateau_blk
+    lea edi, [ebp + OW_INDIGO_PLATEAU_BLK_GBADDR]
+    mov ecx, INDIGO_PLATEAU_BLK_SIZE
+    rep movsb
+    mov esi, overworld_coll
+    lea edi, [ebp + OW_COLL_GBADDR]
+    mov ecx, OVERWORLD_COLL_SIZE
+    rep movsb
+    mov esi, map_headers_data
+    lea edi, [ebp + OW_TILESET_HDR_GBADDR]
+    mov ecx, MAP_HEADERS_DATA_SIZE
+    rep movsb
+    pop ecx
+    pop edi
+    pop esi
+    ret
+
+SetupPlayerSprite:
+%ifdef SKIP_TITLE
+    cmp byte [ebp + wCurMap], 0
+    jne .skip_map_default
+    mov byte [ebp + wCurMap], MAP_ID_PALLET_TOWN
+    mov byte [ebp + wYCoord], 8
+    mov byte [ebp + wXCoord], 8
+    mov byte [ebp + wYBlockCoord], 0
+    mov byte [ebp + wXBlockCoord], 0
+    mov word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], PALLET_TOWN_VIEW_PTR
+.skip_map_default:
+%endif
+    mov byte [ebp + W_SPRITE_PLAYER_FACING_DIR],   SPRITE_FACING_DOWN
+    mov byte [ebp + wPlayerDirection],           0
+    mov byte [ebp + wPlayerMovingDirection],    0
+    mov byte [ebp + W_SPRITE_PLAYER_Y_STEP_VECTOR], 0
+    mov byte [ebp + W_SPRITE_PLAYER_X_STEP_VECTOR], 0
+    mov byte [ebp + wWalkCounter],               0
+    mov byte [ebp + wSpritePlayerStateData1PictureID],      1
+    mov byte [ebp + W_SPRITE_PLAYER_IMAGE_BASE_OFFSET], 1
+    mov byte [ebp + W_SPRITE_PLAYER_Y_PIXELS],        0x3C
+    mov byte [ebp + W_SPRITE_PLAYER_X_PIXELS],        0x40
+    mov byte [ebp + wSpritePlayerStateData1ImageIndex],     SPRITE_FACING_DOWN
+    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM],      0
+    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME],      0
+    mov byte [ebp + wSpritePlayerStateData2WalkAnimationCounter], 0
+    mov byte [ebp + W_SPRITE_PLAYER_GRASS_PRIORITY],  0
+    mov byte [ebp + wGrassTile],    0xFF
+    mov byte [ebp + wFontLoaded],   0
+    mov byte [ebp + wMovementFlags], 0
+    mov byte [ebp + hAutoBGTransferEnabled],        0
+    mov byte [g_player_marker_on], 0
+    ret
 
 ; ---------------------------------------------------------------------------
 ; GBPalNormal MOVED to src/home/palettes.asm (mirror rule) — a pret

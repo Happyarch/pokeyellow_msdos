@@ -47,9 +47,12 @@
 ; assets/<stem>_sprite.inc, emitted by tools/generators/gen_all_assets.py from
 ; gfx/sprites/<stem>.2bpp. Each is a 384-byte, 24-tile sheet laid out exactly
 ; like player_sprite (12 standing tiles + 12 walking tiles), which is what
-; LoadPlayerSpriteGraphicsCommon's (home/overworld.asm) two 192-byte copies
-; assume. player_sprite itself (pret RedSprite, the walking set) is defined in
-; src/engine/overworld/overworld.asm and consumed the same way.
+; LoadPlayerSpriteGraphicsCommon in home/overworld.asm's two 192-byte copies
+; assume.
+; D.4: player_sprite (pret RedSprite, the walking set) now also lives here
+; instead of src/engine/overworld/overworld.asm; it is consumed the same way
+; by LoadPlayerSpriteGraphicsCommon (home/overworld.asm) and by
+; player_animations.asm's SetupPlayerAnimation.
 ;
 ; NOTE: assets/mon_icons.inc (consumed by src/engine/gfx/mon_icons.asm) also
 ; defines a non-`global` label literally named `SeelSprite` for the unrelated
@@ -61,6 +64,11 @@
 ; emits a `global` label as an UNDEFINED external if it is defined in the
 ; implicit default section (measured 2026-08-15 — dropping this line made all
 ; three symbols vanish at link time with the data still present in the object).
+section .data
+
+global player_sprite
+%include "assets/player_sprite.inc"
+
 section .text
 
 global RedBikeSprite

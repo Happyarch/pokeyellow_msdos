@@ -27,11 +27,13 @@
 ;   exported by assets/map_headers.inc: MapHeaderPointers (LoadMapHeader),
 ;     TilesetGfx/Blocks/Coll Ptrs + Gfx/Blocks Sizes (LoadTilesetHeader),
 ;     IndoorMapBlkPtrs/Sizes + map_headers_data + MAP_HEADERS_DATA_SIZE
-;     (LoadOverworldAssets / the indoor blk loader in overworld.asm);
-;   exported by route23_blk.inc / indigo_plateau_blk.inc (below, via
-;     extra_includes.inc): consumed as immediates by LoadOverworldAssets;
-;   imported from overworld.asm's TU: the OVERWORLD tileset triple, which stays
-;     with its engine loader while the dispatch tables here point at it.
+;     (LoadOverworldAssets in src/home/init.asm);
+;   exported by the OVERWORLD tileset triple + outdoor blk set below:
+;     consumed as immediates by LoadOverworldAssets (init.asm) and by
+;     cut.asm / home/overworld.asm for tile clamp checks.
+;   D.1: the OVERWORLD triple and the entire outdoor .blk set (pallet_town
+;     through route25, plus route23/indigo_plateau via extra_includes.inc)
+;     now live here instead of src/engine/overworld/overworld.asm.
 ;
 ; Embedded data goes in .data per the linker rule in docs/assembly.md.
 ;
@@ -40,19 +42,54 @@
 bits 32
 
 %include "gb_memmap.inc"                  ; OW_*_GBADDR equs (assets/rom_window.inc)
-                                          ; consumed by map_headers_data's dw rows
-
-; OVERWORLD tileset blobs stay in src/engine/overworld/overworld.asm's TU;
-; the TilesetGfx/Blocks/Coll rows for tileset 0 reference them cross-object.
-extern overworld_gfx                      ; overworld.asm (assets/overworld_gfx.inc)
-extern OVERWORLD_GFX_SIZE                 ; overworld.asm (assets/overworld_gfx.inc)
-extern overworld_blocks                   ; overworld.asm (assets/overworld_blocks.inc)
-extern OVERWORLD_BLOCKS_SIZE              ; overworld.asm (assets/overworld_blocks.inc)
-extern overworld_coll                     ; overworld.asm (assets/overworld_coll.inc)
-extern OVERWORLD_COLL_SIZE                ; overworld.asm (assets/overworld_coll.inc)
+                                           ; consumed by map_headers_data's dw rows
 
 section .data
 align 4
+
+; D.1 — OVERWORLD tileset assets (previously in overworld.asm)
+%include "assets/overworld_gfx.inc"
+%include "assets/overworld_blocks.inc"
+%include "assets/overworld_coll.inc"
+global MapBorderOverridePointers
+%include "assets/map_border_overrides.inc"
+
+; D.1 — outdoor block maps (previously in overworld.asm; route23/indigo_plateau
+; were already here via extra_includes.inc but are now exported directly)
+%include "assets/pallet_town_blk.inc"
+%include "assets/route1_blk.inc"
+%include "assets/route21_blk.inc"
+%include "assets/viridian_city_blk.inc"
+%include "assets/pewter_city_blk.inc"
+%include "assets/cerulean_city_blk.inc"
+%include "assets/lavender_town_blk.inc"
+%include "assets/vermilion_city_blk.inc"
+%include "assets/celadon_city_blk.inc"
+%include "assets/fuchsia_city_blk.inc"
+%include "assets/cinnabar_island_blk.inc"
+%include "assets/saffron_city_blk.inc"
+%include "assets/route2_blk.inc"
+%include "assets/route3_blk.inc"
+%include "assets/route4_blk.inc"
+%include "assets/route5_blk.inc"
+%include "assets/route6_blk.inc"
+%include "assets/route7_blk.inc"
+%include "assets/route8_blk.inc"
+%include "assets/route9_blk.inc"
+%include "assets/route10_blk.inc"
+%include "assets/route11_blk.inc"
+%include "assets/route12_blk.inc"
+%include "assets/route13_blk.inc"
+%include "assets/route14_blk.inc"
+%include "assets/route15_blk.inc"
+%include "assets/route16_blk.inc"
+%include "assets/route17_blk.inc"
+%include "assets/route18_blk.inc"
+%include "assets/route19_blk.inc"
+%include "assets/route20_blk.inc"
+%include "assets/route22_blk.inc"
+%include "assets/route24_blk.inc"
+%include "assets/route25_blk.inc"
 
 %include "assets/map_headers.inc"
 %include "assets/extra_includes.inc"
