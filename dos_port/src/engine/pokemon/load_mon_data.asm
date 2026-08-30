@@ -18,7 +18,6 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 
-extern LoadMonData                  ; src/home/pokemon.asm (pret home/pokemon.asm mirror)
 global LoadMonData_
 global GetMonSpecies
 

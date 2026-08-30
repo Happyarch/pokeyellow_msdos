@@ -12,10 +12,9 @@
 ; lost in the move:
 ;   EvolvedText / IntoText / StoppedEvolvingText / IsEvolvingText — generated
 ;     text-command streams, defined in assets/battle_text.inc (translated).
-;   Func_3b079, Func_3b0a2, Func_3b10f — not translated.
 ;
-; The two GetMonLearnset_Evo* helpers at the bottom are PORT-ONLY (no pret
-; counterpart) and came here with EvolutionAfterBattle, their only caller.
+; The GetMonLearnset_Evo_BlobStart helper at the bottom is PORT-ONLY (no pret
+; counterpart) and came here with EvolutionAfterBattle, its only caller.
 ;
 ; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI,
 ; EBP = GB memory base; GB memory = [EBP+addr]. The evo/learnset blobs
@@ -27,6 +26,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "assets/script_constants.inc"   ; species ids (VICTREEBEL) — %define only, no COFF symbols
+%include "assets/audio_constants.inc"   ; SFX_GET_ITEM_2
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
 ; includes, so the translation reads identically to the pret source.
 
@@ -44,7 +44,6 @@ global Func_3b10f
 global WriteMonMoves
 global WriteMonMoves_ShiftMoveData
 global GetMonLearnset
-global GetMonLearnset_Evo       ; local corrected version (×4 dd offset + 32-bit read)
 global GetMonLearnset_Evo_BlobStart
 
 ; From engine/movie/evolution.asm (the animation half, still in its own file):
@@ -72,10 +71,12 @@ extern LearnMove                     ; src/engine/pokemon/learn_move.asm — fai
 
 ; From engine/battle/ and engine/pikachu/:
 extern IsThisPartyMonStarterPikachu  ; src/engine/pikachu/pikachu_status.asm (mood bump)
-extern lvl_mon_ptr              ; src/engine/battle/battle_menu.asm — PrintStatsBox scratch
 
 ; Text/display/input helpers:
 extern PrintText                ; battle-scope text engine (ESI = flat text stream)
+extern PrintText_NoCreatingTextBox ; home/window.asm — ESI = flat TX stream
+extern PlaySoundWaitForCurrent  ; home/delay.asm — AL = sound id
+extern WaitForSoundToFinish     ; home/delay.asm
 extern GetPartyMonName          ; (AL=index, ESI=nick list) → wNameBuffer (EDX out)
 extern CopyToStringBuffer            ; src/home/copy_string.asm — wNameBuffer -> wStringBuffer
 extern ClearScreenArea          ; (ESI=tilemap dst, BH=rows, BL=width)
@@ -322,9 +323,10 @@ Evolution_PartyMonLoop:
     call GetName                    ; new species name → wNameBuffer
 
     mov esi, IntoText
-    call PrintText                  ; TODO-HW: pret uses PrintText_NoCreatingTextBox +
-                                    ; PlaySoundWaitForCurrent(SFX_GET_ITEM_2) +
-                                    ; WaitForSoundToFinish — audio HAL (Phase 3)
+    call PrintText_NoCreatingTextBox
+    mov al, SFX_GET_ITEM_2
+    call PlaySoundWaitForCurrent
+    call WaitForSoundToFinish
     mov bl, 40
     call DelayFrames
     call ClearScreen
@@ -739,7 +741,6 @@ LearnMoveFromLevelUp:
     movzx eax, byte [ebp + wWhichPokemon]
     imul eax, eax, PARTYMON_STRUCT_LENGTH
     add eax, wPartyMon1
-    mov [lvl_mon_ptr], eax
     lea edi, [eax + MON_MOVES]
     mov cl, NUM_MOVES
 .known:
@@ -844,7 +845,7 @@ WriteMonMoves:
     mov al, [ebp + wLearningMovesFromDayCare]
     test al, al
     jz .writeMoveToSlot
-    ; TODO-DAYCARE: shift PP up as well (unreachable: flag always 0 today)
+    ; shift PP up as well (unreachable: flag always 0 today)
     push edx
     add esi, MON_PP - (MON_MOVES + 3)
     mov edx, esi                     ; ld d,h / ld e,l
@@ -858,7 +859,7 @@ WriteMonMoves:
     mov al, [ebp + wLearningMovesFromDayCare]
     test al, al
     jz .nextMove
-    ; TODO-DAYCARE: write the move's base PP (unreachable today). DIVERGENCE:
+    ; write the move's base PP (unreachable today). DIVERGENCE:
     ; read PP straight from the flat Moves table instead of FarCopyData→wBuffer.
     movzx eax, byte [esi]            ; move id (FLAT)
     dec eax
@@ -924,37 +925,6 @@ GetMonLearnset:
     inc esi
     test al, al
     jnz .skipEvolutionDataLoop               ; skip past evo data + its 0 terminator
-    ret
-
-; ===========================================================================
-; GetMonLearnset_Evo  (local — corrected version of evos_moves.asm GetMonLearnset)
-; Returns ESI pointing to the LEARNSET portion of the evo/learnset blob for the
-; species in [wCurPartySpecies].  Uses CORRECT ×4 offset + 32-bit pointer read.
-;
-; Bug fixed vs evos_moves.asm GetMonLearnset: the old code used ×2 offset and
-; read only 16 bits, which is wrong for dd (32-bit) pointer table entries.
-;
-; In:  [wCurPartySpecies] = internal species index (1-based; e.g. 0x99 = Bulbasaur)
-; Out: ESI = flat pointer to first learnset byte (past the evo entries)
-; Clobbers: AL, ECX
-; ===========================================================================
-GetMonLearnset_Evo:
-    mov al, [ebp + wCurPartySpecies]
-    dec al                          ; 0-based index
-    movzx ecx, al
-    shl ecx, 2                      ; ×4: each entry is a dd (32-bit pointer)
-    mov esi, EvosMovesPointerTable
-    add esi, ecx
-    mov esi, [esi]                  ; full 32-bit flat pointer to blob start
-
-    ; Skip past the evolution entries (each terminated individually;
-    ; the whole evo-entries section ends with db 0).
-.skipEvoLoop:
-    mov al, [esi]
-    inc esi
-    test al, al
-    jnz .skipEvoLoop                ; non-zero byte = part of an evo entry → skip
-    ; ESI now points to the first learnset byte (or db 0 if no learnset)
     ret
 
 ; ===========================================================================

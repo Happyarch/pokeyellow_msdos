@@ -43,8 +43,8 @@
 ; Externs resolved:
 ;   MoveMon / RemovePokemon → src/home/move_mon.asm (the pret home wrappers)
 ;   ChangeBox               → src/engine/menus/save.asm (first live caller here)
-;   PrintPCBox              → src/engine/printer/printer_stubs.asm (STUB)
-;   PlayCry                 → src/home/home_stubs.asm (STUB)
+;   PrintPCBox              → src/engine/printer/printer.asm (REAL)
+;   PlayCry                 → src/home/pokemon.asm (REAL)
 ;   ModifyPikachuHappiness  → src/engine/events/pikachu_happiness.asm (REAL,
 ;                             since 9ce747c2e; it was a stub until then)
 

@@ -12,10 +12,6 @@
 ;                                             is NOT in this file, it lives in the core.asm
 ;                                             mirror (see below)
 ;   ShowSimulatedInputBagBox                 OLD_MAN/PIKACHU tutorial substitute presentation
-;   print_num3                               fork of home/print_num.asm:PrintNumber, flagged
-;                                             for retirement (DEVIATION below) but still the
-;                                             only caller path status_screen.asm uses
-;   lvl_mon_ptr                              exported scratch for evos_moves.asm
 ; The move TYPE/PP box helper (PrintMoveInfoBox) and FindMoveName (a fork of pret's
 ; GetMoveName) are BOTH gone — see the retirement notes at their old locations below.
 ; The EXP/level-up display routines GainExperience (experience.asm) used to call here
@@ -27,8 +23,7 @@
 ; and TryRunningFromBattle (with its private PrintRunLine helper) — now live in that
 ; mirror; the Buffer1 pair moved earlier to src/home/tilemap.asm. LearnMoveFromLevelUp
 ; is an engine/pokemon/evos_moves.asm label and moved to that mirror,
-; src/engine/pokemon/evos_moves.asm; it still writes this file's lvl_mon_ptr scratch,
-; which is exported for it. WaitForTextScrollButtonPress (with its WaitForAPress alias
+; src/engine/pokemon/evos_moves.asm. WaitForTextScrollButtonPress (with its WaitForAPress alias
 ; and the wtsbp_saved_c1/c2 counters) is a pret home/joypad2.asm label and moved to that
 ; mirror, src/home/joypad2.asm; no routine here calls it any more (its only caller was
 ; the retired ShowGainedExpText). DoEnemyAttackDamage and wBattleOver (the
@@ -83,7 +78,6 @@ bits 32
 section .data
 ; TryRunningFromBattle / PrintRunLine moved to their pret mirror core.asm and
 ; still read these run-message strings, so the five they use are exported.
-global print_num3                     ; PrintStatsBox, now engine/pokemon/status_screen.asm
 global str_gotaway
 global str_attack                     ; PrintStatsBox, now engine/pokemon/status_screen.asm
 global str_defense                    ; PrintStatsBox, now engine/pokemon/status_screen.asm
@@ -100,8 +94,6 @@ global str_norun3
 section .bss
 ; screen_save moved to src/home/tilemap.asm with the Buffer1 routines
 ; (menu-intro review: the pret labels belong in the home/tilemap.asm mirror).
-global lvl_mon_ptr                        ; also written by LearnMoveFromLevelUp (evos_moves.asm)
-lvl_mon_ptr: resd 1                       ; GB offset of the leveling party mon (PrintStatsBox)
 
 section .text
 
@@ -246,42 +238,10 @@ ShowSimulatedInputBagBox:
 ; real GetPartyMonName, which experience.asm already calls) and print_dec (its
 ; only caller), plus the str_gained/str_exppts/str_grew/str_tolevel/str_excl
 ; generated runtime strings (tools/generators/gen_runtime_strings.py) and the
-; RestoreBattleScreen extern above, all now unreferenced. print_num3 stays —
-; PrintStatsBox (engine/pokemon/status_screen.asm) still calls it.
+; RestoreBattleScreen extern above, all now unreferenced, including print_num3
+; (retired 2026-08-29 with unified PrintStatsBox in
+; engine/pokemon/status_screen.asm) and lvl_mon_ptr.
 ; ===========================================================================
-
-; print_num3 — EAX (0..999) → 3-digit right-aligned, space-padded, at [ebp+EDI..EDI+2].
-;
-; DEVIATION{class=temporary; pret=home/print_num.asm:PrintNumber; behavior=reimplements PrintNumber's div-based big-endian decimal conversion (space-padded, no leading zeroes, no left-align) under an invented name and a different calling convention, value pre-loaded in EAX and dest offset in EDI instead of a source pointer in EDX and dest cursor in ESI; evidence=pret PrintStatsBox.PrintStat (engine/pokemon/status_screen.asm) calls the real PrintNumber with BH=2 (byte count) and BL=3 (digit count) and no flag bits for exactly this ATTACK/DEFENSE/SPEED/SPECIAL stat field, and the port's own already-ported PrintNumber (src/home/print_num.asm) implements that identical contract and is called that way elsewhere in status_screen.asm; lifetime=retires when the four call sites in engine/pokemon/status_screen.asm PrintStatsBox.LevelUpStatsBox (status_screen.asm:575,581,587,593) are converted to call PrintNumber directly with ESI=dest cursor, EDX=stat field address, BH=2, BL=3, matching pret, a change outside this slice's edit scope and reported in this slice's report for the exact conversion}
-print_num3:
-    push ebx
-    mov ebx, 10
-    xor edx, edx
-    div ebx
-    add dl, CHAR_DIG0
-    mov [ebp + edi + 2], dl
-    xor edx, edx
-    div ebx
-    test eax, eax
-    jnz .tens
-    test edx, edx
-    jnz .tens
-    mov byte [ebp + edi + 1], 0x7F
-    jmp .hund
-.tens:
-    add dl, CHAR_DIG0
-    mov [ebp + edi + 1], dl
-.hund:
-    test eax, eax
-    jnz .hundDigit
-    mov byte [ebp + edi], 0x7F
-    jmp .num3done
-.hundDigit:
-    add al, CHAR_DIG0
-    mov [ebp + edi], al
-.num3done:
-    pop ebx
-    ret
 
 ; ===========================================================================
 ; Move list helpers — EMPTY as of 2026-08-15 (this slice's remediation pass).

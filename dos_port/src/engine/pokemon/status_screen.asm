@@ -2,14 +2,14 @@
 ;
 ; Faithful port of pret engine/pokemon/status_screen.asm:
 ;   StatusScreen (page 1: name/level/HP/status/types/№/OT/ID/pic/cry),
-;   DrawHP/DrawHP_ (HP bar), DrawLineBox, PrintStatsBox' status-box branch,
-;   PrintLevel, .GetStringPointer, and CalcExpToLevelUp. (PrintMonType /
+;   StatusScreen2 (page 2: moves + PP, EXP, name),
+;   DrawHP/DrawHP_ (HP bar), DrawLineBox, PrintStatsBox, PrintLevel,
+;   .GetStringPointer, and CalcExpToLevelUp. (PrintMonType /
 ;   EraseType2Text live in their own mirror, engine/battle/print_type.asm.)
-;   StatusScreen2 (page 2) is TODO (next session).
 ;
 ; PROJECTION (PROJ status-screen): the port renders the 20×18 GB screen centered
 ; in the 40×25 widescreen BG canvas (wTileMap), exactly as the battle screen does
-; (init_battle flat-canvas path, PrintStatsBox.LevelUpStatsBox in battle_menu.asm).
+; (init_battle flat-canvas path).
 ; GB(x,y) → canvas offset (y+3)*40 + (x+10). scoord() below is that map; the +10/+3
 ; centers 20 cols in 40 and 18 rows in 25. Row-stride math inside routines uses FW
 ; (=40), and pret's SCREEN_WIDTH*n vertical steps become FW*n.
@@ -304,8 +304,9 @@ StatusScreen:
     mov bl, 5
     call PrintNumber
 
-    ; --- stats box (status-screen variant, pret PrintStatsBox d=0) ---
-    call StatusScreen_StatsBox
+    ; --- stats box (pret PrintStatsBox d=STATUS_SCREEN_STATS_BOX) ---
+    mov dh, STATUS_SCREEN_STATS_BOX
+    call PrintStatsBox
 
     call Delay3
     call GBPalNormal
@@ -481,45 +482,6 @@ StatusScreen_PrintLevel:
 ;  routine calls GetMonHeader itself, as pret does, and reads the type2/erase
 ;  row steps from [text_row_stride] — 40 here, set by StatusScreen above.)
 
-; ---------------------------------------------------------------------------
-; StatusScreen_StatsBox — pret PrintStatsBox with d=STATUS_SCREEN_STATS_BOX (0):
-; box at (0,8) 8×8 + ATTACK/DEFENSE/SPEED/SPECIAL labels & values from wLoadedMon*.
-; (The d!=0 LevelUpStatsBox branch lives in battle_menu.asm's PrintStatsBox, which
-; reads the party struct directly since battle stubs LoadMonData.)
-; ---------------------------------------------------------------------------
-StatusScreen_StatsBox:
-    mov esi, scoord(0, 8)
-    mov bh, 8
-    mov bl, 8
-    call TextBoxBorder
-    ; labels at (1,9); values 5 cols right, one row down (pret .PrintStats bc=SCREEN_WIDTH+5)
-    mov esi, scoord(1, 9)
-    mov eax, StatsText
-    call PlaceString
-    ; value column start = labels + FW + 5 = one row below, 5 cols right
-    mov esi, scoord(1, 9) + FW + 5
-    mov edx, wLoadedMonAttack
-    call .printStat
-    mov edx, wLoadedMonDefense
-    call .printStat
-    mov edx, wLoadedMonSpeed
-    call .printStat
-    mov edx, wLoadedMonSpecial
-    ; last stat: no advance
-    mov bh, 2
-    mov bl, 3
-    call PrintNumber
-    ret
-.printStat:
-    ; PrintNumber(2 bytes, 3 digits) then step two rows down (pret .PrintStat).
-    push esi
-    mov bh, 2                                        ; 2 bytes (big-endian)
-    mov bl, 3
-    call PrintNumber
-    pop esi
-    lea esi, [esi + FW * 2]
-    ret
-
 extern TextBoxBorder
 
 section .bss
@@ -533,79 +495,58 @@ section .text
 
 global PrintStatsBox
 
-; PrintStatsBox needs the battle UI level-up box coordinates. They are `equ`s used
-; in address arithmetic (wTileMap + LVLBOX_OFF), and an extern cannot be used in
-; assembly-time arithmetic — so the equates-only layout include comes along, exactly
-; as ARROW_OFF forced it into joypad2.asm in chunk 16.
-%define UI_LAYOUT_EQUATES_ONLY 1
-%include "assets/ui_layout_battle.inc"
-%define LVLBOX_OFF   UI_LVLUP_BOX_OFS
-%define LVLBOX_W     (UI_LVLUP_BOX_GBW - 2)
-%define LVLBOX_H     (UI_LVLUP_BOX_GBH - 2)
-%define LVL_LBL_OFF  UI_LVLUP_LBL_OFS
-%define LVL_VAL_OFF  UI_LVLUP_VAL_OFS
-
-extern print_num3                    ; src/engine/battle/battle_menu.asm
-extern lvl_mon_ptr                   ; src/engine/battle/battle_menu.asm
-extern menu_item_step                ; src/home/window.asm
-extern str_attack                    ; assets/battle_menu_runtime_strings.inc
-extern str_defense                   ; assets/battle_menu_runtime_strings.inc
-extern str_speed                     ; assets/battle_menu_runtime_strings.inc
-extern str_special                   ; assets/battle_menu_runtime_strings.inc
-
-; PrintStatsBox — pret PrintStatsBox.LevelUpStatsBox: box + ATTACK/DEFENSE/SPEED/SPECIAL
-; with right-aligned values from the leveled party mon (CalcStats wrote the new stats).
+; ---------------------------------------------------------------------------
+; PrintStatsBox — pret engine/pokemon/status_screen.asm:PrintStatsBox
+; Single faithful routine with DH param (pret d):
+;   DH == STATUS_SCREEN_STATS_BOX (0) → box at (0,8) 8×8, labels at (1,9) bc=FW+5
+;   DH != 0 → box at (9,2) 8×9, labels at (11,3) bc=FW+4
+; Both branches read stats from wLoadedMon* and use PrintNumber (bh=2, bl=3).
+; ---------------------------------------------------------------------------
 PrintStatsBox:
-    and byte [ebp + wLetterPrintingDelayFlags], (~(1 << BIT_TEXT_DELAY)) & 0xFF
-    mov dword [menu_item_step], FW
-    mov esi, wTileMap + LVLBOX_OFF
-    mov bh, LVLBOX_H
-    mov bl, LVLBOX_W
+    test dh, dh
+    jnz .levelUp
+    mov esi, scoord(0, 8)
+    mov bh, 8
+    mov bl, 8
     call TextBoxBorder
-    movzx eax, byte [ebp + wWhichPokemon]
-    imul eax, eax, PARTYMON_STRUCT_LENGTH
-    add eax, wPartyMon1
-    mov [lvl_mon_ptr], eax
-    mov esi, wTileMap + LVL_LBL_OFF
-    mov eax, str_attack
+    mov esi, scoord(1, 9)
+    mov ecx, FW + 5
+    jmp .printStats
+.levelUp:
+    mov esi, scoord(9, 2)
+    mov bh, 8
+    mov bl, 9
+    call TextBoxBorder
+    mov esi, scoord(11, 3)
+    mov ecx, FW + 4
+.printStats:
+    push ecx
+    push esi
+    mov eax, StatsText
     call PlaceString
-    mov esi, ebx
-    mov esi, wTileMap + LVL_LBL_OFF + 2 * FW
-    mov eax, str_defense
-    call PlaceString
-    mov esi, ebx
-    mov esi, wTileMap + LVL_LBL_OFF + 4 * FW
-    mov eax, str_speed
-    call PlaceString
-    mov esi, ebx
-    mov esi, wTileMap + LVL_LBL_OFF + 6 * FW
-    mov eax, str_special
-    call PlaceString
-    mov esi, ebx
-    mov ebx, [lvl_mon_ptr]
-    mov edi, wTileMap + LVL_VAL_OFF
-    movzx eax, byte [ebp + ebx + MON_ATK]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_ATK + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, wTileMap + LVL_VAL_OFF + 2 * FW
-    movzx eax, byte [ebp + ebx + MON_DEF]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_DEF + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, wTileMap + LVL_VAL_OFF + 4 * FW
-    movzx eax, byte [ebp + ebx + MON_SPD]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_SPD + 1]
-    call print_num3
-    mov ebx, [lvl_mon_ptr]
-    mov edi, wTileMap + LVL_VAL_OFF + 6 * FW
-    movzx eax, byte [ebp + ebx + MON_SPC]
-    shl eax, 8
-    mov al, [ebp + ebx + MON_SPC + 1]
-    call print_num3
+    pop esi
+    pop ecx
+    add esi, ecx
+    mov edx, wLoadedMonAttack
+    mov bh, 2
+    mov bl, 3
+    call .printStat
+    mov edx, wLoadedMonDefense
+    call .printStat
+    mov edx, wLoadedMonSpeed
+    call .printStat
+    mov edx, wLoadedMonSpecial
+    mov bh, 2
+    mov bl, 3
+    call PrintNumber
+    ret
+.printStat:
+    push esi
+    mov bh, 2
+    mov bl, 3
+    call PrintNumber
+    pop esi
+    lea esi, [esi + FW * 2]
     ret
 
 ; ---------------------------------------------------------------------------

@@ -1,16 +1,10 @@
-; dos_port/engine/pokemon/add_mon.asm — _AddEnemyMonToPlayerParty + _MoveMon.
+; dos_port/engine/pokemon/add_mon.asm — _AddPartyMon, LoadMovePPs/AddPartyMon_WriteMovePP,
+;   _AddEnemyMonToPlayerParty, _MoveMon.
 ;
-; Source: engine/pokemon/add_mon.asm:_AddEnemyMonToPlayerParty, _MoveMon
-;         (pret/pokeyellow). pret's _AddPartyMon half (and its
-;         AddPartyMon_WriteMovePP PP helper) live in add_party_mon.asm in this
-;         port; this file carries only the trade / box-move halves.
-;
-; DUP-SYMBOL RESOLUTION (M5.2): this file previously carried a stale, DIFFERENT
-; `global AddPartyMon_WriteMovePP` (dest in EDI, FarCopyData→wMoveData) that
-; duplicated the canonical global in write_moves.asm and the file-local copy in
-; add_party_mon.asm. It was unreferenced here (pret's only caller, _AddPartyMon,
-; is in add_party_mon.asm) so it is DELETED — dedup, not rename. The canonical
-; PP writer stays in write_moves.asm.
+; Source: engine/pokemon/add_mon.asm: all five labels in pret order
+;   (_AddPartyMon, LoadMovePPs, AddPartyMon_WriteMovePP, _AddEnemyMonToPlayerParty, _MoveMon)
+;   (pret/pokeyellow). This file now holds all five in pret order; the previous
+;   split into add_party_mon.asm / write_moves.asm is retired.
 ;
 ; Register map: a=AL, b=BH, c=BL (bc=EBX), d=DH, e=DL (de=EDX), hl=ESI.
 ; GB WRAM is [ebp + sym]; data tables are flat program-image labels.
@@ -314,7 +308,7 @@ _AddPartyMon:
     inc edx
     inc edx                          ; de = struct+0x1C
     pop esi                          ; [S2] moves ptr (MON_MOVES base) = WritePP source
-    call AddPartyMon_WriteMovePP_PartyBuilder ; local flat-table variant
+    call AddPartyMon_WriteMovePP
 
     ; level
     inc edx
@@ -352,32 +346,6 @@ _AddPartyMon:
 .lnPlayer:
     mov al, [ebp + wPartyCount]
     dec al
-    ret
-
-; AddPartyMon_WriteMovePP_PartyBuilder — port-local flat-table variant of the
-; pret AddPartyMon_WriteMovePP provider in write_moves.asm.
-; Source: engine/pokemon/add_mon.asm:AddPartyMon_WriteMovePP.
-; In: ESI (hl) = MON_MOVES base (move ids, WRAM); EDX (de) = MON_PP - 1 (WRAM).
-; DIVERGENCE: read the PP byte straight from the flat Moves table (like
-; GetMonHeader) instead of FarCopyData-ing the record to wMoveData.
-; NOTE (Wave-5 M5.2): a duplicate lives in add_mon.asm; leave this file-local
-; copy intact — M5.2 resolves the duplication.
-AddPartyMon_WriteMovePP_PartyBuilder:
-    mov bh, NUM_MOVES
-.pploop:
-    mov al, [ebp + esi]              ; ld a,[hli] — move id from slot
-    inc esi
-    test al, al
-    jz .empty                       ; empty slot ⇒ PP 0
-    movzx eax, al
-    dec eax
-    imul eax, eax, MOVE_LENGTH
-    mov al, [Moves + eax + MOVE_PP]  ; base PP (flat table)
-.empty:
-    inc edx
-    mov [ebp + edx], al              ; ld [de],a (PP, or 0 for empty)
-    dec bh
-    jnz .pploop
     ret
 
 ; ---------------------------------------------------------------------------
@@ -473,11 +441,11 @@ _AddEnemyMonToPlayerParty:
     mov cl, al
     mov bh, FLAG_SET                    ; pret `ld b, FLAG_SET` (B=BH); FlagAction reads action in BH
     mov esi, wPokedexOwned
-    push cx
-    push bx
+    push ecx
+    push ebx
     call FlagAction
-    pop bx
-    pop cx
+    pop ebx
+    pop ecx
     mov esi, wPokedexSeen
     call FlagAction
     
@@ -568,10 +536,10 @@ _MoveMon:
     
 .copyMonData:
     push esi
-    push dx
+    push edx
     mov bx, BOXMON_STRUCT_LENGTH
     call CopyData
-    pop dx
+    pop edx
     pop esi
     
     mov al, [ebp + wMoveMonType]
@@ -694,7 +662,7 @@ _MoveMon:
     
     mov ecx, (MON_HP_EXP - 1) - MON_STATS ; ld bc,-0x12 (sign-ext = 16-bit add hl,bc)
     add esi, ecx
-    mov bl, 1
+    mov bh, 1
     call CalcStats
     
 .done:
