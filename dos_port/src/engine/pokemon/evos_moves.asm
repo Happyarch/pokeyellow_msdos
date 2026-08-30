@@ -291,8 +291,8 @@ Evolution_PartyMonLoop:
     mov [ebp + wUpdateSpritesEnabled], al
     call ClearSprites
 
-    ; The evolution animation. Now functional: the B-cancel loop is LIVE; the
-    ; cries + palette-flash back-and-forth morph are [2b]/TODO-HW deferred.
+    ; The evolution animation is live: B-cancel loop, cries + palette-flash
+    ; morph all run (engine/movie/evolution.asm EvolveMon).
     call EvolveMon                  ; pret: callfar EvolveMon
     jc CancelledEvolution           ; B pressed (and not forced) → cancel
 
@@ -576,9 +576,10 @@ Evolution_ReloadTilesetTilePatterns:
 ; ===========================================================================
 ; Func_3b079 / Func_3b0a2 / Func_3b10f — pret engine/pokemon/evos_moves.asm:384.
 ;
-; UNREFERENCED IN PRET, and so here. pret's own comment on their data table says
-; "This list is used by a unreferenced function." Together they answer "can the
-; mon in wCurPartySpecies learn TM/HM [wTempTMHM], possibly after evolving?":
+; Referenced in pret by engine/menus/link_menu.asm PetitCup (the per-mon
+; evolution-stage check), so the old "UNREFERENCED IN PRET" note on these is
+; wrong. Together they answer "can the mon in wCurPartySpecies learn TM/HM
+; [wTempTMHM], possibly after evolving?":
 ; Func_3b0a2 tests the current species (TM learnset bit, the Pointer_3b0ee species
 ; list, its already-known moves, then its level-up learnset), and Func_3b10f walks
 ; the evolution table to advance wCurPartySpecies to whatever it evolves into.

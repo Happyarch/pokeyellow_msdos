@@ -599,8 +599,9 @@ RunLinkBookCheck:
     SetEvent EVENT_GOT_POKEDEX          ; open the receptionist's gate
     call CableClubNPC                   ; blocks in LinkTransportSelect's UI;
                                          ; returns once the player cancels all
-                                         ; the way out -- no transport exists
-                                         ; in this stage to actually bind
+                                         ; the way out, without binding a
+                                         ; transport (the check builds the UI,
+                                         ; not a session)
 .park:                                  ; hold still for the AUTOKEY_DUMP_FRAME photograph
     call DelayFrame
     jmp .park

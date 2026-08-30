@@ -4,7 +4,11 @@
 ; Renders accumulated 2bpp bands from g_print_band_buf to an ESC/P dot-matrix
 ; raster stream and outputs via lpt_dos.asm (Lpt_Open, Lpt_Write, Lpt_Close).
 ; Supports monochrome 2x2 ordered dither and 4-pass CMY(K) color (/PRNCOLOR).
-; See docs/current_plan_printer.md.
+; The GB Printer packet exposure byte is used as brightness/contrast in the
+; monochrome path and as saturation in the /PRNCOLOR path (see
+; .GetPixelColorLevel). The Options "PRINT:" row feeds it unmodified through
+; wPrinterSettings -> wPrinterSettingsTempCopy -> g_print_exposure.
+; See docs/plans/printer.md.
 ; ===========================================================================
 
 bits 32
@@ -564,6 +568,8 @@ Escp_PrintPage:
 ;   EAX = y (0..143)
 ;   EDX = plane ID (4=Yellow, 1=Magenta, 2=Cyan, 0=Black)
 ; Returns: EAX = dither level (0..3)
+;
+; DEVIATION{class=HAL; pret=engine/printer/serial.asm:Printer_StageHeaderForSend; behavior=the GB Printer packet exposure byte (Options PRINT brightness) is reused as a saturation scale in the /PRNCOLOR backend (LIGHTEST=$00 desaturates to luminance, LIGHTER=$20 halves saturation, NORMAL=$40 is identity, DARKER=$60 boosts, DARKEST=$7f boosts maximally with clamping) while the mono path uses the same byte as exposure/brightness; evidence=the port-only ESC/P color backend owns the post-printer interpretation and the DOS output is at the printer hardware boundary; lifetime=permanent while /PRNCOLOR reuses the Options exposure byte}
 ; ---------------------------------------------------------------------------
 .GetPixelColorLevel:
     push ebx
@@ -638,6 +644,64 @@ Escp_PrintPage:
     movzx ebx, byte [esi + 1]            ; G6 (0..63)
     movzx ecx, byte [esi + 2]            ; B6 (0..63)
 
+    ; 3b. Exposure -> saturation in the color backend. Normal=$40 is identity;
+    ; light settings desaturate toward luminance, dark settings boost it:
+    ;   channel' = LUM + ((channel - LUM) * exposure) / 64, clamped 0..63.
+    push eax                             ; R
+    push ebx                             ; G
+    push ecx                             ; B
+    mov eax, [esp + 8]                   ; R
+    add eax, [esp + 4]                   ; + G
+    add eax, [esp]                       ; + B
+    xor edx, edx
+    mov ebx, 3
+    div ebx                              ; EAX = LUM = (R+G+B)/3
+    mov edi, eax                         ; EDI = luminance
+    pop ecx                              ; B
+    pop ebx                              ; G
+    pop eax                              ; R
+
+    movzx edx, byte [g_print_exposure]   ; EDX = exposure scale (0..127)
+
+    sub eax, edi
+    imul eax, edx
+    sar eax, 6
+    add eax, edi
+    cmp eax, 0
+    jge .r_ge0
+    xor eax, eax
+.r_ge0:
+    cmp eax, 63
+    jle .r_ok
+    mov eax, 63
+.r_ok:
+
+    sub ebx, edi
+    imul ebx, edx
+    sar ebx, 6
+    add ebx, edi
+    cmp ebx, 0
+    jge .g_ge0
+    xor ebx, ebx
+.g_ge0:
+    cmp ebx, 63
+    jle .g_ok
+    mov ebx, 63
+.g_ok:
+
+    sub ecx, edi
+    imul ecx, edx
+    sar ecx, 6
+    add ecx, edi
+    cmp ecx, 0
+    jge .b_ge0
+    xor ecx, ecx
+.b_ge0:
+    cmp ecx, 63
+    jle .b_ok
+    mov ecx, 63
+.b_ok:
+
     ; 4. Compute plane ink value based on EDX (plane ID: 4=Y, 1=M, 2=C, 0=K)
     mov edx, [esp + 8]                   ; retrieve plane ID
     cmp edx, 4
@@ -675,11 +739,10 @@ Escp_PrintPage:
     jmp .map_level
 
 .plane_cyan:
-    ; C = 63 - R6
+    ; C = 63 - adjusted R
+    mov edx, eax
     mov eax, 63
-    sub eax, eax                         ; C = 63 - R6
-    mov eax, 63
-    sub eax, [esi + 0]
+    sub eax, edx
     jmp .map_level
 
 .map_level:

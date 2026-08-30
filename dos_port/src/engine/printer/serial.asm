@@ -2,11 +2,12 @@
 ;
 ; Mirror of pret engine/printer/serial.asm.
 ;
-; UNPORTED ROUTINE:
-;   PrinterSerial_ (pret :452-632) — the per-byte serial interrupt pump is
-;   unported because serial transmission is superseded by the synchronous
-;   in-memory virtual GB Printer packet consumption (PrintDev_ConsumePacket).
-;   See docs/current_plan_printer.md.
+; NOT IN THE LINKED FLOW:
+;   PrinterSerial_ (pret :452-632) — the per-byte serial interrupt pump. The
+;   port printer device consumes whole packets synchronously through
+;   PrintDev_ConsumePacket, so the interrupt pump is not reached by the linked
+;   printer flow (it is the port's permanent HAL seam, not missing hardware).
+;   See docs/plans/printer.md.
 ;
 ; ---------------------------------------------------------------------------
 
@@ -284,7 +285,7 @@ Printer_WaitLoopBack_:
 .ret:
     ret
 
-; DEVIATION{class=HAL; pret=engine/printer/serial.asm:Printer_PrepareToSend; behavior=in-memory virtual GB Printer packet consumption replaces rSB/rSC serial transmission; evidence=docs/current_plan_printer.md; lifetime=permanent}
+; DEVIATION{class=HAL; pret=engine/printer/serial.asm:Printer_PrepareToSend; behavior=in-memory virtual GB Printer packet consumption replaces rSB/rSC serial transmission; evidence=docs/plans/printer.md; lifetime=permanent}
 Printer_PrepareToSend:
     mov word [ebp + wPrinterSendByteOffset], 0
     call PrintDev_ConsumePacket

@@ -453,7 +453,7 @@ ExitBillsPC:
 ; BillsPCPrintBox — pret ref: engine/pokemon/bills_pc.asm:BillsPCPrintBox.
 ; ---------------------------------------------------------------------------
 BillsPCPrintBox:
-    call PrintPCBox                          ; callfar PrintPCBox — STUB (printer)
+    call PrintPCBox                          ; callfar PrintPCBox — real GB Printer entry
     jmp BillsPCMenu                          ; jp BillsPCMenu
 
 ; ---------------------------------------------------------------------------

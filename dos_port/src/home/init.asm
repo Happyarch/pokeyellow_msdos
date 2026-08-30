@@ -14,7 +14,9 @@
 ;   predef PlayIntro             → call PlayIntro (Game Freak splash + Yellow intro);
 ;                                  faithful default — runs on every normal power-on,
 ;                                  skipped only under SKIP_TITLE / SKIP_INTRO (menu-intro B4)
-;   audio engine setup           → ; TODO: audio HAL (Phase 3)
+;   audio engine setup           → StopAllSounds + SFX_Shooting_Star bank seed
+;                                  (audio engine is live; the bank bytes below are
+;                                  load-bearing, not done-at-PowerOn-inert cells)
 ;   jp PrepareTitleScreen        → jmp PrepareTitleScreen (title screen implemented;
 ;                                  routes to MainMenu — menu-intro A2/A3)
 ;

@@ -2,8 +2,8 @@
 ; cable_club.asm — mirror of pret engine/link/cable_club.asm (all 23 labels).
 ; Link plan Stage 3 (docs/current_plan_link_cable.md): the Trade Center engine
 ; (block build/patch/exchange/unpatch, RNG list election, the two-column
-; select-mon UI, the trade itself) and the Colosseum entry branch (goes live
-; in Stage 4's link battle).
+; select-mon UI, the trade itself) and the Colosseum link-battle entry branch
+; (code-complete; runtime verified under the plan's two-instance battery).
 ;
 ; PRESENTATION — the movie-projection surface (port-only):
 ; DEVIATION{class=projection; pret=engine/link/cable_club.asm:CableClub_DoBattleOrTrade; behavior=the whole cable-club session from CableClub_DoBattleOrTrade to ReturnToCableClubRoom or the index-ff title reset runs on the shared 160x144 cinematic surface (MovieBeginSurface slash MovieEndSurface) with every pret hlcoord projected by the uniform X+10 Y+3 transform and the per-frame surface mirror providing visibility through delays and exchange waits, and pret stride-20 linear tilemap runs that wrap rows are decomposed into per-row fills of the same cells; evidence=the trade-center screens and the Stage-3 trade cinematic are authored against the GB 20x18 viewport like every cinematic (movie_projection.asm header) and the battle projection BCOORD uses the numerically identical transform so PrintWaitingText serves both contexts unchanged; lifetime=permanent widescreen projection}
@@ -508,7 +508,7 @@ CableClub_DoBattleOrTradeAgain:
     mov al, LINK_STATE_TRADING      ; flag-preserving (ld a, n)
     mov [ebp + wLinkState], al
     jne .trading
-    ; --- Colosseum: link battle (goes live in Stage 4) ---
+    ; --- Colosseum: link battle (code-complete; two-instance battery pending) ---
     mov al, LINK_STATE_BATTLING
     mov [ebp + wLinkState], al
     mov al, OPP_RIVAL1

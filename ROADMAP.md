@@ -166,7 +166,7 @@ not an `.inc`) with the per-device shims beside it: `opl_shim.asm`,
 and the `opl_enh.asm` enhancement layer). The pret audio engine is translated and
 live in the build (`engine_1..4.asm`, `low_health_alarm.asm`, `poke_flute.asm`,
 `play_battle_music.asm`, `pikachu_pcm.asm`, `alternate_tempo.asm`,
-`pokedex_rating_sfx.asm`). Per `docs/current_plan_audio.md`, phases A–E are
+`pokedex_rating_sfx.asm`). Per `docs/plans/audio.md`, phases A–E are
 implemented and merged to master; **Phase C (Pikachu PCM) and Phase D (Tandy +
 speaker SFX + polish) both completed 2026-07-07**, and Phase B's MIDI/MT-32
 infrastructure is complete with only by-ear tuning outstanding.
@@ -184,14 +184,14 @@ Device selection at runtime is via `PKMN.EXE` flags (see `dos_port/boot/entry.as
 
 **Remaining Phase 3 work — content, not architecture:**
 - Per-track LLM arrangement passes (Phase E): OPL3 tier-1, then MT-32/GM
-  tier 2–3, auditioned per song. See `docs/current_plan_audio.md` and the
+  tier 2–3, auditioned per song. See `docs/plans/audio.md` and the
   `score-analysis` / `music-theory` / `audio-enhance-*` skills.
 - MT-32 by-ear patch tuning through the audition loop (Phase B tail).
 - Deferred: upgrading `sb_pcm` to auto-init DMA.
 
 Query the live open-item list rather than trusting this list:
-`dos_port/tools/project_state --plans` (as of writing: `current_plan_audio.md`
-30 completed / 4 open).
+`dos_port/tools/project_state --plans` (the audio plan is archived at
+`docs/plans/audio.md`; there is no `current_plan_audio.md` anymore).
 
 ---
 
@@ -319,5 +319,9 @@ Acceptance criteria:
 ## Deferred / Out of Scope
 
 - SGB (Super Game Boy) functions — not relevant for this port
-- Game Boy Printer / Camera accessories
+- Game Boy Printer / Camera **hardware accessories** — real-device printing
+  cannot be verified on a PC. The in-game Printer tier itself is **ported**:
+  `dos_port/src/engine/printer/*.asm` (pret mirrors) + `dos_port/src/print/*.asm`
+  (ESC/P over LPT1 / print-to-file / `/PRNCOLOR` backend), plan archived at
+  `docs/plans/printer.md`.
 - Virtual Console (VC) patch support

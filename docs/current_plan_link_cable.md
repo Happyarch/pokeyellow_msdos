@@ -44,7 +44,7 @@ for harness work.
   under the UI section.
 - **Printer and link keep separate forks of the pret serial functions.**
   Verified compatible: the printer plan cuts inside the printer engine
-  (`Printer_PrepareToSend` → in-memory device; `docs/current_plan_printer.md`
+  (`Printer_PrepareToSend` → in-memory device; `docs/plans/printer.md`
   "The seam") and does no `home/serial.asm`/rSB/rSC work, so
   `dos_port/src/home/serial.asm` belongs to the link layer alone. Pret
   `Serial`'s `wPrinterConnectionOpen` branch is retained as a documented dead
@@ -257,7 +257,8 @@ blocks in `src/engine/menus/naming_screen.asm`.
 ### Stage 0 — governance + groundwork
 - [x] Directive doc sites updated (done in this plan's landing commit):
       the then-active overworld-events plan (retired 2026-08-28 →
-      `docs/plans/overworld_events.md`) and `docs/current_plan_printer.md`
+      `docs/plans/overworld_events.md`) and `docs/plans/printer.md`
+      (the printer plan is archived)
 - [ ] HOST SESSION: apply the stigmergy edits queued in
       `docs/stigmergy_outbox.jsonl` (the `link-layer-planned-transports`
       rewrite, the regression memory_search fold-back, and the Stage 2

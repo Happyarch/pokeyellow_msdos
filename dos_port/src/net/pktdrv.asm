@@ -2,11 +2,10 @@
 ; pktdrv.asm — FTP Software Packet Driver 1.09 client (port-only, no pret
 ; counterpart). docs/current_plan_link_cable.md Stage 7 step 1.
 ;
-; Stage 7 step 1 delivers ONLY the driver-facing primitives: Pktdrv_Init/
-; Shutdown/Send/Recv. NOTHING here is wired into net_hal.asm — no vtable
-; row, no NetInit branch, no link_ui.asm change. Nothing calls Pktdrv_* yet;
-; this file links as dead-but-present code (see "LINK-ONLY, UNREFERENCED"
-; below). Stage 7 step 2 (net_ip.asm) is what makes this transport live.
+; Stage 7 delivered the driver-facing primitives first (Pktdrv_Init/Shutdown/
+; Send/Recv), and Stage 7 step 2 (net_ip.asm) wired them into the TCP
+; transport: net_ip.asm calls Pktdrv_* and net_hal.asm's NET_TRANSPORT_TCP
+; vtable row runs net_ip_pump.
 ;
 ; ===========================================================================
 ; THE PACKET DRIVER API CONTRACT (per the Stage 7 spec's FTP Software Packet
@@ -208,13 +207,10 @@
 ; BIG-ENDIAN as the frame arrived.
 ; ===========================================================================
 ;
-; LINK-ONLY, UNREFERENCED (Stage 7 step 1's own invariant): nothing in this
-; build calls Pktdrv_Init/Shutdown/Send/Recv — no vtable row, no NetInit
-; branch, no link_ui.asm change (all step 2's job). This file is added to
-; the Makefile's NET_SRCS next to ipx_dos.asm purely so it ASSEMBLES AND
-; LINKS; the plain build's BEHAVIOR is unchanged by its presence — verified
-; by linking and confirming no other object references any Pktdrv_* symbol
-; (see the self-check report).
+; Referenced by net_ip.asm (Stage 7 step 2): Pktdrv_Init/Shutdown/Send/Recv
+; are the packet-driver half of the TCP transport. The step-1 invariant
+; ("nothing calls these yet") is superseded — the "pre-wiring" comment was a
+; stage marker, not a permanent dead-code claim.
 ;
 ; Build check: nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 \
 ;              -o /dev/null src/net/pktdrv.asm   (from dos_port/)

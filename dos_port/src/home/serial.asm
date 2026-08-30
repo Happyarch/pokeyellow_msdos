@@ -1,11 +1,12 @@
 ; ===========================================================================
 ; serial.asm — mirror of pret home/serial.asm (all 13 of its labels).
-; docs/current_plan_link_cable.md Stage 1: serial core + no-transport parity.
+; The serial core is the HAL line for the port's link-cable transports
+; (docs/current_plan_link_cable.md).
 ;
 ; This file is the link plan's HAL LINE. Everything above these routines
-; (link_menu.asm today; cable_club*.asm, trade and link battle in later
-; stages) is translated verbatim from pret and calls these primitives by
-; their pret contracts. Below them sits the port-owned transport layer
+; (link_menu.asm, cable_club*.asm, the trade center, and link battle) is
+; translated verbatim from pret and calls these primitives by their pret
+; contracts. Below them sits the port-owned transport layer
 ; (src/net/net_hal.asm): rSB/rSC are virtual bytes (IO_SB/IO_SC), every
 ; `rSC = SC_START|*` write is followed by NetHAL_StartTransfer, and the
 ; serial INTERRUPT is replaced by delivery — a transport pump that completes
@@ -32,11 +33,13 @@
 ;       := $ff (Func_f531b reads it as wLinkMenuSelectionReceiveBuffer ->
 ;       remote-ineligible -> redraw/retry path)
 ;   Serial_ExchangeBytes             -> immediate return, buffers untouched
-;       (no pret caller is linked before Stage 3; the hatch is a hang guard)
+;       when no link session is up (e.g. a dead mid-block exchange); the
+;       caller is CableClub_DoBattleOrTradeAgain, and the hang guard keeps a
+;       dead exchange from walking a partially-filled receive buffer.
 ;
-; hSerialConnectionStatus stays pinned to CONNECTION_NOT_ESTABLISHED ($ff) by
-; LinkMenu at entry until Stage 2's HELLO role election writes pret's own
-; $01/$02 constants into it.
+; With a live transport the HELLO/token election in net_hal.asm writes the
+; pret $01/$02 connection constants; with no link session the escape hatches
+; above keep the menus on pret's terminal no-partner paths.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP=GB base.
 ; Preservation matches pret per routine; DelayFrame and the NetHAL_* entries
@@ -71,8 +74,10 @@ extern NetHAL_StartTransfer     ; src/net/net_hal.asm — the rSC-write HAL site
 extern NetHAL_ExchangeBlock     ; src/net/net_hal.asm — whole-block exchange
                                 ; (Serial_ExchangeBytes' HAL cut, Stage 3)
 extern DelayFrame               ; src/home/vblank.asm
-extern PrinterSerial            ; src/home/printer.asm — dead
-                                ; branch, see PrinterSerial__ below
+extern PrinterSerial            ; src/home/printer.asm — the Serial handler's
+                                ; printer branch; not reached from the port
+                                ; printer flow (packets are consumed
+                                ; synchronously by PrintDev_ConsumePacket)
 extern PrintWaitingText         ; src/engine/link/print_waiting_text.asm
                                 ; (pret mirror, real as of Stage 3 — the
                                 ; link_stubs.asm stub is retired)
@@ -100,8 +105,8 @@ section .text
 ;
 ; DEVIATION{class=HAL; pret=home/serial.asm:Serial; behavior=runs as a plain call from a transport pump on exchange completion with ret instead of a hardware serial interrupt with reti, rSB/rSC are virtual GB-memory bytes and the slave re-arm rSC write is consumed by the transport driver via NetHAL_StartTransfer; evidence=the port has no SM83 interrupt controller and net_hal.asm transports deliver completed exchanges from NetHAL_Pump (docs/current_plan_link_cable.md message-level seam); lifetime=permanent HAL boundary}
 ;
-; Stage 1: nothing calls this yet (the null transport never delivers). It is
-; translated now so the Stage-2 UART pump has the real handler to call.
+; Reached from the transport pump: net_deliver_gb_byte (src/net/net_hal.asm)
+; calls this with a completed exchange's received byte staged in IO_SB.
 ; ---------------------------------------------------------------------------
 Serial:
     push eax                        ; push af/bc/de/hl
@@ -110,9 +115,11 @@ Serial:
     push esi
     ; ld a,[wPrinterConnectionOpen] / bit 0,a / jp nz, PrinterSerial__
     mov al, [ebp + wPrinterConnectionOpen]
-    test al, 1                      ; retained DEAD branch: no port code sets
-    jnz PrinterSerial__             ; bit 0 (printer plan cuts inside the
-                                    ; printer engine, not here)
+    test al, 1                      ; printer branch retained: the printer
+    jnz PrinterSerial__             ; engine sets bit 0 as pret does, but the
+                                    ; port consumes printer packets synchronously
+                                    ; through PrintDev_ConsumePacket, so Serial
+                                    ; is not reached from printer printing paths.
     ; ldh a,[hSerialConnectionStatus] / inc a / jr z (status == $ff -> not yet
     ; established)
     mov al, [ebp + hSerialConnectionStatus]
@@ -517,10 +524,11 @@ Serial_TryEstablishingExternallyClockedConnection:
 
 ; ---------------------------------------------------------------------------
 ; PrinterSerial__ — pret home/serial.asm:331. The Serial handler's printer
-; branch: retained as a documented DEAD branch (no port code sets
-; wPrinterConnectionOpen bit 0; the printer plan's seam is inside the printer
-; engine, docs/current_plan_printer.md "The seam"). Pops the registers Serial
-; pushed, exactly as pret does.
+; branch. The printer engine sets wPrinterConnectionOpen bit 0 exactly as pret
+; does, but the port's printer flow consumes packets synchronously through
+; PrintDev_ConsumePacket, so this branch is retained for contract fidelity
+; rather than reached from printer printing paths (see docs/plans/printer.md).
+; Pops the registers Serial pushed, exactly as pret does.
 ; ---------------------------------------------------------------------------
 PrinterSerial__:
     call PrinterSerial

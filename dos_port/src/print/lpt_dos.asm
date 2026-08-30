@@ -4,7 +4,7 @@
 ; Implements Lpt_Open, Lpt_Write, Lpt_Close using reflected INT 21h via DPMI
 ; (INT 31h AX=0300h) in raw mode or creating PRINTnnn.PRN capture files.
 ; Follows the dsv_io.asm reflected-INT-21h DPMI conventional buffer idiom.
-; See docs/current_plan_printer.md.
+; See docs/plans/printer.md.
 ; ===========================================================================
 
 bits 32

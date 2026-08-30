@@ -11,7 +11,8 @@
 ; src/engine/pokemon/load_mon_data.asm, which keeps the real body LoadMonData_.
 ; PlayCry and GetCryData joined the mirror 2026-08-12 (battle plan 1d) — see the
 ; two banners at the end of this file; they were ret-stubs in home_stubs.asm.
-; NOT here: OverwritewMoves and GetwMoves are unported.
+; OverwritewMoves and GetwMoves are ported (see the banner at the end of this
+; file).
 ;
 ; GetMonHeader copies the 28-byte base-stats record for the internal species
 ; index in [wCurSpecies] into wMonHeader, then overwrites byte 0 (the dex id)
@@ -34,8 +35,9 @@
 ; they have NO BaseStats entry, so it skips the copy and instead writes the sprite
 ; dimensions + front-pic pointer into wMonHSpriteDim. Without this guard the port
 ; would index BaseStats out of bounds (dex lookup returns 0) and copy garbage. The
-; front-pic pointer is written as 0 for now — the fossil/ghost battle sprites are
-; not ported yet (no battle sprite loader); TODO-HW below.
+; front-pic pointer is written as a SPECIAL_PIC_* handle (not a GB ROM address),
+; resolved by UncompressMonSprite via SpecialMonPics — the battle sprite loader
+; exists (see the DEVIATION at .specialID below and src/home/pics.asm).
 ;
 ; Build: nasm -f coff -I include/ -I . -o pokemon.o pokemon.asm
 

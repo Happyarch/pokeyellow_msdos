@@ -126,6 +126,7 @@ extern SpecialEnterMap          ; engine/menus/main_menu.asm       (jpfar target
 
 ; --- cup-eligibility dependencies (PokeCup/PikaCup/PetitCup, below) ----------
 extern GetMonName               ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
+extern Func_3b10f               ; engine/pokemon/evos_moves.asm — species-evolves-into check
 ; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
 ; here: engine/menus/pokedex.asm owns the %include/embed; duplicate-including it
 ; would double-define every DexEntry label at link time). `dd` flat 32-bit .data
@@ -693,8 +694,8 @@ PikaCup:
 
 ; ===========================================================================
 ; PetitCup — pret ref: engine/menus/link_menu.asm:PetitCup.
-; Same team-shape gate; per-mon evolution-stage check (Func_3b10f — stubbed,
-; see below); per-mon dex-entry height (<6'8") + weight (<=44lb) check;
+; Same team-shape gate; per-mon evolution-stage check (Func_3b10f, ported in
+; evos_moves.asm); per-mon dex-entry height (<6'8") + weight (<=44lb) check;
 ; level gate 25-30 each, combined <=80.
 ; ===========================================================================
 PetitCup:
@@ -726,27 +727,30 @@ PetitCup:
     ; --- per-mon evolution-stage check (x3) ---
     ; pret: `ld a,[hl] / ld [wCurPartySpecies],a / push hl / callfar Func_3b10f
     ; / pop hl / jp c, asm_f56ad` for mon1, mon2, mon3 in turn.
-    ; DEVIATION{class=temporary; pret=engine/menus/link_menu.asm:PetitCup; behavior=treat all three party species as basic forms instead of calling Func_3b10f; evidence=pret PetitCup callfar sequence and project_state reports Func_3b10f missing; lifetime=until Func_3b10f is ported and wired}
-    ; Func_3b10f (engine/pokemon/evos_moves.asm — "does some species
-    ; evolve into wCurPartySpecies") is not yet ported (pokemon_behavior plan).
-    ; Stubbed to the "basic form" result (CF clear -> jc NOT taken) for every
-    ; mon. TODO once ported: extern Func_3b10f, preserve esi across the call
-    ; (pret wraps it in push/pop hl since callfar clobbers registers), replace
-    ; each `clc` stub below with `mov [ebp+wCurPartySpecies], al` / real call.
+    ; Func_3b10f is ported (src/engine/pokemon/evos_moves.asm): it scans the
+    ; evolution table and, on a match, rewrites wCurPartySpecies to the form
+    ; that evolves into the mon and returns CF=1. pret callers use it from
+    ; PetitCup; the former temporary "basic-form" deviation is retired with it.
     dec esi                             ; esi -> mon1 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; structured temporary deviation above: basic path
-    jc asm_f56ad
+    push esi                            ; pret push/pop hl around the farcall
+    call Func_3b10f
+    pop esi                             ; esi -> current mon species byte
+    jc asm_f56ad                        ; CF=1: mon is an evolved form
     inc esi                             ; esi -> mon2 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; structured temporary deviation above: basic path
+    push esi
+    call Func_3b10f
+    pop esi
     jc asm_f56ad
     inc esi                             ; esi -> mon3 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
-    clc                                 ; structured temporary deviation above: basic path
+    push esi
+    call Func_3b10f
+    pop esi
     jc asm_f56ad
     dec esi
     dec esi                             ; esi -> mon1 address (wPartySpecies)
@@ -946,10 +950,9 @@ asm_f569b:
     ret
 
 ; asm_f56ad — pret ref: engine/menus/link_menu.asm:asm_f56ad. Evolved-mon fail
-; (Func_3b10f's `jp c`). Currently unreachable while Func_3b10f is stubbed to
-; the basic-form path (see PetitCup) — kept live so the seam is a one-line
-; flip (`clc` -> real call) once Func_3b10f lands. pret: `ld a,[hl]` — esi
-; still points at the current mon's species byte at the jc site.
+; (Func_3b10f's `jp c`). Reached when Func_3b10f reports any of the three party
+; mons is an evolved form. pret: `ld a,[hl]` — esi still points at the current
+; mon's species byte at the jc site.
 asm_f56ad:
     mov al, [ebp + esi]
     mov [ebp + wNamedObjectIndex], al

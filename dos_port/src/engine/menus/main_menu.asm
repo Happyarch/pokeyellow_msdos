@@ -355,9 +355,9 @@ MainMenu:
 InitOptions:
     mov byte [ebp + wLetterPrintingDelayFlags], 1 << BIT_FAST_TEXT_DELAY
     mov byte [ebp + wOptions], TEXT_DELAY_MEDIUM
-    ; ld a,64 / ld [wPrinterSettings],a — plain WRAM value (printer/audio setting;
-    ; the printer hardware is TODO-HW only where a byte is actually transmitted,
-    ; which is not here — this is a value store, kept verbatim).
+    ; ld a,64 / ld [wPrinterSettings],a — plain WRAM value (printer/audio setting).
+    ; This is only the default seed; the value is transmitted later if a print is
+    ; requested. Kept verbatim from pret.
     mov byte [ebp + wPrinterSettings], 64
     ret
 

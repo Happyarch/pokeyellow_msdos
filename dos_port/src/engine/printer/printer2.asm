@@ -1,11 +1,14 @@
 ; ===========================================================================
 ; printer2.asm — pret mirror of engine/printer/printer2.asm.
 ;
-; UNPORTED ROUTINES:
+; NOT IN THE LINKED FLOW:
 ;   PrinterDebug_LoadGFX, PrinterDebug_DoFunction,
-;   PrinterDebug_ConvertStatusFlagsToTiles (pret :187-974) — debug test engine,
-;   only called inside a pret unreferenced block (engine/movie/title.asm:209-213).
-;   See docs/current_plan_printer.md.
+;   PrinterDebug_ConvertStatusFlagsToTiles (pret :187-974) — debug test engine.
+;   Its only pret caller is inside an unreferenced block
+;   (engine/movie/title.asm:209-213), so it is not part of the linked printer
+;   flow today. The associated Func_ea* / Data_ea9* helpers in this file are
+;   only referenced from that debug engine, so they sit in its shadow too.
+;   (Not a hardware/HAL deferral: the printer engine itself is ported.)
 ;
 ; ===========================================================================
 
