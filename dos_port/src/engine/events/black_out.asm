@@ -3,8 +3,7 @@
 ; The blackout bookkeeping half: clear the transient player/battle state, halve
 ; the player's money (3-byte BCD), arm the escape-warp flags so
 ; PrepareForSpecialWarp sends the player to their last Pokémon Center, and tail
-; into HealParty. Reached from HandleBlackOut (home/overworld.asm, ported into
-; engine/overworld/overworld.asm) via `callfar`.
+; into HealParty. Reached from HandleBlackOut (src/home/overworld.asm).
 ;
 ; Register map (CLAUDE.md): A→AL, HL→ESI, BC→BX, DE→EDX; EBP = GB memory base.
 ;

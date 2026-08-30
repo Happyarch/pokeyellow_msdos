@@ -1,4 +1,4 @@
-; dos_port/src/items/itemfinder.asm
+; dos_port/src/engine/items/itemfinder.asm
 
 %include "gb_macros.inc"
 %include "gb_constants.inc"      ; FLAG_TEST

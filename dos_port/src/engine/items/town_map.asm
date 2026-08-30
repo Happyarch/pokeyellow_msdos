@@ -27,6 +27,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
+%include "assets/audio_constants.inc"
 
 section .text
 
@@ -82,9 +83,6 @@ SCREEN_HEIGHT_PX   equ 144
 B_PAD_A            equ 0
 B_PAD_UP           equ 6
 B_PAD_DOWN         equ 7
-; TODO-HW(audio): real SFX ids from constants/music_constants.asm (PlaySound is a stub)
-SFX_TINK           equ 0x00
-SFX_HEAL_AILMENT   equ 0x00
 ; HRAM joypad (port layout: FFB3 pressed, FFB4 held, FFB5 hJoy5, FFB6, FFB7 hJoy7)
 ; %ifndef-guarded so these coexist once root promotes hJoy5/6/7 into
 ; gb_memmap.inc (shared with src/home/joypad2.asm).

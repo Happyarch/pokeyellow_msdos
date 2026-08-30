@@ -50,7 +50,7 @@ extern SetLastBlackoutMap                      ; src/engine/events/set_blackout_
 extern IsStarterPikachuAliveInOurParty         ; src/engine/pikachu/pikachu_status.asm
 extern LoadCurrentMapView                      ; src/home/overworld.asm
 extern Delay3                                  ; src/home/palettes.asm
-extern PikachuWalksToNurseJoy                  ; NOT YET DEFINED IN THE PORT
+extern PikachuWalksToNurseJoy                  ; src/engine/pikachu/pikachu_emotions.asm
 extern DelayFrames                             ; src/home/delay.asm
 extern DisablePikachuOverworldSpriteDrawing    ; src/home/pikachu.asm
 extern EnablePikachuOverworldSpriteDrawing     ; src/home/pikachu.asm

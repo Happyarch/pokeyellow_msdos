@@ -794,23 +794,14 @@ RestoreBonusPP:
 ;    UpdateHPBar2, and pret's guarantee only covers the path where the predef
 ;    runs. The Softboiled drain is still not animated (a separate call site).
 ;
-; 2. DEVIATION(text/window) — pret prints through PrintText, which composites the
-;    message box over the live screen buffer. The port's dialog projection
-;    collapses the window list to the dialog alone (set_single_window), so the
-;    bag list / party panel beneath it disappears for the duration. Every caller
-;    of these refusal texts redraws its screen right after (StartMenu_Item's
-;    reload, or .done's ReloadMapData), so the end state matches; the transient
-;    does not. Same DEVIATION TossItem_ carries (item_effects.asm).
-;    Retired by: a dialog printer that composites with the existing windows.
-;
-; 3. DEVIATION(palette) — `call z, RunDefaultPaletteCommand` after GBPalWhiteOut
-;    is a TODO-HW boundary (SGB/CGB palette commands, Phase 5).
+; DEVIATION{class=projection; pret=engine/items/item_effects.asm:UseItem_; behavior=refusal dialogs collapse window list to dialog alone rather than compositing over bag list; evidence=pret PrintText composition vs port dialog window projection; lifetime=until dialog printing composes with existing windows}
+; DEVIATION{class=HAL; pret=engine/items/item_effects.asm:UseItem_; behavior=RunDefaultPaletteCommand after GBPalWhiteOut is a no-op; evidence=Phase 5 palette HAL boundary; lifetime=until SGB/CGB palette HAL lands}
 ;
 ; 4. predef → direct call (port-wide, no bank/predef dispatch): FlagActionPredef
 ;    becomes `call FlagAction` (same idiom as engine/menus/pokedex.asm),
 ;    LearnMoveFromLevelUp / PrintStatsBox are called directly.
 ;
-; Build: nasm -f coff -I include/ -I . -o item_use.o src/engine/items/item_use.asm
+; Build: nasm -f coff -I include/ -I . -o item_effects.o src/engine/items/item_effects.asm
 
 %include "assets/audio_constants.inc"
 

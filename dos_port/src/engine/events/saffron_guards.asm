@@ -36,8 +36,8 @@ section .text
 ;       jr z, .drinkLoop
 ;       farjp RemoveItemByID
 ;
-; GuardDrinksList is a label DEFINED IN THIS FILE, i.e. it lives in the flat
-; program image, not in emulated GB memory — so `ld hl, GuardDrinksList` /
+; GuardDrinksList is defined in src/data/items/guard_drink_items.asm, living in
+; the flat program image, not in emulated GB memory — so `ld hl, GuardDrinksList` /
 ; `ld a, [hli]` is a FLAT pointer walk: `mov esi, GuardDrinksList` then
 ; `mov al, [esi]` with NO `ebp` added. (Compare CeladonMartRoofDrinkList in
 ; src/scripts/celadon_mart_roof.asm, the established precedent for exactly

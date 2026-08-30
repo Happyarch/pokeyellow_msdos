@@ -4,11 +4,9 @@
 ;
 ; Register map: A=AL, B=BH, C=BL, D=DH, E=DL, HL=ESI; GB memory at [EBP + addr].
 ;
-; NOT YET WIRED: pret's only caller is engine/events/hidden_events/bookshelves.asm:37
-; (`farjp PrintCardKeyText`), and the port's PrintBookshelfText is still a ret-stub in
-; src/engine/overworld/hidden_object_stubs.asm. So PrintCardKeyText is defined and
-; linked but not reached until the bookshelf handler lands. GetCoordsInFrontOfPlayer
-; has no port caller yet either.
+; WIRED: pret caller is engine/events/hidden_events/bookshelves.asm:37
+; (`farjp PrintCardKeyText`), called by PrintBookshelfText in
+; src/engine/events/hidden_events/bookshelves.asm.
 ;
 ; SilphCoMapList is a pret data/events/card_key_maps.asm label, generated into
 ; assets/card_key_maps.inc by tools/generators/gen_card_key_maps.py and %included

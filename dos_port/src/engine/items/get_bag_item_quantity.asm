@@ -1,4 +1,4 @@
-; dos_port/src/items/get_bag_item_quantity.asm
+; dos_port/src/engine/items/get_bag_item_quantity.asm
 
 %include "gb_macros.inc"
 %include "gb_memmap.inc"

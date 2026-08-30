@@ -946,7 +946,6 @@ GAME_SRCS := \
     src/engine/events/give_pokemon.asm \
     src/data/pickup_text.asm \
     src/data/text_predef_pointers.asm \
-    src/engine/events/hidden_events/hidden_events_stubs.asm \
     src/engine/events/hidden_events/bills_house_pc.asm \
     src/engine/events/hidden_events/reds_room.asm \
     src/engine/events/hidden_events/pokecenter_pc.asm \
