@@ -134,7 +134,7 @@ arg_tcp:      db '/TCP=',     0
 arg_ip:       db '/IP=',      0
 arg_mask:     db '/MASK=',    0
 arg_gw:       db '/GW=',      0
-; Printer configuration flags (docs/current_plan_printer.md Stage 4)
+; Printer configuration flags (docs/plans/printer.md Stage 4)
 arg_print9:   db '/PRINT9',   0
 arg_prncolor: db '/PRNCOLOR', 0
 arg_prnfile:  db '/PRNFILE',  0

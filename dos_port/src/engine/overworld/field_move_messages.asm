@@ -79,7 +79,7 @@ UsedStrengthText:
                                                 ; text_asm hook; the dispatch was a silent skip until
                                                 ; this file was linked and exposed it.
     mov al, [ebp + wCurPartySpecies]
-    call PlayCry                                ; TODO-HW: cry synth unported (see status_screen.asm)
+    call PlayCry                                ; home/pokemon.asm — real blocking cry body
     call Delay3
     jmp TextScriptEnd
 

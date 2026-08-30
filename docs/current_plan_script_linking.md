@@ -51,18 +51,17 @@ H/L use is incidental). **Read the pair, not the instruction.**
 | script | status | notes |
 |---|---|---|
 | ~~`vermilion_dock`~~ | **DONE 2026-08-20.** | See `docs/plans/ss_anne_departure.md` |
-| ~~`celadon_mansion_3f`~~ | **DONE 2026-08-23.** | `PrintDiploma` landed with Stage 2 of `current_plan_printer.md`. |
-| ~~`pokemon_fan_club`~~ | **DONE 2026-08-23.** | `PrintFanClubPortrait` landed with Stage 2 of `current_plan_printer.md`. |
-| ~~`summer_beach_house`~~ | **DONE 2026-08-23.** | `PrintSurfingMinigameHighScore` landed with Stage 2 of `current_plan_printer.md`. |
+| ~~`celadon_mansion_3f`~~ | **DONE 2026-08-23.** | `PrintDiploma` landed with Stage 2 of `plans/printer.md`. |
+| ~~`pokemon_fan_club`~~ | **DONE 2026-08-23.** | `PrintFanClubPortrait` landed with Stage 2 of `plans/printer.md`. |
+| ~~`summer_beach_house`~~ | **DONE 2026-08-23.** | `PrintSurfingMinigameHighScore` landed with Stage 2 of `plans/printer.md`. |
 | ~~`hall_of_fame`~~ | **DONE 2026-08-26.** | `HallOfFamePC` and `SetSpriteFacingDirectionAndDelay` linked. |
 
-**The printer tier is `engine/printer/printer.asm`, 979 lines / 35 labels, with
-NOTHING ported** — `printer_stubs.asm` holds only `PrintPokedexEntry` and
-`PrintPCBox`. Its existing stub comment records the real blocker: "until a serial
-HAL exists (Phase 4)". So there is a deliberate choice to make, not just work to
-do: four `ret`-stubs under the normal stub convention would link three of these
-five scripts today, leaving printing unimplemented. That is a maintainer decision
-about stubbing a feature, not something to do silently.
+The printer tier is fully ported (see `docs/plans/printer.md`, now archived).
+`engine/printer/printer.asm` / `printer2.asm` / `serial.asm` carry the translated
+engine, and `src/print/` carries the port-only DOS backend; the only labels left
+out of the link set are the pret `PrinterDebug*` test body and the
+`PrinterSerial_` byte-pump, both replaced by the in-memory
+`PrintDev_ConsumePacket` seam and not part of the linked print flow.
 
 ## What actually blocked this (worth knowing before touching it again)
 
@@ -117,12 +116,14 @@ the scripts get linked"*. Confirmed: 4 of 6 sampled undefined symbols trace to i
 `celadon_mansion_3f`, `hall_of_fame`, `pokemon_fan_club`, `pokemon_tower_2f`,
 `pokemon_tower_7f`, `safari_zone_gate`, `summer_beach_house`.
 
-Nothing wrong with the scripts. They need:
+Nothing was wrong with the scripts. They needed:
 - the **Game Boy Printer tier** (`PrintDiploma`, `PrintFanClubPortrait`,
   `PrintSurfingMinigameHighScore`,
-  `Printer_PrepareSurfingMinigameHighScoreTileMap`) — a real subsystem, not a
-  routine;
-- `HallOfFamePC` (pret `engine/movie/credits.asm`).
+  `Printer_PrepareSurfingMinigameHighScoreTileMap`) — now ported
+  (`docs/plans/printer.md`, archived);
+- `HallOfFamePC` (pret `engine/movie/credits.asm`) — now ported.
+
+All five printer-script links above are DONE.
 
 ## Stages
 
@@ -142,16 +143,16 @@ Nothing wrong with the scripts. They need:
 - [x] `vermilion_dock`: DONE 2026-08-20 — but NOT by porting `ScheduleEastColumnRedraw` +
       `ScheduleColumnRedrawHelper` into `src/home/overworld.asm`, then lower
       `VermilionDockSSAnneLeavesScript` and settle its scroll count visually
-- [ ] Group C: port the Printer tier and `HallOfFamePC`
+- [x] Group C: port the Printer tier and `HallOfFamePC`
       - **`HallOfFamePC` is DONE 2026-08-23** (4d3345837): the whole of
         `engine/movie/credits.asm` is ported (20/20) on the back of
         `engine/movie/hall_of_fame.asm` (17/17, 07828148b), so
         `HallOfFame_Script`'s predef call now runs the ceremony and the roll
         instead of a ret-stub. The stub is deleted from `evolution_stubs.asm`.
         See [[ending-chain-hof-and-credits-ported]].
-      - The **Printer tier is out of this tree's lane** — maintainer directive
-        2026-08-23, it is being worked in another tree. This item stays open only
-        for that half.
+      - The **Printer tier is DONE 2026-08-23** via `docs/plans/printer.md`
+        (translated engine mirrors + `src/print/` backend); the plan is
+        archived. The earlier "out of this tree's lane" note is superseded.
 - [ ] Re-audit: with scripts linked, a dropped global is now a link error rather
       than silence. Re-run the sibling-drop audit across all 225, not just the
       blocked 18.

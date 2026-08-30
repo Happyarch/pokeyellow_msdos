@@ -21,9 +21,11 @@
 ;    overworld dialog itself (as home/trainers.asm / field_move_messages tails do)
 ;    before PrintText. FoundItemText/NoMoreRoomForItemText are generated flat
 ;    streams (assets/pickup_text.inc); their `_ref` gives the flat pointer.
-;    (The pret `sound_get_item_1` jingle rides in that stream but sits past the
-;    far text's TX_END, so — like every other port text-stream sound — it is not
-;    played; TODO-HW audio-in-text-streams.)
+;    (The pret `sound_get_item_1` jingle rides in that stream; the audio engine
+;    is live and TextCommand_SOUND handles the TX_SOUND_* commands, but the
+;    generator's flattened stream places the sound byte after the far text's
+;    TX_END, so TextCommandProcessor returns before reaching it. Fix at the
+;    generator/gen_battle_text seam, not in an audio HAL.)
 ;
 ; Build: nasm -f coff -I include/ -I . -o pick_up_item.o src/engine/events/pick_up_item.asm
 

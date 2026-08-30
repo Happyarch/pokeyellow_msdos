@@ -3,7 +3,7 @@
 ;
 ; Consumes GB Printer packets emitted by serial.asm (Printer_PrepareToSend)
 ; and accumulates 2bpp bands in memory for the ESC/P page backend.
-; See docs/current_plan_printer.md.
+; See docs/plans/printer.md.
 ; ===========================================================================
 
 bits 32

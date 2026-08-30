@@ -2,10 +2,15 @@
 ; printer.asm — pret mirror of home/printer.asm.
 ;
 ; pret's home/printer.asm holds three labels:
-;   PrinterSerial, SerialFunction            — unported; superseded by the
-;                                              in-memory virtual GB Printer
-;                                              packet consumption (PrintDev_ConsumePacket).
-;                                              See docs/current_plan_printer.md.
+;   PrinterSerial, SerialFunction            — the Serial handler's printer branch
+;                                              in pret. They are ret-only here
+;                                              because the port printer device
+;                                              consumes GB Printer packets
+;                                              synchronously through
+;                                              PrintDev_ConsumePacket, so the
+;                                              serial-interrupt byte pump pret used
+;                                              to reach them never runs in this
+;                                              model. See docs/plans/printer.md.
 ;   DisableWaitingAfterTextDisplay           — ported below.
 ;
 ; This file exists so the third one lives in its MIRROR (CLAUDE.md: a pret-labeled
@@ -29,15 +34,17 @@ global SerialFunction
 section .text
 
 ; ---------------------------------------------------------------------------
-; PrinterSerial — pret home/printer.asm:1-26.
-; Unported: serial transmission is superseded by synchronous in-memory packet device.
+; PrinterSerial — pret home/printer.asm:1-26. The per-byte printer serial
+; branch of the Serial handler. The port printer device does not use the
+; interrupt byte pump, so the body stays the pret-shape no-op below.
 ; ---------------------------------------------------------------------------
 PrinterSerial:
     ret
 
 ; ---------------------------------------------------------------------------
-; SerialFunction — pret home/printer.asm:27-29.
-; Unported: VBlank poller superseded by synchronous in-memory packet device.
+; SerialFunction — pret home/printer.asm:27-29. Same pret-shape no-op: the
+; printer engine's serial-function sentinel is only meaningful alongside the
+; byte-interrupt pump that the port printer flow does not run.
 ; ---------------------------------------------------------------------------
 SerialFunction:
     ret

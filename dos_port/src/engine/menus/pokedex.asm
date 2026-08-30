@@ -131,10 +131,9 @@ extern GetMonHeader                  ; home/pokemon.asm — wCurSpecies → wMon
 extern LoadFlippedFrontSpriteByMonIndex ; src/home/pokemon.asm — ESI = tilemap coord; decode + place
 extern JoypadLowSensitivity          ; src/home/joypad2.asm → [hJoy5]
 extern LoadTextBoxTilePatterns       ; gfx/load_font.asm
-; PlayCry is a ret-only STUB (home_stubs.asm), NOT an absent routine and NOT an audio-HAL
-; blocker — the engine is live and CryData is generated; nobody has written its ~15
-; instructions (M-32). pret's DrawDexEntryOnScreen calls it, so the port calls it: the
-; call is what goes loud the day the stub is filled in. Dropping it was M-75.
+; PlayCry is a real body in src/home/pokemon.asm (implemented with GetCryData
+; 2026-08-12, battle plan 1d); pret's DrawDexEntryOnScreen calls it, and the port
+; calls it too.
 extern PlayCry                       ; src/home/pokemon.asm — pret home/pokemon.asm:140
 extern g_dex_flavor_active           ; text/text.asm — full-page window mode for the flavor
 
@@ -153,9 +152,11 @@ SET_PAL_POKEDEX   equ 0x04
 H_CLEAR_LETTER_PRINTING_DELAY_FLAGS equ 0xFFF9
 ; hUILayoutFlags bit (pret constants/gfx_constants.asm) — treat <PAGE> as <NEXT>.
 BIT_PAGE_CHAR_IS_NEXT equ 3
-; wPrinterPokedexEntryTextPointer — pret ram/wram.asm (dw). Read only by the GB-Printer
-; path (Pokedex_PrepareDexEntryForPrinting); the port reaches the flavor through
-; dex_flavor_ptr instead, so nothing populates it (see the tag at that routine).
+; wPrinterPokedexEntryTextPointer — pret ram/wram.asm (dw). Written by
+; Printer_GetDexEntryRegisters and read by the GB-Printer path
+; (Pokedex_PrepareDexEntryForPrinting). The port reaches the flavor through
+; dex_flavor_ptr instead, so this is retained as the pret WRAM contract even
+; though the print pipeline does not consume it (see the tag at that routine).
 ; wDexFlavorBuf — PORT-ONLY staging buffer (DEVIATION, see Pokedex_PrintFlavorTextAtBC).
 ; TextCommandProcessor reads its stream EBP-relative but the flavor lives in flat .data,
 ; so the bytes are copied into GB space first. Reuses wTileMapBackup2 (wTileMapBackup2
@@ -342,7 +343,7 @@ HandlePokedexSideMenu:
     dec al
     ; pret vc_patch Forbid_printing_Pokedex: _YELLOW_VC forbids printing (jr z to
     ; .handleMenuInput, a no-op). The ELSE (non-VC) build dispatches to .chosePrint;
-    ; ported faithfully — .chosePrint itself is a STUB (printer out of scope).
+    ; ported faithfully — .chosePrint calls the real printer entry point.
     jz .chosePrint
     ; fell through: chose Quit
     mov bh, 1                                    ; ld b, 1
@@ -405,19 +406,16 @@ HandlePokedexSideMenu:
     jmp .exitSideMenu
 
 .chosePrint:
-    ; The GB-printer path. pret's body is ported in full and faithfully; only the
-    ; printer routine itself is deferred — PrintPokedexEntry is a ret-only STUB in
-    ; engine/printer/printer_stubs.asm (the Game Boy Printer is a serial-link
-    ; peripheral: TODO-HW serial). Keeping the surrounding body means the screen is
-    ; cleared and redrawn exactly as on hardware-with-no-printer, and whoever ports
-    ; the printer only has to fill in the stub. Previously this whole path was a bare
-    ; `mov bh,3 / jmp`, which dropped 3 stores and 2 calls with no tag (M-65).
+    ; The GB-printer path. The surrounding body is pret verbatim, and
+    ; PrintPokedexEntry is the real printer entry point in
+    ; src/engine/printer/printer.asm. The printer backend consumes the packets
+    ; through PrintDev_ConsumePacket (see docs/plans/printer.md).
     mov al, [ebp + hTileAnimations]                 ; ldh a, [hTileAnimations]
     push eax                                        ; push af
     mov byte [ebp + hTileAnimations], 0             ; xor a / ldh [hTileAnimations], a
     mov al, [ebp + wPokedexNum]
     mov [ebp + wCurPartySpecies], al
-    call PrintPokedexEntry                          ; callfar PrintPokedexEntry — STUB (TODO-HW: serial)
+    call PrintPokedexEntry                          ; callfar PrintPokedexEntry — real GB Printer entry
     mov byte [ebp + hAutoBGTransferEnabled], 0      ; xor a / ldh [hAutoBGTransferEnabled], a
     call ClearScreen
     pop eax                                         ; pop af
@@ -1084,11 +1082,10 @@ Pokedex_PrepareDexEntryForPrinting:
     call DrawTileLine
     mov byte [ebp + HL(0, 13)],  0x6C    ; ldcoord_a 0,13
     mov byte [ebp + HL(19, 13)], 0x6E    ; ldcoord_a 19,13
-    ; TODO-HW(serial): pret loads the stream pointer from wPrinterPokedexEntryTextPointer,
-    ; which only the printer path writes. In the port the flavor is flat .data reached
-    ; through dex_flavor_ptr, which DrawDexEntryOnScreen has already set for the mon on
-    ; screen — so this routine prints the same stream pret would, and the pret WRAM word
-    ; stays unpopulated until the printer itself is ported.
+    ; pret loads the stream pointer from wPrinterPokedexEntryTextPointer, which
+    ; Printer_GetDexEntryRegisters writes. In the port the flavor is flat .data
+    ; reached through dex_flavor_ptr, which DrawDexEntryOnScreen has already set
+    ; for the mon on screen — so this routine prints the same stream pret would.
     mov ebx, HL(1, 1)                    ; bccoord 1,1
     or byte [ebp + hUILayoutFlags], 1 << BIT_PAGE_CHAR_IS_NEXT
     call Pokedex_PrintFlavorTextAtBC

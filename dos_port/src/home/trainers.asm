@@ -564,8 +564,7 @@ InitBattleEnemyParameters:
 ; Bankswitch`; under the port's flat model banking is a no-op, so pret's shared
 ; bank tail COLLAPSES into these four direct tail-jumps (SetSpritePosition2's
 ; fallthrough into SpritePositionBankswitch is realized by its own jmp).
-; Called by scripts/OaksLab.asm (Oak cutscene, not yet ported) — provided so the
-; pret labels resolve.
+; Called by scripts/OaksLab.asm (linked) — provided so the pret labels resolve.
 ; ============================================================================
 GetSpritePosition1:
     jmp _GetSpritePosition1

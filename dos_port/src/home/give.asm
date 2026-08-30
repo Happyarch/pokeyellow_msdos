@@ -9,15 +9,10 @@
 ; Register map (SM83 -> x86): a=AL, b=BH, c=BL, hl=ESI, de=EDX. GB memory is
 ; accessed EBP-relative as [ebp+SYM] with SYM from gb_memmap.inc.
 ;
-; LINK STATUS: CHECK-only for now. Two externs are unresolved in the current tree:
-;   * _GivePokemon      — engine/events/give_pokemon.asm is NOT yet ported
-;                         (lands with the pokemon events layer). GivePokemon is a
-;                         faithful farjp into it.
-;   * CopyToStringBuffer — defined in src/engine/battle/core.asm:1362 but NOT
-;                         exported `global`. Root must add `global CopyToStringBuffer`
-;                         to core.asm to link GiveItem.
-; GetItemName (home/names.asm) and AddItemToInventory (engine/items/inventory.asm)
-; are already `global`.
+; LINK STATUS: `_GivePokemon` is a real body in engine/events/give_pokemon.asm
+; (GivePokemon is a faithful farjp into it). `CopyToStringBuffer` is exported
+; `global` from src/home/copy_string.asm. GetItemName (home/names.asm) and
+; AddItemToInventory (engine/items/inventory.asm) are `global` too.
 ;
 ; Build (check): nasm -f coff -I include/ -I . -o /dev/null src/home/give.asm
 
@@ -33,7 +28,7 @@ global GivePokemon
 extern AddItemToInventory      ; src/home/inventory.asm — ESI=inv count addr; CF=success
 extern GetItemName             ; name of item [wNamedObjectIndex] -> name buffer
 extern CopyToStringBuffer      ; copy_string.asm — copy '@'-terminated name -> wStringBuffer
-extern _GivePokemon            ; engine/events/give_pokemon.asm (NOT YET PORTED)
+extern _GivePokemon            ; engine/events/give_pokemon.asm — real body
 
 ; ---------------------------------------------------------------------------
 ; GiveItem — give the player quantity c (BL) of item b (BH), and copy the

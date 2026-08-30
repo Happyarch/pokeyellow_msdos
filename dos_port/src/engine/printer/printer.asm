@@ -1,10 +1,11 @@
 ; ===========================================================================
 ; printer.asm — pret mirror of engine/printer/printer.asm.
 ;
-; UNPORTED ROUTINES:
-;   PrinterDebug (pret :387-432) — debug test routine, unreferenced in pret
-;   (only called inside an unreferenced block in engine/movie/title.asm:209-213).
-;   See docs/current_plan_printer.md.
+; NOT IN THE LINKED FLOW:
+;   PrinterDebug (pret :387-432) — debug test routine. Its only pret caller is
+;   inside an unreferenced block (engine/movie/title.asm:209-213), so it is not
+;   part of the linked printer flow today. (Not a hardware/HAL deferral: the
+;   printer engine itself is ported; this is a debug-only routine.)
 ;
 ; ===========================================================================
 
@@ -528,7 +529,7 @@ PrintFanClubPortrait:
 ; ---------------------------------------------------------------------------
 ; Printer_StopIfPressB — pret engine/printer/printer.asm:433-464.
 ;
-; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_StopIfPressB; behavior=replaces direct rSB/rSC cancel burst with call PrintDev_Cancel; evidence=docs/current_plan_printer.md; lifetime=permanent}
+; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_StopIfPressB; behavior=replaces direct rSB/rSC cancel burst with call PrintDev_Cancel; evidence=docs/plans/printer.md; lifetime=permanent}
 ; ---------------------------------------------------------------------------
 Printer_StopIfPressB:
     test byte [ebp + hJoyHeld], PAD_B
@@ -554,7 +555,7 @@ Printer_StopIfPressB:
 
 ; Printer_CopyTileMapToPrinterTileBuffer — pret engine/printer/printer.asm:466-471.
 ;
-; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_CopyTileMapToPrinterTileBuffer; behavior=snapshots per-cell palette into g_print_pal_buf sidecar for /PRNCOLOR printer backend; evidence=docs/current_plan_printer.md; lifetime=permanent}
+; DEVIATION{class=HAL; pret=engine/printer/printer.asm:Printer_CopyTileMapToPrinterTileBuffer; behavior=snapshots per-cell palette into g_print_pal_buf sidecar for /PRNCOLOR printer backend; evidence=docs/plans/printer.md; lifetime=permanent}
 ; DEVIATION{class=projection; pret=engine/printer/printer.asm:Printer_CopyTileMapToPrinterTileBuffer; behavior=copies 18 rows of 20 tiles from parameterized source address and stride to wPrinterTileBuffer; evidence=port uses 40x25 canvas with +10/+3 GB-centered projection for 4 screens and stride-20 scratch for pokedex; lifetime=permanent}
 ; ---------------------------------------------------------------------------
 Printer_CopyTileMapToPrinterTileBuffer:

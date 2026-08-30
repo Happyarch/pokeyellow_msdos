@@ -5254,8 +5254,8 @@ HasMonFainted:
 ; gain-exp flag, resets the enemy's multi-attack + accumulated Bide damage,
 ; sets wBattleResult=loss, and (only when called from HandlePlayerMonFainted,
 ; i.e. wInHandlePlayerMonFainted==1) plays the cry + "<mon> fainted!" message.
-; Deferred (audio HAL): the low-health alarm and the cry (PlayCry, and the Yellow
-; starter-Pikachu arm that replaces it).
+; The low-health alarm/cry and the starter-Pikachu arm are restored below with
+; the real audio HAL (no deferred body in this routine).
 ;
 ; ModifyPikachuHappiness was ALSO listed here as deferred, and that was wrong —
 ; it is pure WRAM arithmetic with no HAL boundary anywhere in it. Restored

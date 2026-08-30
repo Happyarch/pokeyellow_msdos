@@ -1272,7 +1272,7 @@ EnterMap:
     call RunPokedexEntryTest                ; open RHYDON dex data page (pic+HT/WT), dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_I1
-    call RunLinkMenuTest                    ; open link cup-select screen (serial stubbed), dump FRAME.BIN, exits
+    call RunLinkMenuTest                    ; open link cup-select screen, dump FRAME.BIN, exits
 %endif
 %ifdef DEBUG_I2
     call RunLinkCupsTest                    ; run cup validators (pass+gated fail), record codes, dump, exits
@@ -4796,10 +4796,9 @@ ReloadMapAfterSurfingMinigame:
 ; ReloadMapAfterPrinter — pret home/overworld.asm:ReloadMapAfterPrinter (:2008-2015).
 ;
 ; Rebuilds the block map after the Game Boy Printer has taken over the screen, then
-; falls through into FinishReloadingMap exactly as pret does. Its five callers all
-; live in pret engine/printer/printer.asm, which the port has not reached yet
-; (docs/current_plan_printer.md) — so this has no port caller today and is here
-; because the printer tier will need it and because the label was reading `missing`.
+; falls through into FinishReloadingMap exactly as pret does. Its callers live in
+; the ported engine/printer/printer.asm entry points (PrintPokedexEntry,
+; PrintSurfingMinigameHighScore, PrintDiploma, PrintPCBox, PrintFanClubPortrait).
 ;
 ; The hLoadedROMBank save/restore and SwitchToMapRomBank are kept: they are the
 ; port's flat no-op MBC bookkeeping, matching every other translated site in this

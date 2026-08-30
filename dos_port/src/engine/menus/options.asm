@@ -336,12 +336,13 @@ OptionsMenu_SpeakerSettings:
 
 ; ---------------------------------------------------------------------------
 ; OptionsMenu_GBPrinterBrightness — pret ref: options.asm:OptionsMenu_GBPrinterBrightness.
-; Cycle wPrinterSettings 0..4 on left/right; redraw LIGHTEST..DARKEST. The
-; value is stored; nothing is transmitted (no serial link).
+; Cycle wPrinterSettings 0..4 on left/right; redraw LIGHTEST..DARKEST. This
+; writes the pret brightness value, which StartTransmission copies to
+; wPrinterSettingsTempCopy and the PRINT packet then carries as its exposure
+; byte. The port's printer backend consumes it: ESC/P mono uses it as
+; brightness/contrast, /PRNCOLOR uses it as saturation.
 ; ---------------------------------------------------------------------------
 OptionsMenu_GBPrinterBrightness:
-    ; TODO-HW: printer (no serial) — the row renders and the brightness value is
-    ; stored in wPrinterSettings, but there is no GB Printer HAL to drive.
     call GetGBPrinterBrightness              ; BL=sel, DH=left, DL=right
     mov al, [ebp + hJoy5]
     test al, PAD_RIGHT
