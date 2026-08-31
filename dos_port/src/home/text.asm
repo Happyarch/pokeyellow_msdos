@@ -488,7 +488,34 @@ dialog_window_scroll:
     mov eax, [wtsbp_arrow_pos]
     push eax
     mov dword [wtsbp_arrow_pos], GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET
+%ifdef DEBUG_SIGNTEXT
+    ; Sign gate: auto-advance the <cont> page without waiting for A. The sign's
+    ; first page ("Shades of your") ends in <cont>, which normally shows ▼ and
+    ; waits for A via ManualTextScroll. Headless, AutoKey's A train is not
+    ; synchronized to this window, so the wait would hang. Instead, show the
+    ; box for a few frames (so the compositor draws it) and return; PrintText
+    ; will then scroll to page 2 and continue. The final page's wait (After-
+    ; DisplayingTextID) is where we dump, so bypassing this intermediate wait
+    ; is exactly what the golden needs.
+    push ecx
+    mov ecx, 30
+.auto_advance_sign:
+    call DelayFrame
+    loop .auto_advance_sign
+    pop ecx
+%elifdef DEBUG_ITEMTM
+    ; TM teach: the "Booted up TM" and "X learned Y!" prompts would hang in the
+    ; same ManualTextScroll wait. Auto-advance headless; wram golden does not
+    ; verify the dialog window.
+    push ecx
+    mov ecx, 30
+.auto_advance_itemtm:
+    call DelayFrame
+    loop .auto_advance_itemtm
+    pop ecx
+%else
     call ManualTextScroll
+%endif
     pop eax
     mov [wtsbp_arrow_pos], eax
     ; mts_hide_arrow needs no blink guard any more: with no ▼ placed above,

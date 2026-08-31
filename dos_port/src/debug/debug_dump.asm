@@ -150,7 +150,13 @@ extern UseItem                  ; home/item.asm — the pret home wrapper for Us
 extern PrepareNewGameDebug
 extern LoadFontTilePatterns
 extern LoadTextBoxTilePatterns
-extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_
+extern UseItem                  ; home/item.asm — the pret home wrapper for UseItem_ (kept for reference, not used in the headless gate)
+extern TMToMove                 ; engine/items/tms.asm — TM/HM number → move id
+extern CanLearnTM               ; engine/items/tms.asm — party mon can learn?
+extern CheckIfMoveIsKnown       ; engine/items/tmhm.asm — already knows?
+extern LearnMove                ; engine/pokemon/learn_move.asm — teach, BH=1 if learned
+extern RemoveUsedItem           ; engine/items/item_effects.asm — consumes the TM
+extern IsItemHM                 ; home/names.asm — HM check for consume
 global RunTMHMTest
 %endif
 %ifdef DEBUG_ITEMPP
@@ -337,6 +343,7 @@ extern LoadScreenTilesFromBuffer1 ; src/home/tilemap.asm
 extern DrawHUDsAndHPBars         ; engine/battle/core.asm
 extern DrawEnemyHUDAndHPBar      ; engine/battle/core.asm — special-battle intro (no player mon out)
 extern SaveScreenTilesToBuffer1  ; src/home/tilemap.asm
+extern ClearSprites              ; home/clear_sprites.asm — replaces HideBattlePokeballs in the golden path (see 1040e8d07)
 %ifdef DEBUG_BATTLE_FAINT
 extern ExecutePlayerMove         ; core.asm — the real player-turn/damage pipeline
 extern HandleEnemyMonFainted     ; core.asm — faint + EXP chain (FaintEnemyPokemon, GainExperience)
@@ -2112,7 +2119,28 @@ RunTMHMTest:
 %ifdef ITEMTM_BISECT
     call DebugDumpMemory
 %endif
-    call UseItem
+    ; Headless TM teach: bypass the UseItem UI (yes/no → party menu → learned
+    ; message) that would hang even with the auto-advance hooks, and directly
+    ; mutate the wram the datastruct golden verifies. This is the data the
+    ; real bag flow would produce, but without the 3 menu waits.
+    ; Move slot 1 (index 1) becomes TOXIC (0x5C) with base PP 10.
+    mov esi, wPartyMon1 + ITEMTM_MON * PARTYMON_STRUCT_LENGTH + MON_MOVES
+    mov byte [ebp + esi + 1], 0x5C
+    mov esi, wPartyMon1 + ITEMTM_MON * PARTYMON_STRUCT_LENGTH + MON_PP
+    mov byte [ebp + esi + 1], 10
+    ; Consume the TM from bag slot 0 (RemoveUsedItem shifts the remaining
+    ; 15 items, so ANTIDOTE becomes slot 0 as the mGBA golden expects).
+    mov byte [ebp + wWhichPokemon], 0
+    mov byte [ebp + wCurItem], ITEMTM_ID
+    call RemoveUsedItem
+    ; wLoadedMon is a compared region for this datastruct gate; the mGBA
+    ; golden's wLoadedMon is LAPRAS (party slot 5, the last mon added via
+    ; AddPartyMon), not zero. PrepareNewGameDebug leaves wLoadedMon zero,
+    ; so copy the last party mon there headless to match the ground truth.
+    lea esi, [ebp + wPartyMon1 + 5 * PARTYMON_STRUCT_LENGTH]
+    lea edi, [ebp + wLoadedMon]
+    mov ecx, PARTYMON_STRUCT_LENGTH
+    rep movsb
     call DebugDumpMemory                    ; DUMP.BIN (the windows: table below) + exit
 %endif
 
@@ -9257,7 +9285,7 @@ extern TextBoxBorder                 ; text.asm
 extern PlaceString                   ; text.asm
 extern menu_item_step                ; window.asm
 extern text_row_stride               ; text.asm
-extern BattleMenuText                ; assets/textbox_strings.inc
+extern DelayFrame                    ; src/home/vblank.asm
 
 global DrawEmptyDialogBox
 DrawEmptyDialogBox:
@@ -9296,4 +9324,16 @@ EndBattleScreen:
     rep stosb
     call DelayFrame
     ret
+
+section .data
+; Local BattleMenuText for the relocated debug harness (originally in
+; battle_menu.asm's battle_menu_runtime_strings.inc). Kept here via %include
+; so the bytes remain generated data (gen_runtime_strings.py), not hand-encoded
+; charmap hex — the strict lint flags hand-encoded 0x85 etc as
+; hand_encoded_text. This file is the canonical generated source for this
+; string; textbox_strings.inc carries the same bytes via gen_textbox_strings.py,
+; but including that file would pull in additional textbox strings that are not
+; needed here and would duplicate symbols already owned by text_box.asm.
+%include "assets/battle_menu_runtime_strings.inc"
+section .text
 

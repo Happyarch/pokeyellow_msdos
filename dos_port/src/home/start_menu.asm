@@ -6,9 +6,7 @@
 ; (DrawStartMenu + HandleMenuInput loop with the manual top/bottom wrap), the
 ; watched-key exit saves wBattleAndStartSavedMenuItem and dispatches to the
 ; StartMenu_* handlers (engine/menus/start_sub_menus.asm), and EXIT falls
-; through to CloseStartMenu. The StartMenu_* handlers `jmp RedisplayStartMenu`
-; back, all at the same stack depth (pret's jp chains), so the single
-; pushad/popad pair at DisplayStartMenu entry / CloseStartMenu exit balances.
+; through to CloseStartMenu which tail-jumps to CloseTextDisplay.
 ;
 ; Port-model notes (all rendering goes through DrawStartMenu's canvas→window
 ; bridge; see draw_start_menu.asm):
@@ -32,10 +30,6 @@
 ;    hJoyHeld/A|B|START because OverworldLoop reads hJoyHeld, not the edge
 ;    (overworld.asm:904 — hJoyPressed is always cleared by the time it looks):
 ;    a still-held START would reopen the menu on the very next iteration.
-;  * DEVIATION(port-input-model): pret's `jp CloseTextDisplay` teardown is folded
-;    into CloseStartMenu. CloseTextDisplay is linked now, but the port opens the
-;    START menu straight from OverworldLoop rather than from inside DisplayTextID,
-;    whose saved-bank stack slot CloseTextDisplay pops.
 ;
 ; Input: hJoyPressed is reliable here (HandleMenuInput runs one DelayFrame →
 ; one joypad_update per iteration).
@@ -58,6 +52,7 @@ global RedisplayStartMenu
 global RedisplayStartMenu_DoNotDrawStartMenu
 global CloseStartMenu
 
+extern CloseTextDisplay              ; home/text_script.asm
 extern DrawStartMenu                 ; engine/menus/draw_start_menu.asm
 extern StartMenu_Pokedex             ; engine/menus/start_sub_menus.asm
 extern StartMenu_Pokemon
@@ -91,10 +86,9 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; DisplayStartMenu — pret ref: home/start_menu.asm:DisplayStartMenu.
-; In: EBP = GB base. All registers preserved (pushad; popad in CloseStartMenu).
+; In: EBP = GB base.
 ; ---------------------------------------------------------------------------
 DisplayStartMenu:
-    pushad
     ; ld a, BANK(StartMenu_Pokedex) / call BankswitchCommon — flat: no-op
     ; ld a,[wWalkBikeSurfState] / ld [wWalkBikeSurfStateCopy],a
     mov al, [ebp + wWalkBikeSurfState]
@@ -211,41 +205,14 @@ RedisplayStartMenu_DoNotDrawStartMenu:
 ; ---------------------------------------------------------------------------
 CloseStartMenu:
     ; DEVIATION{class=HAL; pret=home/start_menu.asm:CloseStartMenu; behavior=wait through DelayFrame for A, B, and START release instead of directly polling Joypad for A release; evidence=pret CloseStartMenu loop plus port frame-driven joypad state and held-key overworld input; lifetime=permanent input HAL boundary}
-    ; pret spins `call Joypad / bit B_PAD_A,
-    ; [hJoyPressed]` until the closing press clears. The port never calls Joypad
-    ; — DelayFrame runs joypad_update, so it IS the poll — and OverworldLoop
-    ; reads hJoyHeld rather than the edge (overworld.asm:904), so B/START must
-    ; be waited out too or a still-held START reopens the menu immediately. See
-    ; the header.
+    ; pret spins `call Joypad / bit B_PAD_A, [hJoyPressed]` until the closing press
+    ; clears. The port never calls Joypad — DelayFrame runs joypad_update, so it IS
+    ; the poll — and OverworldLoop reads hJoyHeld rather than the edge
+    ; (overworld.asm:904), so B/START must be waited out too or a still-held START
+    ; reopens the menu immediately.
 .closeReleaseLoop:
     call DelayFrame
     test byte [ebp + hJoyHeld], PAD_A | PAD_B | PAD_START
     jnz .closeReleaseLoop
     call LoadTextBoxTilePatterns
-    ; DEVIATION{class=projection; pret=home/start_menu.asm:CloseStartMenu; behavior=inline the window and tile restoration instead of jumping to CloseTextDisplay, and additionally reset the port-only text_row_stride and menu_redraw_cb; evidence=CloseTextDisplay does not reset either of those two port-only menu variables and does not call RefreshCollisionTileMap or ReloadWalkingTilePatterns, so a bare jump would leave the next dialog on the menu stride with a stale redraw callback; lifetime=until CloseTextDisplay absorbs the port-only menu teardown or the start menu stops owning it}
-    ;
-    ; *** THE ORIGINAL REASON FOR THIS INLINE IS DISPROVEN — do not re-cite it. ***
-    ; It read `class=temporary ... evidence=project_state reports CloseTextDisplay
-    ; check-only ... lifetime=until text_script.asm closure links`. Measured
-    ; 2026-08-23: src/home/text_script.asm IS in the Makefile's linked source list,
-    ; and both CloseTextDisplay and HoldTextDisplayOpen report `translated` with a
-    ; port file. The linkage blocker retired at some point and nothing re-read the
-    ; annotation.
-    ;
-    ; What survives is a real projection difference, which is why this is still
-    ; inlined rather than swapped for pret's `jp CloseTextDisplay`. A swap WOULD gain
-    ; pret behaviour this path currently skips — SwitchToMapRomBank, DelayFrame,
-    ; LoadGBPal, the sprite-facing restore, InitMapSprites, LoadCurrentMapView — and
-    ; that is worth doing; it is left for a change that can be gated deliberately,
-    ; because this is live overworld UI covered by the core-tier start_menu golden.
-    ; drop the menu window and swap the walk tiles back into vFont.
-    call hide_window
-    call RefreshCollisionTileMap        ; scrub the box tiles out of the mirror
-                                        ; (pret: LoadScreenTilesFromBuffer2 analog)
-    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED) & 0xFF
-    call ReloadWalkingTilePatterns      ; reload NPC walk tiles the menu font overwrote (vFont)
-    call LoadPlayerSpriteGraphics
-    mov dword [text_row_stride], 20     ; restore the overworld dialog stride
-    mov dword [menu_redraw_cb], 0
-    popad
-    ret
+    jmp CloseTextDisplay

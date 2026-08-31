@@ -65,6 +65,8 @@ extern UpdateSprites                    ; src/home/update_sprites.asm — final 
 extern LoadGBPal                        ; palettes/fade (Wave 10)
 extern hide_window                      ; src/ppu/ppu.asm — empty the window list (count=0)
 extern BankswitchCommon                 ; home/bankswitch2.asm (no-op flat)
+extern text_row_stride
+extern menu_redraw_cb
 extern w_map_text_table_ptr             ; map_sprites.asm — flat ptr to current map TextTable
 extern w_predef_text_table_ptr           ; home/predef_text.asm — port-only flat ptr to TextPredefs
 %ifdef DEBUG_POKECENTER_HEAL
@@ -78,6 +80,9 @@ extern prize_corner_dump_armed
 %endif
 %ifdef DEBUG_POKEMART
 extern pokemart_dump_armed
+%endif
+%ifdef DEBUG_SIGNTEXT
+extern DumpBackbuffer                  ; src/debug/debug_dump.asm — sign golden dump
 %endif
 extern wMapSpriteData                   ; map_sprites.asm — flat [movbyte2,textid] per slot
 extern TrainerTalkHook                  ; src/scripts/trainer_map_script.asm — TEXT_ENTRY_TRAINER_TALK
@@ -315,6 +320,29 @@ DisplayTextID:
     ; fall through to AfterDisplayingTextID
 
 AfterDisplayingTextID:
+    %ifdef DEBUG_SIGNTEXT
+    ; Streamed-text golden: the sign's two-page stream has been fully printed via
+    ; PrintText (including the <cont> scroll that AutoKey answered), so the box now
+    ; shows page 2 ("journey await!") and waits for the final A. Dump before that
+    ; wait — the exact state the mGBA golden captures. The ShowTextStream hook that
+    ; previously served this gate no longer fires after the DisplayTextID realign
+    ; (b76b5e063), so this is the replacement.
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    call DumpBackbuffer
+    %endif
+%ifdef DEBUG_ITEMTM
+    ; TM teach: the "X learned Y!" message would hang waiting for A via
+    ; WaitForTextScrollButtonPress / HoldTextDisplayOpen. Auto-advance headless.
+    push ecx
+    mov ecx, 30
+.tm_item_after:
+    call DelayFrame
+    loop .tm_item_after
+    pop ecx
+    jmp CloseTextDisplay
+%endif
     ; ld a,[wEnteringCableClub]; and a; jr nz,HoldTextDisplayOpen
     mov al, [ebp + wEnteringCableClub]
     test al, al
@@ -385,6 +413,8 @@ CloseTextDisplay:
     call LoadPlayerSpriteGraphics
 .skipLoadPlayerGfx:
     call LoadCurrentMapView
+    mov dword [text_row_stride], 20     ; restore overworld dialog stride
+    mov dword [menu_redraw_cb], 0       ; disarm menu redraw callback
     ; pop af / call BankswitchCommon — restore the entry ROM bank (no-op flat)
     pop eax
     call BankswitchCommon

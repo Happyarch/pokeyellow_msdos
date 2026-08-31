@@ -339,6 +339,22 @@ PartyMenuInit:
     ret
 
 HandlePartyMenuInput:
+%ifdef DEBUG_ITEMTM
+    ; Headless TM teach: DisplayPartyMenu would hang waiting for A via
+    ; HandleMenuInput_ (same hang as the YES/NO above). Auto-answer with the
+    ; target mon ITEMTM_MON (default 0) — the wram golden only checks the
+    ; resulting party move list + bag, not the cursor.
+%ifndef ITEMTM_MON
+%define ITEMTM_MON 0
+%endif
+    mov byte [ebp + wCurrentMenuItem], ITEMTM_MON
+    mov byte [ebp + wWhichPokemon], ITEMTM_MON
+    mov al, [ebp + wPartySpecies + ITEMTM_MON]
+    mov [ebp + wCurPartySpecies], al
+    mov [ebp + wBattleMonSpecies2], al
+    clc
+    ret
+%endif
     mov byte [ebp + wMenuWrappingEnabled], 1    ; ld a,1 / ld [wMenuWrappingEnabled],a
     mov byte [ebp + wPartyMenuAnimMonEnabled], 0x40 ; ld a,$40
     ; The icon bob itself is pret's: HandleMenuInput_'s .loop2 calls

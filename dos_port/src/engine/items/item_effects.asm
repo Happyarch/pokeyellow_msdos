@@ -505,6 +505,20 @@ ti_dialog_show:
 
 ; ▼ + wait for an A/B press cycle (the texts' terminal `prompt`), clear the ▼.
 ti_dialog_prompt:
+%ifdef DEBUG_ITEMTM
+    ; Headless TM teach: the "Booted up TM/HM" and "Teach ...?" texts would hang
+    ; waiting for A via hJoyHeld. Auto-advance after a short visible delay so the
+    ; compositor draws the box, then return — the wram golden does not verify the
+    ; dialog window.
+    push ecx
+    mov ecx, 30
+.tm_auto:
+    call DelayFrame
+    loop .tm_auto
+    pop ecx
+    mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_TILE_SPC
+    ret
+%endif
     mov byte [ebp + GB_TILEMAP1 + DIALOG_ARROW_TILEMAP_OFFSET], TI_CHAR_DOWN
 .release:
     call DelayFrame

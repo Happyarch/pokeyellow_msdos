@@ -512,6 +512,17 @@ DoBuySellQuitMenu:
 YN_SROW        equ 16
 
 DisplayTwoOptionMenu:
+%ifdef DEBUG_ITEMTM
+    ; Headless TM teach: the "Booted up TM / Teach ... to a PKMN?" YES/NO
+    ; would hang waiting for A via HandleMenuInput. The wram golden only
+    ; verifies the party move list + bag consumption, so auto-answer YES
+    ; (first option) headless. Tilemap not compared for this datastruct gate.
+    mov byte [ebp + wCurrentMenuItem], 0
+    mov byte [ebp + wChosenMenuItem], 0
+    mov byte [ebp + wMenuExitMethod], CHOSE_FIRST_ITEM
+    clc
+    ret
+%endif
     pushad
 
     ; --- read + consume the "default to second option" bit (pret:

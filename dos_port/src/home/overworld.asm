@@ -5289,14 +5289,16 @@ global OverworldLoopLessDelay
 
 ; ---------------------------------------------------------------------------
 ; LoadDestinationWarpPosition — load spawn Y/X from the destination map's warp
-; table entry selected by wDestinationWarpID.
+; table entry selected by wDestinationWarpID, and derive wCurrentTileBlockMapViewPointer.
 ; Pret ref: home/overworld.asm:LoadDestinationWarpPosition
-; DEVIATION{class=projection; pret=home/overworld.asm:LoadDestinationWarpPosition; behavior=reads Y and X directly from wWarpEntries and leaves wCurrentTileBlockMapViewPointer to LoadDestinationMapData stride-math instead of copying 4-byte struct including view pointer from ROM table; evidence=pret predef copies 4-byte struct block-view-pointer Y X from hl-indexed ROM table straight into wCurrentTileBlockMapViewPointer wYCoord wXCoord, port has no per-map view-pointer table, Y and X come from already-loaded wWarpEntries warp_event macro; lifetime=permanent, flat model no ROM view-pointer table}
+; DEVIATION{class=projection; pret=home/overworld.asm:LoadDestinationWarpPosition; behavior=reads Y and X directly from wWarpEntries and derives wCurrentTileBlockMapViewPointer dynamically from map dimensions and spawn coordinates instead of copying a 4-byte struct containing precomputed ROM view pointers; evidence=pret predef copies a 4-byte struct (block-view-pointer, Y, X) from an hl-indexed ROM table into wCurrentTileBlockMapViewPointer, wYCoord, wXCoord, whereas the port derives the native 12x9 block viewport pointer directly from wCurMapWidth and spawn Y/X matching coords.inc:event_displacement; lifetime=permanent, flat model with extended native viewport}
 ; In:  wDestinationWarpID = 0-based warp index (destination map's table)
-; Out: wYCoord, wXCoord set. Preserves all other registers/flags.
+; Out: wYCoord, wXCoord, wCurrentTileBlockMapViewPointer set. Preserves all other registers/flags.
 ; ---------------------------------------------------------------------------
 LoadDestinationWarpPosition:
     push eax
+    push ebx
+    push ecx
     push esi
 
     movzx eax, byte [ebp + wDestinationWarpID]
@@ -5308,7 +5310,26 @@ LoadDestinationWarpPosition:
     mov al, [esi+1]                     ; spawn X tile
     mov [ebp + wXCoord], al
 
+    ; Derive wCurrentTileBlockMapViewPointer from spawn Y/X and map dimensions
+    ; (matches the native viewport formula in coords.inc:event_displacement).
+    movzx eax, byte [ebp + wCurMapWidth]
+    add eax, MAP_BORDER * 2             ; stride = width + 2*MAP_BORDER
+    movzx ebx, byte [ebp + wYCoord]
+    shr ebx, 1                          ; block Y
+    add ebx, MAP_BORDER
+    sub ebx, SCREEN_BLOCK_HEIGHT / 2    ; view row
+    movzx ecx, byte [ebp + wXCoord]
+    shr ecx, 1                          ; block X
+    add ecx, MAP_BORDER
+    sub ecx, SCREEN_BLOCK_WIDTH / 2     ; view col
+    imul eax, ebx
+    add eax, ecx
+    add eax, wOverworldMap
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+
     pop esi
+    pop ecx
+    pop ebx
     pop eax
     ret
 
