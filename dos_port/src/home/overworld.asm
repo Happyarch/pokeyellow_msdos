@@ -5180,14 +5180,14 @@ ZeroSpriteStateData:
     ret
 
 ; Disable regular sprites: SPRITESTATEDATA1_IMAGEINDEX for slots 1-14.
-; DEVIATION{class=data-model; pret=home/overworld.asm:DisableRegularSprites; behavior=writes 0 to SPRITESTATEDATA1_IMAGEINDEX instead of pret 0xFF hidden marker; evidence=pret 0xFF hidden until UpdateSprites InitializeSpriteStatus overwrites on first frame, second frame CheckSpriteAvailability computes facing, live game runs UpdateSprites every frame so both seeds behave identically, 0 keeps NPCs visible in DEBUG snapshot that skips UpdateSprites while 0xFF hides them, faithful 0xFF would need harness to run UpdateSprites plus move-delay ported; lifetime=permanent while DEBUG snapshot skips UpdateSprites and needs deterministic move-delay}
+; Pret ref: home/overworld.asm:DisableRegularSprites.
 DisableRegularSprites:
     push ecx
     push esi
     mov esi, 0x10                                       ; slot 1
     mov ecx, 14
 .loop:
-    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
     add esi, 0x10
     dec ecx
     jnz .loop

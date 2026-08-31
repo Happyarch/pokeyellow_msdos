@@ -1722,25 +1722,9 @@ WillPikachuSpawnOnTheScreen:
     jb .not_on_screen
 
 .same_x:
-    call .GetNPCCurrentTile
-    mov dh, 0x60
-    mov al, [ebp + esi]                                 ; ld a, [hli]
-    inc esi
-    mov dl, al                                          ; ld e, a
-    cmp al, dh
-    jae .not_on_screen
-    mov al, [ebp + esi]                                 ; ld a, [hld]
-    dec esi
-    cmp al, dh
-    jae .not_on_screen
-    sub esi, SCREEN_WIDTH                               ; ld bc, -SCREEN_WIDTH; add hl, bc
-    mov al, [ebp + esi]                                 ; ld a, [hli]
-    inc esi
-    cmp al, dh
-    jae .not_on_screen
-    mov al, [ebp + esi]                                 ; ld a, [hl]
-    cmp al, dh
-    jb .on_screen
+    ; DEVIATION{class=projection; pret=engine/pikachu/pikachu_follow.asm:WillPikachuSpawnOnTheScreen; behavior=bypass wTileMap $60+ textbox tile check because DOS PPU composites window layer over sprites and wTileMap is an isolated UI scratchpad; evidence=testing wTileMap >= $60 caused Pikachu to derender whenever player talks to an NPC facing up with Pikachu behind them in rows 12-17; lifetime=permanent window compositor projection}
+    xor dl, dl
+    jmp .on_screen
 
 .not_on_screen:
     movzx esi, byte [ebp + hCurrentSpriteOffset]

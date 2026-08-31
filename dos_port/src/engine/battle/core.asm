@@ -248,6 +248,8 @@ extern GetName                         ; src/home/names2.asm — wNameListType/w
 extern ItemsCantBeUsedHereText         ; assets/battle_text.inc (generated Tier-1)
 extern g_window_count                  ; src/ppu/ppu.asm — window descriptor count
 extern g_bg_whiteout                   ; src/ppu/ppu.asm — 1 = blank BG, skip the tilemap
+extern add_window                      ; src/ppu/ppu.asm
+extern menu_tilemap_base               ; src/home/window.asm
 ; LinkBattleExchangeData is now REAL — defined below, next to its pret
 ; neighbor SelectEnemyMove (see `global LinkBattleExchangeData` there). The
 ; battle_stubs.asm stub is RETIRED (Stage 4 step 2).
@@ -258,7 +260,6 @@ extern PlaceMenuCursor                 ; home/window.asm
 extern menu_item_step                  ; home/window.asm — cursor vertical spacing
 extern menu_redraw_cb                  ; home/window.asm — per-frame cursor redraw hook
 extern PartyMenuMirror                 ; engine/menus/party_menu.asm — scratch → window blit
-extern DisplaySwitchStatsCancelPartyBox ; engine/menus/text_box.asm — port-only scratch draw
 extern EraseMenuCursor                 ; home/window.asm
 
 ; --- text engine + move-list helpers ---
@@ -639,6 +640,9 @@ DisplayBattleMenu:
     cmp al, BATTLE_TYPE_PIKACHU
     je .doSimulatedMenuInput
 .handleBattleMenuInput:
+    mov dword [menu_tilemap_base], wTileMap
+    mov dword [text_row_stride], SCREEN_TILES_W
+    mov dword [menu_item_step], 2 * SCREEN_TILES_W
     mov al, [ebp + wBattleAndStartSavedMenuItem]
     mov [ebp + wCurrentMenuItem], al
     mov [ebp + wLastMenuItem], al
@@ -3418,10 +3422,11 @@ BagWasSelected:
     jmp DisplayPlayerBag                ; jr
 .simulatedInputBattle:
     ; pret: ld hl, SimulatedInputBattleItemList / ld a, l / ld [wListPointer], a / ld a, h / ld [wListPointer+1], a / jr DisplayBagMenu
-    ; Stage the 4-byte SimulatedInputBattleItemList into wBuffer in GB memory space
+    ; Stage the 4-byte SimulatedInputBattleItemList into GB memory space (0x0080)
+    ; Note: cannot use wBuffer because IsKeyItem_ copies KeyItemFlags into wBuffer during PrintListMenuEntries.
     mov eax, [SimulatedInputBattleItemList]
-    mov [ebp + wBuffer], eax
-    mov word [ebp + wListPointer], wBuffer
+    mov [ebp + 0x0080], eax
+    mov word [ebp + wListPointer], 0x0080
     jmp DisplayBagMenu
 
 SimulatedInputBattleItemList:
@@ -3433,14 +3438,6 @@ DisplayPlayerBag:
     ; get the pointer to the player's bag when in a normal battle
     mov word [ebp + wListPointer], wNumBagItems
 DisplayBagMenu:
-    ; PORT-ONLY: raise the background whiteout for the duration of the list.
-    ; The port draws the list menu into the scratch AND shows it through window
-    ; descriptors (list_draw_box_border); with the battle canvas still
-    ; composited underneath, BOTH copies are visible — measured 2026-08-12, the
-    ; bag rendered twice, once top-left and once top-right. Every other in-game
-    ; caller that owns the screen for a list raises this first
-    ; (bills_pc.asm:308). RestoreBattleScreenState clears it on every exit.
-    mov dword [g_bg_whiteout], 1
     mov byte [ebp + wPrintItemPrices], 0            ; xor a
     mov byte [ebp + wListMenuID], ITEMLISTMENU
     mov al, [ebp + wBagSavedMenuItem]
@@ -3577,41 +3574,40 @@ PartyMenuOrRockOrRun:
     call GBPalNormal
     jmp DisplayBattleMenu               ; jp
 .partyMonDeselected:
-    ; Wipe the SWITCH/STATS/CANCEL box before going back to the list. This has to
-    ; erase it where DisplaySwitchStatsCancelPartyBox DREW it — the party screen's
-    ; stride-20 scratch — not the canvas. Both the address and the count are
-    ; stride-bearing: pret's `ld bc, 6 * SCREEN_WIDTH + 9` is 6 GB rows plus 9
-    ; cells (129), and taking the port's SCREEN_WIDTH (40, the canvas) made it 249
-    ; bytes at a canvas address, which cleared cells this box never occupied and
-    ; left the real ones standing.
-    mov esi, wTileMap + 11 * PARTY_SCRATCH_STRIDE + 11   ; pret hlcoord 11, 11
-    mov bx, 6 * PARTY_SCRATCH_STRIDE + 9  ; ld bc, ... (FillMemory count in BX)
-    mov al, 0x7f                        ; ld a, " " — the blank tile
-    call FillMemory
-    call PartyMenuMirror                ; port: push the erase to the window too
+    mov dword [g_window_count], 2       ; drop the 3rd popup window
+    mov dword [text_row_stride], 20     ; restore party screen stride
+    mov dword [menu_item_step], 2 * 20
     mov byte [ebp + wPartyMenuTypeOrMessageID], NORMAL_PARTY_MENU  ; xor a
     call GoBackToPartyMenu
     jmp .checkIfPartyMonWasSelected     ; jr
 .partyMonWasSelected:
-    ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the SWITCH STATS CANCEL box is drawn by a port-only routine into the party screen stride-20 scratch instead of through DisplayTextBoxID, and PartyMenuMirror is hooked as the cursor redraw callback; evidence=DisplayTextBoxID_ forces text_row_stride to the canvas width and works in canvas coordinates while this screen is a full-screen takeover that sets g_bg_whiteout so render_bg skips the tilemap entirely and the visible surface is the stride-20 scratch that PartyMenuMirror carries into GB_TILEMAP1 for the window descriptors, so a canvas draw is never composited - the geometry drawn is pret's own text_box_text row 11 11 19 17 with text at 13 12; lifetime=permanent window-compositor boundary, the same one msgbox_party already crossed for this screen's message box}
-    ; Backlog item 10c — RESOLVED. Was: drawn to the canvas, invisible (the menu
-    ; still worked; only the draw was missing).
-    call DisplaySwitchStatsCancelPartyBox
-    call PartyMenuMirror                ; port: carry the finished box to the window
+    ; DEVIATION{class=projection; pret=engine/battle/core.asm:PartyMenuOrRockOrRun; behavior=the SWITCH STATS CANCEL box is drawn via DisplayTextBoxID and presented through a popup window at wx=255, wy=144, clip=72, max_y=200; evidence=party screen composites two windows for mon list and message box, so a 3rd window at the bottom-right cleanly shows the contiguous 9x7 box without splitting across windows; lifetime=permanent window-compositor boundary}
+    mov byte [ebp + wTextBoxID], SWITCH_STATS_CANCEL_MENU_TEMPLATE
+    call DisplayTextBoxID
+    call ssc_mirror
+    mov eax, 255                        ; wx
+    mov ebx, 144                        ; wy
+    mov ecx, 72                         ; clip (9 * 8)
+    mov edx, 200                        ; max_y
+    mov esi, GB_TILEMAP0
+    xor edi, edi                        ; start_row = 0
+    call add_window
     ; pret walks hl from wTopMenuItemY; the port writes each field directly.
-    mov byte [ebp + wTopMenuItemY], 0x0c
-    mov byte [ebp + wTopMenuItemX], 0x0c
+    mov byte [ebp + wTopMenuItemY], 19
+    mov byte [ebp + wTopMenuItemX], 32
     mov byte [ebp + wCurrentMenuItem], 0
     mov byte [ebp + wMaxMenuItem], 2
     mov byte [ebp + wMenuWatchedKeys], PAD_B | PAD_A
     mov byte [ebp + wLastMenuItem], 0
-    ; port: the cursor the generic driver draws lands in the same scratch, so it
-    ; needs the same mirror hook HandlePartyMenuInput uses (home/pokemon.asm).
-    ; text_row_stride and menu_item_step are already the party screen's (20 and
-    ; 2*20, set by home/pokemon.asm) — this box shares that geometry by design.
-    mov dword [menu_redraw_cb], PartyMenuMirror
+    mov dword [menu_tilemap_base], wTileMap
+    mov dword [text_row_stride], SCREEN_TILES_W
+    mov dword [menu_item_step], 2 * SCREEN_TILES_W
+    mov dword [menu_redraw_cb], ssc_mirror
     call HandleMenuInput
     mov dword [menu_redraw_cb], 0
+    mov dword [g_window_count], 2       ; drop the popup window
+    mov dword [text_row_stride], 20     ; restore party screen stride
+    mov dword [menu_item_step], 2 * 20
     test al, PAD_B                      ; bit B_PAD_B, a
     jnz .partyMonDeselected             ; jr nz — B cancels
 ; A was pressed
@@ -3748,6 +3744,27 @@ SwitchPlayerMon:
     mov al, 2                           ; ld a, $2
     mov [ebp + wCurrentMenuItem], al    ; ld [wCurrentMenuItem], a
     and al, al                          ; and a — A=2, so ZF=0
+    ret
+
+; Helper to mirror the 9x7 SWITCH/STATS/CANCEL box from canvas (31,18) to GB_TILEMAP0
+ssc_mirror:
+    pushad
+    xor ebx, ebx
+.row:
+    mov esi, ebx
+    add esi, 18                         ; canvas row 18..24
+    imul esi, esi, SCREEN_TILES_W
+    add esi, 31                         ; canvas col 31..39
+    lea esi, [ebp + esi + wTileMap]
+    mov edi, ebx
+    shl edi, 5                          ; ×32 GB_TILEMAP0 stride
+    lea edi, [ebp + edi + GB_TILEMAP0]
+    mov ecx, 9                          ; 9 columns
+    rep movsb
+    inc ebx
+    cmp ebx, 7                          ; 7 rows
+    jb .row
+    popad
     ret
 
 ; ---------------------------------------------------------------------------

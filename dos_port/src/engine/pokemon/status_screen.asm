@@ -153,7 +153,7 @@ StatusScreen:
     mov [ebp + wCurEnemyLevel], al
     mov esi, wLoadedMonHPExp - 1
     mov edx, wLoadedMonStats
-    mov bl, 1
+    mov bh, 1
     call CalcStats
 .DontRecalculate:
     or byte [ebp + wStatusFlags2], (1 << BIT_NO_AUDIO_FADE_OUT)   ; set BIT_NO_AUDIO_FADE_OUT

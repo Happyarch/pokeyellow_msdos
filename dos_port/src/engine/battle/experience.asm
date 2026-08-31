@@ -400,8 +400,8 @@ GainExperience:
     mov bh, [ebp + esi]             ; BH = old maxHP high
     push ebx                        ; PUSH G: save old maxHP (BH:CL)
 
-    ; EDI = party_mon + MON_MAXHP (CalcStats writes stats here).
-    mov edi, esi
+    ; EDX = party_mon + MON_MAXHP (CalcStats writes stats here).
+    mov edx, esi
 
     ; Navigate to stat-EXP source for CalcStats.
     ; offset = (MON_HP_EXP - 1) - MON_MAXHP = (0x11 - 1) - 0x22 = -0x12

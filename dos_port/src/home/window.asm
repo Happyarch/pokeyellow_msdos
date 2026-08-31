@@ -62,6 +62,11 @@ global AutoTextBoxDrawingCommon
 global menu_item_step
 global menu_redraw_cb
 global menu_arrow_pos
+global menu_tilemap_base
+
+section .data
+align 4
+menu_tilemap_base: dd wTileMap
 
 section .bss
 ; Menu cursor vertical item spacing (bytes). Set by the caller: text_row_stride
@@ -225,7 +230,7 @@ PlaceMenuCursor:
     imul eax, [text_row_stride]
     movzx ecx, byte [ebp + wTopMenuItemX]
     add eax, ecx
-    add eax, wTileMap
+    add eax, [menu_tilemap_base]
     mov ebx, [menu_item_step]           ; per-item row step
     ; erase the cursor at the previous item (if still there)
     movzx ecx, byte [ebp + wLastMenuItem]
