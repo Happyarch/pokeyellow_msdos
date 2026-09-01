@@ -1732,11 +1732,18 @@ WillPikachuSpawnOnTheScreen:
     push edi
     push ebp
     cmp dword [g_bg_whiteout], 0
-    jne .pika_win_visible
+    jne .pika_hide
     cmp word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    je .pika_win_visible
+    je .pika_hide
     cmp dword [g_window_count], 0
     je .pika_win_visible
+    jmp .pika_win_check
+.pika_hide:
+    pop ebp
+    pop edi
+    pop esi
+    jmp .not_on_screen
+.pika_win_check:
     movzx esi, byte [ebp + hCurrentSpriteOffset] ; 0xF0
     movzx eax, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
     movzx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]

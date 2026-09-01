@@ -948,11 +948,12 @@ GetTileSpriteStandsOn_WindowCheck:
     push esi
     push edi
     push ebp
-    ; flat-canvas or whiteout → window already blanks, no hide needed
+    ; flat-canvas (town map/battle) or whiteout (start/save) → hide all overworld NPCs
+    ; (matte white area around centered windows, not window overlap)
     cmp dword [g_bg_whiteout], 0
-    jne .win_visible
+    jne .win_hide
     cmp word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
-    je .win_visible
+    je .win_hide
     cmp dword [g_window_count], 0
     je .win_visible
     ; sprite 16×16 canvas box: dos_base = (MAP- wCoord)*16 + 32/96
@@ -992,7 +993,8 @@ GetTileSpriteStandsOn_WindowCheck:
     mov ebp, [edi + 12]                  ; WIN_MAX_Y
     cmp eax, ebp                         ; top < win bottom?
     jae .win_next
-    ; overlap → hide
+.win_hide:
+    ; overlap or flat-canvas/whiteout → hide
     pop ebp
     pop edi
     pop esi
