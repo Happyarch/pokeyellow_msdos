@@ -497,12 +497,12 @@ LoadTownMap:
     ; moved from old wTileMap >=$60, but town map is flat-canvas modal with
     ; g_window_count==0, so window check alone would leave them visible and
     ; stale spr_dos at matte left (80) survives via wShadowOAMBackup 0xF3C0
-    ; 36*4 copy. Park 1-14 here; slot 0 player and 15 Pikachu kept for
-    ; DrawPlayerOrBirdSprite.
+    ; Park all 16 slots (including Pikachu 15) — town map draws
+    ; player/bird directly to wShadowOAM 32/36, not via sprite state.
     push ecx
     push esi
-    mov ecx, 14
-    mov esi, 0x10
+    mov ecx, 16
+    xor esi, esi
 .hidePark:
     mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
     add esi, 0x10
