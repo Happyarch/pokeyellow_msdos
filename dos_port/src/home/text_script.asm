@@ -441,6 +441,12 @@ DisplayPokemartDialogue:
     mov esi, PokemartGreetingText        ; ld hl, PokemartGreetingText
     mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
     call PrintText
+    ; Discard held-A that dismissed the greeting so the mart's BUY/SELL/QUIT
+    ; menu (HandleMenuInput via hJoy5, hJoy7==0→hJoyHeld) doesn't read it as
+    ; a fresh A press and autoadvance into BUY.
+    xor eax, eax
+    mov [ebp + hJoyPressed], al
+    mov [ebp + hJoyHeld], al
     pop esi                              ; pop hl
     inc esi                              ; inc hl — skip the TX_SCRIPT_MART byte → item list
     call LoadItemList

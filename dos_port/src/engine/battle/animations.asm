@@ -947,6 +947,16 @@ AnimationCleanOAM:
     push eax
     call DelayFrame
     call ClearSprites
+    ; For a successful capture the ball sprite must remain visible on screen
+    ; until the player dismisses the "All right! ..." prompt (pret keeps
+    ; wShadowOAM published through PrintText's TX_PROMPT_BUTTON wait). The
+    ; generic OAM cleanup would publish the zeroed shadow immediately,
+    ; making the ball disappear automatically. Keep the last published OAM
+    ; for the captured case — its explicit ClearSprites after the prompt
+    ; (ItemUseBall:2170/2207) will do the single publish.
+    mov al, [ebp + wPokeBallAnimData]
+    cmp al, 0x43
+    je .skipPublish
     ; publish the now-zeroed shadow as the canonical OAM (the GB's next DMA).
     ; ECX = 0: no drawn entries, matching the spr_oam_valid ClearSprites just set.
     mov esi, wShadowOAM
@@ -954,6 +964,7 @@ AnimationCleanOAM:
     mov eax, 80                              ; battle-frame projection origin
     mov ebx, 24
     call PublishProjectedOAM
+.skipPublish:
     pop eax
     pop ebx
     pop edx

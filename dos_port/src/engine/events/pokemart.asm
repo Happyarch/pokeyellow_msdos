@@ -12,7 +12,7 @@
 ; UI PROJECTION (docs/ui_projection.md):
 ;   BUY/SELL/QUIT box : anchor top-LEFT,  X+0,  Y+0  -> canvas cols 0-10,  rows 0-6
 ;   MONEY box         : anchor top-right, X+20, Y+0  -> canvas cols 31-39, rows 0-2
-;   priced item list  : RAW canvas origin (11, 7)    -> canvas cols 11-26, rows 7-17
+;   priced item list  : RAW canvas origin (11, 2)    -> canvas cols 11-26, rows 2-12  (1-row overlap with MONEY bottom)
 ;
 ; Build: nasm -f coff -I include/ -I . -o pokemart.o src/engine/events/pokemart.asm
 ; ===========================================================================
@@ -201,7 +201,7 @@ DisplayPokemartDialogue_:
     mov [ebp + wPrintItemPrices], al             ; ld [wPrintItemPrices], a
     inc al                                       ; inc a ; a = 2 (PRICEDITEMLISTMENU)
     mov [ebp + wListMenuID], al                  ; ld [wListMenuID], a
-    ; PROJ overworld-ui: GB(4,2) 16x11 --(RAW origin (11, 7))--> wx=95 wy=56 clip=128 max_y=144
+    ; PROJ overworld-ui: GB(4,2) 16x11 --(RAW origin (11, 2))--> wx=95 wy=16 clip=128 max_y=104  (1-row overlap with MONEY)
     call DisplayListMenuID                       ; call DisplayListMenuID
     jc .returnToMainPokemartMenu                 ; jr c, .returnToMainPokemartMenu
     mov byte [ebp + wMaxItemQuantity], 99        ; ld a, 99 / ld [wMaxItemQuantity], a
@@ -276,6 +276,8 @@ DisplayPokemartDialogue_:
     jmp .returnToMainPokemartMenu                ; jr .returnToMainPokemartMenu
 
 .done:
+    extern hide_window
+    call hide_window                             ; clear leaked list/qty windows — otherwise GB_TILEMAP0 window at RAW 11,2 paints blank box over overworld after B/QUIT exit
     mov esi, PokemartThankYouText                ; ld hl, PokemartThankYouText
     call PrintText                               ; call PrintText
     mov byte [ebp + wUpdateSpritesEnabled], 1    ; ld a, 1 / ld [wUpdateSpritesEnabled], a

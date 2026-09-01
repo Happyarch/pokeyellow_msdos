@@ -117,6 +117,8 @@ extern CountSetBits                  ; home/count_set_bits.asm — ESI=addr, BH=
 extern FlagAction                    ; engine/flag_action.asm — ESI=field, CL=bit, BH=action → CL
 extern GetMonName                    ; home/names.asm — [wNamedObjectIndex] → wNameBuffer
 extern set_single_window             ; ppu/ppu.asm
+extern hide_window                   ; ppu/ppu.asm
+extern g_window_count                ; ppu/ppu.asm
 extern g_bg_whiteout                 ; ppu/ppu.asm
 ; PlaySound is a REAL body (home/audio.asm), not the "audio HAL stub" this file used
 ; to claim — the audio engine is live and music plays. The POKéDEX CRY option is
@@ -788,6 +790,18 @@ ShowPokedexDataInternal:
     ; ($FF24, gb_memmap.inc), written by engine_1/engine_2 and READ every frame by the
     ; OPL / Tandy / MPU-401 shims to scale channel output. Nothing was blocking it. M-73.
     mov byte [ebp + rAUDVOL], 0x33       ; ld a, $33 (3/7 volume) / ldh [rAUDVOL], a
+    ; Save window/stride state for callers that had their own projection (battle
+    ; capture path uses msgbox_centered 40-wide; standalone dex uses 20-wide).
+    ; ShowPokedexDataInternal is a full-screen takeover via dex_show_window
+    ; (set_single_window + g_bg_whiteout=1) and DrawDexEntryOnScreen forces
+    ; text_row_stride=20 — both must be restored or the battle caller splatters
+    ; text and leaves the dex window occluding the battle screen.
+    mov eax, [g_window_count]
+    push eax
+    mov eax, [g_bg_whiteout]
+    push eax
+    mov eax, [text_row_stride]
+    push eax
     movzx eax, byte [ebp + hTileAnimations]
     push eax                             ; push af
     xor al, al
@@ -824,6 +838,13 @@ ShowPokedexDataInternal:
     jz .waitForButtonPress
     pop eax                              ; pop af (hTileAnimations)
     mov [ebp + hTileAnimations], al
+    ; Restore window/stride state saved on entry — see prologue comment.
+    pop eax
+    mov [text_row_stride], eax
+    pop eax
+    mov [g_bg_whiteout], eax
+    pop eax
+    mov [g_window_count], eax
     call GBPalWhiteOut
     call ClearScreen
     ; The old comment here said RunDefaultPaletteCommand was "not defined in the port".
@@ -954,11 +975,16 @@ DrawDexEntryOnScreen:
     ;   feet = @+1, inches = @+2, weight_lo = @+3, weight_hi = @+4, flavor = @+5.
     ; EDI is preserved by PrintNumber, so it carries the '@' pointer across the calls.
     mov edi, [dex_entry_ptr]
+    mov ecx, 512                         ; bound the scan to prevent page fault on wild pointer
 .scan_at:
     cmp byte [edi], 0x50                 ; '@'
     je .found_at
     inc edi
-    jmp .scan_at
+    dec ecx
+    jnz .scan_at
+    ; fallback: if no terminator found within bound, treat current as terminator to avoid crash
+    ; (entry data is corrupted or pointer wild — show what we can rather than fault)
+    jmp .found_at
 .found_at:
     ; hDexWeight ($FF8B) is a shared HRAM UNION slot, in the port exactly as in pret
     ; (hMapStride / hPreviousTileset / hWarpDestinationMap / hItemPrice all live here;

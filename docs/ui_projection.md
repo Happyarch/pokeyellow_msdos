@@ -214,11 +214,13 @@ anchor rule.** On hardware it is drawn at `hlcoord 4, 2` with `lb de, 9, 14`
 (`home/list_menu.asm:34`) — a 16x11 box over GB cols 4-19, rows 2-12 — which
 partially covers the MONEY box's bottom border AND paints over BUY/SELL/QUIT.
 That overlap is a 20x18 SCREEN-SIZE CONSTRAINT, not a design intent, and at 40x25
-there is room to stop borrowing those cells. The port therefore places it at a
-raw canvas origin of **(11, 7)**: its top-left corner just touches the
-bottom-right corner of BUY/SELL/QUIT, so the list unfolds down-and-right from the
-menu that opened it and overlaps NOTHING (menu cols 0-10 rows 0-6; money cols
-31-39 rows 0-2; list cols 11-26 rows 7-17).
+there is room for a widescreen spread — but the port **keeps 1 row of overlap**
+with MONEY's bottom border by maintainer direction (“just below and slightly
+overlapping the bottom of the money counter”, 2026-09-01). The port therefore
+places it at a raw canvas origin of **(11, 2)**: its top border row `2` sits on
+`MONEY`'s bottom border row `2` (cols 11-26 rows 2-12, 1-row vertical overlap with
+money cols 31-39 rows 0-2), while still clearing `BUY/SELL/QUIT` below its top
+rows.
 
 Recorded as raw coordinates ON PURPOSE. It is genuinely a one-off: the registry's
 vocabulary is per-axis translation, and "offset from another element's box" is a
@@ -317,20 +319,20 @@ and sit at rows 9-11, one row above the list's bottom border. They are flush-rig
 INSIDE their parent. That containment is the thing to preserve.
 
 Offsets from the priced list's origin: quantity-only +11 col / +7 row;
-quantity+price +3 col / +7 row. Applied to the port's list origin (11, 7):
+quantity+price +3 col / +7 row. Applied to the port's list origin (11, 2):
 
-  quantity only     -> (22, 14)  5x3   canvas cols 22-26, rows 14-16
-  quantity + price  -> (14, 14)  13x3  canvas cols 14-26, rows 14-16
+  quantity only     -> (22, 9)  5x3   canvas cols 22-26, rows 9-11
+  quantity + price  -> (14, 9)  13x3  canvas cols 14-26, rows 9-11
 
 Both again end at col 26 — exactly the port list's right edge (cols 11-26) — and
-again sit one row above its bottom (row 17). The relationship survives the
+again sit one row above its bottom (row 12). The relationship survives the
 projection intact, which is the check that this is the right rule rather than a
 plausible one.
 
 *** WHY THE GENERIC ANCHOR IS NOT MERELY SUBOPTIMAL BUT BROKEN HERE. *** The
 `overworld-ui (list quantity)` row anchors this box top-right X+20, which is
 correct for the bag, the PC and the elevator, whose lists also sit at X+20. It is
-wrong for the mart, whose list is at the raw origin (11, 7):
+wrong for the mart, whose list is at the raw origin (11, 2):
   quantity only    X+20 -> canvas cols 35-39, while its list is at 11-26 — the box
                    floats NINE columns clear of its own parent.
   quantity + price X+20 -> canvas cols 27-39, starting one column PAST the list's
@@ -501,7 +503,7 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (list quantity)| (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | list_menu.asm (DisplayChooseQuantityMenu) |
 | overworld-ui (mart BUY/SELL/QUIT) | (0, 0) | 11×7 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 88 | 56 | pokemart.asm (BUY_SELL_QUIT_MENU_TEMPLATE, data/text_boxes.asm) |
 | overworld-ui (mart MONEY)         | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | pokemart.asm (MONEY_BOX_TEMPLATE, data/text_boxes.asm) |
-| overworld-ui (mart priced list)   | (4, 2) | 16×11| RAW origin (11, 7) — one-off, see the Poké Mart section above | 95 | 56 | 128 | 144 | pokemart.asm (PRICEDITEMLISTMENU; overrides the generic list_menu.asm anchor) |
+| overworld-ui (mart priced list)   | (4, 2) | 16×11| RAW origin (11, 2) — one-off, 1-row overlap with MONEY, see Poké Mart section above | 95 | 16 | 128 | 104 | pokemart.asm (PRICEDITEMLISTMENU; overrides the generic list_menu.asm anchor) |
 | overworld-ui (vending drinks)     | (0, 3) | 14×10| anchor=top-LEFT, X+0, Y+0 | 7 | 24 | 112 | 104 | vending_machine.asm:20 (hlcoord 0,3 + lb bc,8,12) |
 | overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
 | overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
@@ -513,8 +515,8 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (bike shop menu text) | (2, 2) | — | INHERITS the bike shop box: +2 col, +2 row from its origin → (2, 2) | — | — | — | — | scripts/BikeShop.asm:58 PlaceString BikeShopMenuText |
 | overworld-ui (bike shop price)    | (8, 3) | — | INHERITS the bike shop box: +8 col, +3 row from its origin → (8, 3) | — | — | — | — | scripts/BikeShop.asm:61 PlaceString BikeShopMenuPrice |
 | overworld-field (SS Anne water fill) | (0, 10) | 20×6 | FULL SPAN: 40 cols; row count derived from canvas height, not pret's literal 6 | — | — | — | — | scripts/VermilionDock.asm:54 (hlcoord 0,10 + SCREEN_WIDTH*6 + FillMemory $14) |
-| overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (22, 14) | 183 | 112 | 40 | 136 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) |
-| overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (14, 14) | 119 | 112 | 104 | 136 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
+| overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (22, 9) | 183 | 72 | 40 | 96 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) |
+| overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (14, 9) | 119 | 72 | 104 | 96 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
 | battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |

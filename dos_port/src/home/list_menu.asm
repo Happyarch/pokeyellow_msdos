@@ -104,6 +104,7 @@ extern GetItemPrice             ; engine/items/item_price.asm  [wCurItem] → hI
 extern LoadMonData              ; src/home/pokemon.asm
 extern GetPartyMonName          ; home/pokemon.asm  AL=index, ESI=nick list base
 extern CopyToStringBuffer       ; src/home/copy_string.asm  EDX=src → wStringBuffer
+extern AddBCD                   ; engine/math/bcd.asm — direct (see .printPrice fix)
 extern AddBCDPredef             ; engine/math/bcd.asm
 extern DivideBCDPredef3         ; engine/math/bcd.asm
 
@@ -140,6 +141,10 @@ LIST_MAXY       equ 104
 LIST_WX_BATTLE   equ 119         ; ; PROJ battle: GB(4,2) 16x11 --(anchor=center, X+10, Y+3)--> wx=119 wy=40 clip=128 max_y=128
 LIST_WY_BATTLE   equ 40
 LIST_MAXY_BATTLE equ 128
+LIST_MART_WX     equ 95          ; ; PROJ mart: GB(4,2) 16x11 --(raw canvas origin 11,2)--> wx=95 wy=16 clip=128 max_y=104
+LIST_MART_WY     equ 16
+LIST_MART_CLIP   equ 128
+LIST_MART_MAXY   equ 104
 LIST_SROW       equ 0           ; GB_TILEMAP0 start row
 LIST_CURSOR_COL equ 1           ; pret hlcoord 5,4 → box-rel (1,2)
 LIST_NAME_COL   equ 2           ; pret hlcoord 6,4 → box-rel (2,2)
@@ -165,21 +170,21 @@ QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list b
 ; Mart variant of the quantity box. PRICEDITEMLISTMENU is the ONLY list id that
 ; takes pret's wider `hlcoord 7,9 / lb bc,1,11` layout (13x3), and it is also the
 ; only caller whose parent list is NOT at the shared X+20 anchor — the mart's
-; priced item list sits at the raw canvas origin (11,7). So this box is placed
+; priced item list sits at the raw canvas origin (11,2). So this box is placed
 ; RELATIVE TO THAT LIST, reproducing pret's containment exactly; see
 ; docs/ui_projection.md, "The mart quantity box — positioned RELATIVE TO ITS LIST".
 ; pret offsets from the priced list's origin (4,2): +3 col, +7 row.
-; Port: (11,7) + (3,7) = canvas (14,14), so cols 14-26 x rows 14-16 — ending on
-; col 26, exactly the port list's right edge, one row above its bottom (17), which
+; Port: (11,2) + (3,7) = canvas (14,9), so cols 14-26 x rows 9-11 — ending on
+; col 26, exactly the port list's right edge, one row above its bottom (12), which
 ; is the same flush-right containment pret has ending on col 19.
 QTY_MART_COL    equ 11 + 3      ; mart list origin col + pret's dcol
-QTY_MART_ROW    equ 7 + 7       ; mart list origin row + pret's drow
+QTY_MART_ROW    equ 2 + 7       ; mart list origin row + pret's drow
 QTY_MART_WX     equ 8 * QTY_MART_COL + 7        ; 119
-QTY_MART_WY     equ 8 * QTY_MART_ROW            ; 112
+QTY_MART_WY     equ 8 * QTY_MART_ROW            ; 72
 QTY_MART_CLIP   equ 8 * 13                      ; 104 — the 13-wide priced box, NOT
-                                                ; QTY_CLIP's 5-tile 40, which would
-                                                ; clip 8 of its 13 columns away
-QTY_MART_MAXY   equ 8 * (QTY_MART_ROW + 3)      ; 136
+                                                 ; QTY_CLIP's 5-tile 40, which would
+                                                 ; clip 8 of its 13 columns away
+QTY_MART_MAXY   equ 8 * (QTY_MART_ROW + 3)      ; 96
 QTY_SCRATCH     equ LIST_SCRATCH + QTY_SROW * LIST_STRIDE  ; scratch row == tilemap row
 QTY_TOTAL_W     equ 13          ; widest (priced) box; small box clipped by window
 QTY_TOTAL_H     equ 3
@@ -617,7 +622,8 @@ DisplayChooseQuantityMenu:
     push ebx
     mov edx, hMoney + 2                        ; DE = hMoney+2
     mov esi, hItemPrice + 2                    ; HL = hItemPrice+2
-    call AddBCDPredef                          ; hMoney += hItemPrice
+    mov cl, 3                                  ; c = 3 bytes
+    call AddBCD                                ; hMoney += hItemPrice — direct: GetPredefRegisters would clobber EDX/ESI/CL
     pop ebx
     dec bl
     jnz .addLoop
@@ -909,10 +915,18 @@ list_draw_box_border:
     mov ecx, LIST_CLIP
     mov edx, LIST_MAXY
     cmp byte [ebp + wIsInBattle], 0
-    jz .publish
+    jz .checkMart
     mov eax, LIST_WX_BATTLE
     mov ebx, LIST_WY_BATTLE
     mov edx, LIST_MAXY_BATTLE
+    jmp .publish
+.checkMart:
+    cmp byte [ebp + wListMenuID], PRICEDITEMLISTMENU
+    jne .publish
+    mov eax, LIST_MART_WX
+    mov ebx, LIST_MART_WY
+    mov ecx, LIST_MART_CLIP
+    mov edx, LIST_MART_MAXY
 .publish:
     mov esi, GB_TILEMAP0
     mov edi, LIST_SROW
@@ -921,7 +935,7 @@ list_draw_box_border:
 
 list_add_qty_window:
     ; PROJ overworld-ui (list quantity): GB(15,9) 5x3 --(anchor=top-right, X+20, Y+0)--> wx=287 wy=72 clip=40 max_y=96
-    ; PROJ overworld-ui (mart qty + price): GB(7,9) 13x3 --(RELATIVE to the mart priced list, +3 col +7 row from its (11,7) origin)--> wx=119 wy=112 clip=104 max_y=136
+    ; PROJ overworld-ui (mart qty + price): GB(7,9) 13x3 --(RELATIVE to the mart priced list, +3 col +7 row from its (11,2) origin)--> wx=119 wy=72 clip=104 max_y=96
     mov eax, QTY_WX
     mov ebx, QTY_WY
     mov ecx, QTY_CLIP
