@@ -5,7 +5,6 @@
   "wEndBattleLoseTextPointer": "0xF404",
   "wEndBattleTextRomBank": "0xF408",
   "wEndBattleWinTextPointer": "0xF400",
-  "wMenuWrappingEnabled": "0xD628",
-  "wTempPic": "0x21A00",
-  "wTrainerPicPointer": "0xDE14"
+  "wShadowOAMBackup": "0xF3C0",
+  "wTempPic": "0x21A00"
 }

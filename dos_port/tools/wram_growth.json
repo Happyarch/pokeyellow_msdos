@@ -73,6 +73,10 @@
     "W_SURF_ANIM_DATA": {
       "size": "0x2C0",
       "why": "surfing-minigame anim tables, same reason"
+    },
+    "W_SHADOWOAMBACKUP": {
+      "size": "0xA0",
+      "why": "town-map OAM backup separate from pret UNION at 0xC508 (wSurroundingTiles 48x36 1728B) — TownMapSpriteBlinkingAnimation copies 36*4 backup→shadow at wAnimCounter 50, so surrounding-map tiles >=$60 <160 became ghost sprites left of TOWNMAP_X_PX 80; prefix-sum puts shifted WRAM end 0xEDCB + 0x2A0+0x2C0 = 0xF32B, headroom 2772B below GB_OAM 0xFE00"
     }
   }
 }

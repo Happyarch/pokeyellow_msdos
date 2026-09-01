@@ -881,7 +881,8 @@
 ; of garbage glyphs across the map). It goes in the Echo region instead, with the other
 ; buffers that outgrew their pret slots (wSurroundingTiles, wOverworldMap,
 ; wTileMapBackup2 — which ends at 0xF4E8).
-%define wShadowOAMBackup             0xC788   ; 160 B (OAM_COUNT * 4), ends 0xF59F
+; DEVIATION{class=data-model; pret=ram/wram.asm:wShadowOAMBackup; behavior=relocate wShadowOAMBackup from pret 0xC508 UNION (port 0xC788 via wTileMap +640) to port-only expanded WRAM 0xF3C0; evidence=0xC788 aliases wTileMapBackup/wSurroundingTiles 0xC788 0x6C0 and wAnimatedObjectsData 0xC788 0xCA — TownMapSpriteBlinkingAnimation 36*4 backup→shadow at wAnimCounter 50 then publishes surrounding-map tiles >=$60 <160 as ghost sprites left of TOWNMAP_X_PX 80, blinking with cursor, measured 2026-09-01; prefix-sum port_addr=pret_addr+Σ(growths<addr) puts pret WRAM end 0xDFFF→0xEDCB, staging 0x2A0+0x2C0→0xF32B, so port-only 0xF3C0 (after W_SURF 0xF100→0xF3C0) is derived not asserted, headroom 0x9A0 to GB_OAM 0xFE00; lifetime=permanent while wTileMap 40×25 swallows 0xC508}
+%define wShadowOAMBackup             0xF3C0   ; port-only 160 B, 0xF3C0→0xF460 (expanded WRAM, was 0xC788 UNION)
 %define wTownMapSpriteBlinkingEnabled 0xDE68
 %define wTownVisitedFlag             0xE4D8   ; = wTownVisitedFlag (2 bytes)
 ; The three below are aliased-scratch lanes, like every other 0xCD3D/0xCEE9 user
