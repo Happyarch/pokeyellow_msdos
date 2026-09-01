@@ -225,7 +225,11 @@ DisplayTownMap:
     ; town map so UpdateSprites inside ExitTownMap did nothing. Now that it
     ; is restored to 1, republish overworld sprites immediately so pressing B
     ; to close the map reshows them without waiting for bag close.
+    ; wTileMap is still blank (ClearScreen) after ExitTownMap — rebuild it
+    ; before UpdateSprites or UpdatePlayerSprite sees 0x7F >=$60 at
+    ; PLAYER_STANDING_ROW/COL and keeps player hidden.
     push eax
+    call RefreshCollisionTileMap
     call UpdateSprites
     pop eax
     ret
