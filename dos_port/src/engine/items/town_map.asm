@@ -56,6 +56,7 @@ extern JoypadLowSensitivity            ; src/home/joypad2.asm
 extern g_tilecache_dirty               ; ppu.asm — see the FarCopyData note in LoadTownMap
 extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout flag
 extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count
+extern spr_dos_sy, spr_dos_sx          ; ppu.asm — sprite canvas positions
 extern hide_window                     ; home/window.asm
 extern PrepareStaticOAM                ; engine/gfx/sprite_oam.asm — publish OBJ positions
 extern HideSprites                     ; home/clear_sprites.asm — zero shadow OAM
@@ -492,6 +493,39 @@ LoadTownMap:
     ; 1, so without this the overworld's stale OAM entries survive — and tm_publish_oam
     ; then dutifully publishes them as ghost sprites over the map.
     call HideSprites
+    ; Explicit park all 14 NPC slots (keep freeze) — single hide at new constants
+    ; moved from old wTileMap >=$60, but town map is flat-canvas modal with
+    ; g_window_count==0, so window check alone would leave them visible and
+    ; stale spr_dos at matte left (80) survives via wShadowOAMBackup 0xF3C0
+    ; 36*4 copy. Park 1-14 here; slot 0 player and 15 Pikachu kept for
+    ; DrawPlayerOrBirdSprite.
+    push ecx
+    push esi
+    mov ecx, 14
+    mov esi, 0x10
+.hidePark:
+    mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
+    add esi, 0x10
+    dec ecx
+    jnz .hidePark
+    pop esi
+    pop ecx
+    ; Also park spr_dos for all 40 OAM entries to -1000 (HideSprites only clears
+    ; wShadowOAM Y and spr_oam_valid, not spr_dos; frozen PrepareOAMData leaves
+    ; stale dos_base at matte)
+    push eax
+    push ecx
+    push edi
+    xor edi, edi
+.sprPark:
+    mov dword [spr_dos_sy + edi*4], -1000
+    mov dword [spr_dos_sx + edi*4], -1000
+    inc edi
+    cmp edi, 40
+    jb .sprPark
+    pop edi
+    pop ecx
+    pop eax
     call hide_window
     ; BG tile animations rewrite vTileset $03/$14 every DelayFrame; the world-map tiles
     ; live at $60+, so they are not hit — but the animator also arms the cache. Leave it.
