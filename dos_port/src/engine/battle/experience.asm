@@ -396,9 +396,9 @@ GainExperience:
     ; Read old max HP (before CalcStats updates it).
     mov al, [ebp + esi]             ; low byte of maxHP
     dec esi                         ; → MON_MAXHP (high byte)
-    mov cl, al                      ; CL = old maxHP low
+    mov bl, al                      ; BL = old maxHP low (BH:BL preserved via EBX; CL would be clobbered by CalcStats)
     mov bh, [ebp + esi]             ; BH = old maxHP high
-    push ebx                        ; PUSH G: save old maxHP (BH:CL)
+    push ebx                        ; PUSH G: save old maxHP (BH:BL)
 
     ; EDX = party_mon + MON_MAXHP (CalcStats writes stats here).
     mov edx, esi
@@ -409,14 +409,14 @@ GainExperience:
     mov bh, 1                       ; BH = 1: include stat-EXP in calculation
     call CalcStats
 
-    pop ebx                         ; POP G: BH = old maxHP high, CL = old maxHP low
+    pop ebx                         ; POP G: BH = old maxHP high, BL = old maxHP low (EBX preserved by CalcStats)
     pop esi                         ; POP F: ESI = MON_MAXHP+1 (low byte)
 
     ; Compute HP delta: new maxHP - old maxHP.
     mov al, [ebp + esi]             ; new maxHP low byte (CalcStats wrote it)
     dec esi                         ; → MON_MAXHP high byte
-    sub al, cl
-    mov cl, al                      ; CL = maxHP delta low
+    sub al, bl
+    mov bl, al                      ; BL = maxHP delta low
     mov al, [ebp + esi]             ; new maxHP high byte
     sbb al, bh
     mov bh, al                      ; BH = maxHP delta high
@@ -425,7 +425,7 @@ GainExperience:
     ; MON_HP + 1 = (MON_HP + 1); offset from MON_MAXHP = (MON_HP+1) - MON_MAXHP = 0x02-0x22 = -0x20
     add esi, (MON_HP + 1) - MON_MAXHP
     mov al, [ebp + esi]             ; current HP low
-    add al, cl
+    add al, bl
     mov [ebp + esi], al             ; write new current HP low
     dec esi                         ; → MON_HP high byte
     mov al, [ebp + esi]
