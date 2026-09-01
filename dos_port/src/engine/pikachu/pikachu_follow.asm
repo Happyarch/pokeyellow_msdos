@@ -52,6 +52,9 @@ extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
 extern Pikachu_IsInArray                ; src/home/pikachu.asm
 extern InitializeSpriteScreenPosition   ; src/engine/overworld/movement.asm
 extern Random                           ; src/home/random.asm
+extern g_window_count          ; ppu.asm — window count
+extern g_windows               ; ppu.asm — window array
+extern g_bg_whiteout           ; ppu.asm — whiteout
 
 ; ---------------------------------------------------------------------------
 ; Globals
@@ -1722,24 +1725,62 @@ WillPikachuSpawnOnTheScreen:
     jb .not_on_screen
 
 .same_x:
-    ; Re-unified with PRET on the larger 40-wide wTileMap (PRET -20 → port -SCREEN_WIDTH).
-    ; GetNPCCurrentTile returns ESI = lower-left wTileMap entry (row*40+col+40).
-    call .GetNPCCurrentTile              ; ESI = lower-left
-    mov dh, MAP_TILESET_SIZE             ; $60
-    mov al, [ebp + esi]                  ; lower-left (BL)
-    mov dl, al                           ; ld e,a — saved for grass priority at .on_screen
-    cmp al, dh
-    jae .not_on_screen
-    mov al, [ebp + esi + 1]              ; lower-right (BR)
-    cmp al, dh
-    jae .not_on_screen
-    mov al, [ebp + esi - SCREEN_WIDTH]   ; upper-left (TL)
-    cmp al, dh
-    jae .not_on_screen
-    mov al, [ebp + esi - SCREEN_WIDTH + 1] ; upper-right (TR)
-    cmp al, dh
-    jae .not_on_screen
-    jmp .on_screen                       ; all four < $60 → visible
+    ; New window locations where those boxes are actually drawn (dialog 87,152,
+    ; list 199,16 etc. as g_windows on 40×25), not old wTileMap >=$60 at 20×18.
+    ; Pikachu hide at new constants: 16×16 YPIXELS/XPIXELS vs g_windows.
+    push esi
+    push edi
+    push ebp
+    cmp dword [g_bg_whiteout], 0
+    jne .pika_win_visible
+    cmp word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    je .pika_win_visible
+    cmp dword [g_window_count], 0
+    je .pika_win_visible
+    movzx esi, byte [ebp + hCurrentSpriteOffset] ; 0xF0
+    movzx eax, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
+    movzx ecx, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
+    ; ECX=left, EAX=top, +16 right/bottom
+    mov edx, ecx
+    add edx, 16                          ; right
+    mov ebx, eax
+    add ebx, 16                          ; bottom
+    xor esi, esi                         ; i=0
+.pika_win_loop:
+    cmp esi, [g_window_count]
+    jae .pika_win_visible
+    imul edi, esi, 32
+    add edi, g_windows
+    mov ebp, [edi + 0]                   ; WIN_WX
+    cmp edx, ebp
+    jbe .pika_win_next
+    mov ebp, [edi + 8]                   ; WIN_CLIP_W
+    add ebp, [edi + 0]                   ; win right
+    cmp ecx, ebp
+    jae .pika_win_next
+    mov ebp, [edi + 4]                   ; WIN_WY
+    cmp ebx, ebp
+    jbe .pika_win_next
+    mov ebp, [edi + 12]                  ; WIN_MAX_Y
+    cmp eax, ebp
+    jae .pika_win_next
+    ; overlap → hide
+    pop ebp
+    pop edi
+    pop esi
+    jmp .not_on_screen
+.pika_win_next:
+    inc esi
+    jmp .pika_win_loop
+.pika_win_visible:
+    pop ebp
+    pop edi
+    pop esi
+    ; Grass priority still needs tile at stand position (faithful PRET, now 40-wide)
+    call .GetNPCCurrentTile              ; ESI = lower-left wTileMap 40
+    mov al, [ebp + esi]
+    mov dl, al                           ; ld e,a for .on_screen grass cmp
+    jmp .on_screen
 
 .not_on_screen:
     movzx esi, byte [ebp + hCurrentSpriteOffset]

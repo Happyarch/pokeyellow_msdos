@@ -61,6 +61,9 @@ extern Random_
 extern DetectCollisionBetweenSprites  ; src/engine/overworld/sprite_collisions.asm
 extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per slot (pret wMapSpriteData)
 extern IsObjectHidden          ; src/engine/overworld/toggleable_objects.asm (pret predef)
+extern g_window_count          ; ppu.asm — window descriptor count
+extern g_windows               ; ppu.asm — window descriptor array
+extern g_bg_whiteout           ; ppu.asm — 1 = whiteout takeover
 
 %ifdef DEBUG_NPC_WALK
 extern npc_log
@@ -862,23 +865,13 @@ CheckSpriteAvailability:
     cmp ecx, edx
     jl  .spriteVisibleEdge               ; MAPX ∈ {+12,+13} → on-screen but E of safe zone
 .skipXYVisibility:
-    ; Re-unified with PRET: derive the 2×2 stand tile exactly as PRET does,
-    ; but on the larger 40-wide wTileMap (PRET SCREEN_WIDTH 20 → port 40).
-    ; GetTileSpriteStandsOn returns EBX = wTileMap + row*40 + col (lower-left).
-    call GetTileSpriteStandsOn           ; EBX = lower-left wTileMap entry
-    mov dh, MAP_TILESET_SIZE             ; $60
-    mov al, [ebp + ebx]                  ; lower-left
-    cmp al, dh
-    jae .spriteInvisible
-    mov al, [ebp + ebx + 1]              ; lower-right
-    cmp al, dh
-    jae .spriteInvisible
-    mov al, [ebp + ebx - SCREEN_WIDTH]   ; upper-left
-    cmp al, dh
-    jae .spriteInvisible
-    mov al, [ebp + ebx - SCREEN_WIDTH + 1] ; upper-right
-    cmp al, dh
-    jb .spriteVisible
+    ; Moved to new window locations where those boxes are actually drawn
+    ; (dialog 87,152, list 199,16 etc. as g_windows), on the larger 40×25
+    ; viewport. PRET’s wTileMap >=$60 at old hlcoord 8,9 (20) is pruned —
+    ; GetTileSpriteStandsOn_WindowCheck tests 16×16 dos_base vs g_windows.
+    call GetTileSpriteStandsOn_WindowCheck ; CF=1 → overlap → hide
+    jc .spriteInvisible
+    jmp .spriteVisible
 
 .spriteInvisible:
     mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF
@@ -939,6 +932,86 @@ GetTileSpriteStandsOn:
     imul ecx, ecx, SCREEN_WIDTH          ; row * 40
     add ebx, ecx
     add ebx, wTileMap
+    ret
+; ---------------------------------------------------------------------------
+; GetTileSpriteStandsOn — window overlap extension (single label)
+; PRET’s hide was wTileMap >=$60 at old hlcoord 8,9 (20×18). Port moves those
+; boxes to new window constants (dialog 87,152, list 199,16 etc.) as g_windows
+; descriptors; this extension tests the same sprite (16×16 at dos_base) against
+; the new g_windows rects on the larger 40×25 viewport. Walking caller ignores
+; CF and uses EBX; hide caller (CheckSpriteAvailability) tests CF.
+; ---------------------------------------------------------------------------
+GetTileSpriteStandsOn_WindowCheck:
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
+    push ebp
+    ; flat-canvas or whiteout → window already blanks, no hide needed
+    cmp dword [g_bg_whiteout], 0
+    jne .win_visible
+    cmp word [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], 0
+    je .win_visible
+    cmp dword [g_window_count], 0
+    je .win_visible
+    ; sprite 16×16 canvas box: dos_base = (MAP- wCoord)*16 + 32/96
+    movsx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
+    movsx ecx, byte [ebp + wYCoord]
+    sub eax, ecx
+    imul eax, eax, 16
+    add eax, 32                          ; EAX = top
+    movsx ecx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
+    movsx edx, byte [ebp + wXCoord]
+    sub ecx, edx
+    imul ecx, ecx, 16
+    add ecx, 96                          ; ECX = left
+    mov edx, ecx
+    add edx, 16                          ; EDX = right
+    mov ebx, eax
+    add ebx, 16                          ; EBX = bottom
+    ; EAX=top, EBX=bottom, ECX=left, EDX=right
+    xor esi, esi                         ; i = 0
+.win_loop:
+    cmp esi, [g_window_count]
+    jae .win_visible
+    imul edi, esi, 32                    ; WIN_DESC_SIZE
+    add edi, g_windows
+    mov ebp, [edi + 0]                   ; WIN_WX
+    ; window: left=WX, right=WX+CLIP_W, top=WY, bottom=MAX_Y
+    ; overlap if sprite right > win left && left < win right && bottom > win top && top < win bottom
+    cmp edx, ebp                         ; right > win left?
+    jbe .win_next
+    mov ebp, [edi + 8]                   ; WIN_CLIP_W
+    add ebp, [edi + 0]                   ; win right = WX+CLIP
+    cmp ecx, ebp                         ; left < win right?
+    jae .win_next
+    mov ebp, [edi + 4]                   ; WIN_WY
+    cmp ebx, ebp                         ; bottom > win top?
+    jbe .win_next
+    mov ebp, [edi + 12]                  ; WIN_MAX_Y
+    cmp eax, ebp                         ; top < win bottom?
+    jae .win_next
+    ; overlap → hide
+    pop ebp
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    stc
+    ret
+.win_next:
+    inc esi
+    jmp .win_loop
+.win_visible:
+    pop ebp
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    clc
     ret
 
 ; ---------------------------------------------------------------------------
