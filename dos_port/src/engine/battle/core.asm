@@ -3453,6 +3453,15 @@ DisplayBagMenu:
 
 UseBagItem:
     ; either use an item from the bag or use a safari zone item
+    ; PORT: the bag list was shown as a window over the battle BG — hide it
+    ; before the item animation runs, otherwise the list stays composited over
+    ; the ball throw (the "menu stays open" bug, measured 2026-08-31). The old
+    ; whiteout-based approach blanked the BG but still left the window visible
+    ; over the blank; the PIC_STAGE refactor removed the whiteout but kept the
+    ; window, so the list now occludes the battle animation itself. Clearing
+    ; the window here mirrors the post-effect teardown below and also covers the
+    ; capture path which otherwise never called RestoreBattleScreenState.
+    call RestoreBattleScreenState
     mov al, [ebp + wCurItem]
     mov [ebp + wNamedObjectIndex], al
     call GetItemName

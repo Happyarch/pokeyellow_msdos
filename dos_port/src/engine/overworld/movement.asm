@@ -862,8 +862,23 @@ CheckSpriteAvailability:
     cmp ecx, edx
     jl  .spriteVisibleEdge               ; MAPX ∈ {+12,+13} → on-screen but E of safe zone
 .skipXYVisibility:
-    ; DEVIATION{class=projection; pret=engine/overworld/movement.asm:CheckSpriteAvailability; behavior=omit wTileMap textbox tile occlusion culling ($60+) because the DOS compositor overlays the window layer above OBJ sprites and wTileMap is an isolated UI scratchpad; evidence=with wTileMap used as UI scratch, sampling wTileMap >= $60 caused on-screen NPC objects like the Viridian house clipboard to derender during dialog, while PPU render_window over render_sprites already handles visual occlusion; lifetime=permanent window compositor projection}
-    jmp .spriteVisible
+    ; Re-unified with PRET: derive the 2×2 stand tile exactly as PRET does,
+    ; but on the larger 40-wide wTileMap (PRET SCREEN_WIDTH 20 → port 40).
+    ; GetTileSpriteStandsOn returns EBX = wTileMap + row*40 + col (lower-left).
+    call GetTileSpriteStandsOn           ; EBX = lower-left wTileMap entry
+    mov dh, MAP_TILESET_SIZE             ; $60
+    mov al, [ebp + ebx]                  ; lower-left
+    cmp al, dh
+    jae .spriteInvisible
+    mov al, [ebp + ebx + 1]              ; lower-right
+    cmp al, dh
+    jae .spriteInvisible
+    mov al, [ebp + ebx - SCREEN_WIDTH]   ; upper-left
+    cmp al, dh
+    jae .spriteInvisible
+    mov al, [ebp + ebx - SCREEN_WIDTH + 1] ; upper-right
+    cmp al, dh
+    jb .spriteVisible
 
 .spriteInvisible:
     mov byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_IMAGEINDEX], 0xFF

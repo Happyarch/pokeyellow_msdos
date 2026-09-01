@@ -1722,9 +1722,24 @@ WillPikachuSpawnOnTheScreen:
     jb .not_on_screen
 
 .same_x:
-    ; DEVIATION{class=projection; pret=engine/pikachu/pikachu_follow.asm:WillPikachuSpawnOnTheScreen; behavior=bypass wTileMap $60+ textbox tile check because DOS PPU composites window layer over sprites and wTileMap is an isolated UI scratchpad; evidence=testing wTileMap >= $60 caused Pikachu to derender whenever player talks to an NPC facing up with Pikachu behind them in rows 12-17; lifetime=permanent window compositor projection}
-    xor dl, dl
-    jmp .on_screen
+    ; Re-unified with PRET on the larger 40-wide wTileMap (PRET -20 → port -SCREEN_WIDTH).
+    ; GetNPCCurrentTile returns ESI = lower-left wTileMap entry (row*40+col+40).
+    call .GetNPCCurrentTile              ; ESI = lower-left
+    mov dh, MAP_TILESET_SIZE             ; $60
+    mov al, [ebp + esi]                  ; lower-left (BL)
+    mov dl, al                           ; ld e,a — saved for grass priority at .on_screen
+    cmp al, dh
+    jae .not_on_screen
+    mov al, [ebp + esi + 1]              ; lower-right (BR)
+    cmp al, dh
+    jae .not_on_screen
+    mov al, [ebp + esi - SCREEN_WIDTH]   ; upper-left (TL)
+    cmp al, dh
+    jae .not_on_screen
+    mov al, [ebp + esi - SCREEN_WIDTH + 1] ; upper-right (TR)
+    cmp al, dh
+    jae .not_on_screen
+    jmp .on_screen                       ; all four < $60 → visible
 
 .not_on_screen:
     movzx esi, byte [ebp + hCurrentSpriteOffset]
