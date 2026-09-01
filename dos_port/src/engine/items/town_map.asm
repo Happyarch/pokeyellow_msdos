@@ -221,6 +221,13 @@ DisplayTownMap:
     pop esi                            ; pop hl (wUpdateSpritesEnabled)
     pop eax                            ; pop af (old value)
     mov [ebp + esi], al                ; ld [hl], a
+    ; Explicit park set 16 slots to $FF; wUpdateSpritesEnabled was $FF during
+    ; town map so UpdateSprites inside ExitTownMap did nothing. Now that it
+    ; is restored to 1, republish overworld sprites immediately so pressing B
+    ; to close the map reshows them without waiting for bag close.
+    push eax
+    call UpdateSprites
+    pop eax
     ret
 .pressedUp:
     mov al, [ebp + wWhichTownMapLocation]
@@ -286,6 +293,9 @@ LoadTownMap_Nest:
     pop esi                             ; pop hl
     pop eax                             ; pop af
     mov [ebp + esi], al                 ; ld [hl], a
+    push eax
+    call UpdateSprites
+    pop eax
     ret
 
 ; MonsNestText / ToText / AreaUnknownText are generated into town_map_data.inc.
@@ -388,6 +398,9 @@ LoadTownMap_Fly:
     pop esi                             ; pop hl (wUpdateSpritesEnabled)
     pop eax                             ; pop af
     mov [ebp + esi], al                 ; ld [hl], a
+    push eax
+    call UpdateSprites
+    pop eax
     ret
 .pressedUpFly:
     mov edx, TM_COORD(18, 0)            ; decoord 18, 0
