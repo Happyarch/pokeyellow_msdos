@@ -166,7 +166,7 @@ QTY_MAXY        equ 96
 QTY_WX_BATTLE   equ 207         ; PROJ battle: GB(15,9) 5x3 --(anchor=center, X+10, Y+3)--> wx=207 wy=96 clip=40 max_y=120
 QTY_WY_BATTLE   equ 96
 QTY_MAXY_BATTLE equ 120
-QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list box)
+QTY_SROW        equ 16          ; GB_TILEMAP0 start row (below the 11-row list box) — moved from 12 to avoid aliasing dialog rows 12-14 (MSG_BOX_ESI wTileMap+12*20)
 ; Mart variant of the quantity box. PRICEDITEMLISTMENU is the ONLY list id that
 ; takes pret's wider `hlcoord 7,9 / lb bc,1,11` layout (13x3). Its parent list
 ; is the mart priced list now at the shared X+20 anchor (24,2), same as the bag.
@@ -279,6 +279,7 @@ DisplayListMenuID:
     ; state matches; only the blit path differs. list_draw_box_border is the
     ; LIST_MENU_BOX template (14x9 interior) expressed at that anchor.
     call list_draw_box_border
+    call list_mirror                           ; border → GB_TILEMAP0 before DelayFrames 10 so first 10 frames are not black (P2)
 
     ; DEVIATION{class=projection; pret=home/list_menu.asm:DisplayListMenuIDLoop; behavior=omit two UpdateSprites calls because the port window layer already occludes OBJ; evidence=pret sprite-hide calls plus port window-over-OBJ compositor order; lifetime=permanent compositor z-order boundary}
     ; pret's two `call UpdateSprites` here exist to
@@ -649,10 +650,13 @@ DisplayChooseQuantityMenu:
     ; spaces began at, blanking then overwriting that run. The port's PlaceString
     ; keeps the same contract (ESI = line start), so the price goes to (5,1) too.
     ; Priced box origin is GB(7,9): (12,10) → box-rel (5,1).
-    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 5
+    ; Use runtime [list_scratch] + QTY_SROW*20, not QTY_SCRATCH (which is PIC_STAGE+240 compile-time, P4)
+    mov esi, [list_scratch]
+    add esi, QTY_SROW * LIST_STRIDE + 1 * LIST_STRIDE + 5
     mov eax, SpacesBetweenQuantityAndPriceText  ; flat .data label
     call PlaceString
-    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 5  ; pret: HL still 12,10 after PlaceString
+    mov esi, [list_scratch]
+    add esi, QTY_SROW * LIST_STRIDE + 1 * LIST_STRIDE + 5  ; pret: HL still 12,10 after PlaceString
     mov edx, hMoney
     mov bl, 3 | (1 << BIT_LEADING_ZEROES) | (1 << BIT_MONEY_SIGN)
     call PrintBCDNumber
@@ -662,7 +666,8 @@ DisplayChooseQuantityMenu:
     ; priced  GB(9,10)  − origin GB(7,9)  = (2,1)
     ; qty-only GB(17,10) − origin GB(15,9) = (2,1)
     ; They overwrite the "01" of the "×01" label placed at box-rel (1,1).
-    mov esi, QTY_SCRATCH + 1 * LIST_STRIDE + 2
+    mov esi, [list_scratch]
+    add esi, QTY_SROW * LIST_STRIDE + 1 * LIST_STRIDE + 2
     mov edx, wItemQuantity
     mov bh, (1 << BIT_LEADING_ZEROES) | 1      ; flags|bytes: LEADING_ZEROES | 1 byte
     mov bl, 2                                  ; 2 digits
@@ -908,7 +913,16 @@ list_draw_box_border:
     mov bl, LIST_INT_W
     mov bh, LIST_INT_H
     call TextBoxBorder
-    call hide_window                            ; reset descriptor list (count=0)
+    cmp byte [ebp + wListMenuID], PRICEDITEMLISTMENU
+    je .keepWindows
+    call hide_window                            ; reset descriptor list (count=0) — non-mart lists are sole window
+    jmp .afterHide
+.keepWindows:
+    ; Mart keeps the dialog window (msgbox_dialog GB_TILEMAP1 wy152) and any
+    ; prior mart windows; list (24,2) is the third window and must paint over
+    ; money's bottom row where they overlap. hide_window would drop dialog
+    ; exposing matte R[19,24)×[10,29) (ephemeral_1 P5).
+.afterHide:
     mov eax, LIST_WX
     mov ebx, LIST_WY
     mov ecx, LIST_CLIP

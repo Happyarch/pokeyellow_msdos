@@ -75,6 +75,7 @@ extern place_flat_str                   ; home/text.asm — EAX=flat str ptr, ES
 extern DelayFrame                       ; src/home/vblank.asm — one frame + present
 extern add_window                       ; src/ppu/ppu.asm — EAX=wx EBX=wy ECX=clip_w EDX=max_y ESI=tilemap EDI=srow
 extern g_window_count                   ; src/ppu/ppu.asm — active window-descriptor count
+extern g_windows                        ; src/ppu/ppu.asm — window descriptor array
 extern menu_redraw_cb                   ; home/window.asm — per-frame side-info redraw cb (0=none)
 extern yn_box_col                       ; home/yes_no.asm — box top-left GB column
 extern yn_box_row                       ; home/yes_no.asm — box top-left GB row
@@ -354,6 +355,7 @@ DisplayMoneyBox:
     call PrintBCDNumber
     ; ld hl,wStatusFlags5 / res BIT_NO_TEXT_DELAY,[hl]
     and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
+    call mart_show_money_window
     ret
 
 ; ---------------------------------------------------------------------------
@@ -383,9 +385,12 @@ DoBuySellQuitMenu:
     ; pret's PlaceMenuCursor hardcodes the 2-row item
     ; spacing; the port's carries it in menu_item_step (stride is the canvas 40).
     mov dword [menu_item_step], 2 * SCREEN_TILES_W
+    call mart_show_bsq_window
+    mov dword [menu_redraw_cb], mart_bsq_mirror
     ; ld a,[wStatusFlags5] / res BIT_NO_TEXT_DELAY,a / ld [wStatusFlags5],a
     and byte [ebp + wStatusFlags5], (~(1 << BIT_NO_TEXT_DELAY)) & 0xFF
     call HandleMenuInput                ; AL = watched keys pressed
+    mov dword [menu_redraw_cb], 0
     call PlaceUnfilledArrowMenuCursor
     test al, PAD_A                      ; bit B_PAD_A,a / jr nz,.pressedA
     jnz .pressedA
@@ -438,6 +443,8 @@ DoBuySellQuitMenu:
 
 ; GB_TILEMAP0 source row the projected box is mirrored to (matches bag YES/NO).
 YN_SROW        equ 16
+MART_MONEY_SROW equ 20          ; P1: money 9x3 at row20 (free vs list 0-10, qty 16-18, YN 16)
+MART_BSQ_SROW   equ 23          ; P1: BUY 11x7 at row23 (free, after money)
 
 DisplayTwoOptionMenu:
 %ifdef DEBUG_ITEMTM
@@ -1226,4 +1233,102 @@ TwoOptionMenu_RestoreScreenTiles:
     dec bh                              ; dec b
     jnz .loop
     call UpdateSprites
+    ret
+
+; Mart money/BUY mirrors — stride 40 (canvas), not 20 (YN scratch)
+; Draw once then edit for money changes (user suggestion) — idempotent add
+mart_money_mirror:
+    pushad
+    xor ebx, ebx
+.mart_money_row:
+    mov esi, ebx
+    imul esi, esi, SCREEN_TILES_W
+    add esi, wTileMap + UI_MONEY_BOX_TEMPLATE_ROW * SCREEN_TILES_W + UI_MONEY_BOX_TEMPLATE_COL
+    add esi, ebp
+    mov edi, ebx
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP0 + MART_MONEY_SROW * 32]
+    mov ecx, UI_MONEY_BOX_TEMPLATE_GBW
+    rep movsb
+    inc ebx
+    cmp ebx, UI_MONEY_BOX_TEMPLATE_GBH
+    jb near .mart_money_row
+    popad
+    ret
+
+mart_bsq_mirror:
+    pushad
+    xor ebx, ebx
+.mart_bsq_row:
+    mov esi, ebx
+    imul esi, esi, SCREEN_TILES_W
+    add esi, wTileMap + UI_BUY_SELL_QUIT_MENU_TEMPLATE_ROW * SCREEN_TILES_W + UI_BUY_SELL_QUIT_MENU_TEMPLATE_COL
+    add esi, ebp
+    mov edi, ebx
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP0 + MART_BSQ_SROW * 32]
+    mov ecx, UI_BUY_SELL_QUIT_MENU_TEMPLATE_GBW
+    rep movsb
+    inc ebx
+    cmp ebx, UI_BUY_SELL_QUIT_MENU_TEMPLATE_GBH
+    jb near .mart_bsq_row
+    popad
+    ret
+
+mart_show_money_window:
+    pushad
+    mov ecx, [g_window_count]
+    xor ebx, ebx
+.mart_money_check:
+    cmp ebx, ecx
+    jge near .mart_money_notfound
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_START_ROW]
+    cmp edx, MART_MONEY_SROW
+    je near .mart_money_found
+    inc ebx
+    jmp .mart_money_check
+.mart_money_found:
+    call mart_money_mirror
+    popad
+    ret
+.mart_money_notfound:
+    popad
+    call mart_money_mirror
+    mov eax, UI_MONEY_BOX_TEMPLATE_WX
+    mov ebx, UI_MONEY_BOX_TEMPLATE_WY
+    mov ecx, UI_MONEY_BOX_TEMPLATE_CLIP
+    mov edx, UI_MONEY_BOX_TEMPLATE_MAXY
+    mov esi, GB_TILEMAP0
+    mov edi, MART_MONEY_SROW
+    call add_window
+    ret
+
+mart_show_bsq_window:
+    pushad
+    mov ecx, [g_window_count]
+    xor ebx, ebx
+.mart_bsq_check:
+    cmp ebx, ecx
+    jge near .mart_bsq_notfound
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_START_ROW]
+    cmp edx, MART_BSQ_SROW
+    je near .mart_bsq_found
+    inc ebx
+    jmp .mart_bsq_check
+.mart_bsq_found:
+    call mart_bsq_mirror
+    popad
+    ret
+.mart_bsq_notfound:
+    popad
+    call mart_bsq_mirror
+    mov eax, UI_BUY_SELL_QUIT_MENU_TEMPLATE_WX
+    mov ebx, UI_BUY_SELL_QUIT_MENU_TEMPLATE_WY
+    mov ecx, UI_BUY_SELL_QUIT_MENU_TEMPLATE_CLIP
+    mov edx, UI_BUY_SELL_QUIT_MENU_TEMPLATE_MAXY
+    mov esi, GB_TILEMAP0
+    mov edi, MART_BSQ_SROW
+    call add_window
     ret

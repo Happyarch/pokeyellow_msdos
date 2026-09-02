@@ -556,10 +556,12 @@ EnterMap:
     call StageIndoorMapBlk
 %endif
 %ifdef DEBUG_POKEMART
-    ; pokemart_buy_sell golden: spawn in Pewter Mart at (y=5, x=1) facing clerk
+    ; pokemart_buy_sell golden: spawn in Pewter Mart at (y=5, x=2) facing clerk
+    ; (clerk at 0,5 behind counter at 1,5; player talks +1 tile away vs normal NPCs,
+    ; so 2 tiles away at 2,5 facing LEFT; 1,5 is the counter itself, impassable)
     mov byte [ebp + wCurMap], 0x38          ; PEWTER_MART
     mov byte [ebp + wYCoord], 5
-    mov byte [ebp + wXCoord], 1
+    mov byte [ebp + wXCoord], 2
     mov byte [ebp + wDestinationWarpID], 0xFF
     call StageIndoorMapBlk
 %endif
