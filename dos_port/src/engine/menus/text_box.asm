@@ -392,6 +392,7 @@ DoBuySellQuitMenu:
     call HandleMenuInput                ; AL = watched keys pressed
     mov dword [menu_redraw_cb], 0
     call PlaceUnfilledArrowMenuCursor
+    call mart_bsq_mirror                ; publish hollow ▷ so BSQ stays visible with white cursor when list is shown (pret keeps tilemap, port must mirror)
     test al, PAD_A                      ; bit B_PAD_A,a / jr nz,.pressedA
     jnz .pressedA
     test al, PAD_B                      ; bit B_PAD_B,a (always true) / jr z,.pressedA
@@ -442,8 +443,8 @@ DoBuySellQuitMenu:
 ; ===========================================================================
 
 ; GB_TILEMAP0 source row the projected box is mirrored to (matches bag YES/NO).
-YN_SROW        equ 16
-MART_MONEY_SROW equ 20          ; P1: money 9x3 at row20 (free vs list 0-10, qty 16-18, YN 16)
+YN_SROW        equ 11          ; moved 16->11 to de-alias YN vs QTY 16-18 and MONEY 20-22 for mart buy YES/NO (all four windows coexist)
+MART_MONEY_SROW equ 20          ; P1: money 9x3 at row20 (free vs list 0-10, qty 16-18, YN 11-15)
 MART_BSQ_SROW   equ 23          ; P1: BUY 11x7 at row23 (free, after money)
 
 DisplayTwoOptionMenu:

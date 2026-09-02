@@ -46,6 +46,9 @@ extern TextBoxBorder
 extern TextCommandProcessor
 extern sync_dialog_window
 extern set_single_window               ; src/ppu/ppu.asm
+extern add_window                      ; src/ppu/ppu.asm
+extern g_windows                       ; src/ppu/ppu.asm
+extern g_window_count                  ; src/ppu/ppu.asm
 
 global HandleMenuInput
 global HandleMenuInput_
@@ -174,10 +177,87 @@ PrintText:
     mov edx, [edi + MB_WIN_MAXY]
     push edi
     mov edi, [edi + MB_WIN_STARTROW]
-    call set_single_window              ; count=1; mirrors wy→hWY (dialog-open flag)
-    pop edi
-    call sync_dialog_window             ; show the empty box before the first char
+    ; Mart preservation: keep money/BSQ/list/qty windows when dialog appears in mart.
+    ; set_single_window resets count to 1, which would hide those windows. If mart
+    ; windows are present (MONEY 20 / BSQ 23), append dialog instead, or just update
+    ; hWY if dialog already exists.
+    push esi                    ; tilemap
+    push eax                    ; wx
+    push ebx                    ; wy
+    push ecx                    ; clip
+    push edx                    ; max_y
+    push edi                    ; startrow
+    cmp dword [g_window_count], 0
+    je .singleRestore
+    mov ecx, [g_window_count]
+    xor ebx, ebx
+.scanMart:
+    cmp ebx, ecx
+    jge .singleRestore
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_START_ROW]
+    cmp edx, 20                 ; MART_MONEY_SROW
+    je .martFound
+    cmp edx, 23                 ; MART_BSQ_SROW
+    je .martFound
+    inc ebx
+    jmp .scanMart
+.martFound:
+    mov ecx, [g_window_count]
+    xor ebx, ebx
+.scanDialog:
+    cmp ebx, ecx
+    jge .addDialogRestore
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_TILEMAP]
+    cmp edx, GB_TILEMAP1
+    je .dialogExistsRestore
+    inc ebx
+    jmp .scanDialog
+.addDialogRestore:
+    pop edi                     ; startrow
+    pop edx                     ; max_y
+    pop ecx                     ; clip
+    pop ebx                     ; wy
+    pop eax                     ; wx
+    pop esi                     ; tilemap
+    call add_window
+    mov [ebp + hWY], bl
+    mov [ebp + IO_WX], al
+    pop edi                     ; projection record
+    call sync_dialog_window
     call DelayFrame
+    jmp .afterWindow
+.dialogExistsRestore:
+    pop edi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    pop esi
+    mov [ebp + hWY], bl
+    mov [ebp + IO_WX], al
+    pop edi
+    call sync_dialog_window
+    call DelayFrame
+    jmp .afterWindow
+.singleRestorePop:
+    jmp .singleRestore
+.singleRestore:
+    ; non-mart or empty window list: original single-window path
+    pop edi                     ; startrow
+    pop edx                     ; max_y
+    pop ecx                     ; clip
+    pop ebx                     ; wy
+    pop eax                     ; wx
+    pop esi                     ; tilemap
+    call set_single_window
+    pop edi
+    call sync_dialog_window
+    call DelayFrame
+    jmp .afterWindow
+.afterWindow:
+    jmp .noWindow
 .noWindow:
     pop esi                             ; pret: `pop hl` — restore the stream pointer
 %ifdef DEBUG_ASSERT_REENTRANCY

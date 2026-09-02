@@ -82,6 +82,8 @@ extern PrintNumber              ; home/print_num.asm  ESI=dest, EDX=src, BH=flag
 extern PrintBCDNumber           ; home/print_bcd.asm  ESI=dest, EDX=src, BL=flags|len
 extern add_window               ; ppu.asm        EAX=wx EBX=wy ECX=clip EDX=max_y ESI=tilemap EDI=start_row
 extern hide_window              ; ppu.asm        clear window list (count=0)
+extern g_window_count           ; ppu.asm
+extern g_windows                ; ppu.asm
 extern HandleMenuInput          ; home/window.asm  Out: AL=watched keys pressed
 extern PlaceMenuCursor          ; home/window.asm
 extern text_row_stride          ; text.asm       (resd) active wTileMap row stride
@@ -915,13 +917,48 @@ list_draw_box_border:
     call TextBoxBorder
     cmp byte [ebp + wListMenuID], PRICEDITEMLISTMENU
     je .keepWindows
+    ; ITEMLISTMENU is shared between the bag (non-mart) and the mart sell list.
+    ; The bag list should be the sole window (hide), but the mart sell list must
+    ; keep BSQ/money/dialog visible — same requirement as the priced buy list.
+    ; Detect mart by scanning for its windows (MART_MONEY_SROW 20 / BSQ 23).
+    push eax
+    push ebx
+    push ecx
+    push edx
+    mov ecx, [g_window_count]
+    test ecx, ecx
+    jz .doHide
+    xor ebx, ebx
+.scanMart:
+    cmp ebx, ecx
+    jge .doHide
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_START_ROW]
+    cmp edx, 20                                 ; MART_MONEY_SROW
+    je .keepFound
+    cmp edx, 23                                 ; MART_BSQ_SROW
+    je .keepFound
+    inc ebx
+    jmp .scanMart
+.doHide:
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
     call hide_window                            ; reset descriptor list (count=0) — non-mart lists are sole window
     jmp .afterHide
+.keepFound:
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
 .keepWindows:
     ; Mart keeps the dialog window (msgbox_dialog GB_TILEMAP1 wy152) and any
     ; prior mart windows; list (24,2) is the third window and must paint over
     ; money's bottom row where they overlap. hide_window would drop dialog
-    ; exposing matte R[19,24)×[10,29) (ephemeral_1 P5).
+    ; exposing matte R[19,24)×[10,29) (ephemeral_1 P5). For ITEMLISTMENU this
+    ; path is the mart sell list; bag lists never have a mart window, so they
+    ; still hide correctly.
 .afterHide:
     mov eax, LIST_WX
     mov ebx, LIST_WY
