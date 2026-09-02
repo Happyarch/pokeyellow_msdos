@@ -54,6 +54,8 @@ extern SubtractAmountPaidFromMoney      ; src/home/inventory.asm (farjp wrapper 
 extern PlaySoundWaitForCurrent          ; src/home/delay.asm
 extern WaitForSoundToFinish             ; src/home/delay.asm
 extern StringCmp                        ; src/home/compare.asm
+extern g_window_count                   ; src/ppu/ppu.asm
+extern sync_dialog_window               ; src/home/text.asm
 
 ; ---------------------------------------------------------------------------
 ; DisplayPokemartDialogue_ — pret engine/events/pokemart.asm:DisplayPokemartDialogue_
@@ -111,9 +113,14 @@ DisplayPokemartDialogue_:
     mov esi, PokemonSellingGreetingText          ; ld hl, PokemonSellingGreetingText
     call PrintText                               ; call PrintText
     call SaveScreenTilesToBuffer1                ; call SaveScreenTilesToBuffer1
+    mov eax, [g_window_count]
+    mov [mart_saved_wc], eax
 
 .sellMenuLoop:
     call LoadScreenTilesFromBuffer1              ; call LoadScreenTilesFromBuffer1
+    mov eax, [mart_saved_wc]
+    mov [g_window_count], eax
+    call sync_dialog_window
     ; PROJ overworld-ui: GB(11,0) 9x3 --(anchor=top-right, X+20, Y+0)--> wx=255 wy=0 clip=72 max_y=24
     mov byte [ebp + wTextBoxID], MONEY_BOX       ; ld a, MONEY_BOX / ld [wTextBoxID], a
     call DisplayTextBoxID                        ; call DisplayTextBoxID
@@ -177,6 +184,8 @@ DisplayPokemartDialogue_:
     mov esi, PokemartItemBagEmptyText            ; ld hl, PokemartItemBagEmptyText
     call PrintText                               ; call PrintText
     call SaveScreenTilesToBuffer1                ; call SaveScreenTilesToBuffer1
+    mov eax, [g_window_count]
+    mov [mart_saved_wc], eax
     jmp .returnToMainPokemartMenu                ; jp .returnToMainPokemartMenu
 
 .buyMenu:
@@ -189,9 +198,14 @@ DisplayPokemartDialogue_:
     mov esi, PokemartBuyingGreetingText          ; ld hl, PokemartBuyingGreetingText
     call PrintText                               ; call PrintText
     call SaveScreenTilesToBuffer1                ; call SaveScreenTilesToBuffer1
+    mov eax, [g_window_count]
+    mov [mart_saved_wc], eax
 
 .buyMenuLoop:
     call LoadScreenTilesFromBuffer1              ; call LoadScreenTilesFromBuffer1
+    mov eax, [mart_saved_wc]
+    mov [g_window_count], eax
+    call sync_dialog_window
     ; PROJ overworld-ui: GB(11,0) 9x3 --(anchor=top-right, X+20, Y+0)--> wx=255 wy=0 clip=72 max_y=24
     mov byte [ebp + wTextBoxID], MONEY_BOX       ; ld a, MONEY_BOX / ld [wTextBoxID], a
     call DisplayTextBoxID                        ; call DisplayTextBoxID
@@ -253,6 +267,9 @@ DisplayPokemartDialogue_:
 
 .returnToMainPokemartMenu:
     call LoadScreenTilesFromBuffer1              ; call LoadScreenTilesFromBuffer1
+    mov eax, [mart_saved_wc]
+    mov [g_window_count], eax
+    call sync_dialog_window
     ; PROJ overworld-ui: GB(11,0) 9x3 --(anchor=top-right, X+20, Y+0)--> wx=255 wy=0 clip=72 max_y=24
     mov byte [ebp + wTextBoxID], MONEY_BOX       ; ld a, MONEY_BOX / ld [wTextBoxID], a
     call DisplayTextBoxID                        ; call DisplayTextBoxID
@@ -287,6 +304,10 @@ DisplayPokemartDialogue_:
     mov [ebp + wListScrollOffset], al            ; ld [wListScrollOffset], a
     ret
 
+section .bss
+mart_saved_wc: resd 1
+
+section .text
 ; ---------------------------------------------------------------------------
 ; Text wrappers — pret engine/events/pokemart.asm
 ; ---------------------------------------------------------------------------
