@@ -79,7 +79,7 @@
 %define WIN_SRC_X                    24   ; dd: horizontal source offset, px (0..255)
 %define WIN_SRC_Y                    28   ; dd: vertical source offset, px (0..255)
 %define WIN_DESC_SIZE                32   ; bytes per descriptor (8 dwords)
-%define MAX_WINDOWS                  6   ; bag needs <=4 simultaneously (list + sub-menu/qty + dialog)
+%define MAX_WINDOWS                  8   ; mart needs 6 simultaneously (money+BSQ+dialog+list+qty+YN), bag <=4
 
 ; WRAM bank 0 — $C000–$CFFF (4 KB)
 ; Always available. General-purpose work RAM.

@@ -306,6 +306,7 @@ DisplayPokemartDialogue_:
 
 section .bss
 mart_saved_wc: resd 1
+mart_price_saved_wc: resd 1
 
 section .text
 ; ---------------------------------------------------------------------------
