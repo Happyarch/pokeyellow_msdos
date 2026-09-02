@@ -209,30 +209,33 @@ The result spreads the mart UI across the widescreen canvas rather than
 stretching or centering it, because the GB screen's two edges land on the port's
 two edges.
 
-**The priced item list is a deliberate one-off with RAW coordinates, not an
-anchor rule.** On hardware it is drawn at `hlcoord 4, 2` with `lb de, 9, 14`
-(`home/list_menu.asm:34`) — a 16x11 box over GB cols 4-19, rows 2-12 — which
-partially covers the MONEY box's bottom border AND paints over BUY/SELL/QUIT.
-That overlap is a 20x18 SCREEN-SIZE CONSTRAINT, not a design intent, and at 40x25
-there is room for a widescreen spread — but the port **keeps 1 row of overlap**
-with MONEY's bottom border by maintainer direction (“just below and slightly
-overlapping the bottom of the money counter”, 2026-09-01). The port therefore
-places it at a raw canvas origin of **(11, 2)**: its top border row `2` sits on
-`MONEY`'s bottom border row `2` (cols 11-26 rows 2-12, 1-row vertical overlap with
-money cols 31-39 rows 0-2), while still clearing `BUY/SELL/QUIT` below its top
-rows.
+**The priced item list borders the DOS right edge, mirroring how it borders the
+GB right edge on hardware.** On hardware it is drawn at `hlcoord 4, 2` with
+`lb de, 9, 14` (`home/list_menu.asm:34`) — a 16x11 box over GB cols 4-19,
+rows 2-12 — which partially covers the MONEY box's bottom border AND paints over
+BUY/SELL/QUIT. On hardware both overlaps are 20×18 SCREEN-SIZE CONSTRAINTS. At
+40×25 there is room to spread: the port keeps **1 row of overlap with MONEY's
+bottom border** (“just below and slightly overlapping the bottom of the money
+counter”, 2026-09-01) but, by explicit 2026-09-02 direction, **does NOT keep the
+overlap with BUY/SELL/QUIT** — that box is now anchored top-left (X+0) at
+canvas 0-10×0-6 while the list is anchored top-right (X+20) at canvas 24-39×2-12
+(GB 4,2 +20 → 24,2, wx 199). Its top border row 2 sits on MONEY's bottom border
+row 2 (9-col horizontal overlap, cols 31-39), same flush-right containment pret
+has at col 19, while BUY/SELL/QUIT and the list no longer intersect by design
+(the widescreen spread, maintainer confirmed).
 
-Recorded as raw coordinates ON PURPOSE. It is genuinely a one-off: the registry's
-vocabulary is per-axis translation, and "offset from another element's box" is a
-relative-anchor concept no other screen needs. Inventing one for a single screen
-would add a mechanism with exactly one user.
+Recorded as a top-right anchor (X+20, Y+0), not a raw one-off: the registry's
+vocabulary already has that anchor for the bag/PC/elevator lists, and the mart
+list now shares it — it borders the DOS right edge exactly as it bordered the GB
+right edge. The overlap with MONEY survives because both are right-anchored and
+their vertical positions are unchanged; the non-overlap with BUY/SELL/QUIT is
+intentional.
 
-**Consequence for the code, and it is not just a table edit:** the generic
-`list_menu.asm` row `(4,2) 16x11` is shared by the bag, the PC and the elevator,
-all of which stay `X+20`. `DisplayListMenuID` therefore CANNOT apply one
-projection for every caller — the mart must set its own origin. A mart
-implementation that simply inherits the generic list anchor is wrong, and will
-look wrong in exactly the way this section exists to prevent.
+**Consequence for the code:** `DisplayListMenuID`'s generic row `(4,2) 16×11` at
+X+20 already lands the list at 24,2 — the mart's desired position. The
+`LIST_MART_*` equates therefore alias the generic position (199,16,128,104); they
+remain named distinctly so the mart's intent stays grep-able (`; PROJ mart`), but
+inheriting the generic anchor is now CORRECT, not wrong.
 
 ### Vending machine and Celadon prize menu — the mart rule, and nothing bespoke
 
@@ -319,27 +322,25 @@ and sit at rows 9-11, one row above the list's bottom border. They are flush-rig
 INSIDE their parent. That containment is the thing to preserve.
 
 Offsets from the priced list's origin: quantity-only +11 col / +7 row;
-quantity+price +3 col / +7 row. Applied to the port's list origin (11, 2):
+quantity+price +3 col / +7 row. Applied to the port's list origin (24, 2)
+(GB 4,2 +20):
 
-  quantity only     -> (22, 9)  5x3   canvas cols 22-26, rows 9-11
-  quantity + price  -> (14, 9)  13x3  canvas cols 14-26, rows 9-11
+  quantity only     -> (35, 9)  5x3   canvas cols 35-39, rows 9-11
+  quantity + price  -> (27, 9)  13x3  canvas cols 27-39, rows 9-11
 
-Both again end at col 26 — exactly the port list's right edge (cols 11-26) — and
+Both again end at col 39 — exactly the port list's right edge (cols 24-39) — and
 again sit one row above its bottom (row 12). The relationship survives the
-projection intact, which is the check that this is the right rule rather than a
-plausible one.
+projection intact; the qty-only variant now coincides with the generic
+`overworld-ui (list quantity)` anchor (also 35,9 → 287,72), while the wide
+qty+price variant remains distinct at 27,9 → 223,72 and must stay RELATIVE.
 
-*** WHY THE GENERIC ANCHOR IS NOT MERELY SUBOPTIMAL BUT BROKEN HERE. *** The
-`overworld-ui (list quantity)` row anchors this box top-right X+20, which is
-correct for the bag, the PC and the elevator, whose lists also sit at X+20. It is
-wrong for the mart, whose list is at the raw origin (11, 2):
-  quantity only    X+20 -> canvas cols 35-39, while its list is at 11-26 — the box
-                   floats NINE columns clear of its own parent.
-  quantity + price X+20 -> canvas cols 27-39, starting one column PAST the list's
-                   last column. The box and the list it belongs to would not
-                   overlap at all.
-So this row does not merely need a different anchor; inheriting the shared one
-detaches a child box from its parent entirely.
+*** WHY THE GENERIC ANCHOR IS NOT MERELY SUBOPTIMAL BUT BROKEN FOR THE WIDE
+BOX. *** The `overworld-ui (list quantity)` row anchors a 5×3 box at 35,9
+(GTX+20), which coincides with the mart qty-only position — so a mart small box
+would accidentally be correct. The wide 13×3 mart box at 27,9 is the one that
+cannot inherit the generic anchor: X+20 would put it at 35,9 with only 5 cols of
+the 13 visible (clipped) and starting 8 cols past where its parent expects it,
+detaching it from the list it belongs to.
 
 CONSEQUENCE FOR THE CODE: DisplayChooseQuantityMenu (src/home/list_menu.asm) is
 shared by all list-menu callers, so it must select this placement on the
@@ -503,7 +504,7 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (list quantity)| (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | list_menu.asm (DisplayChooseQuantityMenu) |
 | overworld-ui (mart BUY/SELL/QUIT) | (0, 0) | 11×7 | anchor=top-LEFT, X+0, Y+0 | 7 | 0 | 88 | 56 | pokemart.asm (BUY_SELL_QUIT_MENU_TEMPLATE, data/text_boxes.asm) |
 | overworld-ui (mart MONEY)         | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | pokemart.asm (MONEY_BOX_TEMPLATE, data/text_boxes.asm) |
-| overworld-ui (mart priced list)   | (4, 2) | 16×11| RAW origin (11, 2) — one-off, 1-row overlap with MONEY, see Poké Mart section above | 95 | 16 | 128 | 104 | pokemart.asm (PRICEDITEMLISTMENU; overrides the generic list_menu.asm anchor) |
+| overworld-ui (mart priced list)   | (4, 2) | 16×11| anchor=top-right, X+20, Y+0 — borders DOS right edge (24,2), 1-row overlap with MONEY, see Poké Mart section | 199 | 16 | 128 | 104 | pokemart.asm (PRICEDITEMLISTMENU; now shares generic list_menu.asm anchor) |
 | overworld-ui (vending drinks)     | (0, 3) | 14×10| anchor=top-LEFT, X+0, Y+0 | 7 | 24 | 112 | 104 | vending_machine.asm:20 (hlcoord 0,3 + lb bc,8,12) |
 | overworld-ui (prize menu)         | (0, 2) | 18×10| anchor=top-LEFT, X+0, Y+0 | 7 | 16 | 144 | 96 | prize_menu.asm:25 (hlcoord 0,2 + lb bc,8,16) |
 | overworld-ui (prize coin box)     | (11, 0)| 9×3  | anchor=top-right, X+20, Y+0 | 255 | 0 | 72 | 24 | prize_menu.asm:145 PrintPrizePrice (hlcoord 11,0 + lb bc,1,7) |
@@ -515,10 +516,10 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (bike shop menu text) | (2, 2) | — | INHERITS the bike shop box: +2 col, +2 row from its origin → (2, 2) | — | — | — | — | scripts/BikeShop.asm:58 PlaceString BikeShopMenuText |
 | overworld-ui (bike shop price)    | (8, 3) | — | INHERITS the bike shop box: +8 col, +3 row from its origin → (8, 3) | — | — | — | — | scripts/BikeShop.asm:61 PlaceString BikeShopMenuPrice |
 | overworld-field (SS Anne water fill) | (0, 10) | 20×6 | FULL SPAN: 40 cols; row count derived from canvas height, not pret's literal 6 | — | — | — | — | scripts/VermilionDock.asm:54 (hlcoord 0,10 + SCREEN_WIDTH*6 + FillMemory $14) |
-| overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (22, 9) | 183 | 72 | 40 | 96 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) |
-| overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (14, 9) | 119 | 72 | 104 | 96 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
+| overworld-ui (mart qty only)      | (15, 9)| 5×3  | RELATIVE to the mart priced list: +11 col, +7 row from its origin → (35, 9) — coincides with generic top-right 35,9 | 287 | 72 | 40 | 96 | list_menu.asm:199 DisplayChooseQuantityMenu (hlcoord 15,9 + lb bc,1,3) — RELATIVE, not generic fallback |
+| overworld-ui (mart qty + price)   | (7, 9) | 13×3 | RELATIVE to the mart priced list: +3 col, +7 row from its origin → (27, 9) | 223 | 72 | 104 | 96 | list_menu.asm:205 DisplayChooseQuantityMenu PRICEDITEMLISTMENU branch (hlcoord 7,9 + lb bc,1,11) |
 | overworld-field (tile reads) | (8, 9) player feet | 1×1 | +16col, +8row → W_TILEMAP (PLAYER_STANDING_COL=24, PLAYER_STANDING_ROW=17); facing-relative reads ±2 tiles (one block), two-steps ±4 | — | — | — | — | overworld.asm (GetTileInFrontOfPlayer), player_state.asm (_GetTileAndCoordsInFrontOfPlayer / GetTileTwoStepsInFrontOfPlayer), player_animations.asm (IsPlayerStandingOnWarpPadOrHole), wild_encounters.asm (PLAYER_STANDING_TILE, fixed OW-A.6) — NEVER copy pret stride-20 lda_coord literals |
-| battle-ui (YES/NO box)      | (cc,rr) | W×H   | battle center, X+10, Y+3    | —   | —  | —   | —   | yes_no.asm (mode 1) — UNVERIFIED, no caller wired |
+| battle-ui (YES/NO box)      | (13,9) 6×5 & (0,7) 6×5 | 6×5 each | battle center, X+10, Y+3 → (23,12) wx191 wy96 & (10,10) wx87 wy80, clip48 max96 |191/87|96/80|48|96| yes_no.asm mode 1 — wired: `core.asm:DoUseNextMonDialogue` (13,9→23,12) and `core.asm:EnemySendOutFirstMon` switch prompt (0,7→10,10), both `yn_proj_mode=1` battle anchor (verified live) |
 | battle-ui (whole screen)    | (0, 0)  | 20×18 | center in 40×25 BG, +10col/+3row | — | — | — | — | init_battle.asm (full widescreen canvas via render_bg) |
 | battle-ui (msg box)         | (0, 12) | 20×6  | → canvas (10,15), +10col/+3row   | — | — | — | — | init_battle.asm (hand-drawn box, stride 40) |
 | battle-ui (enemy HUD)       | (1,0)/(4,1)/(2,2) | — | +10col/+3row → name(11,3) lv(15,4) hpbar(12,5); frame shelf row 6 | — | — | — | — | battle_hud.asm (DrawEnemyHUD/DrawEnemyHUDFrame) |

@@ -12,7 +12,8 @@
 ; UI PROJECTION (docs/ui_projection.md):
 ;   BUY/SELL/QUIT box : anchor top-LEFT,  X+0,  Y+0  -> canvas cols 0-10,  rows 0-6
 ;   MONEY box         : anchor top-right, X+20, Y+0  -> canvas cols 31-39, rows 0-2
-;   priced item list  : RAW canvas origin (11, 2)    -> canvas cols 11-26, rows 2-12  (1-row overlap with MONEY bottom)
+;   priced item list  : anchor top-right, X+20, Y+0  -> canvas cols 24-39, rows 2-12  (1-row overlap with MONEY bottom, flush-right)
+;   qty box (buy qty) : RELATIVE to list, +3 col +7 row -> canvas cols 27-39, rows 9-11 (overlaps list interior)
 ;
 ; Build: nasm -f coff -I include/ -I . -o pokemart.o src/engine/events/pokemart.asm
 ; ===========================================================================
@@ -201,13 +202,13 @@ DisplayPokemartDialogue_:
     mov [ebp + wPrintItemPrices], al             ; ld [wPrintItemPrices], a
     inc al                                       ; inc a ; a = 2 (PRICEDITEMLISTMENU)
     mov [ebp + wListMenuID], al                  ; ld [wListMenuID], a
-    ; PROJ overworld-ui: GB(4,2) 16x11 --(RAW origin (11, 2))--> wx=95 wy=16 clip=128 max_y=104  (1-row overlap with MONEY)
+    ; PROJ overworld-ui: GB(4,2) 16x11 --(anchor=top-right, X+20, Y+0)--> wx=199 wy=16 clip=128 max_y=104  (borders DOS right edge, 1-row overlap with MONEY)
     call DisplayListMenuID                       ; call DisplayListMenuID
     jc .returnToMainPokemartMenu                 ; jr c, .returnToMainPokemartMenu
     mov byte [ebp + wMaxItemQuantity], 99        ; ld a, 99 / ld [wMaxItemQuantity], a
     xor al, al                                   ; xor a
     mov [ebp + hHalveItemPrices], al             ; ldh [hHalveItemPrices], a
-    call DisplayChooseQuantityMenu               ; call DisplayChooseQuantityMenu
+    call DisplayChooseQuantityMenu               ; call DisplayChooseQuantityMenu — qty at (27,9) RELATIVE to list (24,2)+(+3,+7), overlapping list interior
     inc al                                       ; inc a
     jz .buyMenuLoop                              ; jr z, .buyMenuLoop
     mov al, [ebp + wCurItem]                     ; ld a, [wCurItem]
@@ -277,7 +278,7 @@ DisplayPokemartDialogue_:
 
 .done:
     extern hide_window
-    call hide_window                             ; clear leaked list/qty windows — otherwise GB_TILEMAP0 window at RAW 11,2 paints blank box over overworld after B/QUIT exit
+    call hide_window                             ; clear leaked list/qty windows — otherwise GB_TILEMAP0 window at 24,2 (right edge) paints blank box over overworld after B/QUIT exit
     mov esi, PokemartThankYouText                ; ld hl, PokemartThankYouText
     call PrintText                               ; call PrintText
     mov byte [ebp + wUpdateSpritesEnabled], 1    ; ld a, 1 / ld [wUpdateSpritesEnabled], a

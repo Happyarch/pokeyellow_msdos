@@ -134,14 +134,14 @@ LIST_INT_W      equ 14          ; TextBoxBorder interior width  (total 16)
 LIST_INT_H      equ 9           ; TextBoxBorder interior height (total 11)
 LIST_TOTAL_W    equ LIST_INT_W + 2
 LIST_TOTAL_H    equ LIST_INT_H + 2
-LIST_WX         equ 199         ; ; PROJ overworld-ui GB(4,2) anchor=top-right X+20 Y+0
+LIST_WX         equ 199         ; PROJ overworld-ui GB(4,2) anchor=top-right X+20 Y+0
 LIST_WY         equ 16
 LIST_CLIP       equ 128
 LIST_MAXY       equ 104
-LIST_WX_BATTLE   equ 119         ; ; PROJ battle: GB(4,2) 16x11 --(anchor=center, X+10, Y+3)--> wx=119 wy=40 clip=128 max_y=128
+LIST_WX_BATTLE   equ 119         ; PROJ battle: GB(4,2) 16x11 --(anchor=center, X+10, Y+3)--> wx=119 wy=40 clip=128 max_y=128
 LIST_WY_BATTLE   equ 40
 LIST_MAXY_BATTLE equ 128
-LIST_MART_WX     equ 95          ; ; PROJ mart: GB(4,2) 16x11 --(raw canvas origin 11,2)--> wx=95 wy=16 clip=128 max_y=104
+LIST_MART_WX     equ 199         ; PROJ mart: GB(4,2) 16x11 --(anchor=top-right, X+20, Y+0)--> wx=199 wy=16 clip=128 max_y=104
 LIST_MART_WY     equ 16
 LIST_MART_CLIP   equ 128
 LIST_MART_MAXY   equ 104
@@ -159,27 +159,26 @@ LIST_DOWN_ROW   equ 9
 ; priced(mart) anchor is context-specific → TODO(proj) when the mart is wired.
 ; The qty box gets its OWN scratch rows + GB_TILEMAP0 region (bag_menu's
 ; distinct-start-row scheme) so it never collides with the list box (rows 0-10).
-QTY_WX          equ 287         ; ; PROJ overworld-ui GB(15,9) anchor=top-right X+20 Y+0
+QTY_WX          equ 287         ; PROJ overworld-ui GB(15,9) anchor=top-right X+20 Y+0
 QTY_WY          equ 72
 QTY_CLIP        equ 40
 QTY_MAXY        equ 96
-QTY_WX_BATTLE   equ 207         ; ; PROJ battle: GB(15,9) 5x3 --(anchor=center, X+10, Y+3)--> wx=207 wy=96 clip=40 max_y=120
+QTY_WX_BATTLE   equ 207         ; PROJ battle: GB(15,9) 5x3 --(anchor=center, X+10, Y+3)--> wx=207 wy=96 clip=40 max_y=120
 QTY_WY_BATTLE   equ 96
 QTY_MAXY_BATTLE equ 120
 QTY_SROW        equ 12          ; GB_TILEMAP0 start row (below the 11-row list box)
 ; Mart variant of the quantity box. PRICEDITEMLISTMENU is the ONLY list id that
-; takes pret's wider `hlcoord 7,9 / lb bc,1,11` layout (13x3), and it is also the
-; only caller whose parent list is NOT at the shared X+20 anchor — the mart's
-; priced item list sits at the raw canvas origin (11,2). So this box is placed
-; RELATIVE TO THAT LIST, reproducing pret's containment exactly; see
-; docs/ui_projection.md, "The mart quantity box — positioned RELATIVE TO ITS LIST".
-; pret offsets from the priced list's origin (4,2): +3 col, +7 row.
-; Port: (11,2) + (3,7) = canvas (14,9), so cols 14-26 x rows 9-11 — ending on
-; col 26, exactly the port list's right edge, one row above its bottom (12), which
-; is the same flush-right containment pret has ending on col 19.
-QTY_MART_COL    equ 11 + 3      ; mart list origin col + pret's dcol
+; takes pret's wider `hlcoord 7,9 / lb bc,1,11` layout (13x3). Its parent list
+; is the mart priced list now at the shared X+20 anchor (24,2), same as the bag.
+; This box is placed RELATIVE TO THAT LIST, reproducing pret's containment
+; exactly; see docs/ui_projection.md, "The mart quantity box — positioned
+; RELATIVE TO ITS LIST". pret offsets from the priced list's origin (4,2):
+; +3 col, +7 row. Port: (24,2) + (3,7) = canvas (27,9), so cols 27-39 x rows
+; 9-11 — ending on col 39, exactly the port list's right edge (cols 24-39),
+; one row above its bottom (12), flush-right as pret ends on col 19.
+QTY_MART_COL    equ 24 + 3      ; mart list origin col + pret's dcol
 QTY_MART_ROW    equ 2 + 7       ; mart list origin row + pret's drow
-QTY_MART_WX     equ 8 * QTY_MART_COL + 7        ; 119
+QTY_MART_WX     equ 8 * QTY_MART_COL + 7        ; 223
 QTY_MART_WY     equ 8 * QTY_MART_ROW            ; 72
 QTY_MART_CLIP   equ 8 * 13                      ; 104 — the 13-wide priced box, NOT
                                                  ; QTY_CLIP's 5-tile 40, which would
