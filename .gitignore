@@ -133,6 +133,11 @@ dos_port/tools/audio/analysis/
 handoff.md
 handoff_s*.md
 
+# Ephemeral journals — subagent/local investigation notes (docs/ephemeral*),
+# safe pattern for anything that must never be committed. Durable findings
+# belong in stigmergy memories, not here.
+ephemeral*
+
 # Windows toolchain installed by dos_port/tools/setup_toolchain.py (never committed;
 # see the "Legal note" in README.md -- these are third-party GPL/BSD binaries we
 # link to, not redistribute)
