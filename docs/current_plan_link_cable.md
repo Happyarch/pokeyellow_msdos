@@ -446,9 +446,22 @@ blocks in `src/engine/menus/naming_screen.asm`.
       registry including the new cable_club_nolink (this VM uses the
       serial tiers per the maintainer's standing instruction). Zero
       single-player drift from the whole Stage 2 net layer. The fork's
-      NMDBG instrumentation is pushed on Happyarch/dosbox-x `mcp-debug`
-      (`0eff618fd`) and the submodule pointer tracks it (maintainer
-      authorization, this session)
+       NMDBG instrumentation is pushed on Happyarch/dosbox-x `mcp-debug`
+       (`0eff618fd`) and the submodule pointer tracks it (maintainer
+       authorization, this session)
+ - [x] Fork resync 2026-09-04: `mcp-debug` now at `8b4288d42` (merged fork
+       master `28a6887` + true upstream joncampbell123 `6c4a364b`, 225
+       commits incl. v2026.08.31 — binary now reports 2026.08.31). One
+       conflict (src/debug/debug.cpp) resolved keeping both sides: our SYMF
+       block + upstream AnnotateDirectBranch, upstream CDebugVar lookup
+       before our SYMF hook in GetHexValue, our MCP BREAK notify + upstream
+       AGENT_NotifyDebuggerStopped at debugger entry. NMDBG heartbeat,
+       RENDER_CaptureImageNow, ffmpeg-9 hunk all verified present post-merge;
+       rebuilt via `tools/build_dosbox_mcp.sh` (exit 0) and installed to
+       `~/.local/bin/dosbox-x-mcp` + `tools/dosbox-x-mcp/`. Upstream's
+       named-pipe/AF_UNIX serial transports (c15fcee41) and RPC agent
+       interface are in-tree but unused by the link plan — evaluate before
+       Stage 3+ transport work. Prior `0eff618fd` refs above are history.
 
 ### Stage 3 — Trade Center
 - [x] HAL block seam 2026-08-22 (`b50e1e0`): `NF_BLK` reliable frame type +
