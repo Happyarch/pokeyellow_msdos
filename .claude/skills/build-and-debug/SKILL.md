@@ -377,8 +377,36 @@ skip the copy.
   (see NEVER `pkill` below); the handshake re-read is the mechanism.
 
 **Failure heuristic:** a breakpoint that never fires, or reads returning all
-zeros, means one of the four items above — **not** a broken socket. Check
-them first.
+zeros, means one of the five items above — **not** a broken socket. Check
+them first. (The fifth: the guest is hung upstream of your breakpoints — see
+the RUN-outstanding discipline below. A frozen screen with no break
+notification IS the finding, not a rig failure.)
+
+**RUN-outstanding discipline (measured 2026-09-04, trainer-win hang probe).**
+The bridge serves exactly ONE command at a time, and a RUN's reply is produced
+only at the next debugger entry (breakpoint hit / BREAK / debugger hotkey).
+Consequences, all load-bearing:
+- Once `continue_exec()` has returned (either mode), `wait_break()` is the ONLY
+  call that can proceed. Every other tool — `pause_exec`, `get_registers`,
+  `gb_read`, `screenshot`, `dbg_command`, … — bounces with "a previous
+  command's response is still pending" until the RUN resolves. Do NOT stack
+  more commands behind it, do NOT poke the Unix socket directly (a second
+  client wedges the C-side bridge thread), and do NOT kill/restart `server.py`
+  (that permanently disconnects your own tools).
+- The agent CANNOT break itself out: a BREAK sent while a RUN is outstanding
+  can never be read by the single-threaded C bridge. If the game is hung and no
+  breakpoint will ever hit, the ONLY way into the debugger is the human pilot
+  pressing the DOSBox-X debugger hotkey (`Alt+Pause`, or the window's Debug
+  menu) — that entry produces the RUN's reply, and the next `wait_break()`
+  collects the halt EIP. Ask for it explicitly.
+- Keep `wait_break()` timeouts well under the MCP transport budget (~60 s —
+  a 60 s wait transport-times out with `-32001` while the server keeps
+  waiting; use ≤45 s and re-call).
+- `continue_exec(wait_for_break=False)` + pilot-driven repro is the paired
+  pattern (human plays, BPs armed), but know what a freeze means: screen frozen
+  + no break notification = the guest hung BEFORE reaching any armed BP. That
+  already localizes the fault upstream of every BP — record which BPs did NOT
+  fire, they are the evidence.
 
 **⚠ NEVER `pkill -f dosbox`** — the pattern also matches
 `tools/dosbox_mcp/server.py` and kills the MCP server, permanently

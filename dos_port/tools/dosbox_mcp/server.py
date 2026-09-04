@@ -306,7 +306,11 @@ def _game_ctx() -> Optional[str]:
                 "set before continuing).")
     if _client.has_pending():
         return ("ERROR: a previous command's response is still pending — "
-                "call wait_break() to collect it.")
+                "call wait_break() to collect it. A RUN is outstanding and its "
+                "reply arrives only at the next debugger entry; if the game is "
+                "hung with no breakpoint hit, ask the pilot to press the "
+                "DOSBox-X debugger hotkey (Alt+Pause), then wait_break() "
+                "collects the halt point.")
     regs = _regs()
     if 'error' in regs:
         return f"ERROR: cannot read registers: {regs['error']}"
@@ -645,7 +649,11 @@ def continue_exec(wait_for_break: bool = True, timeout: float = 300.0) -> str:
     """
     global _state
     if _state == 'running' or _client.has_pending():
-        return "ERROR: already running — use wait_break()."
+        return ("ERROR: already running — use wait_break(). A RUN is "
+                "outstanding and only a debugger entry resolves it; if the "
+                "game is hung with no breakpoint hit, ask the pilot to press "
+                "the DOSBox-X debugger hotkey (Alt+Pause), then wait_break() "
+                "collects the halt point.")
     try:
         _client.connect()
     except OSError as e:

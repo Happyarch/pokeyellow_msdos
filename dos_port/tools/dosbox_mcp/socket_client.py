@@ -77,7 +77,13 @@ class DebugSocketClient:
             if self._pending:
                 raise PendingResponse(
                     "a previous command's response is still pending — "
-                    "collect it first (wait_response)")
+                    "collect it first (wait_response). A RUN is outstanding: "
+                    "the bridge serves one command at a time and its reply "
+                    "arrives only at the next debugger entry, so wait_break() "
+                    "is the only call that can proceed. If the game is hung "
+                    "and no breakpoint fires, no agent command can break in — "
+                    "ask the pilot to press the DOSBox-X debugger hotkey "
+                    "(Alt+Pause), then wait_break() collects the halt point.")
             if self._sock is None:
                 self.connect()
             self._send_locked(cmd)
