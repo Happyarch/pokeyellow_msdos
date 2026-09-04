@@ -486,13 +486,12 @@ EndTrainerBattle:
     cmp al, OPP_ID_OFFSET
     jae .skipRemoveSprite                   ; pret: jr nc — a real trainer stays on the map
     ; A non-trainer opponent fought through the trainer flow: remove its sprite.
-    ; DEVIATION{class=data-model; pret=home/trainers.asm:EndTrainerBattle; behavior=skip the wToggleableObjectList search plus HideObject when the list is empty; evidence=the port never populates wToggleableObjectList (toggleable_objects.asm precomputes global indices into toggle_list data, see its header divergence) so pret's IsInArray over it would scan unterminated zero-filled WRAM; lifetime=until the wToggleableObjectList build (pret MarkTownVisitedAndLoadToggleableObjects list tail) is ported}
-    cmp byte [ebp + wToggleableObjectList], 0
-    je .skipRemoveSprite                    ; list never built in the port — see DEVIATION
+    ; wToggleableObjectList is populated by MarkTownVisitedAndLoadToggleableObjects.
     lea esi, [ebp + wToggleableObjectList]  ; pret: ld hl, wToggleableObjectList (flat view of WRAM)
     mov edx, 2                              ; pret: ld de, $2 (entry stride)
     mov al, [ebp + wSpriteIndex]
     call IsInArray                          ; search for sprite ID; ESI = match on CF=1
+    jnc .skipRemoveSprite
     inc esi                                 ; pret: inc hl
     mov al, [esi]                           ; paired toggleable object index (flat read)
     mov [ebp + wToggleableObjectIndex], al

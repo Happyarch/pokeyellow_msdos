@@ -95,13 +95,15 @@ def object_event_survival(label: str) -> list:
 
 
 def runtime_slot_for(survival: list, k: int):
-    """Map object-const index k (file order) to the _DEBUG-stripped slot index, or
-    None if that object_event was stripped (no runtime slot)."""
+    """Map object-const index k (file order) to the _DEBUG-stripped slot index (1-based),
+    or None if that object_event was stripped (no runtime slot).
+    Slot indices are 1-based (1..15) to match hSpriteIndex and pret object_const_def."""
     if k >= len(survival):
         return None
     if not survival[k]:
         return None
-    return sum(1 for s in survival[:k] if s)
+    return 1 + sum(1 for s in survival[:k] if s)
+
 
 
 def parse_toggleables():
