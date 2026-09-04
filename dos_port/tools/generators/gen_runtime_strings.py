@@ -96,8 +96,8 @@ FILES = {
         ("str_profoak_name", ["PROF.OAK", [0x50, 0xFA, 0x2D]]),
     ],
     "effectiveness_runtime_strings.inc": [
-        ("SuperEffectiveText", [[0x00], "It's super", [0x4F], "effective!", [0x58]]),
-        ("NotVeryEffectiveText", [[0x00], "It's not very", [0x4F], "effective...", [0x58]]),
+        ("SuperEffectiveText", [[0x00], "It's super", [0x4F], "effective!", [0x58, 0x50]]),
+        ("NotVeryEffectiveText", [[0x00], "It's not very", [0x4F], "effective...", [0x58, 0x50]]),
     ],
     # DEBUG_ANIM_SHOW labels. Rendered on screen, so Tier-1 data like every other
     # string — never hand-encoded charmap bytes in the harness. Moves are labelled

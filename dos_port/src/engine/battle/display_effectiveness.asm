@@ -28,7 +28,7 @@ section .text
 global DisplayEffectiveness
 
 ; --- shared scaffold extern (call, never define) ---
-extern PrintText                    ; src/home/window.asm — ESI = flat text stream
+extern PrintBattleText              ; engine/battle/core.asm — ESI = flat text stream
 
 ; ===========================================================================
 ; DisplayEffectiveness — pret engine/battle/display_effectiveness.asm.
@@ -37,7 +37,7 @@ extern PrintText                    ; src/home/window.asm — ESI = flat text st
 ;   == EFFECTIVE  -> print nothing (ret)
 ;   >  EFFECTIVE  -> "It's super effective!"      (CF clear after cp, not equal)
 ;   <  EFFECTIVE  -> "It's not very effective..." (CF set after cp)
-; Clobbers AL, ESI; tail-jumps into PrintText.
+; Clobbers AL, ESI; tail-jumps into PrintBattleText.
 ; ===========================================================================
 DisplayEffectiveness:
     mov al, [ebp + wDamageMultipliers]  ; ld a, [wDamageMultipliers]
@@ -48,6 +48,6 @@ DisplayEffectiveness:
     jnc .done                           ; jr nc, .done — multiplier > EFFECTIVE
     mov esi, NotVeryEffectiveText       ; ld hl, NotVeryEffectiveText
 .done:
-    jmp PrintText                       ; jp PrintText
+    jmp PrintBattleText                 ; jp PrintText (routes through battle msgbox wrapper)
 .ret:
     ret

@@ -868,7 +868,7 @@ AIPrintItemUse_:
     mov al, [ebp + wAIItem]                ; ld a, [wAIItem]
     mov [ebp + wNamedObjectIndex], al      ; ld [wNamedObjectIndex], a
     call GetItemName
-    mov eax, AIBattleUseItemText           ; ld hl, AIBattleUseItemText
+    mov esi, AIBattleUseItemText           ; ld hl, AIBattleUseItemText
     jmp PrintBattleText                    ; jp PrintText (battle msgbox projection)
 
 ; --- AIPrintItemUseAndUpdateHPBar ---
@@ -1022,7 +1022,7 @@ SwitchEnemyMon:
     ; two-tier rule), and EnemySendOut has been translated and linked for some
     ; time — without it the AI "switch" copied the HP back to the roster and then
     ; never actually sent the replacement mon out.
-    mov eax, AIBattleWithdrawText          ; ld hl, AIBattleWithdrawText
+    mov esi, AIBattleWithdrawText          ; ld hl, AIBattleWithdrawText
     call PrintBattleText                   ; call PrintText (battle msgbox projection)
     ; pret's comment: wFirstMonsNotOutYet is ABUSED here to stop the player
     ; switching in response to this switch. Faithful, including the abuse.

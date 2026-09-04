@@ -1085,10 +1085,10 @@ SelectMenuItem:
 .backedOut:
     ret                                 ; ZF=0 → the player pressed B
 .disabled:
-    mov eax, MoveDisabledText
+    mov esi, MoveDisabledText
     jmp .print
 .noPP:
-    mov eax, MoveNoPPText
+    mov esi, MoveNoPPText
 .print:
     call PrintBattleText                ; pret: call PrintText
     call LoadScreenTilesFromBuffer1
@@ -1400,7 +1400,7 @@ AnyMoveToSelect:
     jz  .noMovesLeft
     ret                                 ; ZF=0
 .noMovesLeft:
-    mov eax, NoMovesLeftText
+    mov esi, NoMovesLeftText
     call PrintBattleText
     mov bl, 60
     call DelayFrames
@@ -1408,11 +1408,12 @@ AnyMoveToSelect:
     ret
 
 ; ---------------------------------------------------------------------------
-; PrintBattleText — pret PrintText, battle variant. In: EAX = flat-linear ptr to a
-; battle_text.inc command stream. Selects the battle box geometry (so <LINE>/<PROMPT>
-; land in the battle dialog box, ▼ in wTileMap) and runs the one printer, which
-; draws the box and walks the stream in place, revealing it char-by-char and
-; self-terminating on prompt/done/text_end.
+; PrintBattleText — pret PrintText, battle variant. In: ESI = flat-linear ptr to a
+; battle_text.inc command stream (matching SM83 HL / PrintText register map). Also
+; accepts EAX for backwards compatibility if ESI is below 0x10000.
+; Selects the battle box geometry (so <LINE>/<PROMPT> land in the battle dialog box,
+; ▼ in wTileMap) and runs the one printer, which draws the box and walks the stream
+; in place, revealing it char-by-char and self-terminating on prompt/done/text_end.
 ;
 ; RULE (battle_core_realign D.1): all battle prints in this file go through this
 ; wrapper, not bare PrintText. The lone bare `jmp PrintText` below is the printer
@@ -1420,7 +1421,10 @@ AnyMoveToSelect:
 ; DEVIATION{class=projection; pret=engine/battle/core.asm:PrintText; behavior=battle prints go through the port-only PrintBattleText wrapper that sets text_msgbox=msgbox_centered before tail-jumping to PrintText; evidence=pret's DisplayTextBoxID fixes the box id inside the routine while the port republishes geometry from [text_msgbox] on every PrintText call, so the wrapper is required to select the battle box; lifetime=permanent window-compositor boundary}
 ; ---------------------------------------------------------------------------
 PrintBattleText:
-    mov esi, eax                        ; flat source stream
+    cmp esi, 0x10000
+    jae .have_stream
+    mov esi, eax                        ; legacy fallback: caller passed pointer in EAX
+.have_stream:
     mov dword [text_msgbox], msgbox_centered
     jmp PrintText                       ; the one printer, drawing per the record.
                                         ; Tail — its ret returns to us.
@@ -1444,7 +1448,7 @@ PrintBattleText:
 ; not reliably the battle box yet. Same wrapper the rest of this file uses.
 ; ---------------------------------------------------------------------------
 PrintEmptyString:
-    mov eax, EmptyBattleString           ; ld hl, .emptyString
+    mov esi, EmptyBattleString           ; ld hl, .emptyString
     jmp PrintBattleText                  ; jp PrintText (see the note above)
 
 section .data
@@ -2393,7 +2397,7 @@ CheckForDisobedience:
     jc .monNaps
     cmp al, bl
     jnc .monDoesNothing
-    mov eax, WontObeyText
+    mov esi, WontObeyText
     call PrintBattleText
     call HandleSelfConfusionDamage
     jmp .cannotUseMove
@@ -2404,25 +2408,24 @@ CheckForDisobedience:
     and al, SLP_MASK
     jz .monNaps                         ; keep trying until at least 1 turn of sleep
     mov [ebp + wBattleMonStatus], al
-    mov eax, BeganToNapText
+    mov esi, BeganToNapText
     jmp .printText
 .monDoesNothing:
     call BattleRandom
     and al, 3
     ; pret keeps the roll in A while loading each text ptr into HL (`ld hl,imm16`
-    ; doesn't touch A). On x86 `mov eax,<label>` WOULD clobber the roll, so park it
-    ; in DL and test DL — the text selection stays RNG-driven (pret core.asm:4088-4101).
+    ; doesn't touch A). Loading into ESI matches pret's HL.
     mov dl, al
-    mov eax, LoafingAroundText
+    mov esi, LoafingAroundText
     test dl, dl
     jz .printText
-    mov eax, WontObeyText
+    mov esi, WontObeyText
     dec dl
     jz .printText
-    mov eax, TurnedAwayText
+    mov esi, TurnedAwayText
     dec dl
     jz .printText
-    mov eax, IgnoredOrdersText
+    mov esi, IgnoredOrdersText
 .printText:
     call PrintBattleText
     jmp .cannotUseMove
@@ -5363,7 +5366,7 @@ RemoveFaintedPlayerMon:
     mov al, [ebp + wBattleMonSpecies]    ; ld a, [wBattleMonSpecies]
     call PlayCry
 .printFaintText:
-    mov eax, PlayerMonFaintedText
+    mov esi, PlayerMonFaintedText
     call PrintBattleText                 ; "<nick> fainted!"
     ; pret core.asm:1067-1083 — the fainting penalty. Two reason codes, chosen by
     ; how badly outlevelled the player was.
@@ -5616,7 +5619,7 @@ HandlePlayerBlackOut:
     call ScrollTrainerPicAfterBattle
     mov bl, 40                           ; ld c, 40
     call DelayFrames
-    mov eax, Rival1WinText
+    mov esi, Rival1WinText
     call PrintBattleText
 %endif
     mov al, [ebp + wCurMap]
@@ -5626,10 +5629,10 @@ HandlePlayerBlackOut:
     mov bh, SET_PAL_BATTLE_BLACK         ; ld b (port RunPaletteCommand reads BH)
     call RunPaletteCommand
 %ifndef DEBUG_TRAINER_RESULT
-    mov eax, PlayerBlackedOutText2       ; ld hl, PlayerBlackedOutText2
+    mov esi, PlayerBlackedOutText2       ; ld hl, PlayerBlackedOutText2
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
     jnz .noLinkBattle                    ; jr nz
-    mov eax, LinkBattleLostText
+    mov esi, LinkBattleLostText
 .noLinkBattle:
     call PrintBattleText
 %endif
@@ -5718,7 +5721,7 @@ StartBattle:
     test al, al                              ; and a
     jnz .notOutOfSafariBalls                 ; jr nz
     call LoadScreenTilesFromBuffer1          ; call LoadScreenTilesFromBuffer1
-    mov eax, _OutOfSafariBallsText           ; ld hl, .outOfSafariBallsText
+    mov esi, _OutOfSafariBallsText           ; ld hl, .outOfSafariBallsText
     jmp PrintBattleText                      ; jp PrintText — tail (its ret returns to _InitBattleCommon)
 .notOutOfSafariBalls:
     call PrintSafariZoneBattleText           ; callfar
@@ -5808,12 +5811,12 @@ StartBattle_displaySafariZoneBattleMenu:
 ; ===========================================================================
 EnemyRan:
     call LoadScreenTilesFromBuffer1
-    mov eax, WildRanText                 ; ld hl, WildRanText
+    mov esi, WildRanText                 ; ld hl, WildRanText
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
     jne .printText                       ; jr nz
 ; link battle
     mov byte [ebp + wBattleResult], 0    ; xor a / ld [wBattleResult], a
-    mov eax, EnemyRanText                ; ld hl, EnemyRanText
+    mov esi, EnemyRanText                ; ld hl, EnemyRanText
 .printText:
     call PrintBattleText                 ; call PrintText (port battle msgbox wrapper)
     mov al, SFX_RUN
@@ -6011,7 +6014,7 @@ EnemySendOutFirstMon:
     je .next4                                    ; jr z — link battle: no prompt
     test byte [ebp + wOptions], 1 << BIT_BATTLE_SHIFT
     jnz .next4                                   ; jr nz — SET battle style: no prompt
-    mov eax, TrainerAboutToUseText
+    mov esi, TrainerAboutToUseText
     call PrintBattleText                         ; ld hl,.../call PrintText
     ; pret: hlcoord 0, 7 / lb bc, 8, 1 / wTextBoxID=TWO_OPTION_MENU / DisplayTextBoxID.
     ; DEVIATION{class=projection; pret=engine/battle/core.asm:EnemySendOutFirstMon; behavior=the switch-prompt YES/NO box is drawn from the port's YES_NO_MENU descriptor (4x3 interior, str_yes/str_no) at yn_box_col/row=(0,7) with yn_proj_mode=1 (battle anchor, X+10/Y+3) instead of pret's raw hlcoord 0,7 / lb bc,8,1 box; evidence=DisplayTwoOptionMenu is table-driven by wTwoOptionMenuID in this port (TwoOptionMenuDesc, engine/menus/text_box.asm) rather than pret's HL/BC triple, exactly as SaveTheGame_YesOrNo (engine/menus/save.asm) already established for the identical hlcoord 0,7 / lb bc,8,1 box, and this is the first caller to select yn_proj_mode=1 rather than the overworld default, closing engine/menus/text_box.asm's own TODO(battle-verify) note on that branch; lifetime=permanent window-compositor boundary, same as SaveTheGame_YesOrNo's}
@@ -6031,7 +6034,7 @@ EnemySendOutFirstMon:
     mov al, [ebp + wWhichPokemon]
     cmp al, [ebp + wPlayerMonNumber]
     jnz .next6                                   ; jr nz
-    mov eax, AlreadyOutText
+    mov esi, AlreadyOutText
     call PrintBattleText
 .next8:
     call GoBackToPartyMenu
@@ -6059,7 +6062,7 @@ EnemySendOutFirstMon:
     call RunPaletteCommand
     ; pret: GBPalNormal (palette fade path) — Phase-5 deferral, unchanged.
     ; pret: ld hl, TrainerSentOutText / call PrintText
-    mov eax, TrainerSentOutText
+    mov esi, TrainerSentOutText
     call PrintBattleText
     ; pret: wEnemyMonSpecies2 -> wCurPartySpecies/wCurSpecies, GetMonHeader,
     ; LoadMonFrontSprite -> vFrontPic, then the tilemap placement. The port folds
@@ -6389,7 +6392,7 @@ TrainerBattleVictory:
     ; so it must not park in an acknowledgement wait; it stops at the same
     ; post-victory arithmetic boundary the production path reaches.
 %ifndef DEBUG_TRAINER_RESULT
-    mov eax, TrainerDefeatedText
+    mov esi, TrainerDefeatedText
     call PrintBattleText
 %endif
     cmp byte [ebp + wLinkState], LINK_STATE_BATTLING
@@ -6399,7 +6402,7 @@ TrainerBattleVictory:
     mov bl, 40                                     ; ld c, 40
     call DelayFrames
     call PrintEndBattleText                        ; class-specific "<TRAINER>: …"
-    mov eax, MoneyForWinningText
+    mov esi, MoneyForWinningText
     call PrintBattleText
 %endif
     ; win money: wPlayerMoney += wAmountMoneyWon (3-byte BCD). pret:
@@ -7784,10 +7787,10 @@ TryRunningFromBattle:
     jae .canEscape
     ; can't escape: forfeit the turn (pret core.asm:1611-1615)
     mov byte [ebp + wActionResultOrTookBattleTurn], 1
-    mov eax, CantEscapeText              ; pret: ld hl, CantEscapeText
+    mov esi, CantEscapeText              ; pret: ld hl, CantEscapeText
     jmp .printCantEscapeOrNoRunningText  ; pret: jr .printCantEscapeOrNoRunningText
 .trainerBattle:
-    mov eax, NoRunningText               ; pret: ld hl, NoRunningText
+    mov esi, NoRunningText               ; pret: ld hl, NoRunningText
 .printCantEscapeOrNoRunningText:
     ; The generated battle_text.inc streams carry pret's real text commands
     ; (text/line/cont/prompt), so PrintBattleText gives the GB presentation:
@@ -7825,7 +7828,7 @@ TryRunningFromBattle:
     mov [ebp + wBattleResult], al        ; ld [wBattleResult], a
     mov al, SFX_RUN
     call PlaySoundWaitForCurrent         ; pret: call PlaySoundWaitForCurrent
-    mov eax, GotAwayText                 ; pret: ld hl, GotAwayText
+    mov esi, GotAwayText                 ; pret: ld hl, GotAwayText
     call PrintBattleText                 ; pret: call PrintText
     call WaitForSoundToFinish
     call SaveScreenTilesToBuffer1
@@ -8043,7 +8046,7 @@ FaintEnemyPokemon:
     test dh, dh
     jz .return                                  ; ret z (no party alive -> just return)
 
-    mov eax, EnemyMonFaintedText
+    mov esi, EnemyMonFaintedText
     call PrintBattleText                       ; ld hl,EnemyMonFaintedText / call PrintText
     call PrintEmptyString
     call SaveScreenTilesToBuffer1

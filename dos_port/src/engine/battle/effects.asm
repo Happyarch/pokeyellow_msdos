@@ -231,7 +231,7 @@ SleepEffect:
     and al, SLP_MASK
     jz .notAlreadySleeping               ; jr z — not already asleep
     mov esi, AlreadyAsleepText           ; ld hl, AlreadyAsleepText
-    jmp PrintText                        ; jp PrintText
+    jmp PrintBattleText                  ; jp PrintText
 .notAlreadySleeping:
     mov al, bh
     and al, al
@@ -259,10 +259,10 @@ SleepEffect:
     mov bh, al
 .continueSetCounter:
     mov al, bh                           ; ld a,b
-    mov [ebp + edx], al                  ; ld [de],a
+    mov [ebp + edx], al                  ; ld [de], al
     call PlayCurrentMoveAnimation2       ; literal subanim — ANIMATION=OFF stub (§2.1)
     mov esi, FellAsleepText              ; ld hl, FellAsleepText
-    jmp PrintText                        ; jp PrintText
+    jmp PrintBattleText                  ; jp PrintText
 .didntAffect:
     jmp PrintDidntAffectText             ; jp PrintDidntAffectText
 ; ===========================================================================
@@ -355,10 +355,10 @@ PoisonEffect:
     je .regularPoisonEffect
     mov al, bh                          ; a = anim id (subanim is the ANIMATION=OFF stub)
     call PlayBattleAnimation2
-    jmp PrintText                       ; ESI = the poison text stream
+    jmp PrintBattleText                 ; ESI = the poison text stream
 .regularPoisonEffect:
     call PlayCurrentMoveAnimation2
-    jmp PrintText
+    jmp PrintBattleText
 .noEffect:
     mov al, [ebp + edx]
     cmp al, POISON_EFFECT
@@ -473,14 +473,14 @@ FreezeBurnParalyzeEffect:
     mov al, ENEMY_HUD_SHAKE_ANIM
     call PlayBattleAnimation
     mov esi, BurnedText
-    jmp PrintText
+    jmp PrintBattleText
 .freeze1:
     call ClearHyperBeam                 ; resets hyper beam (recharge) condition from target
     mov byte [ebp + wEnemyMonStatus], 1 << FRZ
     mov al, ENEMY_HUD_SHAKE_ANIM
     call PlayBattleAnimation
     mov esi, FrozenText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; --- opponent is attacking; target = player's mon ---
 ; mostly the same as above with addresses swapped for the opponent.
@@ -536,7 +536,7 @@ FreezeBurnParalyzeEffect:
     mov al, SHAKE_SCREEN_ANIM
     call PlayBattleAnimation2
     mov esi, BurnedText
-    jmp PrintText
+    jmp PrintBattleText
 .freeze2:
     ; BUG{class=data-model; pret=engine/battle/effects.asm:FreezeBurnParalyzeEffect; behavior=freezing the player side does not clear Hyper Beam recharge while freezing the enemy side does; evidence=pret .freeze1 and .freeze2 asymmetry plus source comment; lifetime=permanent Gen-1 behavior at compatibility level below 2}
     ; Hyper Beam recharge is reset for the player's side (.freeze1
@@ -555,7 +555,7 @@ FreezeBurnParalyzeEffect:
     mov al, SHAKE_SCREEN_ANIM
     call PlayBattleAnimation2
     mov esi, FrozenText
-    jmp PrintText
+    jmp PrintBattleText
 .ret:
     ret
 
@@ -599,7 +599,7 @@ CheckDefrost:
     mov byte [ebp + esi], 0
     mov esi, FireDefrostedText
 .common:
-    jmp PrintText
+    jmp PrintBattleText
 .ret:
     ret                                 ; pret reaches this via bare `ret z` / `ret nz`
 
@@ -770,7 +770,7 @@ UpdateStatDone:
     jnz .skipBadge
     call ApplyBadgeStatBoosts            ; call z (player turn) — reapply badge boosts
 .skipBadge:
-    mov eax, MonsStatsRoseText           ; pret :537-538 — ld hl, MonsStatsRoseText
+    mov esi, MonsStatsRoseText           ; pret :537-538 — ld hl, MonsStatsRoseText
     call PrintBattleText                 ;                  call PrintText
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
@@ -781,7 +781,7 @@ RestoreOriginalStatModifier:
 
 PrintNothingHappenedText:
     mov esi, NothingHappenedText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; ---------------------------------------------------------------------------
 ; MonsStatsRoseText — pret engine/battle/effects.asm:552. `text_far
@@ -972,7 +972,7 @@ UpdateLoweredStatDone:
     jz .skipBadge
     call ApplyBadgeStatBoosts            ; call nz (enemy used stat-down on player)
 .skipBadge:
-    mov eax, MonsStatsFellText           ; pret :727-728 — ld hl, MonsStatsFellText
+    mov esi, MonsStatsFellText           ; pret :727-728 — ld hl, MonsStatsFellText
     call PrintBattleText                 ;                  call PrintText
     call QuarterSpeedDueToParalysis
     jmp HalveAttackDueToBurn
@@ -986,7 +986,7 @@ CantLowerAnymore:
     cmp al, ATTACK_DOWN_SIDE_EFFECT
     jae .ret                             ; ret nc — side effects stay quiet
     mov esi, NothingHappenedText
-    jmp PrintText
+    jmp PrintBattleText
 .ret:
     ret
 
@@ -1301,7 +1301,7 @@ SwitchAndTeleportEffect:
     je .printText
     mov esi, WasBlownAwayText           ; WHIRLWIND (or any other move routed here)
 .printText:
-    jmp PrintText
+    jmp PrintBattleText
 ; ===========================================================================
 ; TwoToFiveAttacksEffect — pick the multi-hit count for the current attacker's
 ; turn and stash it in wXxxNumAttacksLeft / wXxxNumHits. Guarded by
@@ -1468,7 +1468,7 @@ ChargeEffect:
     mov [ebp + wChargeMoveNum], al     ; ld [wChargeMoveNum], a
 
     mov esi, ChargeMoveEffectText       ; ld hl, ChargeMoveEffectText
-    jmp PrintText                       ; jp PrintText
+    jmp PrintBattleText                 ; jp PrintText
 
 ; ---------------------------------------------------------------------------
 ; ChargeMoveEffectText — pret engine/battle/effects.asm:ChargeMoveEffectText.
@@ -1610,7 +1610,7 @@ ConfusionSideEffectSuccess:
     call PlayCurrentMoveAnimation2         ;   (the damaging move already played its own
 .skipAnim:                                 ;    subanim, so skip it for the side effect)
     mov esi, BecameConfusedText            ; ld hl, BecameConfusedText
-    jmp PrintText                          ; jp PrintText
+    jmp PrintBattleText                    ; jp PrintText
 
 ; --- ConfusionEffectFailed (shared fall-through). Literal translation: AL holds
 ; whatever the predecessor left — the move-effect byte on the already-confused
@@ -1678,7 +1678,7 @@ ClearHyperBeam:
 global PrintNoEffectText
 PrintNoEffectText:
     mov esi, NoEffectText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; ===========================================================================
 ; ConditionalPrintButItFailed / PrintButItFailedText_ — pret effects.asm.
@@ -1792,7 +1792,7 @@ MimicEffect:
     call GetMoveName
     call PlayCurrentMoveAnimation
     mov esi, MimicLearnedMoveText
-    jmp PrintText
+    jmp PrintBattleText
 .mimicMissed:
     jmp PrintButItFailedText_
 
@@ -1925,7 +1925,7 @@ DisableEffect:
     mov [ebp + esi], al
     call GetMoveName
     mov esi, MoveWasDisabledText
-    jmp PrintText
+    jmp PrintBattleText
 .moveMissedPopHL:
     pop esi
 .moveMissed:
@@ -1938,7 +1938,7 @@ ConditionalPrintButItFailed:
 global PrintButItFailedText_
 PrintButItFailedText_:
     mov esi, ButItFailedText
-    jmp PrintText
+    jmp PrintBattleText
 
 ; ===========================================================================
 ; PrintDidntAffectText / PrintMayNotAttackText — pret effects.asm.
@@ -1946,12 +1946,12 @@ PrintButItFailedText_:
 global PrintDidntAffectText
 PrintDidntAffectText:
     mov esi, DidntAffectText
-    jmp PrintText
+    jmp PrintBattleText
 
 global PrintMayNotAttackText
 PrintMayNotAttackText:
     mov esi, ParalyzedMayNotAttackText
-    jmp PrintText
+    jmp PrintBattleText
 ; ===========================================================================
 ; CheckTargetSubstitute — pret effects.asm. ZF=1 if the target has NO substitute
 ; up (move can affect it), ZF=0 if a substitute is up. Preserves ESI/EDX; clobbers AL.

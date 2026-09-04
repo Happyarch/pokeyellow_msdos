@@ -1215,7 +1215,7 @@ StartMenu_Item:
     mov [ebp + wBagSavedMenuItem], al
     jnc .choseItem
 .exitMenu:
-    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Item; behavior=redraw the START window list instead of restoring Buffer2 after leaving the bag; evidence=pret Buffer2 restore plus port RedisplayStartMenu window rebuild; lifetime=permanent window-compositor boundary}
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Item; behavior=redraw the START window list instead of restoring Buffer2 after leaving the bag, and drop compositor windows, bg whiteout, and z-order override; evidence=pret Buffer2 restore plus port RedisplayStartMenu window rebuild; lifetime=permanent window-compositor boundary}
     ; pret's `call LoadScreenTilesFromBuffer2` is dropped —
     ; RedisplayStartMenu → DrawStartMenu rebuilds the window list and the box, so
     ; there is no screen buffer to restore.
@@ -1229,6 +1229,10 @@ StartMenu_Item:
     ; (g_tilecache_dirty), so it sticks. RedisplayStartMenu does NOT reload them.
     ; StartMenu_Option, twenty lines up in this same file, kept both calls.
     call LoadTextBoxTilePatterns        ; call LoadTextBoxTilePatterns
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     call UpdateSprites                  ; call UpdateSprites
     jmp RedisplayStartMenu              ; jp RedisplayStartMenu
 .choseItem:
@@ -1315,6 +1319,10 @@ StartMenu_Item:
     mov al, [ebp + wActionResultOrTookBattleTurn]
     test al, al
     jz ItemMenuLoop                     ; jp z — the item refused; stay in the bag
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     jmp CloseStartMenu
 .useItem_partyMenu:
     movzx eax, byte [ebp + wUpdateSpritesEnabled]
@@ -1325,6 +1333,12 @@ StartMenu_Item:
     jz .partyMenuNotDisplayed
     call GBPalWhiteOutWithDelay3
     call RestoreScreenTilesAndReloadTilePatterns
+    ; DEVIATION{class=projection; pret=engine/menus/start_sub_menus.asm:StartMenu_Item; behavior=drop party menu window descriptors, bg whiteout, and z-order override, reload map tileset patterns and GB pal on return from party-menu item use; evidence=DisplayPartyMenu raises g_bg_whiteout and g_obj_over_window and registers party windows which without teardown stay active across bag redisplay and leak to overworld rendering; lifetime=permanent window-compositor boundary}
+    mov dword [g_window_count], 0       ; drop the party panel/message windows
+    mov dword [g_bg_whiteout], 0        ; clear full-screen whiteout
+    mov dword [g_obj_over_window], 0    ; back to port's window-last order
+    call LoadTilesetTilePatternData     ; reload map tileset overwritten by HP bars
+    call LoadGBPal                      ; un-white the palette
     pop eax
     mov [ebp + wUpdateSpritesEnabled], al
     jmp StartMenu_Item                  ; jp StartMenu_Item — redraw the bag

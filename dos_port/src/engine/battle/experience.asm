@@ -350,7 +350,7 @@ GainExperience:
     call GetPartyMonName            ; REAL (home/pokemon.asm) — stages the nick at wNameBuffer,
                                      ; which GainedText's far intro reads via TX_RAM
 %ifndef DEBUG_TRAINER_RESULT
-    mov eax, GainedText              ; ld hl, GainedText
+    mov esi, GainedText              ; ld hl, GainedText
     call PrintBattleText             ; call PrintText (battle msgbox variant; see extern comment above)
 %endif
     xor al, al
@@ -495,7 +495,7 @@ GainExperience:
     call ModifyPikachuHappiness
     ; pret: ld hl, GrewLevelText / call PrintText — reuses the nick GetPartyMonName
     ; staged at wNameBuffer above (pret stages it once per mon too; no second call).
-    mov eax, GrewLevelText
+    mov esi, GrewLevelText
     call PrintBattleText             ; call PrintText (battle msgbox variant)
     xor al, al
     mov [ebp + wMonDataLocation], al

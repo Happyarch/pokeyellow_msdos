@@ -83,7 +83,7 @@ section .text
 ; battle msgbox projection), exactly as the rest of engine/battle/core.asm does.
 ; ---------------------------------------------------------------------------
 DisplayUsedMoveText:
-    mov eax, UsedMoveText
+    mov esi, UsedMoveText
     jmp PrintBattleText                 ; jp PrintText
 
 ; ---------------------------------------------------------------------------
