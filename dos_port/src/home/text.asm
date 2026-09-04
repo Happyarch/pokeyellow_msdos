@@ -248,6 +248,12 @@ mts_hide_arrow:   db 0
 ; pokédex flavor routine sets it around its TextCommandProcessor call.
 global g_dex_flavor_active
 g_dex_flavor_active: db 0
+
+; When nonzero, dialog_window_scroll preserves the existing window descriptors in
+; g_windows instead of calling set_single_window (used by pokemart buy/sell price
+; confirmation so inventory, money box, and quantity selector stay visible).
+global g_dialog_preserve_windows
+g_dialog_preserve_windows: db 0
 ; ▼ advance arrow position for the full-page pokédex window: pret ldcoord_a 18,16
 POKEDEX_ARROW_TILEMAP_OFFSET equ 16 * TILEMAP_W + 18
 ; …and the same (18,16) in the stride-20 wTileMap scratch — where pret's
@@ -464,7 +470,14 @@ dialog_window_scroll:
     mov edx, RENDER_H            ; max_y = 200 (draws to bottom)
     mov esi, GB_TILEMAP1         ; dialog box source tilemap
     xor edi, edi                 ; start_row = 0
+    cmp byte [g_dialog_preserve_windows], 0
+    jnz .skip_set_single_window
     call set_single_window       ; also mirrors wy→hWY (sync_dialog_window flag), wx→IO_WX
+    jmp .after_set_window
+.skip_set_single_window:
+    mov [ebp + hWY], bl          ; mirror wy (152) to hWY without touching g_windows
+    mov [ebp + IO_WX], al        ; mirror wx (87) to IO_WX
+.after_set_window:
     ; Place ▼ arrow and init blink counters.
     ; Pret ref: home/joypad2.asm:WaitForTextScrollButtonPress places coord(18,16).
     ; M1.2: TX_WAIT_BUTTON / in-battle TX_PROMPT_BUTTON suppress the ▼ (mts_hide_arrow).

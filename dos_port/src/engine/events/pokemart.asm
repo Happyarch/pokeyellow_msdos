@@ -56,6 +56,8 @@ extern WaitForSoundToFinish             ; src/home/delay.asm
 extern StringCmp                        ; src/home/compare.asm
 extern g_window_count                   ; src/ppu/ppu.asm
 extern sync_dialog_window               ; src/home/text.asm
+extern list_drop_qty_window            ; src/home/list_menu.asm
+extern g_dialog_preserve_windows       ; src/home/text.asm
 
 ; ---------------------------------------------------------------------------
 ; DisplayPokemartDialogue_ — pret engine/events/pokemart.asm:DisplayPokemartDialogue_
@@ -145,14 +147,17 @@ DisplayPokemartDialogue_:
     call DisplayChooseQuantityMenu               ; call DisplayChooseQuantityMenu
     inc al                                       ; inc a
     jz .sellMenuLoop                             ; jr z, .sellMenuLoop
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartTellSellPriceText           ; ld hl, PokemartTellSellPriceText
     mov bh, 14                                   ; lb bc, 14, 1
     mov bl, 1
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     ; PROJ overworld-ui: GB(14,7) 6x5 --(anchor=top-right, X+20, Y+0)--> wx=279 wy=56 clip=48 max_y=96
     call InitYesNoTextBoxParameters              ; hlcoord 14, 7 / lb bc, 8, 15
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU ; ld a, TWO_OPTION_MENU / ld [wTextBoxID], a
     call DisplayTextBoxID                        ; call DisplayTextBoxID
+    call list_drop_qty_window                    ; tear down quantity window after confirmation
     mov al, [ebp + wMenuExitMethod]              ; ld a, [wMenuExitMethod]
     cmp al, CHOSE_SECOND_ITEM                    ; cp CHOSE_SECOND_ITEM
     je .sellMenuLoop                             ; jr z, .sellMenuLoop
@@ -176,8 +181,10 @@ DisplayPokemartDialogue_:
     jmp .sellMenuLoop                            ; jp .sellMenuLoop
 
 .unsellableItem:
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartUnsellableItemText          ; ld hl, PokemartUnsellableItemText
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     jmp .returnToMainPokemartMenu                ; jp .returnToMainPokemartMenu
 
 .bagEmpty:
@@ -229,12 +236,15 @@ DisplayPokemartDialogue_:
     mov [ebp + wNamedObjectIndex], al            ; ld [wNamedObjectIndex], a
     call GetItemName                             ; call GetItemName
     call CopyToStringBuffer                      ; call CopyToStringBuffer
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartTellBuyPriceText            ; ld hl, PokemartTellBuyPriceText
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     ; PROJ overworld-ui: GB(14,7) 6x5 --(anchor=top-right, X+20, Y+0)--> wx=279 wy=56 clip=48 max_y=96
     call InitYesNoTextBoxParameters              ; hlcoord 14, 7 / lb bc, 8, 15
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU ; ld a, TWO_OPTION_MENU / ld [wTextBoxID], a
     call DisplayTextBoxID                        ; call DisplayTextBoxID
+    call list_drop_qty_window                    ; tear down quantity window after confirmation
     mov al, [ebp + wMenuExitMethod]              ; ld a, [wMenuExitMethod]
     cmp al, CHOSE_SECOND_ITEM                    ; cp CHOSE_SECOND_ITEM
     je .buyMenuLoop                              ; jp z, .buyMenuLoop
@@ -261,8 +271,10 @@ DisplayPokemartDialogue_:
     mov al, SFX_PURCHASE                         ; ld a, SFX_PURCHASE
     call PlaySoundWaitForCurrent                 ; call PlaySoundWaitForCurrent
     call WaitForSoundToFinish                    ; call WaitForSoundToFinish
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartBoughtItemText              ; ld hl, PokemartBoughtItemText
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     jmp .buyMenuLoop                             ; jp .buyMenuLoop
 
 .returnToMainPokemartMenu:
@@ -284,13 +296,17 @@ DisplayPokemartDialogue_:
     jmp StringCmp                                ; jp StringCmp
 
 .notEnoughMoney:
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartNotEnoughMoneyText          ; ld hl, PokemartNotEnoughMoneyText
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     jmp .returnToMainPokemartMenu                ; jr .returnToMainPokemartMenu
 
 .bagFull:
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, PokemartItemBagFullText             ; ld hl, PokemartItemBagFullText
     call PrintText                               ; call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     jmp .returnToMainPokemartMenu                ; jr .returnToMainPokemartMenu
 
 .done:

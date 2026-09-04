@@ -72,6 +72,7 @@ global DisplayListMenuIDLoop
 global DisplayChooseQuantityMenu
 global list_mirror              ; menus S4: StartMenu_Item refreshes the list
                                 ; window after its cursor-cell edits
+global list_drop_qty_window
 
 ; ── globals resolved elsewhere (present in the port) ─────────────────────────
 extern TextBoxBorder            ; text.asm       ESI=top-left dest, BL=int w, BH=int h
@@ -681,6 +682,7 @@ DisplayChooseQuantityMenu:
     mov [ebp + wMenuItemToSwap], al
     ret
 .buttonBPressed:                               ; cancel transaction
+    call list_drop_qty_window
     xor al, al
     mov [ebp + wMenuItemToSwap], al
     mov al, 0xff
@@ -1091,5 +1093,49 @@ qty_mirror:
     inc ebx
     cmp ebx, QTY_TOTAL_H
     jb .row
+    popad
+    ret
+
+; ----------------------------------------------------------------------------
+; list_drop_qty_window — tear down the quantity box window descriptor (QTY_SROW).
+; Used when quantity menu is cancelled with B, or after the YES/NO price
+; confirmation finishes in Poké Mart buy/sell.
+; Preserves all registers.
+; ----------------------------------------------------------------------------
+list_drop_qty_window:
+    pushad
+    mov ecx, [g_window_count]
+    test ecx, ecx
+    jz .done
+    xor ebx, ebx
+.scan:
+    cmp ebx, ecx
+    jge .done
+    imul eax, ebx, WIN_DESC_SIZE
+    mov edx, [g_windows + eax + WIN_START_ROW]
+    cmp edx, QTY_SROW                           ; 16
+    je .found
+    inc ebx
+    jmp .scan
+.found:
+    ; Shift subsequent descriptors down by 1 slot (WIN_DESC_SIZE = 32 bytes)
+    mov edi, ebx
+    imul edi, edi, WIN_DESC_SIZE
+    add edi, g_windows                          ; destination
+.shift_loop:
+    inc ebx
+    cmp ebx, ecx
+    jge .shifted
+    mov esi, ebx
+    imul esi, esi, WIN_DESC_SIZE
+    add esi, g_windows                          ; source
+    push ecx
+    mov ecx, WIN_DESC_SIZE / 4                  ; 8 dwords = 32 bytes
+    rep movsd
+    pop ecx
+    jmp .shift_loop
+.shifted:
+    dec dword [g_window_count]
+.done:
     popad
     ret
