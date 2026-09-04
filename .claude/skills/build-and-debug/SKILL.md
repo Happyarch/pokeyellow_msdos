@@ -282,8 +282,7 @@ register/flag token stay unreachable by name — SYMF warns if any exist.
 C: is the isolated `PKMN.IMG` image, so it loads the same working `POKEMON.DSV`
 save as `run`/`run-mt32` — and game-written files (`FRAME.BIN`/`DUMP.BIN`/
 `GBSTATE.BIN`, saves) land INSIDE the image: extract with
-`mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .` (the old `tools/run_with_mcp.sh`
-mounted the host dir and saw a stale save; it is gone, replaced by this).
+`mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .`.
 It does **not** pass `-break-start`: the game's runtime selectors
 only exist once PKMN.EXE is loaded (at BIOS entry there is nothing to target,
 and a paused emulator can't service the socket BREAK request).
@@ -366,13 +365,16 @@ skip the copy.
   pkmn.sym from the build `run-mcp` last launched — recorded in the
   `/tmp/dosbox-mcp.launch` handshake, which the server re-reads on change (so
   a worktree launch redirects a server started in the main checkout, from its
-  next symbol lookup on). Two ways to still get foreign addresses: a server
-  started before this fix landed (restart it), or a `PKMN_SYM`/`PKMN_EXE`/
+  next symbol lookup on). Two ways to still get foreign addresses: a stale
+  launch file (relaunch via `run-mcp`, which rewrites it atomically), or a
+  `PKMN_SYM`/`PKMN_EXE`/
   `DOSBOX_MCP_DIR` env override in the MCP registration, which by design wins
   over the handshake and pins the path. Verify:
   `awk '$3=="PrintText"{print $1}' dos_port/pkmn.sym` in *your* worktree
   against the address `set_breakpoint`/`lookup_symbol` reports — a mismatch is
-  a build mismatch, not a bad symbol.
+  a build mismatch, not a bad symbol. Never "fix" this by killing/restarting
+  `server.py` itself — that permanently disconnects your own dosbox-mcp tools
+  (see NEVER `pkill` below); the handshake re-read is the mechanism.
 
 **Failure heuristic:** a breakpoint that never fires, or reads returning all
 zeros, means one of the four items above — **not** a broken socket. Check

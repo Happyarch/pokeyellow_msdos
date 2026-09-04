@@ -120,6 +120,7 @@ Convenience wrappers at repo root / `dos_port/`:
 ```sh
 dos_port/build       # build (passes args to make)
 dos_port/run         # build + launch in DOSBox-X
+dos_port/run-mcp     # build + launch under the MCP-patched DOSBox-X (same args as run)
 ```
 
 ---

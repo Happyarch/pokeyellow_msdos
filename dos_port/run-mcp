@@ -3,7 +3,7 @@
 # an agent can drive the heavy debugger live (breakpoints, memory, frame
 # dumps) while a human pilots headed.
 #
-# Like run/run-mt32 and unlike the old tools/run_with_mcp.sh this replaces:
+# Like run/run-mt32:
 #   - it BUILDS: `make image` with any non-`/…` args (e.g. `run-mcp SKIP_TITLE=1`);
 #   - '/…' tokens become PKMN.EXE flags (e.g. `run-mcp /MT32`), same split as run;
 #   - C: is the isolated PKMN.IMG image, so the run loads the SAME working
