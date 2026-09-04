@@ -81,9 +81,10 @@ class DebugSocketClient:
                     "the bridge serves one command at a time and its reply "
                     "arrives only at the next debugger entry, so wait_break() "
                     "is the only call that can proceed. If the game is hung "
-                    "and no breakpoint fires, no agent command can break in — "
-                    "ask the pilot to press the DOSBox-X debugger hotkey "
-                    "(Alt+Pause), then wait_break() collects the halt point.")
+                    "and no breakpoint fires, call force_break() to interrupt "
+                    "it (or ask the pilot to press the DOSBox-X debugger "
+                    "hotkey (Alt+Pause)), then wait_break() collects the "
+                    "halt point.")
             if self._sock is None:
                 self.connect()
             self._send_locked(cmd)
@@ -110,6 +111,22 @@ class DebugSocketClient:
             if self._sock is None:
                 self.connect()
             self._send_locked(cmd)
+
+    def force_break(self) -> None:
+        """Park a BREAK request without touching pending state and without
+        waiting — the preemption half of Design A ("force_break preemption").
+
+        Sends b"BREAK\\n" on the existing socket like send_raw, but as a
+        named, auditable method: while a RUN is outstanding the emulator's
+        socket bridge picks the BREAK up out-of-band and breaks at the next
+        CPU slice.  Never waits for (or consumes) the reply — the single
+        pending reply still belongs to the outstanding RUN, so collect it
+        with wait_response().  Never raises PendingResponse, even when a
+        response is outstanding (that is the point)."""
+        with self._lock:
+            if self._sock is None:
+                self.connect()
+            self._send_locked('BREAK')
 
     def wait_response(self, timeout: Optional[float] = None) -> str:
         """Collect the pending response (e.g. a RUN's break notification)."""

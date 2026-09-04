@@ -8012,7 +8012,14 @@ FaintEnemyPokemon:
 .sfxwait:
     mov al, [ebp + wChannelSoundIDs + CHAN5]
     cmp al, SFX_FAINT_FALL
-    je .sfxwait
+    jne .sfxdone
+    ; GB realtimeness: pret's VBlank ISR advanced the sound engine during this
+    ; spin, but the port ticks audio in DelayFrame (audio_tick), so pump one
+    ; frame here — a bare spin would never see CHAN5 change (cf.
+    ; WaitForSoundToFinish, src/home/delay.asm:89-93, same adaptation).
+    call DelayFrame
+    jmp .sfxwait
+.sfxdone:
     mov al, SFX_FAINT_THUD
     call PlaySound
     call WaitForSoundToFinish

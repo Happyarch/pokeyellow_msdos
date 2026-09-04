@@ -308,9 +308,9 @@ def _game_ctx() -> Optional[str]:
         return ("ERROR: a previous command's response is still pending — "
                 "call wait_break() to collect it. A RUN is outstanding and its "
                 "reply arrives only at the next debugger entry; if the game is "
-                "hung with no breakpoint hit, ask the pilot to press the "
-                "DOSBox-X debugger hotkey (Alt+Pause), then wait_break() "
-                "collects the halt point.")
+                "hung with no breakpoint hit, call force_break() to interrupt "
+                "it (or ask the pilot to press the DOSBox-X debugger hotkey "
+                "(Alt+Pause)), then wait_break() collects the halt point.")
     regs = _regs()
     if 'error' in regs:
         return f"ERROR: cannot read registers: {regs['error']}"
@@ -651,9 +651,10 @@ def continue_exec(wait_for_break: bool = True, timeout: float = 300.0) -> str:
     if _state == 'running' or _client.has_pending():
         return ("ERROR: already running — use wait_break(). A RUN is "
                 "outstanding and only a debugger entry resolves it; if the "
-                "game is hung with no breakpoint hit, ask the pilot to press "
-                "the DOSBox-X debugger hotkey (Alt+Pause), then wait_break() "
-                "collects the halt point.")
+                "game is hung with no breakpoint hit, call force_break() to "
+                "interrupt it (or ask the pilot to press the DOSBox-X "
+                "debugger hotkey (Alt+Pause)), then wait_break() collects "
+                "the halt point.")
     try:
         _client.connect()
     except OSError as e:
@@ -858,6 +859,35 @@ def screenshot(output_png: str = '/tmp/dosbox_screenshot.png') -> str:
         return (f"Screenshot written to {src}, but copying it to {output_png} "
                 f"failed: {e}{note}")
     return f"Screenshot written to {dst} (emulator capture: {src}){note}"
+
+
+@mcp.tool()
+def force_break() -> str:
+    """
+    Interrupt an outstanding RUN without the pilot hotkey (Design A:
+    "force_break preemption"). Parks a BREAK request that the emulator's
+    socket bridge picks up while it waits for the run's break notification,
+    so even a hung guest (tight loop, no breakpoint hit) breaks at the next
+    CPU slice.
+
+    Only fires when a response is outstanding (_client.has_pending()) or the
+    tracked state is 'running'; otherwise it delegates to pause_exec(). It
+    does NOT wait for the break — call wait_break() afterwards to collect the
+    single pending reply, in ≤50s chunks (the transport times out ~60s with
+    -32001, so one long wait never returns). RUNWATCH behaves like RUN.
+    """
+    if not _client.has_pending() and _state != 'running':
+        return pause_exec()
+    try:
+        _client.connect()
+    except OSError as e:
+        return f"ERROR: cannot connect to {SOCK_PATH}: {e}"
+    try:
+        _client.force_break()
+    except OSError as e:
+        return f"ERROR: failed to send BREAK: {e}"
+    return ("BREAK parked — the emulator breaks at the next CPU slice. "
+            "Call wait_break() to collect the halt point.")
 
 
 @mcp.tool()
