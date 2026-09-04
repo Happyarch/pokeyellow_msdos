@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Launch the ground-truth side of the mgba-mcp bridge (fidelity plan 1.5):
 # mgba-lua-runner + mcp_agent.lua serving TCP 127.0.0.1:$MGBA_MCP_PORT for
-# tools/mgba_mcp/server.py (model: run_with_mcp.sh for dosbox-mcp).
+# tools/mgba_mcp/server.py (model: run-mcp for dosbox-mcp).
 #
 # The ROM is the sha1-verified golden build from the pinned pret worktree —
 # ground truth only ever comes from a verified ROM (same gate as

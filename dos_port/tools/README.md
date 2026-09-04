@@ -63,7 +63,7 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `unnamed.py` | Find unnamed symbols in a `.sym` file | `build-and-debug` |
 | `golden_diff.py`, `goldencheck.sh` | Fidelity differ / one-scenario check-and-diff | `build-and-debug` |
 | `saveconv.py` | `--verify`/`--info FILE` validates a `.dsv` (size/magic/version/checksum); `--to-dos IN.sav OUT.dsv` / `--to-gb IN.dsv OUT.sav` convert (header prepend/strip — the v2 payload IS a raw `.sav`). Run on every `save_real_load` golden. | `build-and-debug` |
-| `dosbox_mcp/`, `mgba_mcp/`, `run_with_mcp.sh`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side) | `build-and-debug` |
+| `dosbox_mcp/`, `mgba_mcp/`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side); the DOSBox-X side launches via `dos_port/run-mcp` | `build-and-debug` |
 | `audio/audition.py` | Host-side MIDI audition (fastest way to hear a track) | `build-and-debug` |
 | `faithdiff`, `label_status`, `lint_pret_labels`, `update_label_db`, `fidelity_gate` | Pret-fidelity gate: label DB, per-routine diff, pre-commit check | `faithfulness-review` |
 | `label_status --subsystem PAT` | "what is left in <area>" from the terminal: per-pret-file missing/stub/translated rollup + the gap names with their port callers. A thin VIEW over the same `labels` table the graph viewer reads — the viewer covers the same question interactively (status filter + path search); this covers it in a shell | `faithfulness-review` |

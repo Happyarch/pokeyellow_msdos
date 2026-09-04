@@ -43,7 +43,7 @@ stays *pending* and wait_break() collects it.
   know the current state — a restarted server, a screenshot after a crash —
   is no longer punished for guessing.
 
-Usage (started by run_with_mcp.sh or Claude Code MCP config):
+Usage (started by run-mcp or Claude Code MCP config):
   python3 tools/dosbox_mcp/server.py
 
 Which BUILD the symbols come from (launcher handshake, 2026-08-04):
@@ -52,7 +52,7 @@ Which BUILD the symbols come from (launcher handshake, 2026-08-04):
   PKMN.EXE the emulator is running.  A worker debugging a git-worktree build
   used to get its breakpoint addresses from the MAIN checkout's pkmn.sym:
   right symbol name, plausible address, breakpoint never fires.
-  run_with_mcp.sh therefore writes a handshake file (default
+  run-mcp therefore writes a handshake file (default
   /tmp/dosbox-mcp.launch, beside the socket) recording the absolute dos_port/
   directory of the build it launched, and the paths below are re-derived from
   it at every use — the server outlives launches, so the handshake is re-read
@@ -132,7 +132,7 @@ def _abs_path(path: str, root=None) -> str:
 
 
 def read_launch_dosport(launch_file: str) -> Optional[str]:
-    """Return the dos_port/ directory recorded by run_with_mcp.sh, or None.
+    """Return the dos_port/ directory recorded by run-mcp, or None.
 
     Format is KEY=VALUE lines; only DOSPORT is load-bearing here.  Absent,
     unreadable, malformed, or pointing at a directory that no longer exists

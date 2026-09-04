@@ -8,7 +8,7 @@
 # The binary is deliberately named dosbox-x-mcp (NOT dosbox-x) so it can never
 # conflict with or shadow the system dosbox-x install. It is installed to:
 #   ~/.local/bin/dosbox-x-mcp            (on PATH)
-#   tools/dosbox-x-mcp/dosbox-x-mcp      (in-repo copy, used by run_with_mcp.sh)
+#   tools/dosbox-x-mcp/dosbox-x-mcp      (in-repo copy, used by run-mcp)
 #
 # autotools cannot cope with the repo path's space ("Active Code"), so the
 # submodule working tree is rsynced to a space-free staging dir in /tmp and
@@ -79,4 +79,4 @@ echo ""
 echo "Done."
 echo "  In-repo binary: $REPO_BIN"
 echo "  On PATH:        $LOCAL_BIN"
-echo "Run: dos_port/tools/run_with_mcp.sh"
+echo "Run: dos_port/run-mcp"

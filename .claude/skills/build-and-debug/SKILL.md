@@ -277,12 +277,14 @@ the hex-literal reading, and digit-leading tokens (`7B1C`) are always hex
 (NASM names can't start with a digit). Only names colliding with a
 register/flag token stay unreachable by name — SYMF warns if any exist.
 
-**Launch:** `dos_port/tools/run_with_mcp.sh` (does NOT build — run
-`make SKIP_TITLE=1 DEBUG_SEED_PARTY=1` yourself first; launches the fork
-binary with the MCP socket `/tmp/dosbox-mcp.sock`). It mounts the **host
-`dos_port/` as C:**, so harness `FRAME.BIN`/`DUMP.BIN` files land directly on
-disk there — no mcopy (unlike the isolated-`PKMN.IMG` headless pipeline
-above). It does **not** pass `-break-start`: the game's runtime selectors
+**Launch:** `dos_port/run-mcp [make args] [/EXE flags]` — same arg split as
+`dos_port/run` (`make image` autobuild, `/…` tokens become PKMN.EXE flags).
+C: is the isolated `PKMN.IMG` image, so it loads the same working `POKEMON.DSV`
+save as `run`/`run-mt32` — and game-written files (`FRAME.BIN`/`DUMP.BIN`/
+`GBSTATE.BIN`, saves) land INSIDE the image: extract with
+`mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .` (the old `tools/run_with_mcp.sh`
+mounted the host dir and saw a stale save; it is gone, replaced by this).
+It does **not** pass `-break-start`: the game's runtime selectors
 only exist once PKMN.EXE is loaded (at BIOS entry there is nothing to target,
 and a paused emulator can't service the socket BREAK request).
 
@@ -341,7 +343,7 @@ debugger, so it cannot be driven from the bridge at all. `dbg_command
 other kind. For mode 13h and DOS text the two show the same content; if you need
 raw DAC values, use the mapper hotkey with the emulator running.
 
-Files land in the emulator's capture dir (`run_with_mcp.sh` pins
+Files land in the emulator's capture dir (`run-mcp` pins
 `captures=/tmp/dosbox-mcp-capture`, overridable with `DOSBOX_MCP_CAPTURE_DIR`),
 and `screenshot` copies to `output_png` on top of that; pass `output_png=''` to
 skip the copy.
@@ -361,7 +363,7 @@ skip the copy.
   (Symbol names are exempt: identifiers that aren't registers/flags/hex fall
   through to the SYMF table, case-insensitively.)
 - **Symbols from the wrong BUILD.** The server is long-lived and resolves
-  pkmn.sym from the build `run_with_mcp.sh` last launched — recorded in the
+  pkmn.sym from the build `run-mcp` last launched — recorded in the
   `/tmp/dosbox-mcp.launch` handshake, which the server re-reads on change (so
   a worktree launch redirects a server started in the main checkout, from its
   next symbol lookup on). Two ways to still get foreign addresses: a server
@@ -735,8 +737,9 @@ are here so you can debug the script or vary the config; they were verified
    $SCRATCH/pkmn_test.img`, point the scratch conf's `imgmount c` at the
    copy's absolute path, and mcopy-extract from the copy.
 
-(The dosbox-mcp launcher below instead mounts the HOST `dos_port/` as C:, so
-there FRAME.BIN lands directly on disk — no mcopy.)
+(The dosbox-mcp launcher `dos_port/run-mcp` also uses the isolated `PKMN.IMG`
+as C:, so game-written files there need the same mcopy extraction — only the
+debugger's own MEMDUMP.BIN and `screenshot()` captures land on the host.)
 
 ### Visual capture
 
