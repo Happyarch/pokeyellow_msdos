@@ -173,7 +173,7 @@ RocketHideoutB4F_ScriptPointers:
 %assign event_byte_a -1
 RocketHideoutB4FBeatGiovanniScript:
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz RocketHideoutB4FResetScripts
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
@@ -382,7 +382,7 @@ RocketHideoutB4FScript11:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz RocketHideoutB4FResetScripts
     mov al, 0x2
     mov [ebp + wSprite02StateData1MovementStatus], al

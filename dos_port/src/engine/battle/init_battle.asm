@@ -203,7 +203,7 @@ InitBattleCommon:
     mov byte [ebp + wEnemyMonSpecies2], 0
     mov byte [ebp + wAICount], 0xFF
     mov byte [ebp + wEnemyMonPartyPos], 0xFF
-    mov byte [ebp + wIsInBattle], 2
+    mov byte [ebp + wIsInBattle], TRAINER_BATTLE
     ; Is this a major story battle? pret init_battle.asm:53-58. wLoneAttackNo is
     ; the gym-leader/rival marker ReadTrainer also reads (read_trainer_party.asm:
     ; "if [wLoneAttackNo] != 0, one pokemon on the team has a special move"), so
@@ -223,7 +223,7 @@ InitWildBattle:
     ; pret InitBattleCommon:32 (shared prologue; the port's DetermineWildOpponent
     ; jumps here directly, so the hoisted call lives on both entry paths).
     call InitBattleVariables
-    mov byte [ebp + wIsInBattle], 1
+    mov byte [ebp + wIsInBattle], WILD_BATTLE
     call LoadEnemyMonData
     call DoBattleTransitionAndInitBattleVariables   ; pret init_battle.asm:64
     ; --- post-transition teardown (see InitBattleCommon above) ---
@@ -445,7 +445,7 @@ _InitBattleCommon:
     ; Harness stop: run the first-mon selection the gate exists to witness at
     ; its old deterministic instant (before any presentation), then stop.
     ; Presentation and the turn loop are intentionally not entered.
-    cmp byte [ebp + wIsInBattle], 2
+    cmp byte [ebp + wIsInBattle], TRAINER_BATTLE
     jne .enemyInitialized
     ; First send-out: suppress the switch prompt exactly as pret StartBattle:141
     ; does on the live path (this gate stops before that block runs).

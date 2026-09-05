@@ -338,7 +338,7 @@ SilphCo11FScript_621ff:
 %assign event_byte_a -1
 SilphCo11FGiovanniAfterBattleScript:
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz SilphCo11FResetCurScript
     mov al, [ebp + wSavedCoordIndex]
     cmp al, 1
@@ -614,7 +614,7 @@ SilphCo11FScript12:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz SilphCo11FResetCurScript
     mov al, 0x2
     mov [ebp + wSprite04StateData1MovementStatus], al

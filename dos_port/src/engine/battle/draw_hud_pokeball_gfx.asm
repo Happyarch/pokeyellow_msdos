@@ -339,7 +339,7 @@ DrawAllPokeballs:
     rep stosd
     call LoadPartyPokeballGfx
     call SetupOwnPartyPokeballs
-    cmp byte [ebp + wIsInBattle], 2      ; trainer battle has both player and enemy rows
+    cmp byte [ebp + wIsInBattle], TRAINER_BATTLE      ; trainer battle has both player and enemy rows
     jne .wild
     call SetupEnemyPartyPokeballs
     mov ecx, 12

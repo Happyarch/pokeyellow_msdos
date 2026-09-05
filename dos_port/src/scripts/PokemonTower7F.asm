@@ -298,7 +298,7 @@ PokemonTower7FScript8:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz PokemonTower7FSetDefaultScript
     mov al, 0x2
     mov [ebp + wSprite01StateData1MovementStatus], al

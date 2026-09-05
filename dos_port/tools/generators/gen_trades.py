@@ -54,6 +54,8 @@ ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
 SRC = ROOT / "data" / "events" / "trades.asm"
 CHARMAP = ROOT / "constants" / "charmap.asm"
+PRET_SCRIPT_CONSTANTS = ROOT / "constants" / "script_constants.asm"
+PORT_GB_CONSTANTS = ROOT / "dos_port" / "include" / "gb_constants.inc"
 # TWO OUTPUTS, because the two labels have DIFFERENT pret homes and the port
 # mirrors pret paths exactly (lint_pret_labels `aux_misplaced`):
 #   TradeMons                 -> pret data/events/trades.asm
@@ -68,6 +70,60 @@ OUT_TRAINER = ASSETS / "trade_trainer_string.inc"
 
 NAME_LENGTH = 11          # constants/text_constants.asm
 TERMINATOR = 0x50         # charmap "@" — dname's pad byte
+
+
+def _parse_num(tok: str) -> int:
+    tok = tok.strip()
+    if tok.startswith('$'):
+        return int(tok[1:], 16)
+    if tok.startswith('%'):
+        return int(tok[1:], 2)
+    return int(tok, 0)
+
+
+def _port_define(name: str, fallback: int) -> int:
+    """Numeric `%define NAME <num>` from dos_port/include/gb_constants.inc."""
+    try:
+        for line in PORT_GB_CONSTANTS.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"\s*%define\s+" + name + r"\s+(\$[0-9A-Fa-f]+|%[01]+|\d+)\b", line)
+            if m:
+                return _parse_num(m.group(1))
+    except OSError:
+        pass
+    return fallback
+
+
+def load_trade_data_size() -> int:
+    """TRADE_DATA_SIZE from pret constants/script_constants.asm.
+
+    Upstream (#166) defines it as `3 + NAME_LENGTH` and uses it as the
+    TradeMons row stride (`table_width`, `ld bc, TRADE_DATA_SIZE`). Each `+`
+    term is a number or NAME_LENGTH (resolved from gb_constants.inc, mirroring
+    gen_script_constants.py's sum branch). Falls back to 3 + NAME_LENGTH so the
+    output never breaks on an upstream rewording.
+    """
+    name_len = _port_define("NAME_LENGTH", NAME_LENGTH)
+    try:
+        for raw in PRET_SCRIPT_CONSTANTS.read_text(encoding="utf-8").splitlines():
+            line = raw.split(";", 1)[0].strip()
+            m = re.match(r"DEF\s+TRADE_DATA_SIZE\s+EQU\s+(.+)$", line)
+            if m and "+" in m.group(1):
+                total, ok = 0, True
+                for tok in m.group(1).split("+"):
+                    tok = tok.strip()
+                    if tok == "NAME_LENGTH":
+                        total += name_len
+                    else:
+                        try:
+                            total += _parse_num(tok)
+                        except ValueError:
+                            ok = False
+                            break
+                if ok:
+                    return total
+    except OSError:
+        pass
+    return 3 + name_len
 
 # engine/events/in_game_trades.asm:InGameTrade_TrainerString
 TRAINER_STRING = "<TRAINER>"
@@ -121,6 +177,11 @@ def encode_name(text: str, toks: dict) -> list:
 
 def main() -> int:
     toks = load_named_tokens()
+    stride = load_trade_data_size()  # pret TRADE_DATA_SIZE (3 + NAME_LENGTH)
+    if stride != 3 + NAME_LENGTH:
+        sys.stderr.write(
+            f"gen_trades: pret TRADE_DATA_SIZE={stride} != 3 + NAME_LENGTH={3 + NAME_LENGTH}; "
+            "row layout follows dname — verify the stride\n")
 
     rows = []
     for line in SRC.read_text(encoding="utf-8").splitlines():
@@ -142,7 +203,7 @@ def main() -> int:
         f"; encoded and '@'-padded ($50) to NAME_LENGTH={NAME_LENGTH}, exactly as",
         "; RGBDS `dname` does; species and dialogset stay as their pret constant",
         "; names (assets/script_constants.inc / include/gb_constants.inc).",
-        f"; Row stride: 3 + {NAME_LENGTH} = {3 + NAME_LENGTH} bytes ($e).",
+        f"; Row stride: 3 + {NAME_LENGTH} = {stride} bytes (${stride:x}).",
         "",
         "; entries correspond to TRADE_FOR_* constants",
         "TradeMons:",

@@ -111,8 +111,8 @@ DoInGameTradeDialogue:
     call SaveScreenTilesToBuffer2
     mov esi, TradeMons                          ; ld hl, TradeMons (FLAT program-image data)
     mov al, [ebp + wWhichTrade]                 ; ld a, [wWhichTrade]
-    mov bx, 0xe                                 ; ld bc, $e  (3 + NAME_LENGTH row stride)
-    call AddNTimes                              ; esi += $e * al (address-space agnostic)
+    mov bx, TRADE_DATA_SIZE                     ; ld bc, TRADE_DATA_SIZE (3 + NAME_LENGTH row stride)
+    call AddNTimes                              ; esi += TRADE_DATA_SIZE * al (address-space agnostic)
 
     mov al, [esi]                               ; ld a, [hli]
     inc esi

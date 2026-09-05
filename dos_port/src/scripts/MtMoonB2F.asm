@@ -292,7 +292,7 @@ MtMoonB2FScript_49d28:
 %assign event_byte_a -1
 MtMoonB2FDefeatedSuperNerdScript:
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz MtMoonB2FResetScripts
     call UpdateSprites
     call Delay3
@@ -565,7 +565,7 @@ MtMoonB2FScript13:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, [ebp + wIsInBattle]
-    cmp al, 0xff
+    cmp al, LOST_BATTLE
     jz MtMoonB2FResetScripts
     mov al, 0x2
     mov [ebp + wSprite02StateData1MovementStatus], al
