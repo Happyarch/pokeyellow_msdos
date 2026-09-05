@@ -1006,8 +1006,8 @@ SelectMenuItem:
     call PlaceString
     jmp .select
 .battleselect:
-    ; Hide move swap cursor in TestBattle. This causes PrintMenuItem to not run in
-    ; TestBattle. MoveSelectionMenu still draws part of its window, an issue which
+    ; Hide move swap cursor in FightDebugMenu. This causes PrintMenuItem to not run in
+    ; FightDebugMenu. MoveSelectionMenu still draws part of its window, an issue which
     ; did not seem to exist in the Japanese versions. (pret's comment, preserved.)
     mov al, [ebp + wStatusFlags7]
     test al, 1 << BIT_TEST_BATTLE
@@ -3823,7 +3823,7 @@ GetCurrentMove:
     jmp .selected
 .player:
     mov edx, wPlayerMoveNum
-    ; TestBattle (debug) forces a specific player move
+    ; FightDebugMenu (debug) forces a specific player move
     mov al, [ebp + wStatusFlags7]
     test al, (1 << BIT_TEST_BATTLE)
     mov al, [ebp + wTestBattlePlayerSelectedMove]

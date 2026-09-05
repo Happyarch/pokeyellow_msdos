@@ -5,17 +5,23 @@
 ;
 ; `label_status --subsystem '*'` reports `engine/debug/debug_menu.asm  99 missing`,
 ; the single largest gap in the tree. **98 of those 99 labels DO NOT EXIST IN THE
-; SHIPPED GAME.** pret's file is ONE `IF DEF(_DEBUG) ... ELSE ret ENDC` block
-; spanning lines 2-1649: with `_DEBUG` unset — which is retail Yellow, and what this
-; port builds — the assembler emits exactly one routine, `DebugMenu`, whose entire
-; body is `ret`. That is what is below.
+; SHIPPED GAME.** pret's file is ONE `IF DEF(_DEBUG) ... ELSE ret ENDC` block:
+; `DebugMenu` proper in `engine/debug/debug_menu.asm` (77 lines, ending with two
+; INCLUDEs), the `FightDebugMenu` harness in `engine/debug/fight_debug_menu.asm`,
+; and the box-debug menu in `engine/debug/set_box_debug_menu.asm`. With `_DEBUG`
+; unset — which is retail Yellow, and what this port builds — the assembler emits
+; exactly one routine, `DebugMenu`, whose entire body is `ret`. That is what is below.
+; (Upstream #165 renamed the harness `TestBattle` -> `FightDebugMenu`, scoping its
+; `Func_fe*`/`Text_fed*`/`Data_feded` labels as `FightDebugMenu.*` locals; the
+; set-box half keeps bare `Func_fe*` names. translation.db rows still carry the
+; pre-split single-file names until the next ROOT-only rescan.)
 ;
 ; Its only call site is `callfar DebugMenu` at engine/movie/title.asm:204, which is
 ; ALSO inside an `IF DEF(_DEBUG)` block; the release arm is `jp MainMenu`, and the
 ; port already takes it (src/engine/movie/title.asm). So the routine is unreachable
 ; in a release build on both sides, exactly as it should be.
 ;
-; Whether to port the other 98 — the debug menu proper, its TestBattle harness, party
+; Whether to port the other 98 — the debug menu proper, its FightDebugMenu harness, party
 ; and item seeding, the map-warp picker — is a SCOPE DECISION, not translation work,
 ; and it belongs to the maintainer alongside the other entries in
 ; tools/port_scope_exclusions.json. They are genuinely portable; they are simply not
@@ -38,7 +44,7 @@ section .text
 ;
 ; EXPECT A LOUD faithdiff ON THIS LABEL, and do not "fix" it: it reports 13 dropped
 ; calls and 9 dropped stores, because it compares this `ret` against pret's _DEBUG
-; body (TextBoxBorder, PlaceString, HandleMenuInput, TestBattle, the menu-state
+; body (TextBoxBorder, PlaceString, HandleMenuInput, FightDebugMenu, the menu-state
 ; stores...). faithdiff has no model of `IF DEF(_DEBUG)`, so it cannot see that the
 ; release assembler emits none of that. The drop set IS the guard. Nothing here is
 ; suppressed, because a suppression would hide the same shape on a routine where it
