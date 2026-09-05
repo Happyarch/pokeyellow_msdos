@@ -404,7 +404,7 @@ StartNewGameDebug:
     mov dword [text_row_stride], 20
     mov dword [text_msgbox], msgbox_dialog
     call OakSpeech                              ; includes the naming screen (pkg C)
-    mov byte [ebp + wPlayerMovingDirection], 0x8   ; ld a,$8 / ld [wPlayerMovingDirection],a
+    mov byte [ebp + wPlayerMovingDirection], PLAYER_DIR_UP   ; ld a,PLAYER_DIR_UP / ld [wPlayerMovingDirection],a
     mov bl, 20
     call DelayFrames
     ; fallthrough to SpecialEnterMap

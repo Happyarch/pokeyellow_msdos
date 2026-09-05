@@ -340,7 +340,7 @@ OakSpeechSlidePicCommon:
 ; body is `text_end`: a one-byte stream that terminates immediately, i.e. printing
 ; it draws the box and nothing else. Unreferenced in pret, and here.
 ; ---------------------------------------------------------------------------
-LinkMenuEmptyText:
+LinkMenuEmptyText: ; unreferenced
     db 0x50                             ; text_end. A lone TX_END is a control byte,
                                         ; not a rendered glyph run, so it is code-side
                                         ; rather than generated Tier-1 data — the same

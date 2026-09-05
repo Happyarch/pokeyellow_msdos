@@ -66,7 +66,7 @@ section .text
 ; so an entry count of 0 writes 256 entries and stops, exactly as on the GB. The
 ; caller is what keeps them non-zero; do not add a guard, which would write 0.
 ; ---------------------------------------------------------------------------
-InitIntroNidorinoOAM:
+InitIntroNidorinoOAM: ; unreferenced
     mov esi, wShadowOAM                 ; ld hl, wShadowOAM
     mov dh, 0                           ; ld d, 0 — running tile id
 .loop:

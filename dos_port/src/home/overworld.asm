@@ -2256,10 +2256,11 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
 
 ; ---------------------------------------------------------------------------
 ; CheckWarpsNoCollision / ...Loop / ...Retry1 / ...Retry2 /
-; ContinueCheckWarpsNoCollisionLoop / CheckWarpsCollision / WarpFound1
+; CheckWarpsCollision / WarpFound1
 ;   — pret home/overworld.asm:360-454, restored 2026-08-22.
 ;
-; NAME FORK CLOSED. All seven labels reported `missing`: the port had merged both
+; NAME FORK CLOSED. All seven labels reported `missing` (six after upstream #166
+; deleted ContinueCheckWarpsNoCollisionLoop 2026-09-04): the port had merged both
 ; of pret's warp scans into one port-local helper, CheckWarpTile
 ; (src/engine/overworld/overworld.asm), which OverworldLoop called inline at the
 ; two seams where pret jumps to these routines. That helper is now DELETED — this
@@ -2290,7 +2291,6 @@ global CheckWarpsNoCollision
 global CheckWarpsNoCollisionLoop
 global CheckWarpsNoCollisionRetry1
 global CheckWarpsNoCollisionRetry2
-global ContinueCheckWarpsNoCollisionLoop
 global CheckWarpsCollision
 global WarpFound1
 
@@ -2370,7 +2370,6 @@ CheckWarpsNoCollisionRetry1:
 CheckWarpsNoCollisionRetry2:
     inc esi                                    ; inc hl
     inc esi                                    ; inc hl (past dest warp id + dest map)
-ContinueCheckWarpsNoCollisionLoop:
     inc bh                                     ; inc b — warp number
     dec bl                                     ; dec c — warps remaining
     jnz CheckWarpsNoCollisionLoop              ; jp nz
@@ -4315,9 +4314,7 @@ CollisionCheckOnWater:
     pop eax
     stc
     ret
-.checkIfVermilionDockTileset:
-    ; UNREFERENCED in pret Yellow (no jump targets this label — Red-era remnant
-    ; kept for label fidelity, like Func_5288 set 3).
+; check if Vermilion Dock tileset
     mov al, [ebp + wCurMapTileset]
     cmp al, SHIP_PORT                              ; Vermilion Dock tileset?
     jne .noCollision                               ; keep surfing if not

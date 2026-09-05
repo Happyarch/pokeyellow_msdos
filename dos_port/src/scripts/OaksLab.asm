@@ -1193,6 +1193,8 @@ OaksLabOak1Text:
     mov bh, POKE_BALL
     call IsItemInBag
     jnz .come_see_me_sometimes
+; This wPokedexOwned check is redundant, since the same check was performed
+; earlier to reach this .check_for_poke_balls block in the first place.
     mov esi, wPokedexOwned
     mov bh, wPokedexOwnedEnd - wPokedexOwned
     call CountSetBits

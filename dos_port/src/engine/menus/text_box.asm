@@ -590,7 +590,7 @@ DisplayTwoOptionMenu:
     ; to 1. A YES/NO opened from a list (bag TOSS: list → "TOSS HOW MANY?" → YES/NO)
     ; therefore ran with out-of-bounds movement watching still armed.
     mov byte [ebp + wMenuWatchMovingOutOfBounds], 0
-    ; Two rows per item — pret's PlaceMenuCursor default (home/window.asm:141 `ld bc,40`);
+    ; Two rows per item — pret's PlaceMenuCursor default (home/window.asm:141 `ld bc, SCREEN_WIDTH * 2`);
     ; it only drops to one row when hUILayoutFlags' BIT_DOUBLE_SPACED_MENU is SET (the
     ; constant name reads backwards), and nothing in this path sets it. Matches the
     ; doubled <NEXT> row step used for the option text above.

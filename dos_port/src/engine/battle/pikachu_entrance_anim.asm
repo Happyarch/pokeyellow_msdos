@@ -16,7 +16,7 @@
 ; `ld d, 7 * 13` (91) and `cp 7 * 7` (49) are id arithmetic, not geometry.
 ; .PlaceColumn writes ids D..D+6 down a column, and the compare goes the way that
 ; looks backwards at first: an id >= 49 is a REAL BACK-PIC TILE and is written, while
-; anything BELOW 49 is replaced with $7F (blank). D starts at 91 and steps DOWN by 7
+; anything BELOW 49 is replaced with ' ' (blank, T_SPACE = $7F). D starts at 91 and steps DOWN by 7
 ; per column, so the first passes are all real tiles and the trailing columns fall
 ; under 49 and come out blank — which is what makes the pic appear to slide in out of
 ; nothing. (The back pic lives at vBackPic tile $31 onward, i.e. ids 49-97; ids 0-48
@@ -45,6 +45,13 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "coords.inc"                   ; BCOORD — the battle-frame projection
+
+; Blank tile (charmap ' ' = $7F). File-local: T_SPACE is a per-file %define in
+; core.asm, and print_type.asm does not exist in this tree, so the idiom is
+; restated here under guard rather than imported.
+%ifndef T_SPACE
+T_SPACE equ 0x7F                        ; pret `ld a, ' '`
+%endif
 
 extern DelayFrames                      ; src/home/delay.asm — BL = frame count
 
@@ -90,7 +97,7 @@ StarterPikachuBattleEntranceAnimation:
     mov al, dh                          ; ld a, d
     cmp al, 7 * 7
     jae .okay                           ; jr nc — id >= 49 IS a back-pic tile: write it
-    mov al, 0x7F                        ; ld a, $7f — below 49: blank this cell
+    mov al, T_SPACE                     ; ld a, ' ' — below 49: blank this cell
 .okay:
     mov [ebp + esi], al                 ; ld [hl], a
     add esi, SCREEN_WIDTH               ; ld bc, SCREEN_WIDTH / add hl, bc — ROW STEP

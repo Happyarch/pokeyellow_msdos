@@ -7,8 +7,8 @@
 ; exactly as in pret. Kept non-`global`, matching pret's single-colon labels.
 ;
 ; The duplicates are NOT identical to the live routines in home/window.asm: this
-; copy hardcodes the tilemap geometry (SCREEN_WIDTH row step, $28 = two rows per
-; menu item) instead of reading the menu state, and carries the entry defect
+; copy hardcodes the tilemap geometry (SCREEN_WIDTH row step, 2 * SCREEN_WIDTH =
+; two rows per menu item) instead of reading the menu state, and carries the entry defect
 ; noted at PlaceMenuCursorDuplicate. Translated as written — see that note.
 ;
 ; Build: nasm -f coff -I include/ -I . -o /dev/null src/engine/menus/unused_input.asm
@@ -129,7 +129,7 @@ HandleMenuInputPokemonSelectionDuplicate:
 ; code pret ships; it is also part of why the family is unreferenced.
 ;
 ; DEVIATION{class=projection; pret=engine/menus/unused_input.asm:PlaceMenuCursorDuplicate; behavior=step the cursor by the port canvas row stride and twice that per menu item rather than pret's literal 20 and 40, so the cursor lands on the same tilemap cells; evidence=port wTileMap is 40x25 with the row stride published as text_row_stride which every ported menu drawer already uses, so the pret literals would address the wrong row entirely; lifetime=permanent canvas projection boundary}
-; pret's `ld bc, $28` is the two-rows-per-item party-menu spacing (2 * 20), not
+; pret's `ld bc, 2 * SCREEN_WIDTH` is the two-rows-per-item party-menu spacing (2 * 20), not
 ; the current menu's step, so it is projected as 2 * text_row_stride rather than
 ; the port's menu_item_step — that would be a different routine.
 ; ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ PlaceMenuCursorDuplicate:
     test al, al
     jz .asm_f5ad5
     mov ebx, [text_row_stride]
-    shl ebx, 1                          ; ld bc, $28 — two rows per menu item
+    shl ebx, 1                          ; ld bc, 2 * SCREEN_WIDTH — two rows per menu item
 .loop2:
     add esi, ebx
     dec al
@@ -168,7 +168,7 @@ PlaceMenuCursorDuplicate:
     test al, al
     jz .asm_f5aec
     mov ebx, [text_row_stride]
-    shl ebx, 1                          ; ld bc, $28
+    shl ebx, 1                          ; ld bc, 2 * SCREEN_WIDTH
 .loop3:
     add esi, ebx
     dec al

@@ -147,7 +147,7 @@ VermilionDock_Script:
 ; ---------------------------------------------------------------------------
 VermilionDockSSAnneLeavesScript:
     SetEventForceReuseHL EVENT_SS_ANNE_LEFT
-    mov al, 0xff
+    mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     call StopAllMusic
     mov bl, 0                                ; ld c, BANK(Music_Surfing) — flat, no-op
