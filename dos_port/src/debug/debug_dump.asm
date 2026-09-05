@@ -9282,6 +9282,7 @@ DoEnemyAttackDamage:
 %define OUTER_H      (UI_DIALOG_BOX_GBH - 2)
 
 extern TextBoxBorder                 ; text.asm
+extern BattleMenuText              ; assets/textbox_strings.inc — single definition (text_box.asm provides it)
 extern PlaceString                   ; text.asm
 extern menu_item_step                ; window.asm
 extern text_row_stride               ; text.asm
@@ -9324,16 +9325,5 @@ EndBattleScreen:
     rep stosb
     call DelayFrame
     ret
-
-section .data
-; Local BattleMenuText for the relocated debug harness (originally in
-; battle_menu.asm's battle_menu_runtime_strings.inc). Kept here via %include
-; so the bytes remain generated data (gen_runtime_strings.py), not hand-encoded
-; charmap hex — the strict lint flags hand-encoded 0x85 etc as
-; hand_encoded_text. This file is the canonical generated source for this
-; string; textbox_strings.inc carries the same bytes via gen_textbox_strings.py,
-; but including that file would pull in additional textbox strings that are not
-; needed here and would duplicate symbols already owned by text_box.asm.
-%include "assets/battle_menu_runtime_strings.inc"
 section .text
 

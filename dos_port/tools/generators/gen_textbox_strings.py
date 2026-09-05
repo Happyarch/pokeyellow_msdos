@@ -124,7 +124,7 @@ def main() -> int:
         lines.append("")
 
     ASSETS.mkdir(parents=True, exist_ok=True)
-    insert_globals(lines, ['PokemonMenuEntries'])
+    insert_globals(lines, ['PokemonMenuEntries', 'BattleMenuText'])
     dst = ASSETS / "textbox_strings.inc"
     dst.write_text("\n".join(lines))
     print(f"wrote {dst} ({len(STRINGS)} labels)")

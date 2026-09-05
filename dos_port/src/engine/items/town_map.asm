@@ -40,6 +40,7 @@ global WriteSymmetricMonPartySpriteOAM
 
 ; ---- ported helpers -------------------------------------------------------
 extern PlaceString, TextBoxBorder, CopyData, FarCopyData
+extern BirdSprite               ; assets/mon_icons.inc — single definition (mon_icons.asm TU)
 extern ClearScreen, ClearSprites, UpdateSprites
 extern RefreshCollisionTileMap         ; src/ppu/ppu.asm — rebuild wTileMap
 extern DisableLCD, EnableLCD, Delay3, DelayFrame, DelayFrames

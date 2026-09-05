@@ -11,9 +11,11 @@ i.e. Tier-2 code — and reads the labels emitted here.
 Sources:
   constants/icon_constants.asm   → the ICON_* enum + ICONOFFSET
   gfx/sprites/*.2bpp             → MonsterSprite / PokeBallSprite / FossilSprite /
-                                   FairySprite / BirdSprite / SeelSprite /
+                                   FairySprite / BirdSprite /
                                    PikachuSprite (overworld sheets whose spare
                                    tiles are the icon frames)
+                                   (SeelSprite lives in sprites.asm's seel_sprite.inc
+                                   and is externed, not re-emitted here.)
   gfx/icons/*.2bpp               → Bug/Plant/Snake/Quadruped icon frames
   gfx/trade/bubble.2bpp          → TradeBubbleIconGFX
   data/pokemon/menu_icons.asm    → MonPartyData (nybble array, dex order)
@@ -76,7 +78,6 @@ BLOBS = [
     ("FossilSprite",        "gfx/sprites/fossil.2bpp",    0, None),  # ICON_HELIX (see header)
     ("FairySprite",         "gfx/sprites/fairy.2bpp",     0, None),
     ("BirdSprite",          "gfx/sprites/bird.2bpp",      0, None),
-    ("SeelSprite",          "gfx/sprites/seel.2bpp",      0, None),
     ("PikachuSprite",       "gfx/sprites/pikachu.2bpp",   0, None),
     # pret: DEF INC_FRAME_1 EQUS "0, $20" / INC_FRAME_2 EQUS "$20, $20"
     ("BugIconFrame1",       "gfx/icons/bug.2bpp",         0x00, 0x20),
@@ -146,6 +147,10 @@ def main():
         blob = data[off:off + length] if length is not None else data[off:]
         assert blob, f"{path}: empty slice"
         out.append("")
+        if label == "BirdSprite":
+            # Single definition: town_map.asm externs this (its own copy was
+            # dropped); the .inc is the provider so the global lives here.
+            out.append("global BirdSprite")
         out.append(f"{label}:   ; {path}"
                    + (f" +0x{off:X}, {len(blob)} bytes" if length is not None
                       else f" ({len(blob)} bytes)"))

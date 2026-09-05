@@ -57,16 +57,6 @@ def db(label, parts, cm, aliases=(), emit_global=False):
 
 
 FILES = {
-    # debug_dump.asm's relocated-harness BattleMenuText (the retired
-    # battle_menu.asm's menu template). Resurrected 2026-09-04: 1040e8d07
-    # dropped this output when battle_menu.asm was retired, but debug_dump
-    # still %includes the file, so fresh assets/ trees could not build.
-    # Only BattleMenuText is still referenced (debug_dump.asm:9308);
-    # str_gotaway/str_cantesc/str_norun1-3/stats had their externs retired
-    # 2026-08-06 and are NOT resurrected here.
-    "battle_menu_runtime_strings.inc": [
-        ("BattleMenuText", ["FIGHT ", "<PK><MN>", [0x4E], "ITEM  RUN", [0x50]]),
-    ],
     "battle_core_runtime_strings.inc": [
         ("str_miss_text", [[0x00], "Attack got no way!", [0x50, 0x50]]),
         # pret engine/battle/core.asm:SevenSpacesText — `ds PIC_WIDTH, " "` + "@".

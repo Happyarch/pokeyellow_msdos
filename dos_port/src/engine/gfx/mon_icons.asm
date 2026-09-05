@@ -57,6 +57,7 @@ global SetMonPartySpriteOrigin
 global CommitMonPartySpriteOAM
 
 extern CopyData                 ; home/copy.asm — ESI=src, EDX=dest, BX=count
+extern SeelSprite               ; src/gfx/sprites.asm — single definition (not re-emitted in mon_icons.inc)
 extern CopyVideoData            ; home/copy2.asm — ESI=dest VRAM, EDX=src flat, BL=tiles
 extern DelayFrame               ; src/home/vblank.asm
 extern DisableLCD               ; home/lcd.asm
@@ -83,6 +84,8 @@ align 4
 ; Icon tile patterns + the ICON_* enum + MonPartyData (tools/generators/gen_mon_icons_inc.py).
 ; Tier-1 data — never hand-edit; MonPartySpritePointers below is the Tier-2 pointer
 ; table that indexes it (project-conventions: pointer tables are code).
+; BirdSprite is defined here (global, single definition); SeelSprite is externed
+; from sprites.asm — neither is emitted twice.
 %include "assets/mon_icons.inc"
 
 ; --- MonPartySpritePointers — pret data/icon_pointers.asm --------------------
