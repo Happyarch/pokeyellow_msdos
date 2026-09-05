@@ -4284,6 +4284,7 @@ assets/battle_text.inc: $(wildcard ../data/text/text_*.asm) \
 	python3 tools/generators/gen_battle_text.py
 
 RUNTIME_STRING_ASSETS := assets/battle_core_runtime_strings.inc \
+	assets/battle_menu_runtime_strings.inc \
 	assets/effectiveness_runtime_strings.inc \
 	assets/anim_show_strings.inc \
 	assets/battle_intro_runtime_strings.inc assets/stat_mod_runtime_strings.inc \
