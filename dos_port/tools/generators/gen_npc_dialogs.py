@@ -17,6 +17,7 @@ Run from dos_port/ or repo root:
 """
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 # Reuse gen_map_headers' map/sprite parsing so the dialog tables stay in lockstep
@@ -27,6 +28,42 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gen_map_headers as gmh
 import gen_map_script_tables as mst
+import gen_marts as gmarts
+
+
+@lru_cache(maxsize=1)
+def _mart_stream_sizes() -> dict:
+    """{clerk label: stream size} from pret data/items/marts.asm via gen_marts.
+
+    Port body per label is db TX_SCRIPT_MART, db <count>, items..., db -1, so
+    size is 3 + len(items). Read from the pret source (same input gen_marts.py
+    uses), never from the generated .inc — no build-order coupling.
+    """
+    return {label: 3 + len(items) for label, _comment, items in gmarts.parse_marts()}
+
+
+def _bare_tx_stream_size(scripts_path: Path, label: str) -> int | None:
+    """Size of a bare single-TX-command body, or None if not one.
+
+    Labels like CeladonMartRoofVendingMachineText whose whole body is one
+    `script_vending_machine` / `script_prize_vendor` line are 1-byte text
+    streams, not routines: PrintText's command dispatcher runs the menu off
+    the TX byte. A SCRIPT entry CALLs that byte as x86 instead (measured
+    2026-09-05: $F5 executes as CMC and falls into the following label's
+    bytes — the vending GPF at CeladonMartRoofCurrentFloorSignText).
+    """
+    try:
+        body = scripts_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    m = re.search(rf"^{re.escape(label)}:\n((?:.*\n)+?)(?=^\S|\Z)", body, re.M)
+    if not m:
+        return None
+    stmts = [ln.strip() for ln in m.group(1).splitlines()
+             if ln.strip() and not ln.strip().startswith(";")]
+    if len(stmts) == 1 and re.fullmatch(r"script_\w+", stmts[0]):
+        return 1
+    return None
 
 ROOT   = Path(__file__).resolve().parent.parent.parent.parent
 ASSETS = ROOT / "dos_port" / "assets"
@@ -176,22 +213,11 @@ SCRIPT_OVERRIDES = {
     'FuchsiaPokecenterChanseyText':    'PokecenterChanseyText',
     'SaffronPokecenterChanseyText':    'PokecenterChanseyText',
     'CinnabarPokecenterChanseyText':   'PokecenterChanseyText',
-    # Poke Mart clerks (tools/generators/gen_marts.py / src/data/items/marts.asm):
-    # each clerk is a TX_SCRIPT_MART data stream dispatched through DisplayPokemartDialogue.
-    'ViridianMartClerkText':           'ViridianMartClerkText',
-    'PewterMartClerkText':             'PewterMartClerkText',
-    'CeruleanMartClerkText':           'CeruleanMartClerkText',
-    'VermilionMartClerkText':          'VermilionMartClerkText',
-    'LavenderMartClerkText':           'LavenderMartClerkText',
-    'CeladonMart2FClerk1Text':         'CeladonMart2FClerk1Text',
-    'CeladonMart2FClerk2Text':         'CeladonMart2FClerk2Text',
-    'CeladonMart4FClerkText':          'CeladonMart4FClerkText',
-    'CeladonMart5FClerk1Text':         'CeladonMart5FClerk1Text',
-    'CeladonMart5FClerk2Text':         'CeladonMart5FClerk2Text',
-    'FuchsiaMartClerkText':            'FuchsiaMartClerkText',
-    'CinnabarMartClerkText':           'CinnabarMartClerkText',
-    'SaffronMartClerkText':            'SaffronMartClerkText',
-    'IndigoPlateauLobbyClerkText':     'IndigoPlateauLobbyClerkText',
+    # Poke Mart clerks are NOT overrides: each clerk is a TX_SCRIPT_MART data
+    # stream (db TX_SCRIPT_MART, count, items, -1) owned by assets/marts.inc
+    # (gen_marts.py). They resolve to ext-pointer + real-size rows in
+    # generate_map below — a SCRIPT entry would CALL the inventory bytes as
+    # code (measured 2026-09-05: every mart faults the same way vending did).
 }
 
 # ---------------------------------------------------------------------------
@@ -491,9 +517,10 @@ def _is_static_text_label(path: Path, label: str) -> bool:
     body) with no logic. A `text_asm` block (even one that CONTAINS nested
     `text_far` rows under its own `.Label:` sub-labels) is a runtime routine and
     must NOT be inlined as a static byte stream — inlining a gym-leader's
-    pre-battle text would drop the battle/reward state machine. Text_asm blocks
-    (and script_* macros) are the auto-wire target; only true wrappers and empty
-    alias bodies stay non-dynamic.
+    pre-battle text would drop the battle/reward state machine. Only text_asm
+    blocks are the auto-wire target; true wrappers, empty alias bodies, and
+    bare single-TX-command script_* bodies stay non-dynamic (the last are
+    1-byte streams, never CALL targets — see _bare_tx_stream_size).
     """
     body = path.read_text(encoding="utf-8", errors="replace")
     m = re.search(rf"^{re.escape(label)}:\n((?:.*\n)+?)(?=^\S|\Z)", body, re.M)
@@ -512,9 +539,8 @@ def _is_static_text_label(path: Path, label: str) -> bool:
         return True                 # empty body — alias/pointer, not a routine
     if first.startswith("text_asm"):
         return False                # runtime routine — auto-wire it
-    if first.startswith("script_vending_machine") or first.startswith("script_prize_vendor"):
-        return False                # dynamic script macro — auto-wire it
-    return True                     # text_far / text / text_start / text_end — static or alias
+    return True                     # text_far / text / text_start / text_end,
+    # bare script_* single-command bodies — static data, never a routine
 
 
 # ---------------------------------------------------------------------------
@@ -630,6 +656,24 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
                 npc_entries.append((nasm_label, None, header, TRAINER_TALK_SENTINEL))
                 continue
 
+        # Data bodies a SCRIPT entry must never CALL: point at the single
+        # definition with a real size so DisplayTextID PrintTexts it.
+        # (a) Poke Mart inventories: db TX_SCRIPT_MART, count, items, -1 in
+        #     assets/marts.inc (gen_marts.py) — size 3 + len(items).
+        # (b) Bare single-TX-command bodies (script_vending_machine,
+        #     script_prize_vendor, ...): 1-byte streams in the map script.
+        if local_label:
+            mart_sizes = _mart_stream_sizes()
+            if local_label in mart_sizes:
+                npc_entries.append(
+                    (nasm_label, None, local_label, mart_sizes[local_label]))
+                continue
+            bare = (_bare_tx_stream_size(scripts_path, local_label)
+                    if scripts_path.exists() else None)
+            if bare is not None:
+                npc_entries.append((nasm_label, None, local_label, bare))
+                continue
+
         # Auto-wire a ported text_asm script. The port keeps pret's label
         # verbatim, so a slot whose pret label is a `global` in the map's port
         # script file is already translated (gym leaders/trainers, Elite Four,
@@ -714,8 +758,10 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
             kind = "overworld item ball pickup script"
         elif sent == SCRIPT_SENTINEL:
             kind = "hand-written text_asm script"
-        else:
+        elif sent == TRAINER_TALK_SENTINEL:
             kind = "trainer header -> TrainerTalkHook"
+        else:
+            kind = f"external data stream ({sent} bytes, single definition)"
         lines.append(f"extern {sym}   ; {kind}")
     if script_externs:
         lines.append("")
@@ -732,8 +778,10 @@ def generate_map(map_id: int, const: str, label: str, charmap: list,
         if script_label and sentinel == TRAINER_TALK_SENTINEL:
             lines.append(f"    dd {script_label}, 0x{TRAINER_TALK_SENTINEL:08X}"
                          f"  ; TRAINER TALK (header -> TrainerTalkHook)")
-        elif script_label:
+        elif script_label and sentinel == SCRIPT_SENTINEL:
             lines.append(f"    dd {script_label}, 0x{SCRIPT_SENTINEL:08X}  ; SCRIPT (text_asm)")
+        elif script_label:
+            lines.append(f"    dd {script_label}, {sentinel}  ; EXT stream (single definition)")
         else:
             lines.append(f"    dd {nasm_label}, {nasm_label}_end - {nasm_label}")
     lines.append("    dd 0, 0  ; sentinel")
