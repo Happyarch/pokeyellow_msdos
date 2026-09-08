@@ -4309,7 +4309,13 @@ src/scripts/PalletTown.o: assets/pallet_runtime_strings.inc
 assets/trainer_parties.inc: ../data/trainers/parties.asm ../data/trainers/special_moves.asm \
                             ../constants/trainer_constants.asm tools/generators/gen_trainer_parties.py
 	python3 tools/generators/gen_trainer_parties.py
-assets/trainer_names.inc: ../data/trainers/names.asm ../constants/charmap.asm \
+# Trainer names + name-pointer table (one run emits both; grouped &: so parallel
+# make runs the generator once). name_pointers.asm is a listed prerequisite:
+# without it the pointers file refreshed only as a side effect and edits to the
+# source silently shipped stale data.
+assets/trainer_names.inc assets/trainer_name_pointers.inc &: \
+                          ../data/trainers/names.asm ../data/trainers/name_pointers.asm \
+                          ../constants/charmap.asm \
                           tools/generators/gen_trainer_names.py
 	python3 tools/generators/gen_trainer_names.py
 # Move-use sentence-grammar table (vestigial in English; carried for faithfulness).
@@ -4322,7 +4328,8 @@ assets/type_names.inc: ../data/types/names.asm ../constants/type_constants.asm \
 	python3 tools/generators/gen_type_names.py
 
 # Wrapper objects depend on their generated includes.
-src/data/trainer_data.o: assets/trainer_parties.inc assets/trainer_names.inc
+src/data/trainer_data.o: assets/trainer_parties.inc assets/trainer_names.inc \
+                         assets/trainer_name_pointers.inc
 src/data/move_grammar.o: assets/move_grammar.inc
 src/data/type_names.o: assets/type_names.inc
 
@@ -5060,6 +5067,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/set_damage_effects.inc \
         assets/wild_grass_water.inc assets/wild_probabilities.inc \
         assets/map_scripts.inc assets/trainer_headers.inc \
+        assets/trainer_names.inc assets/trainer_name_pointers.inc \
         assets/map_script_tables.inc \
         assets/hidden_events.inc \
         assets/hidden_item_coords.inc assets/pickup_text.inc \
