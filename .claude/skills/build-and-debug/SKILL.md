@@ -450,16 +450,17 @@ All coordinates prioritize the Game Boy's native **$(Y, X)$ ordered pair order**
 
 The strongest ground truth of all: compare the port's GB state **byte-for-byte
 against the real game**. mGBA (vendored submodule, built with Lua scripting by
-`tools/build_mgba.sh`) runs the **sha1-verified golden ROM** — built in the
-pinned pristine pret worktree `../pokeyellow_msdos-pret-golden` @ `7caf2e09`.
-That worktree is still a HARD requirement of `make goldens` / `goldens-verify`
-(they resolve pret symbols against it), but the old reason given here — "the
-branch tree's pret sources are contaminated" — is STALE: the pret tree was
-restored to upstream in `ea26854a`, and `make compare` in-tree prints
-`pokeyellow.gbc: OK` against `roms.sha1` (`cc7d0326…`; re-verified 2026-07-26,
-and again 2026-07-28 after the upstream pret merge — see the measurement block
-at the top of `.github/workflows/dos-port.yml`). Keep the
-worktree; stop believing the in-tree pret sources are broken. See memory
+`tools/build_mgba.sh`) runs the **sha1-verified golden ROM** — built in-tree
+by root `make yellow` (`pokeyellow.gbc: OK` against `roms.sha1`, `cc7d0326…`).
+`make goldens` / `goldens-verify` / `run_mgba_mcp.sh` resolve the ROM + symbols
+from the repo root by default (`$PRET_GOLDEN_DIR` overrides); the sha1 gate in
+each script — not any particular checkout — is what proves ROM identity, so a
+fresh clone needs only root `make yellow`, never a sibling worktree. (The old
+pinned worktree `../pokeyellow_msdos-pret-golden` @ `7caf2e09` was retired
+once in-tree builds measured byte-identical; its upstream advances never
+changed ROM bytes.)
+The in-tree pret sources are trustworthy — what was once contamination FUD
+is now just history. See memory
 `pret-tree-contaminated-golden-worktree` — through deterministic
 Lua scenarios (`tools/mgba_harness/scenarios/*.lua`: boot → seeded party →
 real-menu navigation → dump). Each scenario writes a **golden**

@@ -3,14 +3,14 @@
 # mgba-lua-runner + mcp_agent.lua serving TCP 127.0.0.1:$MGBA_MCP_PORT for
 # tools/mgba_mcp/server.py (model: run-mcp for dosbox-mcp).
 #
-# The ROM is the sha1-verified golden build from the pinned pret worktree —
-# ground truth only ever comes from a verified ROM (same gate as
-# make_goldens.sh).
+# The ROM is the sha1-verified golden build from the in-tree pret sources
+# (root `make yellow`) — ground truth only ever comes from a verified ROM
+# (same gate as make_goldens.sh).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PRET_GOLDEN_DIR="${PRET_GOLDEN_DIR:-$(dirname "$REPO_ROOT")/pokeyellow_msdos-pret-golden}"
+PRET_GOLDEN_DIR="${PRET_GOLDEN_DIR:-$REPO_ROOT}"
 
 ROM="$PRET_GOLDEN_DIR/pokeyellow.gbc"
 SYM="$PRET_GOLDEN_DIR/pokeyellow.sym"

@@ -3692,19 +3692,19 @@ ALL_OBJS := $(ALL_SRCS:.asm=.o)
 .DEFAULT_GOAL := all
 
 # Regenerate the committed mGBA goldens (tests/goldens/) from the
-# sha1-verified ROM in the pinned pret worktree. See the fidelity plan +
+# sha1-verified ROM in the in-tree pret build. See the fidelity plan +
 # tools/mgba_harness/make_goldens.sh for prerequisites (build_mgba.sh,
-# ../pokeyellow_msdos-pret-golden).
+# root `make yellow`).
 goldens:
 	tools/mgba_harness/make_goldens.sh
 
 # Regenerate every committed mGBA golden into a scratch directory and compare it
 # against tests/goldens/. This is the drift check: it proves the checked-in
-# goldens are exactly reproducible from the pinned pristine pret worktree.
+# goldens are exactly reproducible from the in-tree pret build.
 goldens-verify:
 	@set -eu; \
 	repo_root=$$(cd .. && pwd); \
-	pret_dir="$${PRET_GOLDEN_DIR:-$$(dirname "$$repo_root")/pokeyellow_msdos-pret-golden}"; \
+	pret_dir="$${PRET_GOLDEN_DIR:-$$repo_root}"; \
 	rom="$$pret_dir/pokeyellow.gbc"; \
 	sym="$$pret_dir/pokeyellow.sym"; \
 	runner="$$repo_root/dos_port/tools/mgba_build/mgba-lua-runner"; \
