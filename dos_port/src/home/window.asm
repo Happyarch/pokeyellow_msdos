@@ -39,6 +39,7 @@ extern PlaySound                       ; src/home/audio.asm — sound id in AL
 
 ; --- PrintText's collaborators (all in text.asm — the text engine) ---
 extern text_msgbox                     ; → the active msgbox projection record (msgbox.inc)
+extern msgbox_dialog                   ; src/home/text.asm — overworld dialog record
 extern text_line2                      ; <LINE> cursor      ] the engine's live scratch,
 extern text_arrow_pos                  ; <PROMPT> ▼ tile    ] loaded from the record
 extern text_prompt_hook                ; <PROMPT> hook      ] on every PrintText
@@ -196,9 +197,11 @@ PrintText:
     jge .singleRestore
     imul eax, ebx, WIN_DESC_SIZE
     mov edx, [g_windows + eax + WIN_START_ROW]
-    cmp edx, 20                 ; MART_MONEY_SROW
+    cmp edx, 20                 ; MART_MONEY_SROW (also PRIZE_COIN_SROW: coin shares money's slot)
     je .martFound
     cmp edx, 23                 ; MART_BSQ_SROW
+    je .martFound
+    cmp edx, 1                  ; PRIZE_MENU_SROW (prize_menu.asm: prize inventory window)
     je .martFound
     inc ebx
     jmp .scanMart
@@ -289,13 +292,40 @@ PrintText_NoCreatingTextBox:
     cmp byte [print_text_depth], 0
     je .direct_no_owner
     call TextCommandProcessor
+    call present_final_text             ; show done-terminated instant text (below)
     dec byte [print_text_depth]
     ret
 .direct_no_owner:
-    jmp TextCommandProcessor
+    call TextCommandProcessor
+    call present_final_text
+    ret
 %else
-    jmp TextCommandProcessor            ; tail call
+    call TextCommandProcessor
+    call present_final_text             ; show done-terminated instant text (below)
+    ret
 %endif
+
+; ---------------------------------------------------------------------------
+; present_final_text — port-only presentation: mirror the final scratch state
+; to the dialog window after the stream ends.
+;
+; Per-character mirroring lives in PrintLetterDelay, which BIT_NO_TEXT_DELAY
+; skips outright — and DONE (unlike PROMPT/CONT/PARA) performs no pause-copy —
+; so a done-terminated stream typed instantly leaves the window showing the
+; empty box synced at present time. Measured prize_corner frames 280/500: blank
+; WhichPrize, blank SoYouWantPrize. GB needs none of this (single tilemap).
+; Restricted to the overworld dialog projection (text_msgbox == msgbox_dialog):
+; other owners (battle, full-screen menus) present through their own windows,
+; and sync_dialog_window self-guards on a closed dialog regardless.
+; All registers preserved (sync_dialog_window preserves everything).
+; ---------------------------------------------------------------------------
+present_final_text:
+    mov eax, [text_msgbox]
+    cmp eax, msgbox_dialog
+    jne .skip
+    call sync_dialog_window
+.skip:
+    ret
 
 ; ---------------------------------------------------------------------------
 ; PlaceMenuCursor — draw the ▶ cursor at the current menu item, erasing the

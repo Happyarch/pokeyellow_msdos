@@ -8831,6 +8831,8 @@ autokey_script:
     dd  940,  946, PAD_A       ; confirm NO -> "Do you want any other prizes?"
     dd 1060, 1066, PAD_A       ; dismiss prompt -> menu re-opens
     dd 1180, 1186, PAD_B       ; CANCEL menu -> returns to overworld
+    dd 1260, 1266, PAD_A       ; dismiss final GotMon/SentToBox text
+    dd 1340, 1346, PAD_A       ; dismiss follow-up -> overworld dump fires
     dd  -1,  -1, 0
 %elifdef AUTOKEY_POKEMART
     ; pokemart_buy_sell: buy 1 Poke Ball ($200) -> reject Bicycle (Key item) -> reject HM01 (HM) -> sell 1 Potion ($150) -> QUIT
