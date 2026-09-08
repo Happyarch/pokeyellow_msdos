@@ -2752,6 +2752,21 @@ SCENARIOS = {
         "flags": "DEBUG_PRIZE_CORNER=1",
         "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
         "window": (18, 6),
+        "masks": {
+            # Entries 4-7 (the guy: GAMECORNERPRIZEROOM_BALDING_GUY per pret)
+            # + 8-11 (gambler): both vary by RNG the harness cannot converge.
+            # The guy randomly faces a new direction each map entry (verified
+            # on hardware VC: port UP vs golden LEFT are both correct); the
+            # gambler WALKs, so its position/facing derive from Random_
+            # (rDIV-timing diverges port vs mGBA) and vary run-to-run even on
+            # one side. Visibility (present, correctly tiled) is what the
+            # tilemap + VRAM compare; OAM pose of these NPCs is unverifiable
+            # by construction.
+            "oam": [(i, "RNG-driven NPC pose: spawn-facing RNG (the guy, "
+                        "verified on hardware) / walk-timing RNG (gambler, "
+                        "Random_ rDIV-timing diverges port vs mGBA)")
+                    for i in (4, 5, 6, 7, 8, 9, 10, 11)],
+        },
         "wram_masks": {
             "wPlayerMapPos": [
                 ((1, 2), "wCurrentTileBlockMapViewPointer: the port's MAP_BORDER is 7, "
