@@ -4477,7 +4477,7 @@ src/engine/menus/draw_badges.o: assets/badge_tiles.inc
 # it is Tier-1 data, so it is rule-driven now.
 assets/mon_icons.inc: ../gfx/sprites/monster.2bpp ../gfx/sprites/poke_ball.2bpp \
                       ../gfx/sprites/fossil.2bpp ../gfx/sprites/fairy.2bpp \
-                      ../gfx/sprites/bird.2bpp ../gfx/sprites/seel.2bpp \
+                      ../gfx/sprites/bird.2bpp \
                       ../gfx/sprites/pikachu.2bpp ../gfx/icons/bug.2bpp \
                       ../gfx/icons/plant.2bpp ../gfx/icons/snake.2bpp \
                       ../gfx/icons/quadruped.2bpp ../gfx/trade/bubble.2bpp \
@@ -4486,6 +4486,55 @@ assets/mon_icons.inc: ../gfx/sprites/monster.2bpp ../gfx/sprites/poke_ball.2bpp 
 	python3 tools/generators/gen_mon_icons_inc.py
 
 src/engine/gfx/mon_icons.o: assets/mon_icons.inc
+
+# Font tile patterns (PNG passthrough of gfx/font/*.png) for LoadFont /
+# LoadBattleExtraTiles (src/home/load_font.asm). Pillow-based, same pattern as
+# battle_hud_2bpp.inc above; the PNG inputs are committed pret sources.
+assets/font_1bpp.inc: ../gfx/font/font.png tools/generators/gen_font_inc.py
+	python3 tools/generators/gen_font_inc.py
+
+assets/font_extra_2bpp.inc: ../gfx/font/font_extra.png tools/generators/gen_font_extra_inc.py
+	python3 tools/generators/gen_font_extra_inc.py
+
+assets/font_battle_extra_2bpp.inc: ../gfx/font/font_battle_extra.png tools/generators/gen_font_battle_extra_inc.py
+	python3 tools/generators/gen_font_battle_extra_inc.py
+
+src/home/load_font.o: assets/font_1bpp.inc assets/font_extra_2bpp.inc \
+                      assets/font_battle_extra_2bpp.inc
+
+# Title/splash/credits 2bpp + tilemaps (one gen_title_gfx_inc.py run emits all
+# 12). PNG/.tilemap inputs are committed pret sources; the_end.2bpp is a root-
+# make product, same class as the mon_icons .2bpp inputs above. Grouped target
+# (&:) so parallel make runs the generator once, as with battle_anim_data.
+assets/pokemon_logo_2bpp.inc assets/pokemon_logo_corner_2bpp.inc \
+assets/pikachu_bg_2bpp.inc assets/pikachu_ob_2bpp.inc \
+assets/title_copyright_2bpp.inc assets/gamefreak_inc_2bpp.inc \
+assets/nine_2bpp.inc assets/gamefreak_intro_2bpp.inc \
+assets/the_end_2bpp.inc assets/falling_star_2bpp.inc \
+assets/pokemon_logo_tilemap.inc assets/pikachu_tilemap.inc \
+assets/pika_bubble_tilemap.inc &: \
+		../gfx/title/pokemon_logo.png ../gfx/title/pokemon_logo_corner.png \
+		../gfx/title/pikachu_bg.png ../gfx/title/pikachu_ob.png \
+		../gfx/title/pokemon_logo.tilemap ../gfx/title/pikachu.tilemap \
+		../gfx/title/pika_bubble.tilemap ../gfx/splash/copyright.png \
+		../gfx/title/gamefreak_inc.png ../gfx/title/nine.png \
+		../gfx/splash/gamefreak_presents.png ../gfx/splash/gamefreak_logo.png \
+		../gfx/splash/falling_star.png ../gfx/credits/the_end.2bpp \
+		tools/generators/gen_title_gfx_inc.py
+	python3 tools/generators/gen_title_gfx_inc.py
+
+src/engine/movie/splash.o: assets/falling_star_2bpp.inc
+src/engine/movie/intro.o: assets/gamefreak_intro_2bpp.inc
+
+# Yellow-intro gfx (one gen_intro_gfx_inc.py run emits all 4). Committed pret
+# PNG/.tilemap sources; the png_to_2bpp core is shared with gen_title_gfx_inc.
+assets/yellow_intro_1_2bpp.inc assets/yellow_intro_2_2bpp.inc \
+assets/yellow_intro_clouds_2bpp.inc assets/yellow_intro_tilemaps.inc &: \
+		../gfx/intro/yellow_intro_1.png ../gfx/intro/yellow_intro_2.png \
+		../gfx/intro/clouds.png ../gfx/intro/unknown_f9b6e.tilemap \
+		../gfx/intro/unknown_f9be6.tilemap ../gfx/intro/unknown_f9bf2.tilemap \
+		tools/generators/gen_intro_gfx_inc.py
+	python3 tools/generators/gen_intro_gfx_inc.py
 
 # Overworld emotion-bubble tiles (2bpp passthrough of gfx/emotes/*.2bpp) for
 # EmotionBubble (src/engine/overworld/emotion_bubbles.asm pret mirror).
@@ -5051,6 +5100,17 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
+        assets/font_1bpp.inc assets/font_extra_2bpp.inc \
+        assets/font_battle_extra_2bpp.inc \
+        assets/pokemon_logo_2bpp.inc assets/pokemon_logo_corner_2bpp.inc \
+        assets/pikachu_bg_2bpp.inc assets/pikachu_ob_2bpp.inc \
+        assets/title_copyright_2bpp.inc assets/gamefreak_inc_2bpp.inc \
+        assets/nine_2bpp.inc assets/gamefreak_intro_2bpp.inc \
+        assets/the_end_2bpp.inc assets/falling_star_2bpp.inc \
+        assets/pokemon_logo_tilemap.inc assets/pikachu_tilemap.inc \
+        assets/pika_bubble_tilemap.inc \
+        assets/yellow_intro_1_2bpp.inc assets/yellow_intro_2_2bpp.inc \
+        assets/yellow_intro_clouds_2bpp.inc assets/yellow_intro_tilemaps.inc \
         assets/save_text.inc assets/main_menu_text.inc assets/league_pc_text.inc \
         assets/players_pc_text.inc assets/link_text.inc assets/link_npc_text.inc assets/oaks_pc_text.inc \
         assets/pc_text.inc assets/slots_text.inc assets/safari_text.inc \

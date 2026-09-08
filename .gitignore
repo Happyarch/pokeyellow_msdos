@@ -46,33 +46,19 @@ dos_port/PAL.BIN
 # whenever a run captures a frame.
 dos_port/capture/
 
-# DOS port assets — generated .inc are ignored, EXCEPT the ones below that have
-# no `make` rule (checked-in generated graphics: fonts, Pikachu/logo/title pics,
-# mon icons). They are NOT reproducible by `make assets`, so they must
-# stay tracked. (Untracking them silently breaks fresh-checkout builds — see the
-# 88c7f98f regression.) Use `dos_port/assets/*` so git still descends to negate.
+# DOS port assets — generated .inc are ignored and reproduced by `make assets`.
+# Every generator under dos_port/tools/generators/ has a Makefile rule with
+# declared inputs (committed pret PNGs, or root-make .2bpp products after the
+# mandated root `make`), so a fresh checkout rebuilds them; nothing rule-driven
+# may be re-added below as a negation. History: 88c7f98f untracked all of
+# assets/*.inc on 2026-06-30 and broke fresh-checkout builds the same day;
+# dfe0cac9c re-tracked 21 outputs as "no `make` rule". That justification went
+# stale as rules landed (mon_icons.inc since f8863164d; fonts/title/intro since
+# the assets-audit), so the negation block was retired. Clean-tree proof:
+# git clean -Xdf dos_port/assets && make assets (root `make` first).
+# Use `dos_port/assets/*` so git still descends to negate the hand-authored
+# sidecars below.
 dos_port/assets/*
-!dos_port/assets/font_1bpp.inc
-!dos_port/assets/font_extra_2bpp.inc
-!dos_port/assets/falling_star_2bpp.inc
-!dos_port/assets/font_battle_extra_2bpp.inc
-!dos_port/assets/gamefreak_inc_2bpp.inc
-!dos_port/assets/gamefreak_intro_2bpp.inc
-!dos_port/assets/mon_icons.inc
-!dos_port/assets/nine_2bpp.inc
-!dos_port/assets/pika_bubble_tilemap.inc
-!dos_port/assets/pikachu_bg_2bpp.inc
-!dos_port/assets/pikachu_ob_2bpp.inc
-!dos_port/assets/pikachu_tilemap.inc
-!dos_port/assets/yellow_intro_1_2bpp.inc
-!dos_port/assets/yellow_intro_2_2bpp.inc
-!dos_port/assets/yellow_intro_clouds_2bpp.inc
-!dos_port/assets/yellow_intro_tilemaps.inc
-!dos_port/assets/pokemon_logo_2bpp.inc
-!dos_port/assets/pokemon_logo_corner_2bpp.inc
-!dos_port/assets/pokemon_logo_tilemap.inc
-!dos_port/assets/title_copyright_2bpp.inc
-!dos_port/assets/the_end_2bpp.inc
 # UI layout sidecars: hand-positioned via tools/ui_layout/editor.py — the
 # source of truth the generated ui_layout_*.inc is derived from. Must stay
 # tracked; the .inc itself regenerates via `make assets`.
