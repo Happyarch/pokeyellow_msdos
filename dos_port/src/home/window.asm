@@ -203,6 +203,8 @@ PrintText:
     je .martFound
     cmp edx, 1                  ; PRIZE_MENU_SROW (prize_menu.asm: prize inventory window)
     je .martFound
+    cmp edx, 2                  ; FOSSIL_SROW (cinnabar_lab.asm: fossil list window)
+    je .martFound
     inc ebx
     jmp .scanMart
 .martFound:

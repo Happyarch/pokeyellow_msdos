@@ -38,6 +38,7 @@ extern GivePokemon
 extern LoadFossilItemAndMonName   ; NOT YET DEFINED IN THE PORT
 extern PrintText
 extern TextScriptEnd
+extern g_bg_whiteout                    ; src/ppu/ppu.asm — 1 = blank BG, full-screen takeover
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -151,6 +152,11 @@ CinnabarLabFossilRoomScientist1Text:
     mov bl, 30
     call GivePokemon
     jae .done
+    ; Naming runs on the party path and leaves g_bg_whiteout set with no
+    ; in-file clear (prize pattern: prize_menu.asm re-show + whiteout clear);
+    ; drop it here so the map shows behind the closing dialog. Harmless no-op
+    ; on the box path, which never enters the naming screen.
+    mov dword [g_bg_whiteout], 0
     ResetEvents EVENT_GAVE_FOSSIL_TO_LAB, EVENT_LAB_STILL_REVIVING_FOSSIL, EVENT_LAB_HANDING_OVER_FOSSIL_MON
     jmp .done
 

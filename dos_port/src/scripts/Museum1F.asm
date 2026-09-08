@@ -54,6 +54,7 @@ extern TextScriptEnd
 extern UpdateSprites
 extern WaitForSoundToFinish
 extern YesNoChoice
+extern g_dialog_preserve_windows      ; src/home/text.asm — 1 = dialog pauses keep windows (mart pattern)
 
 ; Script constants — pret defines these via dw_const in this file.
 SCRIPT_MUSEUM1F_NOOP                           equ 1
@@ -205,6 +206,11 @@ Museum1FPrintScientist1Text:
     call DisplayTextBoxID
     xor al, al
     mov [ebp + hJoyHeld], al
+    ; Mart pattern (pokemart.asm): dialog pauses reset the window list via
+    ; set_single_window unless this flag is set — without it the money box
+    ; is torn down at the first prompt below. Held across the whole ticket
+    ; interaction (prize pattern); YN appends/restores itself.
+    mov byte [g_dialog_preserve_windows], 1
     mov esi, .WouldYouLikeToComeInText
     call PrintText
     call YesNoChoice
@@ -251,6 +257,7 @@ Museum1FPrintScientist1Text:
 .deny_entry:
     mov esi, .ComeAgainText
     call PrintText
+    mov byte [g_dialog_preserve_windows], 0
     mov al, 0x1
     mov [ebp + wSimulatedJoypadStatesIndex], al
     mov al, PAD_DOWN
@@ -264,6 +271,7 @@ Museum1FPrintScientist1Text:
 .allow_entry:
     mov al, SCRIPT_MUSEUM1F_NOOP
     mov [ebp + wMuseum1FCurScript], al
+    mov byte [g_dialog_preserve_windows], 0
     jmp .done
 
 %assign event_byte -1
