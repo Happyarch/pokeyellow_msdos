@@ -2758,10 +2758,13 @@ SCENARIOS = {
                          "not pret's 3 (include/gb_memmap.inc)"),
             ],
             "wPartyData": [
-                ((229, 230), "received Abra current HP: recomputed from rDIV-derived DVs"),
-                ((240, 241), "received Abra OT ID: Random_ (rDIV-timing) in _AddPartyMon"),
-                ((255, 256), "received Abra DVs: Random_ (rDIV-timing) in _AddPartyMon"),
-                ((262, 271), "received Abra maxHP/Atk/Def/Spd/Spc: DV-derived stats"),
+                # Abra is party mon index 1 on both sides (lua seeds 1 mon +
+                # the bought Abra; the port prize seed rebuilds the same
+                # 1-mon party): struct base = wPartyData+52. OT ID needs no
+                # mask (wPlayerID = 0 deterministically on both sides).
+                ((53, 54), "received Abra current HP: recomputed from rDIV-derived DVs"),
+                ((79, 80), "received Abra DVs: Random_ (rDIV-timing) in _AddPartyMon"),
+                ((86, 95), "received Abra maxHP/Atk/Def/Spd/Spc: DV-derived stats"),
             ],
         },
     },

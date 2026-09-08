@@ -265,15 +265,80 @@ PrepareNewGameDebug:
     mov byte [ebp + wPlayerMoney + 2], 0x60
 %endif
 %ifdef DEBUG_PRIZE_CORNER
-    ; prize_corner golden: 250 coins, Coin Case x1 in bag, 5 party mons (slot 6 empty for Abra)
+    ; prize_corner golden: 250 coins, Coin Case x1 in bag, and a 1-mon party
+    ; (STARTER_PIKACHU L15, move slot 3 SURF-poked) that is byte-identical to
+    ; the lua seed (prize_corner.lua: party = {{species = 84, level = 15,
+    ; pokes = {[3] = SURF}}}, bag = {{COIN_CASE, 1}}). The lua seeds against
+    ; FRESH (zeroed) WRAM, so every byte past the live data must be zeroed
+    ; here too — the generic seed above leaves a full 6-mon party and 16-item
+    ; bag whose bytes linger past the count/terminator and fail the 404-byte
+    ; wPartyData / 42-byte wBagItems region compares as stale residue.
     mov byte [ebp + wPlayerCoins + 0], 0x02
     mov byte [ebp + wPlayerCoins + 1], 0x50
+    ; Bag: count + [COIN_CASE x1] + terminator, then zero the 38 tail bytes.
     mov byte [ebp + wNumBagItems], 1
     mov byte [ebp + wBagItems + 0], 0x45 ; COIN_CASE
     mov byte [ebp + wBagItems + 1], 1
     mov byte [ebp + wBagItems + 2], 0xFF
-    mov byte [ebp + wPartyCount], 5
-    mov byte [ebp + wPartySpecies + 5], 0xFF
+    lea edi, [ebp + wNumBagItems + 4]
+    xor eax, eax
+    mov ecx, 38
+    rep stosb
+    ; Party: wipe the whole block, then build the lua's mon through the real
+    ; AddPartyMon (base moves + WriteMonMoves learnset fold + PP, OT = RED,
+    ; OTID = wPlayerID = 0, EXP = CalcExperience) exactly like
+    ; SetDebugNewGameParty.loop does, so the struct converges with
+    ; lib/seed.lua build_mon by construction.
+    lea edi, [ebp + wPartyCount]
+    xor eax, eax
+    mov ecx, wPartyMonNicksEnd - wPartyCount
+    rep stosb
+    mov byte [ebp + wMonDataLocation], 0x10 ; marker: skip AskName (no input)
+    mov byte [ebp + wCurPartySpecies], STARTER_PIKACHU
+    mov byte [ebp + wCurEnemyLevel], 15
+    call AddPartyMon
+    ; Species-default nickname, as the declined-naming outcome would leave it.
+    mov al, [ebp + wCurPartySpecies]
+    mov [ebp + wNamedObjectIndex], al
+    call GetMonName
+    movzx eax, byte [ebp + wPartyCount]
+    dec eax
+    imul eax, NAME_LEN
+    lea edx, [eax + wPartyMonNicks]
+    mov esi, wNameBuffer
+    mov bx, NAME_LEN
+    call CopyData
+    mov byte [ebp + wMonDataLocation], 0
+    ; Deterministic DVs + stat recompute for mon 0 (mirrors the .dvLoop body
+    ; above for a single mon; idempotent with it, which already ran for the
+    ; generic party this rebuild replaces).
+    mov edi, wPartyMon1
+    mov byte [ebp + edi + MON_DVS_OFF], 0x98
+    mov byte [ebp + edi + MON_DVS_OFF + 1], 0x76
+    mov dword [ebp + edi + MON_HP_EXP_OFF], 0
+    mov dword [ebp + edi + MON_HP_EXP_OFF + 4], 0
+    mov word  [ebp + edi + MON_HP_EXP_OFF + 8], 0
+    mov al, [ebp + edi + MON_SPECIES_OFF]
+    mov [ebp + wCurSpecies], al
+    mov al, [ebp + edi + MON_LEVEL_OFF]
+    mov [ebp + wCurEnemyLevel], al
+    push edi
+    call GetMonHeader
+    lea esi, [edi + MON_HP_EXP_OFF - 1]
+    lea edx, [edi + MON_MAXHP_OFF]
+    call CalcStats
+    pop edi
+    mov ax, [ebp + edi + MON_MAXHP_OFF]
+    mov [ebp + edi + MON_HP_OFF], ax
+    ; SURF in move slot 3, PP kept (lua pokes AFTER PP; port quirk mirrored).
+    mov byte [ebp + wPartyMon1Moves + 2], SURF
+    ; _AddPartyMon set PIKACHU owned+seen above; restore the exact lua
+    ; seed.pokedex pattern (all seen + scattered owned) it would otherwise
+    ; perturb.
+    mov edi, wPokedexSeen
+    call DebugSetPokedexEntries
+    mov edi, wPokedexOwned
+    call DebugSetPokedexOwnedScatter
 %endif
 %ifdef DEBUG_POKEMART
     ; pokemart_buy_sell golden: $10,000 money, bag = [Bicycle x1, HM01 x1, Potion x5]
