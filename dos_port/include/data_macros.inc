@@ -65,6 +65,14 @@
 
 ; dname requires NAME_LENGTH (gb_constants.inc) in scope when the 1-arg form
 ; is used.
+; Pad byte is an explicit 0x50: RGBDS assembles pret's dname "@" pad through
+; the charmap to $50, while NASM db '@' would emit ASCII $40 — which every
+; '@'-scanner (CopyString, GetName, PlaceString: cmp 0x50) never matches,
+; running the consumer off the table exactly like the prizes.asm WRAM smash
+; (fixed cb5605a9c). NOTE the glyph bytes (db %1) are still raw NASM/ASCII,
+; NOT charmap-encoded, so this macro is only correct for already-numeric
+; args; real GB names go through tools/generators/gb_text.py (see
+; assets/trades.inc, generated "as dname does" with $50 padding).
 %macro dname 1-2
     %if %0 == 2
         %assign n %2
@@ -73,7 +81,7 @@
     %endif
     %strlen len %1
     db %1
-    times (n - len) db '@'
+    times (n - len) db 0x50 ; "@" pad (GB charmap $50, not ASCII $40)
 %endmacro
 
 %macro tmhm 0-*
