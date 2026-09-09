@@ -4510,15 +4510,16 @@ asm_0dbd:
     mov [ebp + wCurMapTileset], al
     mov [ebp + hPreviousTileset], al
     ; pret: bit BIT_NO_PREVIOUS_MAP,b / ret nz — if the map is already loaded (bit was
-    ; set), skip the whole header reload.
-    ; TODO(OW-A.5/verify): the early return is DEFERRED. All 3 FRAME.BIN baselines exercise
-    ; this routine with the bit CLEAR, so they cannot prove the bit-set path; that path is
-    ; only reached after a continue-from-save, and skipping the header reload there would
-    ; break the map if the port's .dsv restore does not repopulate wCurMapHeader (it does
-    ; not today). Restore the `ret nz` once the save/continue flow can be driven live
-    ; (MCP) and verified — same conservatism as OW-A.4(b). Faithful code:
-    ;     test bl, (1 << BIT_NO_PREVIOUS_MAP)
-    ;     jnz .noPreviousMapReturn   ; pop edi/esi/ecx/ebx/eax ; ret
+    ; set by the save-load path), skip the whole header reload. Restored 2026-09-09:
+    ; the OW-A.5 deferral concern (.dsv restore not repopulating wCurMapHeader) is
+    ; disproven — LoadMainData (save.asm) restores sMainData→wMainDataStart wholesale,
+    ; which includes wCurMapHeader, wWarpEntries, signs and Height2/Width2, and sets
+    ; this bit only on continue-from-save. Deferring it ran LoadTilesetHeader on
+    ; continue, whose dungeon tail stomped saved coords with stale wDestinationWarpID
+    ; (measured live: museum 2F save resumed on the 1F stairwell). Verified live via
+    ; continue-from-save manual repro.
+    test bl, (1 << BIT_NO_PREVIOUS_MAP)    ; pret: bit BIT_NO_PREVIOUS_MAP,b
+    jnz .noPreviousMapReturn               ; pret: ret nz
 
     ; wCurMapHeader is a 10-byte buffer: tileset(1), h(1), w(1), blkptr(2), txtptr(2), scrptr(2), conn(1)
     ; pret :1811 — `call GetMapHeaderPointer`. The table lookup was inlined here
@@ -4657,6 +4658,17 @@ asm_0dbd:
     mov al, [esi + 1]
     mov [ebp + wMapMusicROMBank], al            ; music 2
 
+    pop edi
+    pop esi
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+
+; pret home/overworld.asm:1808-1809 `ret nz` target: map already loaded
+; (continue-from-save), epilogue matches the five-register prologue shared by
+; LoadMapHeader and Func_0db5.
+.noPreviousMapReturn:
     pop edi
     pop esi
     pop ecx
