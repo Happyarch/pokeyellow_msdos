@@ -946,17 +946,21 @@ AnimationCleanOAM:
     push ebx
     push eax
     call DelayFrame
-    call ClearSprites
     ; For a successful capture the ball sprite must remain visible on screen
     ; until the player dismisses the "All right! ..." prompt (pret keeps
-    ; wShadowOAM published through PrintText's TX_PROMPT_BUTTON wait). The
-    ; generic OAM cleanup would publish the zeroed shadow immediately,
-    ; making the ball disappear automatically. Keep the last published OAM
-    ; for the captured case — its explicit ClearSprites after the prompt
-    ; (ItemUseBall:2170/2207) will do the single publish.
+    ; the last-published ball OAM through PrintText's TX_PROMPT_BUTTON wait:
+    ; ItemUseBall issues no ClearSprites between the MoveAnimation return and
+    ; the ItemUseBallText05 prompt on either side). The generic OAM cleanup
+    ; would zero spr_oam_valid immediately, making the ball disappear
+    ; automatically — render_sprites is count-driven, so a zeroed count draws
+    ; nothing no matter what the canonical OAM still holds. Keep the whole
+    ; published state for the captured case — the explicit ClearSprites after
+    ; the prompt (ItemUseBall party/box/.printMessage paths) does the teardown.
+    ; DEVIATION{class=projection; pret=engine/battle/animations.asm:AnimationCleanOAM; behavior=when wPokeBallAnimData is $43 (successful capture) the routine returns after DelayFrame without clearing or republishing OAM, so the caught ball stays composited through the catch-prompt dialog; evidence=maintainer-observed hardware behavior plus in-tree ItemUseBall issuing no ClearSprites between MoveAnimation return and ItemUseBallText05 PrintText on either side, and the count-driven render path that a ClearSprites would blank; lifetime=permanent, part of the battle-animation projection boundary}
     mov al, [ebp + wPokeBallAnimData]
     cmp al, 0x43
-    je .skipPublish
+    je .done
+    call ClearSprites
     ; publish the now-zeroed shadow as the canonical OAM (the GB's next DMA).
     ; ECX = 0: no drawn entries, matching the spr_oam_valid ClearSprites just set.
     mov esi, wShadowOAM
@@ -964,7 +968,7 @@ AnimationCleanOAM:
     mov eax, 80                              ; battle-frame projection origin
     mov ebx, 24
     call PublishProjectedOAM
-.skipPublish:
+.done:
     pop eax
     pop ebx
     pop edx

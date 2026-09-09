@@ -41,7 +41,24 @@ PewterGuys:
     add edi, wSimulatedJoypadStatesEnd     ; edi = dest EBP-offset
 
     movzx eax, byte [ebp + wWhichPewterGuy]
+    cmp eax, 1
+    ja .badGuyIndex                            ; union residue (this byte aliases dungeon-warp
+                                               ; size/prize-window state): touch no table at all
     mov esi, [PewterGuysCoordsTable + eax*4]   ; hl = flat ptr to Pewter*GuyCoords
+    ; Bound the entry scan: the museum table holds 4 entries, the gym table 5,
+    ; and NEITHER carries a terminator — pret relies on the caller always
+    ; standing on a listed tile plus a fully-mapped GB address space, so a scan
+    ; miss still dereferences some dw. The port widened dw to flat dd: a miss
+    ; walks into the movement bytes below the table and loads 4 of them as a
+    ; code pointer, which faults. Talking to the gym guy from an unlisted
+    ; adjacent tile (north or east of him) is exactly such a miss.
+    ; DEVIATION{class=data-model; pret=engine/events/pewter_guys.asm:PewterGuys; behavior=bound the coord-entry scan to the table's entry count (4 museum, 5 gym) and no-op when no entry matches or the guy index is out of range, instead of scanning past the table end; evidence=neither coord list carries a terminator on either side and the flat dd load faults where the GB dw load only glitched, reachable by talking to the gym guy from an unlisted tile; lifetime=permanent}
+    push ecx
+    mov ecx, 5
+    test eax, eax
+    jnz .haveEntryCount
+    mov ecx, 4
+.haveEntryCount:
     mov bh, [ebp + wYCoord]                  ; b = player Y
     mov bl, [ebp + wXCoord]                  ; c = player X
 .findMatchingCoordsLoop:
@@ -53,6 +70,7 @@ PewterGuys:
     inc esi
     cmp al, bl
     jne .nextEntry2
+    pop ecx                                    ; match: release the entry bound
     mov esi, [esi]                             ; hl = flat ptr to this entry's movement data
 .copyMovementDataLoop:
     mov al, [esi]
@@ -69,7 +87,13 @@ PewterGuys:
     inc esi                                    ; skip entry X
 .nextEntry2:
     add esi, 4                                 ; skip the 4-byte flat movement pointer
-    jmp .findMatchingCoordsLoop
+    dec ecx
+    jnz .findMatchingCoordsLoop
+    pop ecx                                    ; exhausted: no listed tile — leave the queued
+                                               ; player movement alone and return
+    jmp .done
+.badGuyIndex:
+    ret
 .done:
     ret
 

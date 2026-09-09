@@ -99,6 +99,13 @@ PewterCity_Script:
     and byte [ebp + esi], ~(1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE)) & 0xFF
     mov esi, PewterCity_ScriptPointers
     mov al, [ebp + wPewterCityCurScript]
+    ; Clamp: CallFunctionInTable indexes 4-byte flat code pointers, so a stale
+    ; script byte would call into adjacent bytes as code. Fall back to Default.
+    ; DEVIATION{class=data-model; pret=scripts/PewterCity.asm:PewterCity_Script; behavior=clamp wPewterCityCurScript to the 7-entry pointer table, falling back to Default on out-of-range values; evidence=CallFunctionInTable indexes 4-byte flat code pointers where pret indexed 2-byte GB pointers into mapped ROM, so a stale byte faults instead of glitching, and the byte is save-restored persistent state; lifetime=permanent}
+    cmp al, 6
+    jbe .scriptInRange
+    xor al, al
+.scriptInRange:
     call CallFunctionInTable
     ret
 

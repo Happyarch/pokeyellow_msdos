@@ -83,6 +83,11 @@ RunNPCMovementScript:
     test al, al
     jz .done
     dec al                                          ; table num is 1-based
+    ; Clamp: only 3 per-map tables exist. A stale num would load past the
+    ; table as a flat code pointer and fault (GB: 2-byte load, glitch only).
+    ; DEVIATION{class=data-model; pret=home/npc_movement.asm:RunNPCMovementScript; behavior=ignore wNPCMovementScriptPointerTableNum values above 3 instead of indexing past the 3-entry table; evidence=flat 4-byte pointer load faults on out-of-range indices where the GB 2-byte load only glitched, and the byte is transient script state outside the save-restored slice; lifetime=permanent}
+    cmp al, 2
+    ja .done
     movzx eax, al
     mov esi, [NPCMovementScriptPointerTables + eax*4] ; ESI = flat per-map jumptable
     mov al, [ebp + wNPCMovementScriptFunctionNum]

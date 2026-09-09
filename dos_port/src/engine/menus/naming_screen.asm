@@ -72,7 +72,9 @@ extern ClearScreenArea                 ; home/copy2.asm — ESI=dest, BH=rows, B
 extern CopyData                        ; home/copy.asm — ESI=src,EDX=dest,BX=count
 extern PrintText                   ; src/home/window.asm — the one printer; ESI = FLAT TX stream ptr
 extern InitYesNoTextBoxParameters      ; home/yes_no.asm — pret's own: the box's hlcoord/lb bc
+extern yn_proj_mode                    ; home/yes_no.asm — 0 = overworld anchor, 1 = battle anchor
 extern DisplayTextBoxID                ; home/textbox.asm — pret's own box dispatcher
+extern hide_window                     ; ppu/ppu.asm — empty the window list (count=0)
 extern ReloadMapSpriteTilePatterns     ; engine/overworld/reload_sprites.asm
 extern GBPalWhiteOutWithDelay3         ; src/home/palettes.asm
 extern RestoreScreenTilesAndReloadTilePatterns ; src/home/palettes.asm
@@ -218,11 +220,15 @@ AskName:
     mov al, [ebp + wIsInBattle]
     dec al
     ; pret: `call z, ClearScreenArea` (conditional CALL). hlcoord 0,0 / lb bc,4,11
-    ; are pret's own (always-stride-20) coords — this call runs before the
-    ; naming screen's own canvas takeover, so it targets whatever scratch is
-    ; live at the call site (battle or overworld).
+    ; wipes the enemy name/HUD corner of the GB tilemap. This call runs before
+    ; the naming screen's own canvas takeover, in battle, where wTileMap IS the
+    ; 40-stride canvas — so GB (0,0) sits at canvas (10,3) under the uniform
+    ; battle projection (X+10/Y+3, BCOORD in coords.inc). The local HL() macro
+    ; below addresses the stride-20 scratch, which would blank canvas rows 0-3
+    ; cols 0-10 as a stray top-left box instead.
+    ; DEVIATION{class=projection; pret=engine/menus/naming_screen.asm:AskName; behavior=clear the battle-projected HUD corner at canvas (10,3) instead of the stride-20 scratch origin, keeping pret's 4x11 dims; evidence=pret wipes GB rows 0-3 cols 0-10 which the battle projection places at canvas (10,3), while the local HL() macro would blank unprojected canvas rows 0-3; lifetime=permanent window-compositor boundary}
     jnz .skipBattleClear
-    mov esi, HL(0, 0)
+    mov esi, wTileMap + 3 * SCREEN_WIDTH + 10
     mov bh, 4
     mov bl, 11
     call ClearScreenArea
@@ -281,6 +287,15 @@ AskName:
     ; it is 0 in practice by the time AskName runs). The port is therefore deterministic
     ; where pret is stale-state-dependent; same box either way.
     call InitYesNoTextBoxParameters
+    ; Battle catch: route the YES/NO box through DisplayTwoOptionMenu's battle
+    ; anchor (direct canvas at X+10/Y+3) instead of the overworld window path,
+    ; whose stride-20 staging aliases the live battle canvas and presented as
+    ; a second window overflowing into the upper screen.
+    ; DEVIATION{class=projection; pret=engine/menus/naming_screen.asm:AskName; behavior=the nickname YES/NO box selects yn_proj_mode=1 (battle anchor) when wIsInBattle is set, keeping pret's hlcoord 14,7 geometry via InitYesNoTextBoxParameters; evidence=DisplayTwoOptionMenu routes on yn_proj_mode and the overworld path stages stride-20 scratch over the live battle canvas, exactly as EnemySendOutFirstMon in engine/battle/core.asm already established for a battle YES/NO box; lifetime=permanent window-compositor boundary}
+    cmp byte [ebp + wIsInBattle], 0
+    je .overworldYN
+    mov dword [yn_proj_mode], 1              ; battle anchor (X+10/Y+3 direct canvas)
+.overworldYN:
     mov byte [ebp + wTextBoxID], TWO_OPTION_MENU
     call DisplayTextBoxID
 
@@ -665,6 +680,13 @@ DisplayNamingScreen:
     call GBPalNormal
     mov byte [ebp + wAnimCounter], 0      ; xor a / ld [wAnimCounter],a
     and byte [ebp + wStatusFlags5], ~(1 << BIT_NO_TEXT_DELAY) & 0xFF
+    ; Port teardown: naming_show_window raised g_bg_whiteout + a full-screen
+    ; window for its takeover, and pret's palette-only exit has no counterpart
+    ; for either — so drop both here, or every caller inherits a whited-out BG
+    ; with hidden sprites until some later menu's teardown happens to run.
+    ; DEVIATION{class=projection; pret=engine/menus/naming_screen.asm:DisplayNamingScreen; behavior=clear g_bg_whiteout and the window list on the submitNickname exit path; evidence=naming_show_window sets both with no in-file clear while pret's exit is palette-only, the same leak prize_menu.asm and the fossil flow each patch around per caller; lifetime=permanent window-compositor boundary}
+    mov dword [g_bg_whiteout], 0
+    call hide_window
 %if KBD_NAMING
     mov byte [g_kbd_text_mode], 0         ; the only exit from DisplayNamingScreen
 %endif
