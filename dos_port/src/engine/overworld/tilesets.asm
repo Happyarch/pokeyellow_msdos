@@ -27,6 +27,7 @@ bits 32
 %include "gb_memmap.inc"
 
 global LoadTilesetHeader
+global StageTilesetBlobs
 
 extern IsInArray                          ; src/home/array2.asm
 extern LoadDestinationWarpPosition        ; src/home/overworld.asm
@@ -47,15 +48,16 @@ section .text
 ; Copies current tileset gfx/blocks/coll from .data section → fixed EBP slots,
 ; then sets g_tilecache_dirty so render_bg rebuilds the decoded-tile cache.
 ; ---------------------------------------------------------------------------
-LoadTilesetHeader:
-    push eax
-    push ebx
-    push esi
-    push edi
-    push ecx
-
-    movzx eax, byte [ebp + wCurMapTileset]   ; tileset index 0-24
-
+; ---------------------------------------------------------------------------
+; StageTilesetBlobs — copy the tileset gfx/blockset/collision blobs for the
+; tileset index in EAX into the fixed EBP staging slots (OW_GFX/blocks/coll)
+; and arm g_tilecache_dirty. Port-only helper extracted verbatim from
+; LoadTilesetHeader's head; all registers preserved.
+;
+; DEVIATION{class=banking; pret=engine/overworld/tilesets.asm:LoadTilesetHeader; behavior=stage tileset blobs through a callable helper also reached from LoadMapHeader's continue early-return path, bypassing the warp-arrival tail; evidence=pret reads tileset bytes from ROM which is always present so its early return needs no staging, while the port holds those bytes in staged RAM populated only here and LoadTilesetTilePatternData reads them via wTilesetGfxPtr on every map load including continue, so skipping the staging leaves boot-zero bytes and blank tiles; lifetime=permanent flat-model banking boundary}
+; ---------------------------------------------------------------------------
+StageTilesetBlobs:
+    pushad
     ; Copy tileset GFX to fixed EBP slot
     mov esi, [TilesetGfxPtrs + eax*4]
     lea edi, [ebp + OW_GFX_GBADDR]
@@ -76,6 +78,19 @@ LoadTilesetHeader:
 
     ; Mark tile cache dirty — render_bg must rebuild decoded tiles
     mov byte [g_tilecache_dirty], 1
+    popad
+    ret
+
+LoadTilesetHeader:
+    push eax
+    push ebx
+    push esi
+    push edi
+    push ecx
+
+    movzx eax, byte [ebp + wCurMapTileset]   ; tileset index 0-24
+
+    call StageTilesetBlobs
 
     ; Populate tileset header fields in WRAM.
     ; TODO-HW: wTilesetBank is meaningless under flat memory (no ROM banking) —

@@ -87,6 +87,7 @@ extern GBPalNormal                        ; src/home/palettes.asm
 extern InitMapSprites                     ; src/home/palettes.asm
 extern LoadTextBoxTilePatterns            ; src/home/load_font.asm
 extern LoadTilesetHeader                  ; src/engine/overworld/tilesets.asm
+extern StageTilesetBlobs                 ; src/engine/overworld/tilesets.asm — tileset blob staging without the warp tail
 extern IndoorMapBlkPtrs                   ; assets/map_headers.inc (map_headers.asm TU)
 extern IndoorMapBlkSizes                  ; assets/map_headers.inc (map_headers.asm TU)
 extern SafariZoneCheckSteps               ; src/engine/events/hidden_events/safari_game.asm
@@ -4667,8 +4668,13 @@ asm_0dbd:
 
 ; pret home/overworld.asm:1808-1809 `ret nz` target: map already loaded
 ; (continue-from-save), epilogue matches the five-register prologue shared by
-; LoadMapHeader and Func_0db5.
+; LoadMapHeader and Func_0db5. The blob staging is the one piece pret's early
+; return can skip but the port's cannot: pret reads tileset bytes from ROM,
+; the port from the OW_* slots StageTilesetBlobs fills (see its DEVIATION).
+; Everything else on the skipped path is save-restored and trusted verbatim.
 .noPreviousMapReturn:
+    movzx eax, byte [ebp + wCurMapTileset]    ; bit 7 already cleared by the snapshot above
+    call StageTilesetBlobs
     pop edi
     pop esi
     pop ecx
