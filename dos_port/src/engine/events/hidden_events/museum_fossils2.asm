@@ -12,6 +12,8 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "coords.inc"
+%define UI_LAYOUT_EQUATES_ONLY 1
+%include "assets/ui_layout_menus.inc"
 
 global DisplayMonFrontSpriteInBox
 
@@ -25,6 +27,14 @@ extern LoadMonFrontSprite               ; src/home/pics.asm
 extern AnimateSendingOutMon             ; src/engine/battle/init_battle.asm
 extern WaitForTextScrollButtonPress     ; src/home/joypad2.asm
 extern LoadScreenTilesFromBuffer1       ; src/home/tilemap.asm
+extern add_window                       ; src/ppu/ppu.asm — EAX=wx EBX=wy ECX=clip_w EDX=max_y ESI=tilemap EDI=srow
+extern g_window_count                   ; src/ppu/ppu.asm — active window-descriptor count
+
+; GB_TILEMAP0 mirror start row for the sprite popup (9x10 at
+; UI_MON_SPRITE_POPUP_COL/ROW). The popup is modal — shown alone and torn down
+; before the follow-on dialog — so sharing rows 10-19 with non-concurrent
+; TILEMAP0 users (YN 11, QTY 16) is safe by construction, not by registry slot.
+FOSSIL_POPUP_SROW equ 10
 
 section .text
 
@@ -34,6 +44,7 @@ section .text
 ; ─────────────────────────────────────────────────────────────────────────────
 ; DEVIATION{class=data-model; pret=engine/events/hidden_events/museum_fossils2.asm:DisplayMonFrontSpriteInBox; behavior=convert wCurPartySpecies to dex-1 through IndexToPokedex and pass in EAX before LoadMonFrontSprite; evidence=the port resolves standard front pics through the dex-keyed MonFrontPics table because the mon header front-pic pointer is a GB ROM address, matching the core.asm and init_battle.asm convention; lifetime=permanent flat-data pic-resolution boundary}
 ; DEVIATION{class=projection; pret=engine/events/hidden_events/museum_fossils2.asm:DisplayMonFrontSpriteInBox; behavior=project hlcoord 10, 11 to BCOORD(10, 11) for AnimateSendingOutMon; evidence=MON_SPRITE_POPUP is centered in the widescreen canvas via the standard +10 col / +3 row projection in ui_layout_menus.inc; lifetime=permanent widescreen UI projection}
+; DEVIATION{class=projection; pret=engine/events/hidden_events/museum_fossils2.asm:DisplayMonFrontSpriteInBox; behavior=mirror the MON_SPRITE_POPUP box plus 7x7 pic from wTileMap to GB_TILEMAP0 and publish an add_window descriptor for the WaitForTextScrollButtonPress duration, torn down before LoadScreenTilesFromBuffer1; evidence=render_bg draws wSurroundingTiles while a view pointer is live so wTileMap writes never reach the screen, same cause as mart P1 money-BUY invisibility fixed by mart_show mirrors in text_box.asm, plus vblank.asm hAutoBGTransferEnabled retirement note; lifetime=permanent window-compositor boundary}
 DisplayMonFrontSpriteInBox:
     mov byte [ebp + hAutoBGTransferEnabled], 1
     call Delay3
@@ -59,8 +70,66 @@ DisplayMonFrontSpriteInBox:
     mov [ebp + wPredefHL + 1], al        ; L (low byte)
     mov [ebp + wPredefHL], ah            ; H (high byte) — big-endian GB word
     call AnimateSendingOutMon
+    call fossil_popup_show
     call WaitForTextScrollButtonPress
+    call fossil_popup_hide
     call LoadScreenTilesFromBuffer1
     call Delay3
     mov byte [ebp + hWY], 0x90
     ret
+
+; ---------------------------------------------------------------------------
+; fossil_popup_show — mirror the sprite popup (box border + 7x7 pic, both staged
+; in wTileMap by DisplayTextBoxID / AnimateSendingOutMon) to GB_TILEMAP0 and
+; publish it as a centered window descriptor. Port-only helper, mart_show_*
+; shape (text_box.asm): stride-40 canvas rows to stride-32 tilemap rows.
+; Saves g_window_count first so the hide drops exactly this descriptor.
+; ---------------------------------------------------------------------------
+fossil_popup_show:
+    mov eax, [g_window_count]
+    mov [fossil_saved_wc], eax
+    call fossil_popup_mirror
+    mov eax, UI_MON_SPRITE_POPUP_WX
+    mov ebx, UI_MON_SPRITE_POPUP_WY
+    mov ecx, UI_MON_SPRITE_POPUP_CLIP
+    mov edx, UI_MON_SPRITE_POPUP_MAXY
+    mov esi, GB_TILEMAP0
+    mov edi, FOSSIL_POPUP_SROW
+    call add_window
+    ret
+
+; ---------------------------------------------------------------------------
+; fossil_popup_hide — drop the popup descriptor, restoring the caller's window
+; list (normally empty in the overworld). Mirror rows go stale after
+; LoadScreenTilesFromBuffer1 but are no longer drawn.
+; ---------------------------------------------------------------------------
+fossil_popup_hide:
+    mov eax, [fossil_saved_wc]
+    mov [g_window_count], eax
+    ret
+
+; ---------------------------------------------------------------------------
+; fossil_popup_mirror — copy the UI_MON_SPRITE_POPUP_GBW x GBH box from wTileMap
+; (stride 40) to GB_TILEMAP0 (stride 32) at FOSSIL_POPUP_SROW. All regs preserved.
+; ---------------------------------------------------------------------------
+fossil_popup_mirror:
+    pushad
+    xor ebx, ebx
+.row:
+    mov esi, ebx
+    imul esi, esi, SCREEN_TILES_W
+    add esi, wTileMap + UI_MON_SPRITE_POPUP_ROW * SCREEN_TILES_W + UI_MON_SPRITE_POPUP_COL
+    add esi, ebp
+    mov edi, ebx
+    shl edi, 5
+    lea edi, [ebp + edi + GB_TILEMAP0 + FOSSIL_POPUP_SROW * 32]
+    mov ecx, UI_MON_SPRITE_POPUP_GBW
+    rep movsb
+    inc ebx
+    cmp ebx, UI_MON_SPRITE_POPUP_GBH
+    jb .row
+    popad
+    ret
+
+section .bss
+fossil_saved_wc: resd 1
