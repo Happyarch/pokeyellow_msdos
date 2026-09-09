@@ -100,6 +100,52 @@ PlayerStepOutFromDoor:
 ; pret: engine/overworld/auto_movement.asm:_EndNPCMovementScript
 ; ---------------------------------------------------------------------------
 _EndNPCMovementScript:
+    ; Repair scripted-walk MAP staleness before tearing down: a scripted NPC
+    ; walk moves PIXELS only (both sides, by design), so MAP still holds the
+    ; walk-start tile when the walk ends; the overworld renderer projects idle
+    ; NPCs from MAP, which strands the sprite at the start (offscreen once the
+    ; camera leaves) even though hardware OAM still carries the walk-end
+    ; pixels — measured live as the Pewter guide vanishing at his arrival
+    ; dialog with MAP (35,16)-start while his pixels sat walk-end beside the
+    ; player. Refresh this walk's slot MAP from its pixels (teleports and
+    ; script hides overwrite it again right after on every path that has
+    ; one). Floored, map-bounds-checked: mid-step positions land on the tile
+    ; the step started from, and wrapped/off-map results keep today's
+    ; behavior instead of ghosting.
+    ; DEVIATION{class=data-model; pret=engine/overworld/auto_movement.asm:_EndNPCMovementScript; behavior=refresh the scripted slot's MAPY/MAPX from its walk-end pixels before clearing the script state; evidence=scripted walks move pixels only on both sides while the port idle-renders from MAP, so a finished walk stranded its sprite at the start tile offscreen where hardware OAM still shows the walk-end pixels, measured with the Pewter guide at arrival dialog; lifetime=permanent}
+    movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
+    test eax, eax
+    jz .noMapRefresh
+    push ebx
+    push ecx
+    ; tileY = (YPIXELS+4)/16 + wYCoord - 4 (invert InitializeSpriteScreenPosition
+    ; to GB tile units; scripted steps are whole 16px tiles, turns 0-delta)
+    movzx ebx, byte [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
+    add ebx, 4
+    shr ebx, 4
+    movzx ecx, byte [ebp + wYCoord]
+    add ebx, ecx
+    sub ebx, 4
+    movzx ecx, byte [ebp + wCurrentMapHeight2]
+    cmp ebx, ecx
+    jae .mapRefreshDone
+    add ebx, 4
+    mov [ebp + eax + wSpriteStateData2 + SPRITESTATEDATA2_MAPY], bl
+    ; tileX = XPIXELS/16 + wXCoord - 4, same treatment
+    movzx ebx, byte [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
+    shr ebx, 4
+    movzx ecx, byte [ebp + wXCoord]
+    add ebx, ecx
+    sub ebx, 4
+    movzx ecx, byte [ebp + wCurrentMapWidth2]
+    cmp ebx, ecx
+    jae .mapRefreshDone
+    add ebx, 4
+    mov [ebp + eax + wSpriteStateData2 + SPRITESTATEDATA2_MAPX], bl
+.mapRefreshDone:
+    pop ecx
+    pop ebx
+.noMapRefresh:
     and byte [ebp + wStatusFlags5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
     and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     and byte [ebp + wMovementFlags], (~((1 << BIT_STANDING_ON_DOOR) | (1 << BIT_EXITING_DOOR))) & 0xFF
