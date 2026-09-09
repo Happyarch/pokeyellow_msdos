@@ -1704,6 +1704,19 @@
 %define wYOffsetSinceLastSpecialWarp 0xE2AF   ; wYOffsetSinceLastSpecialWarp
 %define wXOffsetSinceLastSpecialWarp 0xE2B0   ; wXOffsetSinceLastSpecialWarp
 
+; Persisted sprite-count pointer (port-only, 2 bytes). Mirrors the port-local
+; overworld_sprite_count_ptr (overworld.asm B1) into save-covered GB WRAM so a
+; continue-from-save can repopulate NPC sprite data on the
+; BIT_NO_PREVIOUS_MAP early-return path, where InitSprites would otherwise be
+; skipped while wNumSprites is save-restored nonzero (DisplayTextID then reads
+; text id 0 and faults row 0x7F8 out of the map text table). Set on every full
+; LoadMapHeader alongside the port-local; consumed only by the early-return
+; branch (validated <= MAX_OBJECT_EVENTS there; 0 on pre-fix saves = skip).
+; Sits in pret's wMapSpriteData footprint (0xE2B1-0xE2F0, vacant in the port
+; since OW-A.2 moved both sprite arrays to flat .bss); inside sMainData, so no
+; save-format change.
+%define wSpriteCountPtrSave          0xE2B1   ; persisted overworld_sprite_count_ptr (2 bytes)
+
 ; Edge detection thresholds (height*2 / width*2) — used by CheckMapConnections
 %define wCurrentMapHeight2           0xE2F1   ; wCurrentMapHeight2 = wCurMapHeight * 2
 %define wCurrentMapWidth2            0xE2F2   ; wCurrentMapWidth2 = wCurMapWidth * 2

@@ -4609,6 +4609,11 @@ asm_0dbd:
     ; W_OBJECT_DATA_PTR_TEMP already holds pret's object-data base; sprite_count offset goes to port-local
     sub eax, ebp
     mov [overworld_sprite_count_ptr], ax
+    ; Mirror it into save-covered WRAM (wSpriteCountPtrSave): the port-local
+    ; above does not survive a reset, but a continue-from-save takes the
+    ; BIT_NO_PREVIOUS_MAP early-return below, which needs this pointer to
+    ; repopulate NPC sprite data (see there).
+    mov [ebp + wSpriteCountPtrSave], ax
 
     ; pret home/overworld.asm:1888-1892 (.loadSpriteData): populate the NPC sprite
     ; slots from the map-object binary, UNLESS returning from a battle/blackout
@@ -4675,6 +4680,29 @@ asm_0dbd:
 .noPreviousMapReturn:
     movzx eax, byte [ebp + wCurMapTileset]    ; bit 7 already cleared by the snapshot above
     call StageTilesetBlobs
+    ; A continue lands here with NPC sprite data unrestored: the save slice
+    ; covers wNumSprites but the sprite arrays live in unsaved flat .bss, and
+    ; the InitSprites call further down is skipped with the header reload. A
+    ; nonzero restored count over zeroed text ids then sends DisplayTextID's
+    ; sprite path to row 0x7F8, out of the map text table (measured cr2 page
+    ; fault at DisplayTextID.readFirstByte with edx=0x7F8). Repopulate from
+    ; the persisted sprite-count pointer instead of reloading the header.
+    ; DEVIATION{class=data-model; pret=home/overworld.asm:LoadMapHeader; behavior=repopulate NPC sprite data on the already-loaded early-return path from the persisted sprite-count pointer, mirroring the full path's battle-over skip and validating the count; evidence=the save slice covers wNumSprites but the sprite arrays live in unsaved flat .bss, so a continue left count-nonzero with zeroed text ids and DisplayTextID faulted row 0x7F8 out of the map text table, measured cr2 page fault at readFirstByte with edx 0x7F8; lifetime=permanent}
+    ; W_OBJECT_DATA_PTR_TEMP rides the save slice (in-EBP GB WRAM restored by
+    ; the load), so only the port-local count pointer needs restoring here;
+    ; InitSprites reads both.
+    mov al, [ebp + wStatusFlags4]
+    test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
+    jnz .skipEarlyInitSprites               ; battle return preserves sprite state (full-path rule)
+    movzx eax, word [ebp + wSpriteCountPtrSave]
+    test eax, eax
+    jz .skipEarlyInitSprites                ; pre-fix save (cell never written): keep old behavior
+    movzx ecx, byte [ebp + eax]             ; sprite_count byte at the persisted offset
+    cmp ecx, MAX_OBJECT_EVENTS
+    ja .skipEarlyInitSprites                ; garbage offset: InitSprites trusts the count for slot writes
+    mov [overworld_sprite_count_ptr], ax
+    call InitSprites
+.skipEarlyInitSprites:
     pop edi
     pop esi
     pop ecx
