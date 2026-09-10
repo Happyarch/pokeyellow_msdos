@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_VINE_WHIP
+channels:
+  8:
+    patch: noise_soft_whoosh
+    volume: 100

@@ -109,10 +109,36 @@ PATCHES = {
     # the augmented harmony IS the point). Carrier keeps the KSL treble
     # shelf like the other base-channel voices.
     "duty_clean": [SUS | 0x01, 0x3F, AD, SR, 0x00, SUS | 0x01, KSL | 0x00, AD, SR, 0x00, 0x00],
+    # --- SFX sound-design patches -----------------------------------------
+    # Specialized timbres for sound effects (channel 8 noise + pulse sweeps)
+    # to replace the generic screeching static with pleasant, authentic sounds.
+    #
+    # Soft whoosh (doors, footsteps, ledges, running):
+    # Gentle modulator depth and moderate feedback give a soft, breathy rush of
+    # air rather than high-frequency metallic hash.
+    "noise_soft_whoosh": [SUS | 0x03, 0x22, AD, 0x06, 0x00, SUS | 0x01, KSL | 0x04, AD, 0x06, 0x00, 0x06],
+    # Heavy thud (Tackle, Mega Kick, faint thud, super-effective hit):
+    # Low 1:1 modulator/carrier ratio with snappy envelope creates a solid,
+    # acoustic bass impact / 808-style thump instead of an abrasive buzz.
+    "noise_heavy_thud":  [0x01, 0x0C, 0xF2, 0x07, 0x00, 0x01, 0x00, 0xF4, 0x07, 0x00, 0x08],
+    # Crunch (neutral combat damage impact):
+    # Crisp mid-range bite with controlled feedback for a satisfying physical hit.
+    "noise_crunch":      [0x04, 0x14, 0xF1, 0x07, 0x00, 0x01, 0x02, 0xF3, 0x07, 0x00, 0x08],
+    # Crisp click (menu open, button clicks):
+    # Ultra-short transient snick with rapid decay for tactile UI feedback.
+    "noise_click":       [0x08, 0x18, 0xF0, 0x08, 0x00, 0x01, 0x00, 0xF1, 0x08, 0x00, 0x04],
+    # Soft poof (pokeball opening / smoke):
+    # Rapidly decaying soft noise burst.
+    "noise_poof":        [0x05, 0x20, 0xF2, 0x07, 0x00, 0x01, 0x04, 0xF3, 0x07, 0x00, 0x06],
+    # Soft pulse (high sweeps like ball toss, psychic):
+    # Rounded waveform with reduced feedback to eliminate piercing treble whistle.
+    "pulse_soft":        [SUS | 0x01, 0x2C, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x04, AD_PULSE, SR, 0x00, 0x02],
 }
 
 PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
-               "sub_bass", "soft_pad", "duty_clean"]
+               "sub_bass", "soft_pad", "duty_clean",
+               "noise_soft_whoosh", "noise_heavy_thud", "noise_crunch",
+               "noise_click", "noise_poof", "pulse_soft"]
 
 # Per-song OPL patch overrides for the BASE channels (tier 0). Normally a
 # base channel's FM patch is picked purely from the GB duty-cycle value

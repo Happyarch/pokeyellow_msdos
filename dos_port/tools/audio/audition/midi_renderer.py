@@ -29,6 +29,9 @@ from gb_to_midi import (
 )
 from mt32_presets import resolve_program
 from yaml_lint import lint
+from opl_renderer import (
+    GbApuEngine, DRUM_PARAMS, midi_key_to_gb_freq, midi_key_to_gb_wave_freq
+)
 
 PAN_CC = {"left": 20, "right": 108, "center": 64}
 
@@ -118,6 +121,11 @@ class MidiSession:
         self.solo_enh = False
         self.current_frame = 0
 
+        self.gb_engine = GbApuEngine()
+        self.gb_sound = False
+        self.gb_events: dict[int, list[tuple]] = {}
+        self.active_gb_notes: dict[int, tuple] = {}
+
         # Send SysEx setup if provided
         if sysex_setup:
             for msg in sysex_setup:
@@ -129,6 +137,16 @@ class MidiSession:
     def _compile_base(self):
         self.base_events.clear()
         self.base_init_msgs.clear()
+        self.gb_events.clear()
+        self.active_gb_notes.clear()
+        for n in self.base_song.notes:
+            v = n.chan - 1  # 0: pulse1, 1: pulse2, 2: wave, 3: noise
+            is_drum = (n.chan == 4)
+            fade = getattr(n, "fade", 0)
+            self.gb_events.setdefault(n.frame, []).append(("on", v, (n.key, n.vel, fade, is_drum)))
+            off_f = min(n.frame + n.dur, self.total_frames)
+            self.gb_events.setdefault(off_f, []).append(("off", v, None))
+
         prog_key = "mt32_program" if self.target == "mt32" else "gm_program"
         used = sorted(set(n.chan for n in self.base_song.notes))
         for gc in used:
@@ -228,6 +246,50 @@ class MidiSession:
 
     def silence_all(self):
         self.midi.all_notes_off()
+        if hasattr(self, "gb_engine") and self.gb_engine:
+            self.gb_engine.reset()
+
+    def toggle_gb_sound(self) -> bool:
+        self.gb_sound = not self.gb_sound
+        if self.gb_sound:
+            self.silence_all()
+            for v, (key, vel, fade, is_drum) in self.active_gb_notes.items():
+                if is_drum or v == 3:
+                    params = DRUM_PARAMS.get(key, (8, 1, 34))
+                    init_vol, fade_period, nr43 = params
+                    self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                elif v in (0, 1):
+                    gb_vol = min(15, max(1, (vel - 15) // 7))
+                    fade_period = abs(fade) if fade != 0 else 0
+                    fade_dir = 1 if fade < 0 else 0
+                    freq = midi_key_to_gb_freq(key)
+                    self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                elif v == 2:
+                    freq = midi_key_to_gb_wave_freq(key)
+                    self.gb_engine.trigger_wave(freq, vol_code=1)
+        else:
+            self.gb_engine.reset()
+            self.send_init()
+        return self.gb_sound
+
+    def resume_playback(self):
+        if self.gb_sound:
+            for v, (key, vel, fade, is_drum) in self.active_gb_notes.items():
+                if is_drum or v == 3:
+                    params = DRUM_PARAMS.get(key, (8, 1, 34))
+                    init_vol, fade_period, nr43 = params
+                    self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                elif v in (0, 1):
+                    gb_vol = min(15, max(1, (vel - 15) // 7))
+                    fade_period = abs(fade) if fade != 0 else 0
+                    fade_dir = 1 if fade < 0 else 0
+                    freq = midi_key_to_gb_freq(key)
+                    self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                elif v == 2:
+                    freq = midi_key_to_gb_wave_freq(key)
+                    self.gb_engine.trigger_wave(freq, vol_code=1)
+        else:
+            self.send_init()
 
     def reload_overrides(self):
         self.ov = load_overrides(self.song_label)
@@ -236,24 +298,60 @@ class MidiSession:
             for msg in self.base_init_msgs:
                 self.midi.send(msg)
 
-    def tick(self):
+    def tick(self) -> bytes | None:
         f = self.current_frame
-        if self.enable_base and not self.solo_enh:
-            for msg in self.base_events.get(f, []):
-                self.midi.send(msg)
+        effective_enh = (self.enable_enh or self.solo_enh) and (not self.gb_sound)
+        effective_base = self.enable_base and not self.solo_enh
 
-        if self.enable_enh or self.solo_enh:
-            for msg in self.enh_events.get(f, []):
-                self.midi.send(msg)
+        if self.gb_sound:
+            self.silence_all()
+            for ev_type, v, args in self.gb_events.get(f, []):
+                if ev_type == "on":
+                    self.active_gb_notes[v] = args
+                    key, vel, fade, is_drum = args
+                    if is_drum or v == 3:
+                        params = DRUM_PARAMS.get(key, (8, 1, 34))
+                        init_vol, fade_period, nr43 = params
+                        self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                    elif v in (0, 1):
+                        gb_vol = min(15, max(1, (vel - 15) // 7))
+                        fade_period = abs(fade) if fade != 0 else 0
+                        fade_dir = 1 if fade < 0 else 0
+                        freq = midi_key_to_gb_freq(key)
+                        self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                    elif v == 2:
+                        freq = midi_key_to_gb_wave_freq(key)
+                        self.gb_engine.trigger_wave(freq, vol_code=1)
+                elif ev_type == "off":
+                    self.active_gb_notes.pop(v, None)
+                    self.gb_engine.silence_channel(v)
+            frame_pcm = self.gb_engine.generate_frame()
+        else:
+            if effective_base:
+                for msg in self.base_events.get(f, []):
+                    self.midi.send(msg)
+
+            if effective_enh:
+                for msg in self.enh_events.get(f, []):
+                    self.midi.send(msg)
+            frame_pcm = None
 
         self.current_frame += 1
         if self.current_frame >= self.total_frames:
             self.current_frame = self.loop_start
             self.silence_all()
-            self.send_init()
+            if self.gb_sound:
+                self.gb_engine.reset()
+            else:
+                self.send_init()
+
+        return frame_pcm
 
     def seek_relative(self, frames: int):
         target = max(0, min(self.total_frames - 1, self.current_frame + frames))
         self.silence_all()
         self.current_frame = target
-        self.send_init()
+        if self.gb_sound:
+            self.gb_engine.reset()
+        else:
+            self.send_init()

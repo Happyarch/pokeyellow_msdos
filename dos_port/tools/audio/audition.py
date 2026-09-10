@@ -187,6 +187,19 @@ def run_interactive_audition(
         if target == "mt32" and setup:
             setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
         sess = midi_renderer.MidiSession(song_label, target, port, sysex_setup=setup_msgs)
+        rate = 49716
+        if out_wav:
+            import wave
+            wav_file = wave.open(str(out_wav), "wb")
+            wav_file.setnchannels(2)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(rate)
+        else:
+            aplay_cmd = ["aplay", "-r", str(rate), "-f", "S16_LE", "-c", "2", "-q"]
+            try:
+                aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
+            except FileNotFoundError:
+                aplay_proc = None
 
     canonical_name = sess.song_label
     yaml_path = ENHANCE_DIR / f"{canonical_name}.yaml"
@@ -253,7 +266,8 @@ def run_interactive_audition(
 
     print(f"\n🎵 [{target.upper()}] Auditioning: {canonical_name}")
     print("Controls: [Tab] A/B Toggle  [A] Set Point A  [B]/[C] Set Point B (Checkpoint)")
-    print("          [Space] Enh On/Off  [M] Solo Enh   [ [ ] / [ ] ] Revisions  [U] Revert on Disk  [Q] Quit\n")
+    print("          [G] GB Mode On/Off  [Space] Enh On/Off  [M] Solo Enh")
+    print("          [P] Pause / Resume   [ [ ] / [ ] ] Revisions  [U] Revert on Disk  [Q] Quit\n")
 
     paused = False
     total_frames_played = 0
@@ -368,6 +382,11 @@ def run_interactive_audition(
                             sess.load_enhancement(yaml_path)
                         status_msg = "📌 Point A set to Working Copy (Live)!"
                     status_timer = 150
+                elif key in ("g", "G"):
+                    if hasattr(sess, "toggle_gb_sound"):
+                        is_gb = sess.toggle_gb_sound()
+                        status_msg = f"⚡ GB Mode: {'ON (Real Game Boy APU)' if is_gb else 'OFF (Target Synth)'}"
+                        status_timer = 90
                 elif key in (" ", "e", "E"):
                     sess.enable_enh = not sess.enable_enh
                     if not sess.enable_enh:
@@ -434,7 +453,9 @@ def run_interactive_audition(
                         if hasattr(sess, "silence_all"):
                             sess.silence_all()
                     else:
-                        if hasattr(sess, "send_init"):
+                        if hasattr(sess, "resume_playback"):
+                            sess.resume_playback()
+                        elif hasattr(sess, "send_init"):
                             sess.send_init()
                     status_msg = "PAUSED" if paused else "RESUMED"
                     status_timer = 60
@@ -452,15 +473,16 @@ def run_interactive_audition(
                     frame_pcm = sess.tick()
                     total_frames_played += 1
                 else:
-                    if target == "opl3":
-                        frame_pcm = b"\x00" * (sess.engine.samplerate // 60 * 4)
+                    frame_len = (rate // 60) * 4
+                    if target == "opl3" or getattr(sess, "gb_sound", False):
+                        frame_pcm = b"\x00" * frame_len
                     else:
                         frame_pcm = None
 
-                if target == "opl3":
-                    if wav_file and frame_pcm:
+                if frame_pcm:
+                    if wav_file:
                         wav_file.writeframes(frame_pcm)
-                    elif aplay_proc and aplay_proc.stdin and frame_pcm:
+                    elif aplay_proc and aplay_proc.stdin:
                         try:
                             aplay_proc.stdin.write(frame_pcm)
                             aplay_proc.stdin.flush()
@@ -476,109 +498,383 @@ def run_interactive_audition(
                     elif sleep_dur < -0.1:
                         next_tick = time.perf_counter()
 
-                # Status line rendering (~4 Hz update)
-                if total_frames_played % 15 == 0:
+                # Status line rendering (~4 Hz update or immediately on pause)
+                if total_frames_played % 15 == 0 or paused:
                     curr_sec = sess.current_frame // 60
                     tot_sec = sess.total_frames // 60
-                    enh_state = "SOLO" if sess.solo_enh else ("ON" if sess.enable_enh else "OFF")
+                    is_gb = getattr(sess, "gb_sound", False)
+                    if is_gb:
+                        gb_tag = "\033[92m[G: ON]\033[0m"
+                        enh_tag = "\033[90m[Enh: MUTED]\033[0m"
+                    else:
+                        gb_tag = "\033[91m[G: OFF]\033[0m"
+                        if sess.solo_enh:
+                            enh_tag = "\033[93m[Enh: SOLO]\033[0m"
+                        elif sess.enable_enh:
+                            enh_tag = "\033[92m[Enh: ON]\033[0m"
+                        else:
+                            enh_tag = "\033[91m[Enh: OFF]\033[0m"
+
                     tag_a = f"A*:{slot_a['label']}" if active_slot == "A" else f"A:{slot_a['label']}"
                     tag_b = f"B*:{slot_b['label']}" if active_slot == "B" else f"B:{slot_b['label']}"
                     tab_display = f"[{tag_a} | {tag_b}]"
-                    banner = f"\r▶ {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | {target.upper():<4} | Enh: {enh_state:<4} | Tab: {tab_display}"
+                    play_sym = "⏸" if paused else "▶"
+                    banner = f"\r{play_sym} {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | {target.upper():<4} | {gb_tag} | {enh_tag} | Tab: {tab_display}"
                     if status_timer > 0:
                         banner += f" | {status_msg}"
                         status_timer -= 15
-                    sys.stdout.write(f"{banner:<95}")
+                    sys.stdout.write(f"{banner}\033[K")
                     sys.stdout.flush()
 
     finally:
         sys.stdout.write("\n")
-        if target == "opl3":
-            if wav_file:
-                wav_file.close()
-                print(f"Wrote audio to {out_wav}")
-            if aplay_proc:
-                if aplay_proc.stdin:
-                    aplay_proc.stdin.close()
-                aplay_proc.terminate()
-                aplay_proc.wait()
-        else:
-            if hasattr(sess, "silence_all"):
-                sess.silence_all()
+        if wav_file:
+            wav_file.close()
+            print(f"Wrote audio to {out_wav}")
+        if aplay_proc:
+            if aplay_proc.stdin:
+                aplay_proc.stdin.close()
+            aplay_proc.terminate()
+            aplay_proc.wait()
+        if hasattr(sess, "silence_all"):
+            sess.silence_all()
+
+
+# ---------------------------------------------------------------------------
+# Interactive SFX audition loop (OPL3 host synthesis)
+# ---------------------------------------------------------------------------
+def run_interactive_sfx_audition(
+    sfx_query: str,
+    delay_seconds: float = 2.5,
+    seconds: float | None = None,
+    out_wav: Path | None = None,
+):
+    import opl_renderer
+    sess = opl_renderer.SfxSession(sfx_query, delay_seconds=delay_seconds)
+    rate = sess.engine.samplerate
+    wav_file = None
+    aplay_proc = None
+
+    if out_wav:
+        import wave
+        wav_file = wave.open(str(out_wav), "wb")
+        wav_file.setnchannels(2)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(rate)
+    else:
+        aplay_cmd = ["aplay", "-r", str(rate), "-f", "S16_LE", "-c", "2", "-q"]
+        try:
+            aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
+        except FileNotFoundError:
+            raise SystemExit("aplay not found — install alsa-utils or pass --out <file.wav>")
+
+    print(f"\n🔊 [SFX Audition] {sess.canonical_name} ({sess.header_label})")
+    print(f"   Duration: {sess.sfx_frames} frames ({sess.sfx_frames/60:.2f}s) | Replay Delay: {sess.delay_seconds:.1f}s")
+    if sess.yaml_path and sess.yaml_path.exists():
+        print(f"   Tuned YAML: {sess.yaml_path.name}")
+        for ch, cfg in sess.profile.items():
+            print(f"     - Channel {ch}: patch={cfg.get('patch')}, vol={cfg.get('volume', 100)}%")
+    else:
+        print("   Tuned YAML: (None on disk yet — playing raw default)")
+
+    print("\nControls: [Tab] A/B Toggle (Point A: Tuned ↔ Point B: Raw)   [X] Auto-Alternate A↔B")
+    print("          [G] GB Mode On/Off   [Space] Retrigger immediately   [ [ ] / [ ] ] Replay Delay ±0.5s")
+    print("          [P] Pause / Resume   [Q] Quit\n")
+
+    total_frames = 0
+    max_frames = int(seconds * 60) if seconds else None
+    last_mtime = sess.yaml_path.stat().st_mtime if sess.yaml_path and sess.yaml_path.exists() else 0.0
+    status_msg = ""
+    status_timer = 0
+    next_tick = time.perf_counter()
+
+    try:
+        with RawTerminal() as term:
+            while True:
+                if max_frames and total_frames >= max_frames:
+                    break
+
+                # Watch for YAML modifications on disk
+                if sess.yaml_path and sess.yaml_path.exists():
+                    try:
+                        mtime = sess.yaml_path.stat().st_mtime
+                        if mtime > last_mtime:
+                            last_mtime = mtime
+                            time.sleep(0.02)
+                            sess.load_yaml(sess.yaml_path)
+                            sess.retrigger()
+                            status_msg = f"⚡ Hot-reloaded {sess.yaml_path.name} and retriggered!"
+                            status_timer = 120
+                    except Exception as e:
+                        status_msg = f"⚠ Hot-reload error: {e}"
+                        status_timer = 120
+
+                key = term.get_key()
+                if key:
+                    if key.upper() == "Q" or key == "ESC":
+                        break
+                    elif key == " ":
+                        sess.retrigger()
+                        status_msg = "⚡ Retriggered SFX!"
+                        status_timer = 60
+                    elif key == "\t":
+                        slot = sess.toggle_slot()
+                        label = sess.slot_a_label if slot == "A" else sess.slot_b_label
+                        status_msg = f"⚡ Switched to Point {slot}: {label}"
+                        status_timer = 90
+                    elif key in ("g", "G"):
+                        is_gb = sess.toggle_gb_sound()
+                        status_msg = f"⚡ GB Mode: {'ON (Real Game Boy APU)' if is_gb else 'OFF (OPL3 FM)'}"
+                        status_timer = 90
+                    elif key.upper() == "X":
+                        auto_alt = sess.toggle_auto_alternate()
+                        status_msg = f"⚡ Auto-Alternating A↔B: {'ON' if auto_alt else 'OFF'}"
+                        status_timer = 90
+                    elif key == "[":
+                        sess.set_delay(sess.delay_seconds - 0.5)
+                        status_msg = f"⚡ Replay delay set to {sess.delay_seconds:.1f}s"
+                        status_timer = 60
+                    elif key == "]":
+                        sess.set_delay(sess.delay_seconds + 0.5)
+                        status_msg = f"⚡ Replay delay set to {sess.delay_seconds:.1f}s"
+                        status_timer = 60
+                    elif key in ("p", "P"):
+                        sess.paused = not sess.paused
+                        if sess.paused:
+                            sess.silence_all()
+                        status_msg = "⏸ Paused" if sess.paused else "▶ Resumed"
+                        status_timer = 60
+
+                frame_pcm = sess.tick()
+                total_frames += 1
+
+                if wav_file:
+                    wav_file.writeframes(frame_pcm)
+                elif aplay_proc and aplay_proc.stdin:
+                    try:
+                        aplay_proc.stdin.write(frame_pcm)
+                        aplay_proc.stdin.flush()
+                    except BrokenPipeError:
+                        break
+
+                # Progress display
+                if total_frames % 6 == 0 or sess.paused:
+                    cf = sess.current_frame
+                    sf = sess.sfx_frames
+                    tf = sess.total_cycle_frames
+
+                    gb_tag = "\033[92m[G: ON]\033[0m" if sess.gb_sound else "\033[91m[G: OFF]\033[0m"
+                    tag_a = f"A*:{sess.slot_a_label}" if sess.active_slot == "A" else f"A:{sess.slot_a_label}"
+                    tag_b = f"B*:{sess.slot_b_label}" if sess.active_slot == "B" else f"B:{sess.slot_b_label}"
+                    tab_tag = f"Tab: [{tag_a} | {tag_b}]"
+
+                    if sess.auto_alternate:
+                        alt_tag = "\033[92m[Auto A↔B: ON]\033[0m"
+                    else:
+                        alt_tag = "\033[91m[Auto A↔B: OFF]\033[0m"
+
+                    play_sym = "⏸" if sess.paused else "▶"
+                    if sess.paused:
+                        state_str = f"Paused [{cf:02d}/{sf:02d}f]"
+                    elif cf < sf:
+                        state_str = f"Playing [{cf:02d}/{sf:02d}f]"
+                    else:
+                        rem_s = (tf - cf) / 60.0
+                        state_str = f"Delay [{rem_s:.1f}s]"
+
+                    extra = f" | {status_msg}" if status_timer > 0 else ""
+                    if status_timer > 0:
+                        status_timer -= 6
+
+                    sys.stdout.write(f"\r{play_sym} {gb_tag} | {tab_tag} {alt_tag} {state_str:<18} (Delay: {sess.delay_seconds:.1f}s){extra}\033[K")
+                    sys.stdout.flush()
+
+                if not wav_file:
+                    next_tick += (1.0 / 60.0)
+                    now = time.perf_counter()
+                    if next_tick > now:
+                        time.sleep(next_tick - now)
+                    elif now - next_tick > 0.1:
+                        next_tick = now
+    finally:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+        if wav_file:
+            wav_file.close()
+        if aplay_proc:
+            if aplay_proc.stdin:
+                aplay_proc.stdin.close()
+            aplay_proc.terminate()
+            aplay_proc.wait()
 
 
 # ---------------------------------------------------------------------------
 # Track Catalog & Fuzzy Matching
 # ---------------------------------------------------------------------------
-def get_all_tracks() -> list[str]:
+def get_audio_catalog() -> tuple[dict[str, str], dict[str, str]]:
+    """Returns (music_const_to_header, sfx_const_to_header) dynamically parsed from pret.
+
+    Both music tracks and sound effects are declared identically in
+    constants/music_constants.asm via `music_const <CONST>, <Header_Label>`.
+    """
     from pret_audio import AudioROM
     from gen_audio_data import parse_music_constants
     rom = AudioROM(ROOT)
     consts, _ = parse_music_constants()
-    return sorted({lbl for name, lbl in consts.items()
-                   if name.startswith("MUSIC_") and lbl in rom.symtab})
+    music = {name: lbl for name, lbl in consts.items()
+             if name.startswith("MUSIC_") and lbl in rom.symtab}
+    sfx = {name: lbl for name, lbl in consts.items()
+           if name.startswith("SFX_") and lbl in rom.symtab}
+    return music, sfx
 
 
-def resolve_song_label(query: str, tracks: list[str]) -> str:
+def get_all_tracks() -> list[str]:
+    music, _ = get_audio_catalog()
+    return sorted(set(music.values()))
+
+
+def get_all_sfx() -> list[str]:
+    _, sfx = get_audio_catalog()
+    return sorted(set(sfx.keys()))
+
+
+def resolve_audio_label(
+    query: str,
+    music_map: dict[str, str],
+    sfx_map: dict[str, str],
+    force_sfx: bool = False,
+) -> tuple[str, str]:
+    """Resolves query string to ('music', canonical_track_label) or ('sfx', canonical_sfx_const).
+
+    Derived entirely from pret constants and headers (no hardcoded alias tables):
+    - Exact match on constant name or header label
+    - Case-insensitive exact match
+    - Normalized stem match (stripping 'music_', 'sfx_', and '_')
+    - Substring match across stems
+    - difflib fuzzy match across all audio symbols
+    """
     import difflib
 
     query_str = query.strip()
     if not query_str:
-        raise SystemExit("Empty song query.")
+        raise SystemExit("Empty sound or music query.")
 
-    # 1. Exact match
-    if query_str in tracks:
-        return query_str
+    music_headers = {lbl: lbl for lbl in music_map.values()}
+    sfx_headers_to_const = {lbl: name for name, lbl in sfx_map.items()}
 
-    # 2. Case-insensitive exact match
-    lower_map = {t.lower(): t for t in tracks}
-    if query_str.lower() in lower_map:
-        return lower_map[query_str.lower()]
+    def normalize(s: str) -> str:
+        return s.lower().replace("music_", "").replace("sfx_", "").replace("_", "")
 
-    # 3. Substring matches
-    subs = [t for t in tracks if query_str.lower() in t.lower()]
-    if len(subs) == 1:
-        return subs[0]
-    elif len(subs) > 1:
-        # Prefer exact stem match e.g. "PalletTown" matching "Music_PalletTown"
-        stem_matches = [t for t in subs if t.lower() == f"music_{query_str.lower()}"]
-        if len(stem_matches) == 1:
-            return stem_matches[0]
+    q_upper = query_str.upper()
+    q_norm = normalize(query_str)
 
-    # 4. Normalized match (strip "music_" and "_")
-    clean_map = {t.lower().replace("music_", "").replace("_", ""): t for t in tracks}
-    q_clean = query_str.lower().replace("music_", "").replace("_", "")
-    if q_clean in clean_map:
-        return clean_map[q_clean]
+    # 1. Exact constant or header match
+    if not force_sfx:
+        if q_upper in music_map:
+            return "music", music_map[q_upper]
+        if query_str in music_headers:
+            return "music", query_str
+        if f"MUSIC_{q_upper}" in music_map:
+            return "music", music_map[f"MUSIC_{q_upper}"]
 
-    # 5. Fuzzy matching via difflib
-    close = difflib.get_close_matches(q_clean, list(clean_map.keys()), n=1, cutoff=0.45)
+    if q_upper in sfx_map:
+        return "sfx", q_upper
+    if query_str in sfx_headers_to_const:
+        return "sfx", sfx_headers_to_const[query_str]
+    if f"SFX_{q_upper}" in sfx_map:
+        return "sfx", f"SFX_{q_upper}"
+
+    # 2. Case-insensitive exact match against header labels or constant names
+    if not force_sfx:
+        for c, h in music_map.items():
+            if query_str.lower() in (c.lower(), h.lower()):
+                return "music", h
+
+    for c, h in sfx_map.items():
+        if query_str.lower() in (c.lower(), h.lower()):
+            return "sfx", c
+
+    # 3. Normalized stem matching (stripping music_/sfx_ and underscores)
+    music_stems: dict[str, str] = {}
+    for c, h in music_map.items():
+        music_stems[normalize(c)] = h
+        music_stems[normalize(h)] = h
+
+    sfx_stems: dict[str, str] = {}
+    for c, h in sfx_map.items():
+        sfx_stems[normalize(c)] = c
+        sfx_stems[normalize(h)] = c
+
+    if force_sfx:
+        if q_norm in sfx_stems:
+            return "sfx", sfx_stems[q_norm]
+    else:
+        if q_norm in music_stems and q_norm not in sfx_stems:
+            return "music", music_stems[q_norm]
+        if q_norm in sfx_stems and q_norm not in music_stems:
+            return "sfx", sfx_stems[q_norm]
+        if q_norm in music_stems and q_norm in sfx_stems:
+            raise SystemExit(
+                f"Query '{query_str}' matches both MUSIC ({music_stems[q_norm]}) and SFX ({sfx_stems[q_norm]}).\n"
+                f"Use --sfx to select the sound effect, or specify the full constant name."
+            )
+
+    # 4. Substring matching across stems
+    matched_music = set()
+    if not force_sfx:
+        matched_music = {h for stem, h in music_stems.items() if q_norm in stem}
+    matched_sfx = {c for stem, c in sfx_stems.items() if q_norm in stem}
+
+    if len(matched_music) == 1 and not matched_sfx:
+        chosen = next(iter(matched_music))
+        print(f"💡 Substring matched '{query_str}' -> '{chosen}' (MUSIC)")
+        return "music", chosen
+    if len(matched_sfx) == 1 and not matched_music:
+        chosen = next(iter(matched_sfx))
+        print(f"💡 Substring matched '{query_str}' -> '{chosen}' (SFX)")
+        return "sfx", chosen
+
+    # 5. Fuzzy matching via difflib across normalized stems
+    all_stems: dict[str, tuple[str, str]] = {}
+    if not force_sfx:
+        for s, h in music_stems.items():
+            all_stems[s] = ("music", h)
+    for s, c in sfx_stems.items():
+        all_stems[s] = ("sfx", c)
+
+    close = difflib.get_close_matches(q_norm, list(all_stems.keys()), n=1, cutoff=0.38)
     if close:
-        matched = clean_map[close[0]]
-        print(f"💡 Fuzzy matched '{query_str}' -> '{matched}'")
-        return matched
+        kind, item = all_stems[close[0]]
+        print(f"💡 Fuzzy matched '{query_str}' -> '{item}' ({kind.upper()})")
+        return kind, item
 
-    # 6. Ambiguous substring matches
-    if len(subs) > 1:
+    # 6. Ambiguous matches report
+    combined_subs = [f"{m} (MUSIC)" for m in sorted(matched_music)] + [f"{s} (SFX)" for s in sorted(matched_sfx)]
+    if len(combined_subs) > 1:
         raise SystemExit(
-            f"Ambiguous song query '{query_str}'. Matches:\n" +
-            "\n".join(f"  - {m}" for m in subs)
+            f"Ambiguous query '{query_str}'. Matches:\n" +
+            "\n".join(f"  - {m}" for m in combined_subs)
         )
 
-    # 7. Close matches for suggestion
-    close_full = difflib.get_close_matches(query_str.lower(), [t.lower() for t in tracks], n=3, cutoff=0.3)
+    # 7. Suggestions on failure
+    all_names = (list(music_map.values()) if not force_sfx else []) + list(sfx_map.keys())
+    close_full = difflib.get_close_matches(query_str.lower(), [x.lower() for x in all_names], n=4, cutoff=0.25)
     suggestion_str = ""
     if close_full:
-        suggestions = [lower_map[c] for c in close_full]
+        lower_to_orig = {x.lower(): x for x in all_names}
+        suggestions = [lower_to_orig[c] for c in close_full]
         suggestion_str = "\nDid you mean:\n" + "\n".join(f"  - {s}" for s in suggestions)
 
-    raise SystemExit(f"No song matching '{query_str}' found.{suggestion_str}\n(Run 'audition.py --list' to see all tracks)")
+    raise SystemExit(
+        f"No song or sound effect matching '{query_str}' found.{suggestion_str}\n"
+        f"(Run 'audition.py --list-music' or 'audition.py --list-sfx' to inspect available audio)"
+    )
 
 
 def print_song_list(tracks: list[str]):
     import re
     overrides_dir = AUDIO_DIR / "overrides"
-    print(f"\nAvailable Music Tracks ({len(tracks)} total):")
+    print(f"\n🎵 Available Music Tracks ({len(tracks)} total):")
     print(f"  {'#':<3} {'Track Name':<28} {'Enhancements':<22} {'Overrides':<10}")
     print("  " + "-" * 66)
     for idx, t in enumerate(tracks, 1):
@@ -596,7 +892,30 @@ def print_song_list(tracks: list[str]):
         ov_info = "Yes" if ov_path.exists() else "-"
 
         print(f"  {idx:<3} {t:<28} {enh_info:<22} {ov_info:<10}")
-    print("\nUsage: tools/audio/audition.py <SongName>  (fuzzy search supported)\n")
+    print("\nUsage: tools/audio/audition.py <SongName or SFX_Name> [--delay 2.5]  (or --list-sfx for sound effects)\n")
+
+
+def print_sfx_list(sfx_list: list[str]):
+    sfx_dir = AUDIO_DIR / "sfx"
+    tuned_count = 0
+    lines = []
+    for idx, s in enumerate(sfx_list, 1):
+        clean_name = s.lower().replace("sfx_", "").replace("_", "")
+        yaml_name = "-"
+        if sfx_dir.exists():
+            for p in sfx_dir.glob("*.yaml"):
+                if p.stem.lower().replace("sfx_", "").replace("_", "") == clean_name:
+                    yaml_name = p.name
+                    tuned_count += 1
+                    break
+        lines.append(f"  {idx:<4} {s:<32} {yaml_name:<20}")
+
+    print(f"\n🔊 Available Sound Effects ({len(sfx_list)} total, {tuned_count} tuned with OPL3 YAML):")
+    print(f"  {'#':<4} {'SFX Constant':<32} {'YAML Profile':<20}")
+    print("  " + "-" * 60)
+    for line in lines:
+        print(line)
+    print("\nUsage: tools/audio/audition.py <SFX_Name> [--delay 2.5]  (fuzzy search supported)\n")
 
 
 # ---------------------------------------------------------------------------
@@ -607,12 +926,34 @@ def main():
     ap.add_argument(
         "song",
         nargs="?",
-        help="header label, substring, or fuzzy name (e.g. PalletTown, palet, vermillion)",
+        help="song or SFX label, substring, or fuzzy name (e.g. PalletTown, SFX_GO_OUTSIDE, Go_Outside)",
     )
     ap.add_argument(
-        "-l", "--list",
+        "-l", "--list", "--list-music",
+        dest="list_music",
         action="store_true",
-        help="list all available music tracks and their enhancement status",
+        help="list all available music tracks and their enhancement/override status",
+    )
+    ap.add_argument(
+        "--list-sfx",
+        action="store_true",
+        help="list all available sound effects and their YAML profile status",
+    )
+    ap.add_argument(
+        "--list-all",
+        action="store_true",
+        help="list both music tracks and sound effects",
+    )
+    ap.add_argument(
+        "--sfx",
+        action="store_true",
+        help="force interpretation of query as a sound effect",
+    )
+    ap.add_argument(
+        "--delay",
+        type=float,
+        default=2.5,
+        help="delay in seconds between SFX replays (default: 2.5s)",
     )
     ap.add_argument(
         "--target",
@@ -633,25 +974,49 @@ def main():
     )
     args = ap.parse_args()
 
-    all_tracks = get_all_tracks()
+    music_map, sfx_map = get_audio_catalog()
+    all_tracks = sorted(set(music_map.values()))
+    all_sfx = sorted(set(sfx_map.keys()))
 
-    if args.list or not args.song:
+    if args.list_sfx:
+        print_sfx_list(all_sfx)
+        return
+
+    if args.list_all:
+        print_song_list(all_tracks)
+        print_sfx_list(all_sfx)
+        return
+
+    if args.list_music or not args.song:
         print_song_list(all_tracks)
         return
 
-    canonical_song = resolve_song_label(args.song, all_tracks)
-
-    run_interactive_audition(
-        target=args.target,
-        song_label=canonical_song,
-        port_override=args.port,
-        compare_path=args.compare,
-        no_enh=args.no_enh,
-        solo_enh=args.solo_enh,
-        seconds=args.seconds,
-        out_wav=args.out,
-        setup=args.setup,
+    kind, canonical_label = resolve_audio_label(
+        query=args.song,
+        music_map=music_map,
+        sfx_map=sfx_map,
+        force_sfx=args.sfx,
     )
+
+    if kind == "sfx":
+        run_interactive_sfx_audition(
+            sfx_query=canonical_label,
+            delay_seconds=args.delay,
+            seconds=args.seconds,
+            out_wav=args.out,
+        )
+    else:
+        run_interactive_audition(
+            target=args.target,
+            song_label=canonical_label,
+            port_override=args.port,
+            compare_path=args.compare,
+            no_enh=args.no_enh,
+            solo_enh=args.solo_enh,
+            seconds=args.seconds,
+            out_wav=args.out,
+            setup=args.setup,
+        )
 
 
 if __name__ == "__main__":

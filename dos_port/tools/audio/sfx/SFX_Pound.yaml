@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_POUND
+channels:
+  8:
+    patch: noise_heavy_thud
+    volume: 105

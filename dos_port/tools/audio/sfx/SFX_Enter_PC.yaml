@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_ENTER_PC
+channels:
+  5:
+    patch: pulse_soft
+    volume: 100

@@ -1,0 +1,12 @@
+schema: 1
+sfx: SFX_CAUGHT_MON
+channels:
+  5:
+    patch: pulse_soft
+    volume: 100
+  6:
+    patch: pulse_soft
+    volume: 100
+  7:
+    patch: wave
+    volume: 100

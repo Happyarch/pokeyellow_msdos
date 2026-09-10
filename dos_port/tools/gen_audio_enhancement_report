@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 gen_audio_enhancement_report — Render docs/audio_enhancement_status.md from
-the audio enhancement/override YAML sources, plus record maintainer sign-off.
+the audio enhancement/override/sfx YAML sources, plus record maintainer sign-off.
 
 WHAT THIS REPLACES
 -------------------
@@ -13,33 +13,36 @@ pass or tier count can certify. So this tool splits the two kinds of fact:
 
   * STRUCTURAL facts (does tools/audio/enhancements/<Song>.yaml exist, what
     tiers does it declare, does tools/audio/overrides/<Song>.yaml exist, what
-    do its channels/patches say) are read LIVE from the tree every run, the
-    same way project_state/gen_progress_report derive their tables.
+    do its channels/patches say, and what tools/audio/sfx/<SFX>.yaml profiles exist)
+    are read LIVE from the tree every run, the same way project_state/gen_progress_report
+    derive their tables.
   * APPROVAL is not inferred from any of that. It lives in
     tools/audio/enhancement_approvals.json, a small file this tool owns and
     writes itself — never hand-edited. Record a sign-off by invoking this
-    tool with MUSIC_<CONST>=1 (clear one with =0); see Usage below.
+    tool with <TARGET>=1 (clear one with =0), supporting fuzzy matching; see Usage below.
 
 WHAT THIS REPORT DOES NOT PROVE
 --------------------------------
-Presence of an enhancements/*.yaml or overrides/*.yaml file means schema-valid
+Presence of an enhancements/*.yaml, overrides/*.yaml, or sfx/*.yaml file means schema-valid
 content exists at that path. It is NOT lint-clean (run yaml_lint.py for that),
-NOT audition-tested, and NOT a quality judgment. A song with zero enhancement
-channels can still be a finished, signed-off track — not every track needs,
-or can even take without damaging its voice-leading, a full arrangement. A
-song with all three tiers filled in is not thereby approved. Only the
-"Approved" column reflects a human decision, and it reflects nothing else.
+NOT audition-tested, and NOT a quality judgment. A song or SFX with zero custom
+YAML can still be a finished, signed-off item — not every track needs a full arrangement.
+Only the "Approved" column reflects a human decision, and it reflects nothing else.
 
 Usage:
     dos_port/tools/gen_audio_enhancement_report                  # write docs/audio_enhancement_status.md
     dos_port/tools/gen_audio_enhancement_report --stdout          # print instead of writing
-    dos_port/tools/gen_audio_enhancement_report MUSIC_LAVENDER=1  # record sign-off, then report
-    dos_port/tools/gen_audio_enhancement_report MUSIC_LAVENDER=0  # clear sign-off, then report
+    dos_port/tools/gen_audio_enhancement_report MUSIC_LAVENDER=1  # record sign-off by constant
+    dos_port/tools/gen_audio_enhancement_report pallet=1         # record sign-off with fuzzy matching
+    dos_port/tools/gen_audio_enhancement_report SFX_DAMAGE=1     # record SFX sign-off
+    dos_port/tools/gen_audio_enhancement_report damage=1         # record SFX sign-off via fuzzy search
+    dos_port/tools/gen_audio_enhancement_report damage=0         # clear sign-off
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import sys
@@ -53,13 +56,21 @@ REPO_ROOT = SCRIPT_DIR.parents[1]
 AUDIO_DIR = SCRIPT_DIR / "audio"
 ENH_DIR = AUDIO_DIR / "enhancements"
 OVR_DIR = AUDIO_DIR / "overrides"
+SFX_DIR = AUDIO_DIR / "sfx"
 APPROVALS_PATH = AUDIO_DIR / "enhancement_approvals.json"
 OUT_PATH = REPO_ROOT / "docs" / "audio_enhancement_status.md"
 
 sys.path.insert(0, str(AUDIO_DIR))
 import gen_audio_data  # noqa: E402
 
-_ASSIGNMENT_RE = re.compile(r"^(MUSIC_[A-Z0-9_]+)=([01])$")
+_ASSIGNMENT_RE = re.compile(r"^([^=]+)=([01])$")
+
+
+def _load_audition():
+    spec = importlib.util.spec_from_file_location("audition_main", AUDIO_DIR / "audition.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def cell(value):
@@ -76,18 +87,22 @@ def md_table(headers, rows):
 
 
 def canonical_songs():
-    """(const_name, header_label) for every MUSIC_* entry in music_constants.asm.
-
-    parse_music_constants() just parses that one file's text — no ROM
-    assembly needed, so this is cheap to call on every invocation.
-    """
+    """(const_name, header_label) for every MUSIC_* entry in music_constants.asm."""
     consts, _bounds = gen_audio_data.parse_music_constants()
     return sorted((n, l) for n, l in consts.items() if n.startswith("MUSIC_"))
 
 
-def load_yaml_dir(dir_path):
+def canonical_sfx():
+    """(const_name, header_label) for every SFX_* entry in music_constants.asm."""
+    consts, _bounds = gen_audio_data.parse_music_constants()
+    return sorted((n, l) for n, l in consts.items() if n.startswith("SFX_"))
+
+
+def load_yaml_dir(dir_path: Path):
     """{filename_stem: parsed_dict} for every *.yaml directly in dir_path."""
     out = {}
+    if not dir_path.exists():
+        return out
     for path in sorted(dir_path.glob("*.yaml")):
         with path.open(encoding="utf-8") as fh:
             out[path.stem] = yaml.safe_load(fh) or {}
@@ -98,6 +113,18 @@ def tiers_of(enh_data):
     tiers = {ch.get("tier") for ch in (enh_data or {}).get("channels", [])
              if ch.get("tier") is not None}
     return sorted(tiers)
+
+
+def patches_of_sfx(sfx_data):
+    if not sfx_data or "channels" not in sfx_data:
+        return "—"
+    chans = sfx_data.get("channels", {})
+    parts = []
+    for ch in sorted(chans, key=lambda x: int(x) if str(x).isdigit() else str(x)):
+        cfg = chans[ch]
+        patch = cfg.get("patch", "—") if isinstance(cfg, dict) else "—"
+        parts.append(f"ch{ch}: {patch}")
+    return ", ".join(parts) if parts else "—"
 
 
 def load_approvals():
@@ -111,26 +138,58 @@ def save_approvals(approvals):
         json.dumps(approvals, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def apply_mutations(assignments, const_to_label, approvals):
-    """Validate-then-write MUSIC_<CONST>=<0|1> args into the approval store."""
+def apply_mutations(assignments, const_to_label_m, const_to_label_s, approvals):
+    """Validate-then-write <TARGET>=<0|1> args into the approval store, supporting fuzzy matching."""
+    if not assignments:
+        return False
+
+    audition_mod = _load_audition()
+    music_map, sfx_map = audition_mod.get_audio_catalog()
+    music_label_to_const = {lbl: c for c, lbl in music_map.items()}
+    sfx_label_to_const = {lbl: c for c, lbl in sfx_map.items()}
+
     changed = False
     for arg in assignments:
-        m = _ASSIGNMENT_RE.match(arg)
+        m = _ASSIGNMENT_RE.match(arg.strip())
         if not m:
             sys.exit(f"unrecognized argument: {arg!r} "
-                     "(expected MUSIC_<CONST>=1 or MUSIC_<CONST>=0)")
-        const, flag = m.group(1), m.group(2)
-        if const not in const_to_label:
-            sys.exit(f"unknown song constant: {const!r} "
-                      "(not a MUSIC_* entry in constants/music_constants.asm)")
+                     "(expected <SONG_OR_SFX>=1 or =0)")
+        target_raw, flag = m.group(1).strip(), m.group(2)
+
+        # 1. Exact match in constants
+        if target_raw in const_to_label_m:
+            target_const = target_raw
+        elif target_raw in const_to_label_s:
+            target_const = target_raw
+        elif target_raw in music_label_to_const:
+            target_const = music_label_to_const[target_raw]
+        elif target_raw in sfx_label_to_const:
+            target_const = sfx_label_to_const[target_raw]
+        else:
+            # 2. Fuzzy match via audition's resolve_audio_label
+            try:
+                kind, item = audition_mod.resolve_audio_label(target_raw, music_map, sfx_map)
+                if kind == "music":
+                    target_const = music_label_to_const[item]
+                else:
+                    target_const = item
+            except SystemExit as e:
+                sys.exit(f"Could not resolve audio query {target_raw!r}: {e}")
+
         if flag == "1":
-            approvals[const] = {
+            approvals[target_const] = {
                 "approved": True,
                 "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
             }
+            print(f"✓ Recorded approval for {target_const}")
         else:
-            approvals.pop(const, None)
+            if target_const in approvals:
+                approvals.pop(target_const, None)
+                print(f"Cleared approval for {target_const}")
+            else:
+                print(f"No existing approval for {target_const} to clear.")
         changed = True
+
     if changed:
         save_approvals(approvals)
     return changed
@@ -142,66 +201,100 @@ def orphan_note(data):
         return ("enhancement-shaped content (has `channels[].tier`) sitting in "
                 "`overrides/` — not read by `load_overrides()`, which only "
                 "matches the exact canonical filename")
-    return "filename does not match any canonical song label"
+    if isinstance(data, dict) and "sfx" in data:
+        return "sfx profile does not match any canonical SFX constant"
+    return "filename does not match any canonical song or SFX label"
 
 
-def build_report(canonical, const_to_label, label_to_const, approvals):
+def build_report(canonical_music, const_to_label_m, label_to_const_m,
+                 canonical_sfx_list, const_to_label_s, label_to_const_s,
+                 approvals):
     enh_files = load_yaml_dir(ENH_DIR)
     ovr_files = load_yaml_dir(OVR_DIR)
+    sfx_files = load_yaml_dir(SFX_DIR)
 
-    label_set = set(label_to_const)
-    enh_by_label = {s: d for s, d in enh_files.items() if s in label_set}
-    enh_orphans = {s: d for s, d in enh_files.items() if s not in label_set}
-    ovr_by_label = {s: d for s, d in ovr_files.items() if s in label_set}
-    ovr_orphans = {s: d for s, d in ovr_files.items() if s not in label_set}
+    label_set_m = set(label_to_const_m)
+    enh_by_label = {s: d for s, d in enh_files.items() if s in label_set_m}
+    enh_orphans = {s: d for s, d in enh_files.items() if s not in label_set_m}
+    ovr_by_label = {s: d for s, d in ovr_files.items() if s in label_set_m}
+    ovr_orphans = {s: d for s, d in ovr_files.items() if s not in label_set_m}
 
-    total = len(canonical)
+    # Match SFX yaml files to canonical SFX constants
+    sfx_by_const = {}
+    sfx_orphans = {}
+    for stem, d in sfx_files.items():
+        sfx_field = d.get("sfx")
+        if sfx_field in const_to_label_s:
+            sfx_by_const[sfx_field] = (stem, d)
+        else:
+            # Fallback stem match
+            matched_const = None
+            clean_stem = stem.lower().replace("sfx_", "").replace("_", "")
+            for c in const_to_label_s:
+                if c.lower().replace("sfx_", "").replace("_", "") == clean_stem:
+                    matched_const = c
+                    break
+            if matched_const:
+                sfx_by_const[matched_const] = (stem, d)
+            else:
+                sfx_orphans[stem] = d
+
+    total_m = len(canonical_music)
     n_enh = len(enh_by_label)
     n_ovr = len(ovr_by_label)
-    approved_consts = [c for c in approvals if c in const_to_label]
-    n_approved = len(approved_consts)
+    approved_m = [c for c in approvals if c in const_to_label_m and approvals[c].get("approved")]
+    n_approved_m = len(approved_m)
+
+    total_s = len(canonical_sfx_list)
+    n_sfx_tuned = len(sfx_by_const)
+    approved_s = [c for c in approvals if c in const_to_label_s and approvals[c].get("approved")]
+    n_approved_s = len(approved_s)
 
     lines = [
-        '# Audio Enhancement Status', '',
+        '# Audio Enhancement & Sound Effects Status', '',
         '_Generated by `dos_port/tools/gen_audio_enhancement_report`. Do not'
         ' hand-edit — edit the generator, or run the tool with'
-        ' `MUSIC_<CONST>=1`/`=0` to change sign-off._', '',
+        ' `<SONG_OR_SFX>=1`/`=0` (with fuzzy matching) to change sign-off._', '',
         f'_Last generated: {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")}_',
         '',
-        '> **Presence is a structural fact, not a quality signal.** "Enhancement"'
-        ' and "Override" mean a schema-shaped YAML file exists at that path —'
+        '> **Presence is a structural fact, not a quality signal.** "Enhancement",'
+        ' "Override", and "Tuned Profile" mean a schema-shaped YAML file exists at that path —'
         ' not that it is lint-clean (`yaml_lint.py`) or audition-tested.'
         ' **"Approved" is the one column that reflects a human decision**,'
-        ' entered only via `gen_audio_enhancement_report MUSIC_<CONST>=1`,'
+        ' entered only via `gen_audio_enhancement_report <TARGET>=1`,'
         ' never by hand-editing `tools/audio/enhancement_approvals.json`. A'
-        ' song with no enhancement channels at all can be legitimately'
-        ' finished — not every track needs, or can take without damaging its'
-        ' voice-leading, a full arrangement — and a song with all three tiers'
-        ' filled in is not thereby approved.', '',
+        ' song or sound effect with no custom YAML at all can still be legitimately'
+        ' finished, and an entry with files present is not thereby approved.', '',
         '## Summary', '',
+        '### Music', '',
         md_table(['metric', 'count', 'of 49'], [
-            ['has enhancements/*.yaml', n_enh, f'{n_enh}/{total}'],
-            ['has overrides/*.yaml', n_ovr, f'{n_ovr}/{total}'],
-            ['approved (signed off)', n_approved, f'{n_approved}/{total}'],
+            ['has enhancements/*.yaml', n_enh, f'{n_enh}/{total_m}'],
+            ['has overrides/*.yaml', n_ovr, f'{n_ovr}/{total_m}'],
+            ['approved (signed off)', n_approved_m, f'{n_approved_m}/{total_m}'],
+        ]), '',
+        '### Sound Effects (SFX)', '',
+        md_table(['metric', 'count', 'of 167'], [
+            ['has sfx/*.yaml (tuned profile)', n_sfx_tuned, f'{n_sfx_tuned}/{total_s}'],
+            ['approved (signed off)', n_approved_s, f'{n_approved_s}/{total_s}'],
         ]), '',
     ]
 
     # ── Main table ───────────────────────────────────────────────────────
     lines += ['## Per-song status', '']
-    rows = []
-    for const, label in canonical:
+    rows_m = []
+    for const, label in canonical_music:
         enh = enh_by_label.get(label)
         ovr = ovr_by_label.get(label)
         tiers = tiers_of(enh)
         approval = approvals.get(const)
-        rows.append([
+        rows_m.append([
             label,
             'yes' if enh else '—',
             ','.join(str(t) for t in tiers) if tiers else '—',
             'yes' if ovr else '—',
             f'\u2713 {approval["date"]}' if approval else '—',
         ])
-    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Approved'], rows), '']
+    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Approved'], rows_m), '']
 
     # ── Per-song detail ──────────────────────────────────────────────────
     detail_labels = sorted(set(enh_by_label) | set(ovr_by_label))
@@ -210,7 +303,7 @@ def build_report(canonical, const_to_label, label_to_const, approvals):
                   '_Only songs with an enhancement and/or override file get a'
                   ' section here._', '']
         for label in detail_labels:
-            const = label_to_const[label]
+            const = label_to_const_m[label]
             lines += [f'### {label} (`{const}`)', '']
             enh = enh_by_label.get(label)
             if enh:
@@ -247,44 +340,71 @@ def build_report(canonical, const_to_label, label_to_const, approvals):
                     lines += [f'Drums: velocity {drums.get("velocity", "—")}, '
                               f'{len(dmap)} noise-id \u2192 GM-drum mapping(s).', '']
 
+    # ── Sound Effects (SFX) status ───────────────────────────────────────
+    lines += ['## Sound Effects (SFX) status', '',
+              '_Sound effects in Pokémon Yellow have no arrangement enhancement tiers; '
+              'each sound effect is either tuned with an authentic OPL3 FM profile in `tools/audio/sfx/` '
+              'or uses default hardware emulation._', '']
+    rows_s = []
+    for const, label in canonical_sfx_list:
+        sfx_entry = sfx_by_const.get(const)
+        has_profile = 'yes' if sfx_entry else '—'
+        patches_str = patches_of_sfx(sfx_entry[1]) if sfx_entry else '—'
+        appr = approvals.get(const)
+        approved_str = f'\u2713 {appr["date"]}' if appr else '—'
+        rows_s.append([
+            label,
+            const,
+            has_profile,
+            patches_str,
+            approved_str,
+        ])
+    lines += [md_table(['Sound Effect', 'Constant', 'Tuned Profile', 'Patches', 'Approved'], rows_s), '']
+
     # ── Orphan files ─────────────────────────────────────────────────────
     orphans = ([(f'enhancements/{s}.yaml', d) for s, d in sorted(enh_orphans.items())]
-               + [(f'overrides/{s}.yaml', d) for s, d in sorted(ovr_orphans.items())])
+               + [(f'overrides/{s}.yaml', d) for s, d in sorted(ovr_orphans.items())]
+               + [(f'sfx/{s}.yaml', d) for s, d in sorted(sfx_orphans.items())])
     lines += ['## Orphan / unmatched files', '']
     if not orphans:
         lines += ['_None found._', '']
     else:
-        lines += ['_Files present under `enhancements/` or `overrides/` whose'
-                  ' name does not match any canonical `MUSIC_*` song label —'
+        lines += ['_Files present under `enhancements/`, `overrides/`, or `sfx/` whose'
+                  ' name does not match any canonical song or sound effect label —'
                   ' dead weight the pipeline never reads:_', '']
         lines += [md_table(['file', 'note'],
                             [[p, orphan_note(d)] for p, d in orphans]), '']
 
     lines += ['', '---', '',
               '_To reproduce: `dos_port/tools/gen_audio_enhancement_report`.'
-              ' To record sign-off: `dos_port/tools/gen_audio_enhancement_report'
-              ' MUSIC_<CONST>=1` (find the constant name in'
-              ' `constants/music_constants.asm`)._', '']
+              ' To record sign-off: `dos_port/tools/gen_audio_enhancement_report <TARGET>=1` '
+              '(e.g. `damage=1`, `SFX_DAMAGE=1`, `pallet=1`; clear with `=0`)._', '']
     return '\n'.join(lines) + '\n'
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('assignments', nargs='*',
-                     help='MUSIC_<CONST>=1 or =0 to record/clear sign-off '
-                          'before generating the report')
+                     help='<SONG_OR_SFX>=1 or =0 to record/clear sign-off '
+                          'before generating the report (supports fuzzy matching)')
     ap.add_argument('--stdout', action='store_true',
                      help='print instead of writing docs/audio_enhancement_status.md')
     args = ap.parse_args()
 
-    canonical = canonical_songs()
-    const_to_label = dict(canonical)
-    label_to_const = {label: const for const, label in canonical}
+    canonical_m = canonical_songs()
+    const_to_label_m = dict(canonical_m)
+    label_to_const_m = {label: const for const, label in canonical_m}
+
+    canonical_s = canonical_sfx()
+    const_to_label_s = dict(canonical_s)
+    label_to_const_s = {label: const for const, label in canonical_s}
 
     approvals = load_approvals()
-    apply_mutations(args.assignments, const_to_label, approvals)
+    apply_mutations(args.assignments, const_to_label_m, const_to_label_s, approvals)
 
-    report = build_report(canonical, const_to_label, label_to_const, approvals)
+    report = build_report(canonical_m, const_to_label_m, label_to_const_m,
+                          canonical_s, const_to_label_s, label_to_const_s,
+                          approvals)
     if args.stdout:
         sys.stdout.write(report)
     else:

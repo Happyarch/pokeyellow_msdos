@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_NOT_VERY_EFFECTIVE
+channels:
+  8:
+    patch: noise_crunch
+    volume: 95

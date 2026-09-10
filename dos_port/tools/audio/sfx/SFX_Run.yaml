@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_RUN
+channels:
+  8:
+    patch: noise_soft_whoosh
+    volume: 85

@@ -1,0 +1,6 @@
+schema: 1
+sfx: SFX_HORN_DRILL
+channels:
+  8:
+    patch: noise_crunch
+    volume: 100

@@ -148,4 +148,6 @@ dos_port/node_modules/
 dos_port/tools/audio/opl_synth
 dos_port/tools/audio/libnukedopl.so
 dos_port/tools/audio/libmidiout.so
+dos_port/tools/audio/libgbapu.so
+dos_port/tools/audio/.gb_snd_emu/
 dos_port/tools/audio/.revisions/

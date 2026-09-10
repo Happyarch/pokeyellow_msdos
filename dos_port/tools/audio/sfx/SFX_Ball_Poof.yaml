@@ -1,0 +1,9 @@
+schema: 1
+sfx: SFX_BALL_POOF
+channels:
+  5:
+    patch: pulse_soft
+    volume: 100
+  8:
+    patch: noise_poof
+    volume: 100

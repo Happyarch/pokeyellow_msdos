@@ -1,0 +1,9 @@
+schema: 1
+sfx: SFX_SWAP
+channels:
+  5:
+    patch: pulse_soft
+    volume: 100
+  6:
+    patch: pulse_soft
+    volume: 100
