@@ -229,6 +229,13 @@ class MidiSession:
     def silence_all(self):
         self.midi.all_notes_off()
 
+    def reload_overrides(self):
+        self.ov = load_overrides(self.song_label)
+        self._compile_base()
+        if self.enable_base and not self.solo_enh:
+            for msg in self.base_init_msgs:
+                self.midi.send(msg)
+
     def tick(self):
         f = self.current_frame
         if self.enable_base and not self.solo_enh:

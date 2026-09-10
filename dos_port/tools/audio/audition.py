@@ -190,13 +190,13 @@ def run_interactive_audition(
 
     canonical_name = sess.song_label
     yaml_path = ENHANCE_DIR / f"{canonical_name}.yaml"
+    overrides_path = AUDIO_DIR / "overrides" / f"{canonical_name}.yaml"
 
     rev_history: list[tuple[int, str, Path]] = []
     current_rev_idx = -1
-    ab_target_idx = -1
-    showing_working_copy = True
-    manual_checkpoint_yaml: str | None = None
+    browse_rev_idx = -1
     last_mtime = 0.0
+    last_ov_mtime = 0.0
 
     if yaml_path.exists():
         initial_text = yaml_path.read_text(encoding="utf-8")
@@ -204,10 +204,47 @@ def run_interactive_audition(
         init_id, init_path = revisions.save_snapshot(canonical_name, initial_text, "session_start")
         rev_history = revisions.list_revisions(canonical_name)
         current_rev_idx = len(rev_history) - 1
-        ab_target_idx = max(0, current_rev_idx - 1)
+        browse_rev_idx = current_rev_idx
         sess.load_enhancement(yaml_path)
     elif compare_path and compare_path.exists():
         sess.load_enhancement(compare_path)
+
+    if overrides_path.exists():
+        last_ov_mtime = overrides_path.stat().st_mtime
+
+    # Explicit comparison points: Point A and Point B for [Tab] toggling.
+    # Point A defaults to the live Working Copy on disk.
+    slot_a = {
+        "label": "Working Copy",
+        "content": None,
+        "is_live": True,
+        "rev_id": rev_history[-1][0] if rev_history else None,
+    }
+
+    # Point B defaults to compare_path if passed, or Rev 1 (Session Start).
+    if compare_path and compare_path.exists():
+        slot_b = {
+            "label": f"Compare ({compare_path.name})",
+            "content": compare_path.read_text(encoding="utf-8"),
+            "is_live": False,
+            "rev_id": None,
+        }
+    elif rev_history:
+        slot_b = {
+            "label": f"Rev {rev_history[0][0]} (Session Start)",
+            "content": revisions.get_revision_content(canonical_name, rev_history[0][0]),
+            "is_live": False,
+            "rev_id": rev_history[0][0],
+        }
+    else:
+        slot_b = {
+            "label": "Empty",
+            "content": None,
+            "is_live": False,
+            "rev_id": None,
+        }
+
+    active_slot = "A"  # "A" or "B"
 
     if no_enh:
         sess.enable_enh = False
@@ -215,8 +252,8 @@ def run_interactive_audition(
         sess.solo_enh = True
 
     print(f"\n🎵 [{target.upper()}] Auditioning: {canonical_name}")
-    print("Controls: [Tab] A/B Toggle  [Space] Enh On/Off  [M] Solo Enh")
-    print("          [ [ ] / [ ] ] Revisions  [C] Checkpoint  [U] Revert on Disk  [Q] Quit\n")
+    print("Controls: [Tab] A/B Toggle  [A] Set Point A  [B]/[C] Set Point B (Checkpoint)")
+    print("          [Space] Enh On/Off  [M] Solo Enh   [ [ ] / [ ] ] Revisions  [U] Revert on Disk  [Q] Quit\n")
 
     paused = False
     total_frames_played = 0
@@ -231,7 +268,7 @@ def run_interactive_audition(
                 if max_frames and total_frames_played >= max_frames:
                     break
 
-                # Watch for file modifications on disk
+                # Watch for enhancement modifications on disk
                 if yaml_path.exists():
                     try:
                         mtime = yaml_path.stat().st_mtime
@@ -241,14 +278,37 @@ def run_interactive_audition(
                             new_text = yaml_path.read_text(encoding="utf-8")
                             new_id, new_path = revisions.save_snapshot(canonical_name, new_text, "live_tweak")
                             rev_history = revisions.list_revisions(canonical_name)
-                            ab_target_idx = current_rev_idx  # prior version becomes A/B target
                             current_rev_idx = len(rev_history) - 1
-                            showing_working_copy = True
-                            sess.load_enhancement(yaml_path)
-                            status_msg = f"⚡ Hot-reloaded Rev {new_id}! (Press [Tab] for A/B)"
-                            status_timer = 180
+                            browse_rev_idx = current_rev_idx
+
+                            # Update Point A if it is live tracking the working copy
+                            if slot_a["is_live"]:
+                                slot_a["rev_id"] = new_id
+                                if active_slot == "A":
+                                    sess.load_enhancement(yaml_path)
+                                    status_msg = f"⚡ Hot-reloaded Rev {new_id}! [Tab] A: Working Copy ↔ B: {slot_b['label']}"
+                                    status_timer = 180
+                                else:
+                                    status_msg = f"⚡ Saved Rev {new_id} to Point A (playing Point B: {slot_b['label']})"
+                                    status_timer = 150
+                            # Point B is preserved untouched!
                     except Exception as e:
                         status_msg = f"⚠ Hot-reload error: {e}"
+                        status_timer = 120
+
+                # Watch for channel overrides modifications on disk
+                if overrides_path.exists():
+                    try:
+                        ov_mtime = overrides_path.stat().st_mtime
+                        if ov_mtime > last_ov_mtime:
+                            last_ov_mtime = ov_mtime
+                            time.sleep(0.02)
+                            if hasattr(sess, "reload_overrides"):
+                                sess.reload_overrides()
+                            status_msg = "⚡ Hot-reloaded channel overrides!"
+                            status_timer = 150
+                    except Exception as e:
+                        status_msg = f"⚠ Overrides reload error: {e}"
                         status_timer = 120
 
                 # Keystroke handling
@@ -256,34 +316,58 @@ def run_interactive_audition(
                 if key in ("q", "Q", "ESC", "\x03"):
                     break
                 elif key in ("\t",):  # Tab: A/B toggle
-                    if compare_path and compare_path.exists():
-                        showing_working_copy = not showing_working_copy
-                        target_p = yaml_path if showing_working_copy else compare_path
-                        sess.load_enhancement(target_p)
-                        status_msg = f"Swapped to: {target_p.name}"
-                        status_timer = 120
-                    elif manual_checkpoint_yaml is not None:
-                        showing_working_copy = not showing_working_copy
-                        if showing_working_copy:
-                            sess.load_enhancement(yaml_path)
-                            status_msg = "A/B: Working Copy"
-                        else:
-                            sess.load_enhancement(manual_checkpoint_yaml)
-                            status_msg = "A/B: Checkpoint"
-                        status_timer = 120
-                    elif rev_history and len(rev_history) >= 2:
-                        showing_working_copy = not showing_working_copy
-                        if showing_working_copy:
-                            sess.load_enhancement(yaml_path)
-                            status_msg = f"A/B: Working Copy (Rev {rev_history[current_rev_idx][0]})"
-                        else:
-                            ab_content = revisions.get_revision_content(canonical_name, rev_history[ab_target_idx][0])
-                            sess.load_enhancement(ab_content)
-                            status_msg = f"A/B: Comparing against Rev {rev_history[ab_target_idx][0]}"
-                        status_timer = 120
+                    if active_slot == "A":
+                        active_slot = "B"
+                        target_slot = slot_b
                     else:
-                        status_msg = "No prior revision yet for A/B (save file to create Rev 2)"
-                        status_timer = 120
+                        active_slot = "A"
+                        target_slot = slot_a
+
+                    if target_slot["is_live"]:
+                        sess.load_enhancement(yaml_path)
+                    else:
+                        sess.load_enhancement(target_slot["content"])
+                    status_msg = f"▶ [Tab] Point {active_slot}: {target_slot['label']}"
+                    status_timer = 120
+                elif key in ("b", "B", "c", "C"):  # Set Point B / Checkpoint
+                    if rev_history and browse_rev_idx != current_rev_idx:
+                        rev_num = rev_history[browse_rev_idx][0]
+                        content = revisions.get_revision_content(canonical_name, rev_num)
+                        slot_b["label"] = f"Rev {rev_num}"
+                        slot_b["content"] = content
+                        slot_b["is_live"] = False
+                        slot_b["rev_id"] = rev_num
+                        status_msg = f"📌 Point B set to Rev {rev_num} (Checkpoint)!"
+                    else:
+                        current_text = yaml_path.read_text(encoding="utf-8") if yaml_path.exists() else ""
+                        chk_id, _ = revisions.save_snapshot(canonical_name, current_text, "checkpoint")
+                        rev_history = revisions.list_revisions(canonical_name)
+                        current_rev_idx = len(rev_history) - 1
+                        browse_rev_idx = current_rev_idx
+                        slot_b["label"] = f"Rev {chk_id} (Checkpoint)"
+                        slot_b["content"] = current_text
+                        slot_b["is_live"] = False
+                        slot_b["rev_id"] = chk_id
+                        status_msg = f"📌 Point B (Checkpoint) set to Rev {chk_id}!"
+                    status_timer = 150
+                elif key in ("a", "A"):  # Set Point A
+                    if rev_history and browse_rev_idx != current_rev_idx:
+                        rev_num = rev_history[browse_rev_idx][0]
+                        content = revisions.get_revision_content(canonical_name, rev_num)
+                        slot_a["label"] = f"Rev {rev_num}"
+                        slot_a["content"] = content
+                        slot_a["is_live"] = False
+                        slot_a["rev_id"] = rev_num
+                        status_msg = f"📌 Point A locked to Rev {rev_num}!"
+                    else:
+                        slot_a["label"] = "Working Copy"
+                        slot_a["content"] = None
+                        slot_a["is_live"] = True
+                        slot_a["rev_id"] = rev_history[-1][0] if rev_history else None
+                        if active_slot == "A":
+                            sess.load_enhancement(yaml_path)
+                        status_msg = "📌 Point A set to Working Copy (Live)!"
+                    status_timer = 150
                 elif key in (" ", "e", "E"):
                     sess.enable_enh = not sess.enable_enh
                     if not sess.enable_enh:
@@ -298,7 +382,8 @@ def run_interactive_audition(
                             sess.tier_filter.remove(1)
                         else:
                             sess.tier_filter.add(1)
-                        sess.load_enhancement(yaml_path if showing_working_copy else None)
+                        active_content = yaml_path if (active_slot == "A" and slot_a["is_live"]) else (slot_a["content"] if active_slot == "A" else slot_b["content"])
+                        sess.load_enhancement(active_content)
                         status_msg = f"Tier 1: {'ON' if 1 in sess.tier_filter else 'OFF'}"
                         status_timer = 90
                 elif key in ("m", "M"):
@@ -309,40 +394,38 @@ def run_interactive_audition(
                         sess.send_init()
                     status_msg = f"Solo Enhancements: {'ON' if sess.solo_enh else 'OFF'}"
                     status_timer = 90
-                elif key in ("c", "C"):
-                    if yaml_path.exists():
-                        manual_checkpoint_yaml = yaml_path.read_text(encoding="utf-8")
-                        status_msg = "📌 Checkpoint saved to memory! [Tab] will toggle against it."
-                        status_timer = 150
                 elif key == "[":  # previous revision
-                    if rev_history and ab_target_idx > 0:
-                        ab_target_idx -= 1
-                        rev_num = rev_history[ab_target_idx][0]
-                        ab_content = revisions.get_revision_content(canonical_name, rev_num)
-                        showing_working_copy = False
-                        sess.load_enhancement(ab_content)
-                        status_msg = f"Loaded Rev {rev_num} ({ab_target_idx+1}/{len(rev_history)})"
-                        status_timer = 120
+                    if rev_history and browse_rev_idx > 0:
+                        browse_rev_idx -= 1
+                        rev_num = rev_history[browse_rev_idx][0]
+                        content = revisions.get_revision_content(canonical_name, rev_num)
+                        sess.load_enhancement(content)
+                        status_msg = f"Listening: Rev {rev_num} ({browse_rev_idx+1}/{len(rev_history)}) — Press [A] or [B] to assign"
+                        status_timer = 150
                 elif key == "]":  # next revision
-                    if rev_history and ab_target_idx < len(rev_history) - 1:
-                        ab_target_idx += 1
-                        rev_num = rev_history[ab_target_idx][0]
-                        if ab_target_idx == current_rev_idx:
-                            showing_working_copy = True
+                    if rev_history and browse_rev_idx < len(rev_history) - 1:
+                        browse_rev_idx += 1
+                        rev_num = rev_history[browse_rev_idx][0]
+                        if browse_rev_idx == current_rev_idx and slot_a["is_live"]:
                             sess.load_enhancement(yaml_path)
-                            status_msg = f"Loaded Current Working Copy (Rev {rev_num})"
+                            status_msg = f"Listening: Working Copy (Rev {rev_num}) — Press [A] or [B] to assign"
                         else:
-                            showing_working_copy = False
-                            ab_content = revisions.get_revision_content(canonical_name, rev_num)
-                            sess.load_enhancement(ab_content)
-                            status_msg = f"Loaded Rev {rev_num} ({ab_target_idx+1}/{len(rev_history)})"
-                        status_timer = 120
+                            content = revisions.get_revision_content(canonical_name, rev_num)
+                            sess.load_enhancement(content)
+                            status_msg = f"Listening: Rev {rev_num} ({browse_rev_idx+1}/{len(rev_history)}) — Press [A] or [B] to assign"
+                        status_timer = 150
                 elif key in ("u", "U"):  # Revert on disk
-                    if rev_history and not showing_working_copy:
-                        rev_num = rev_history[ab_target_idx][0]
+                    if rev_history:
+                        rev_num = rev_history[browse_rev_idx][0]
                         if revisions.revert_to_revision(canonical_name, rev_num):
                             last_mtime = yaml_path.stat().st_mtime
-                            showing_working_copy = True
+                            slot_a["label"] = "Working Copy"
+                            slot_a["content"] = None
+                            slot_a["is_live"] = True
+                            slot_a["rev_id"] = rev_num
+                            active_slot = "A"
+                            browse_rev_idx = current_rev_idx
+                            sess.load_enhancement(yaml_path)
                             status_msg = f"↺ Reverted disk file to Rev {rev_num}!"
                             status_timer = 180
                 elif key in ("p", "P"):
@@ -398,12 +481,14 @@ def run_interactive_audition(
                     curr_sec = sess.current_frame // 60
                     tot_sec = sess.total_frames // 60
                     enh_state = "SOLO" if sess.solo_enh else ("ON" if sess.enable_enh else "OFF")
-                    active_rev = f"Rev {rev_history[ab_target_idx][0]}" if not showing_working_copy and rev_history else "Working"
-                    banner = f"\r▶ {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | Target: {target.upper():<4} | Enh: {enh_state:<4} | Layer: {active_rev:<8}"
+                    tag_a = f"A*:{slot_a['label']}" if active_slot == "A" else f"A:{slot_a['label']}"
+                    tag_b = f"B*:{slot_b['label']}" if active_slot == "B" else f"B:{slot_b['label']}"
+                    tab_display = f"[{tag_a} | {tag_b}]"
+                    banner = f"\r▶ {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | {target.upper():<4} | Enh: {enh_state:<4} | Tab: {tab_display}"
                     if status_timer > 0:
                         banner += f" | {status_msg}"
                         status_timer -= 15
-                    sys.stdout.write(f"{banner:<80}")
+                    sys.stdout.write(f"{banner:<95}")
                     sys.stdout.flush()
 
     finally:
