@@ -371,13 +371,111 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
 
 
 # ---------------------------------------------------------------------------
+# Track Catalog & Fuzzy Matching
+# ---------------------------------------------------------------------------
+def get_all_tracks() -> list[str]:
+    from pret_audio import AudioROM
+    from gen_audio_data import parse_music_constants
+    rom = AudioROM(ROOT)
+    consts, _ = parse_music_constants()
+    return sorted({lbl for name, lbl in consts.items()
+                   if name.startswith("MUSIC_") and lbl in rom.symtab})
+
+
+def resolve_song_label(query: str, tracks: list[str]) -> str:
+    import difflib
+
+    query_str = query.strip()
+    if not query_str:
+        raise SystemExit("Empty song query.")
+
+    # 1. Exact match
+    if query_str in tracks:
+        return query_str
+
+    # 2. Case-insensitive exact match
+    lower_map = {t.lower(): t for t in tracks}
+    if query_str.lower() in lower_map:
+        return lower_map[query_str.lower()]
+
+    # 3. Substring matches
+    subs = [t for t in tracks if query_str.lower() in t.lower()]
+    if len(subs) == 1:
+        return subs[0]
+    elif len(subs) > 1:
+        # Prefer exact stem match e.g. "PalletTown" matching "Music_PalletTown"
+        stem_matches = [t for t in subs if t.lower() == f"music_{query_str.lower()}"]
+        if len(stem_matches) == 1:
+            return stem_matches[0]
+
+    # 4. Normalized match (strip "music_" and "_")
+    clean_map = {t.lower().replace("music_", "").replace("_", ""): t for t in tracks}
+    q_clean = query_str.lower().replace("music_", "").replace("_", "")
+    if q_clean in clean_map:
+        return clean_map[q_clean]
+
+    # 5. Fuzzy matching via difflib
+    close = difflib.get_close_matches(q_clean, list(clean_map.keys()), n=1, cutoff=0.45)
+    if close:
+        matched = clean_map[close[0]]
+        print(f"💡 Fuzzy matched '{query_str}' -> '{matched}'")
+        return matched
+
+    # 6. Ambiguous substring matches
+    if len(subs) > 1:
+        raise SystemExit(
+            f"Ambiguous song query '{query_str}'. Matches:\n" +
+            "\n".join(f"  - {m}" for m in subs)
+        )
+
+    # 7. Close matches for suggestion
+    close_full = difflib.get_close_matches(query_str.lower(), [t.lower() for t in tracks], n=3, cutoff=0.3)
+    suggestion_str = ""
+    if close_full:
+        suggestions = [lower_map[c] for c in close_full]
+        suggestion_str = "\nDid you mean:\n" + "\n".join(f"  - {s}" for s in suggestions)
+
+    raise SystemExit(f"No song matching '{query_str}' found.{suggestion_str}\n(Run 'audition.py --list' to see all tracks)")
+
+
+def print_song_list(tracks: list[str]):
+    import re
+    overrides_dir = AUDIO_DIR / "overrides"
+    print(f"\nAvailable Music Tracks ({len(tracks)} total):")
+    print(f"  {'#':<3} {'Track Name':<28} {'Enhancements':<22} {'Overrides':<10}")
+    print("  " + "-" * 66)
+    for idx, t in enumerate(tracks, 1):
+        enh_path = ENHANCE_DIR / f"{t}.yaml"
+        enh_info = "-"
+        if enh_path.exists():
+            text = enh_path.read_text(encoding="utf-8")
+            tiers = sorted(set(re.findall(r"tier:\s*([123])", text)))
+            if tiers:
+                enh_info = f"Tier {', '.join(tiers)}"
+            else:
+                enh_info = "Yes"
+
+        ov_path = overrides_dir / f"{t}.yaml"
+        ov_info = "Yes" if ov_path.exists() else "-"
+
+        print(f"  {idx:<3} {t:<28} {enh_info:<22} {ov_info:<10}")
+    print("\nUsage: tools/audio/audition.py <SongName>  (fuzzy search supported)\n")
+
+
+# ---------------------------------------------------------------------------
 # Main CLI
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument(
         "song",
-        help="header label or unique substring (e.g. Music_PalletTown or PalletTown)",
+        nargs="?",
+        help="header label, substring, or fuzzy name (e.g. PalletTown, palet, vermillion)",
+    )
+    ap.add_argument(
+        "-l", "--list",
+        action="store_true",
+        help="list all available music tracks and their enhancement status",
     )
     ap.add_argument(
         "--target",
@@ -398,10 +496,18 @@ def main():
     )
     args = ap.parse_args()
 
+    all_tracks = get_all_tracks()
+
+    if args.list or not args.song:
+        print_song_list(all_tracks)
+        return
+
+    canonical_song = resolve_song_label(args.song, all_tracks)
+
     # OPL3 target
     if args.target == "opl3":
         run_opl3_audition(
-            song_label=args.song,
+            song_label=canonical_song,
             compare_path=args.compare,
             no_enh=args.no_enh,
             solo_enh=args.solo_enh,
@@ -417,13 +523,13 @@ def main():
             f"{mdir} missing — run `make assets` "
             f"(or gb_to_midi.py --target {args.target})"
         )
-    hits = sorted(p for p in mdir.glob("*.mid") if args.song in p.stem)
-    exact = [p for p in hits if p.stem == args.song]
+    hits = sorted(p for p in mdir.glob("*.mid") if canonical_song in p.stem)
+    exact = [p for p in hits if p.stem == canonical_song]
     if exact:
         hits = exact
     if len(hits) != 1:
         raise SystemExit(
-            f"song {args.song!r} matches {[p.stem for p in hits] or 'nothing'}"
+            f"song {canonical_song!r} matches {[p.stem for p in hits] or 'nothing'}"
         )
     mid = hits[0].read_bytes()
 
@@ -445,3 +551,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
