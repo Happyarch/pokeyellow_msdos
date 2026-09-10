@@ -180,8 +180,19 @@ other tier 2–3 voices.
 ## Auditioning (how to actually hear it)
 
 The listen loop lives in the **build-and-debug** skill ("Auditioning music").
-Short form: `mt32emu-qt &` then `tools/audio/audition.py --target mt32 <Song>` (pass
-`--setup` to prepend the timbres.yaml setup SysEx; `--target opl3` is now the default);
-end-to-end via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
+Short form: `mt32emu-qt &` then `tools/audio/audition.py --target mt32 <Song>` (or fuzzy match
+like `tools/audio/audition.py --target mt32 celadon`; pass `--setup` to prepend the timbres.yaml
+setup SysEx; `--target opl3` is default).
+
+Auditioning features the full interactive TUI:
+- **`[Tab]`**: Instant position-locked A/B toggle between your current working YAML and previous revision/checkpoint.
+- **`[Space]` / `[E]`**: Toggle enhancements On / Off (Pure GB vs. Enhanced).
+- **`[M]`**: Solo enhancements (mutes base GB channels).
+- **`[ [ ]` / `[ ] ]`**: Step through disk revisions in `tools/audio/.revisions/<Song>/`.
+- **`[U]`**: Revert disk YAML to selected revision.
+- **`[C]`**: Save manual checkpoint.
+- **Live Hot-Reload**: Save your YAML editor/LLM changes and `audition.py` reloads them immediately mid-song.
+
+End-to-end in-DOS verification via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
 The track is the `TRACK=` make variable — never edit the Makefile or
 debug_dump.asm to swap songs.
