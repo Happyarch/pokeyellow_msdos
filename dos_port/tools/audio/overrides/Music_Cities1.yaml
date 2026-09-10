@@ -1,0 +1,41 @@
+# Music_Cities1 — per-song MIDI overrides (see README.md for schema).
+#
+# Vanilla defaults are 80/80/38: both pulses render as MT-32 factory "Sax 3"
+# (identical timbre — ch1's motor and ch2's lead collapse wherever they cross,
+# which in this busy 32-bar loop is everywhere) and ch3 renders as "Warm
+# Bell", whose long decay + hall reverb washes the patterned glue over both
+# lines. Same diagnosis as Celadon/Vermilion, same cure: one instrument
+# family per GB channel, short decay on the patterned voice.
+#
+# Registers from the frame-exact sim: ch2 is the melody (C#4..F#6, long
+# octave-5/6 tones with octave-4 dips at mm4/8/12/16); ch1 is the motoric
+# inner line (A3..B4, density 1.55); ch3 is the patterned 8th-note glue
+# (D#4..B4, density 1.41). Bright city-pop instrumentation: trumpet lead
+# with bite over an electric-piano motor and a dry plucked glue.
+channels:
+  1:
+    mt32_program: "Elec Piano 1"  # percussive attack suits the 16th motor
+    gm_program: "Electric Piano 1"
+    volume: 92                    # under the lead
+    pan: 48                       # inner line left, melody right
+  2:
+    mt32_program: "Trumpet 1"     # bright lead, owns the octave-5/6 register
+    gm_program: "Trumpet"
+    volume: 104                   # foreground over motor + drums
+    pan: 80
+  3:
+    mt32_program: "Pizzicato"     # dry pluck for the 8th-note figures;
+    gm_program: "Pizzicato Strings"  # kills the Warm Bell decay wash
+    volume: 72                    # glue sits between the spread lines
+    pan: 64
+drums:
+  # A/B candidate: ch4 uses noise instruments 6/7/8, all kick (36) by
+  # default. GB-side truth (DRUM_PARAMS / NR43): 8 is bright 15-bit hiss
+  # (the sub1/sub2 subdivision runs) while 6 and 7 are lower 7-bit metallic
+  # hits (6 the steady pulse, 7 the accent). Delete this section to audition
+  # the all-kick default.
+  velocity: 100
+  map:
+    6: 36                        # kick — default kept, stated for the record
+    7: 41                        # low floor tom accent
+    8: 42                        # closed hat for the hiss runs
