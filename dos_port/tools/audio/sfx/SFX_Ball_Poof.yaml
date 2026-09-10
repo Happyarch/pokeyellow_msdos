@@ -2,7 +2,7 @@ schema: 1
 sfx: SFX_BALL_POOF
 channels:
   5:
-    patch: pulse_soft
+    patch: duty_50
     volume: 100
   8:
     patch: noise_poof

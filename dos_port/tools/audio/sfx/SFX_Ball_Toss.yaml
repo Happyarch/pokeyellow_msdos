@@ -2,8 +2,8 @@ schema: 1
 sfx: SFX_BALL_TOSS
 channels:
   5:
-    patch: pulse_soft
-    volume: 95
+    patch: square_sfx
+    volume: 100
   6:
-    patch: pulse_soft
-    volume: 95
+    patch: square_sfx
+    volume: 100
