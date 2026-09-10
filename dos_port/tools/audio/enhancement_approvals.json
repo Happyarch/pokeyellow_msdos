@@ -3,6 +3,10 @@
     "approved": true,
     "date": "2026-08-13"
   },
+  "MUSIC_CITIES1": {
+    "approved": true,
+    "date": "2026-09-10"
+  },
   "MUSIC_GYM_LEADER_BATTLE": {
     "approved": true,
     "date": "2026-08-12"
@@ -15,8 +19,20 @@
     "approved": true,
     "date": "2026-09-10"
   },
+  "MUSIC_PKMN_HEALED": {
+    "approved": true,
+    "date": "2026-09-10"
+  },
   "MUSIC_VERMILION": {
     "approved": true,
     "date": "2026-08-13"
+  },
+  "SFX_BALL_POOF": {
+    "approved": true,
+    "date": "2026-09-10"
+  },
+  "SFX_BALL_TOSS": {
+    "approved": true,
+    "date": "2026-09-10"
   }
 }
