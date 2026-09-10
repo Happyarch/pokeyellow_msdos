@@ -32,6 +32,31 @@ POOL_SIZE = 10
 POOL_OPL2_SAFE = 5
 
 
+OPL_VOL_TABLE = [63, 31, 23, 19, 15, 13, 11, 9, 7, 6, 5, 4, 3, 2, 1, 0]
+
+DRUM_PARAMS: dict[int, tuple[int, int, int]] = {
+    1: (12, 1, 51),
+    2: (11, 1, 51),
+    3: (10, 1, 51),
+    4: (8, 1, 51),
+    5: (8, 4, 55),
+    6: (5, 1, 42),
+    7: (4, 1, 43),
+    8: (8, 1, 16),
+    9: (8, 2, 35),
+    10: (8, 2, 37),
+    11: (8, 2, 38),
+    12: (10, 1, 16),
+    13: (10, 2, 17),
+    14: (10, 2, 80),
+    15: (10, 1, 24),
+    16: (9, 1, 40),
+    17: (9, 1, 34),
+    18: (7, 1, 34),
+    19: (6, 1, 34),
+}
+
+
 def ensure_synth_built():
     """Ensures libnukedopl.so is compiled."""
     if not LIB_PATH.exists():
@@ -55,6 +80,25 @@ def fnum_block(midi_note: int) -> tuple[int, int]:
     return 1023, 7
 
 
+def nr43_to_fnum_block(nr43: int) -> tuple[int, int]:
+    s = (nr43 >> 4) + 1
+    r = nr43 & 0x07
+    if r == 0:
+        hz = 524288 >> s
+    else:
+        divisor = r << s
+        hz = 262144 // divisor if divisor else 262144
+
+    fnum = (hz << 13) // 49716
+    block = 7
+    while fnum < 512 and block > 0:
+        fnum <<= 1
+        block -= 1
+    if fnum > 1023:
+        fnum = 1023
+    return fnum, block
+
+
 def carrier_level(patch_name: str, vel: int, volume: int) -> int:
     base_tl = PATCHES[patch_name][6] & 0x3F
     eff = min(127, vel * volume // 127)
@@ -62,7 +106,7 @@ def carrier_level(patch_name: str, vel: int, volume: int) -> int:
 
 
 class OplEngine:
-    def __init__(self, samplerate: int = 49716):
+    def __init__(self, samplerate: int = 48000):
         ensure_synth_built()
         self.lib = ctypes.CDLL(str(LIB_PATH))
         self.lib.opl_create.restype = ctypes.c_void_p
@@ -78,9 +122,14 @@ class OplEngine:
         self.voice_fnums = [0] * 18
         self.voice_blocks = [0] * 18
         self.voice_keyed = [False] * 18
+        self.env_vol = [0] * 18
+        self.env_period = [0] * 18
+        self.env_dir = [0] * 18
+        self.env_acc = [0] * 18
+        self.base_tl = [0] * 18
         self.frac_acc = 0.0
 
-        # Max buffer for 1 frame @ 60Hz: 829 samples * 2 channels
+        # Max buffer for 1 frame @ 60Hz: 1024 samples * 2 channels
         self.frame_buf = (ctypes.c_int16 * (1024 * 2))()
         self.reset()
 
@@ -99,6 +148,11 @@ class OplEngine:
         self.voice_fnums = [0] * 18
         self.voice_blocks = [0] * 18
         self.voice_keyed = [False] * 18
+        self.env_vol = [0] * 18
+        self.env_period = [0] * 18
+        self.env_dir = [0] * 18
+        self.env_acc = [0] * 18
+        self.base_tl = [0] * 18
         self.frac_acc = 0.0
 
     def write_reg(self, reg: int, val: int):
@@ -129,25 +183,72 @@ class OplEngine:
         self.write_reg(0xE0 + car_slot, patch[9])
         # Feedback / connection / pan
         self.write_reg(arr_base + 0xC0 + v_local, (patch[10] & 0x0F) | pan_b)
+        self.base_tl[voice] = patch[6] & 0x3F
 
-    def key_on(self, voice: int, midi_note: int, vel: int = 100, volume: int = 127):
+    def key_on(
+        self,
+        voice: int,
+        midi_note: int,
+        vel: int = 100,
+        volume: int = 127,
+        fade: int = 0,
+        is_drum: bool = False,
+    ):
         if voice < 0 or voice >= 18:
             return
         patch_name = self.voice_patches[voice] or "duty_50"
-        tl = carrier_level(patch_name, vel, volume)
+        patch = PATCHES[patch_name]
+        patch_ksl = patch[6] & 0xC0
+        base_patch_tl = patch[6] & 0x3F
+        self.base_tl[voice] = base_patch_tl
+
         arr_base = 0x100 if voice >= 9 else 0x000
         v_local = voice % 9
         car_slot = arr_base + MOD_SLOTS[v_local] + 3
 
-        # Update carrier TL
-        patch_ksl = PATCHES[patch_name][6] & 0xC0
-        self.write_reg(0x40 + car_slot, patch_ksl | tl)
+        # Declick: if already keyed on, key off first to reset OPL phase & envelope
+        if self.voice_keyed[voice]:
+            block = self.voice_blocks[voice]
+            fnum = self.voice_fnums[voice]
+            self.write_reg(arr_base + 0xB0 + v_local, (block << 2) | ((fnum >> 8) & 0x03))
+            self.voice_keyed[voice] = False
 
-        fnum, block = fnum_block(midi_note)
+        if is_drum or voice == 3:
+            # GB Channel 4 noise drum hit: look up authentic parameters from DRUM_PARAMS
+            params = DRUM_PARAMS.get(midi_note, (8, 1, 34))
+            init_vol, fade_period, nr43 = params
+            fnum, block = nr43_to_fnum_block(nr43)
+            self.env_vol[voice] = init_vol
+            self.env_period[voice] = fade_period
+            self.env_dir[voice] = 0  # always decays
+            self.env_acc[voice] = 0
+            tl = min(63, base_patch_tl + OPL_VOL_TABLE[init_vol])
+        elif voice in (0, 1):
+            # GB Pulse channels: recover GB volume (0..15) and simulate envelope decay
+            gb_vol = min(15, max(1, (vel - 15) // 7))
+            self.env_vol[voice] = gb_vol
+            self.env_period[voice] = abs(fade) if fade != 0 else 0
+            self.env_dir[voice] = 1 if fade < 0 else 0
+            self.env_acc[voice] = 0
+            fnum, block = fnum_block(midi_note)
+            tl = min(63, base_patch_tl + OPL_VOL_TABLE[gb_vol])
+        elif voice == 2:
+            # GB Wave channel: holds flat level without envelope decay
+            self.env_period[voice] = 0
+            fnum, block = fnum_block(midi_note)
+            tl = carrier_level(patch_name, vel, volume)
+        else:
+            # Enhancement voices (4..13): soft sustaining pad/bass
+            self.env_period[voice] = 0
+            fnum, block = fnum_block(midi_note)
+            tl = carrier_level(patch_name, vel, volume)
+
         self.voice_fnums[voice] = fnum
         self.voice_blocks[voice] = block
         self.voice_keyed[voice] = True
 
+        # Write carrier TL before key-on (avoid loud attack burst)
+        self.write_reg(0x40 + car_slot, patch_ksl | tl)
         self.write_reg(arr_base + 0xA0 + v_local, fnum & 0xFF)
         self.write_reg(arr_base + 0xB0 + v_local, 0x20 | (block << 2) | ((fnum >> 8) & 0x03))
 
@@ -161,6 +262,41 @@ class OplEngine:
         self.voice_keyed[voice] = False
         self.write_reg(arr_base + 0xB0 + v_local, (block << 2) | ((fnum >> 8) & 0x03))
 
+    def step_envelopes(self):
+        """Steps software volume envelopes for active voices once per 60 Hz tick.
+
+        Faithfully emulates opl_shim.asm:voice_envelope + voice_volume:
+        step threshold = 60 * period (with 64 accumulated per tick).
+        """
+        for voice in range(4):
+            if not self.voice_keyed[voice] or self.env_period[voice] == 0:
+                continue
+
+            period = self.env_period[voice]
+            self.env_acc[voice] += 64
+            step_threshold = 60 * period
+            if self.env_acc[voice] >= step_threshold:
+                self.env_acc[voice] -= step_threshold
+                if self.env_dir[voice] == 0:
+                    if self.env_vol[voice] > 0:
+                        self.env_vol[voice] -= 1
+                else:
+                    if self.env_vol[voice] < 15:
+                        self.env_vol[voice] += 1
+
+                patch_name = self.voice_patches[voice] or "duty_50"
+                patch_ksl = PATCHES[patch_name][6] & 0xC0
+                tl = min(63, self.base_tl[voice] + OPL_VOL_TABLE[self.env_vol[voice]])
+
+                arr_base = 0x100 if voice >= 9 else 0x000
+                v_local = voice % 9
+                car_slot = arr_base + MOD_SLOTS[v_local] + 3
+                self.write_reg(0x40 + car_slot, patch_ksl | tl)
+
+                # Once noise channel decays to complete silence, key it off
+                if voice == 3 and self.env_vol[voice] == 0:
+                    self.key_off(3)
+
     def generate_frame(self) -> bytes:
         """Generates one 60 Hz frame of stereo 16-bit PCM audio."""
         self.frac_acc += self.samplerate / 60.0
@@ -168,6 +304,7 @@ class OplEngine:
         self.frac_acc -= samples
         self.lib.opl_generate(self.chip, ctypes.cast(self.frame_buf, ctypes.c_void_p), samples)
         return bytes(self.frame_buf)[:samples * 4]
+
 
 
 class SongSession:
@@ -191,17 +328,20 @@ class SongSession:
         self.loop_end = self.base_song.end or max((n.frame + n.dur for n in self.base_song.notes), default=600)
         self.total_frames = self.loop_end
 
-        # Base notes per frame
+        # Base notes per frame: tuple (key, vel, fade, is_drum)
         self.base_events: dict[int, list[tuple[str, int, any]]] = {}
         for n in self.base_song.notes:
-            v = n.chan - 1 # 0: pulse1, 1: pulse2, 2: wave, 3: noise
-            self.base_events.setdefault(n.frame, []).append(("on", v, (n.key, n.vel)))
+            v = n.chan - 1  # 0: pulse1, 1: pulse2, 2: wave, 3: noise
+            is_drum = (n.chan == 4)
+            fade = getattr(n, "fade", 0)
+            self.base_events.setdefault(n.frame, []).append(("on", v, (n.key, n.vel, fade, is_drum)))
             off_f = min(n.frame + n.dur, self.total_frames)
             self.base_events.setdefault(off_f, []).append(("off", v, None))
 
-        # Setup base patches
-        self.engine.load_patch(0, "duty_50", "center")
-        self.engine.load_patch(1, "duty_50", "center")
+        # Setup base patches (Mt. Moon Cave / Cinnabar Mansion override to duty_clean)
+        pulse_patch = "duty_clean" if self.song_label in ("Music_Dungeon2", "Music_CinnabarMansion") else "duty_50"
+        self.engine.load_patch(0, pulse_patch, "center")
+        self.engine.load_patch(1, pulse_patch, "center")
         self.engine.load_patch(2, "wave", "center")
         self.engine.load_patch(3, "noise", "center")
 
@@ -259,10 +399,10 @@ class SongSession:
             if v is None or free_at[v] > frame:
                 v = next((i for i in range(POOL_SIZE) if free_at[i] <= frame), None)
                 if v is None:
-                    continue # Polyphony cap reached
+                    continue  # Polyphony cap reached
             last_voice[ci] = v
             free_at[v] = frame + dur
-            opl_v = 4 + v # Voice 4..13
+            opl_v = 4 + v  # Voice 4..13
 
             self.enh_events.setdefault(frame, []).append(("on", opl_v, (key, vel, vol, patch, pan)))
             off_f = min(frame + dur, self.total_frames)
@@ -284,8 +424,8 @@ class SongSession:
         if self.enable_base and not self.solo_enh:
             for ev_type, v, args in self.base_events.get(f, []):
                 if ev_type == "on":
-                    key, vel = args
-                    self.engine.key_on(v, key, vel)
+                    key, vel, fade, is_drum = args
+                    self.engine.key_on(v, key, vel=vel, fade=fade, is_drum=is_drum)
                 elif ev_type == "off":
                     self.engine.key_off(v)
         else:
@@ -303,6 +443,9 @@ class SongSession:
         else:
             self.silence_enhancements()
 
+        # Step software envelopes for active voices
+        self.engine.step_envelopes()
+
         # Advance frame
         self.current_frame += 1
         if self.current_frame >= self.total_frames:
@@ -318,3 +461,4 @@ class SongSession:
         self.current_frame = target
         for v in range(18):
             self.engine.key_off(v)
+

@@ -267,7 +267,7 @@ For each of items 1–5, the single unified YAML configuration must produce a co
 - Do not alter the loop structure unless the change is strictly needed to preserve a clean repeat.
 - Do not over-orchestrate the track into a film-score texture.
 - Do not introduce harmony that contradicts the GB source.
-- Do not rely on device-specific tricks that make one rendering good while making the other worse.
+- Do not rely on device-specific tricks that make one rendering good while making the other worse. (for tier 1. For higher tiers this is irrelevant since they are exclusive to MT-32/GM anyways)
 - Do not hand-edit the `.mid` files under `dos_port/assets/midi/`; all changes flow through the override/enhancement source and the standard asset build.
 - Do not author enhancement timing that only regenerates correctly for one of the two tempo builds.
 - Do not let the MT-32 rendering diverge from GM in harmonic progression or structural form; divergence is confined to voicing, timbre, and texture.
@@ -364,6 +364,6 @@ The remaster is done when all of the following are true:
 - adding a new section
 - converting the city theme into a cinematic or ambient remix
 - making the two renderings diverge in musical identity
-- optimizing for a device that is not part of the shipped GM / MT-32 target set
+- optimizing for a device that is not part of the shipped OPL3 + GM / MT-32 target set
 - hand-authoring `.mid` bytes outside the override/enhancement build pipeline
 - letting either tempo execution or either device rendering carry different harmonic/structural content than the others

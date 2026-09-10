@@ -144,14 +144,50 @@ def pick_port(target: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# OPL3 interactive audition loop
+# Interactive audition loop (OPL3, MT-32, and General MIDI)
 # ---------------------------------------------------------------------------
-def run_opl3_audition(song_label: str, compare_path: Path | None,
-                      no_enh: bool, solo_enh: bool,
-                      seconds: float | None, out_wav: Path | None):
-    import opl_renderer
+def run_interactive_audition(
+    target: str,
+    song_label: str,
+    port_override: str | None = None,
+    compare_path: Path | None = None,
+    no_enh: bool = False,
+    solo_enh: bool = False,
+    seconds: float | None = None,
+    out_wav: Path | None = None,
+    setup: bool = False,
+):
+    wav_file = None
+    aplay_proc = None
 
-    sess = opl_renderer.SongSession(song_label)
+    if target == "opl3":
+        import opl_renderer
+        sess = opl_renderer.SongSession(song_label)
+        rate = sess.engine.samplerate
+        if out_wav:
+            import wave
+            wav_file = wave.open(str(out_wav), "wb")
+            wav_file.setnchannels(2)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(rate)
+        else:
+            aplay_cmd = ["aplay", "-r", str(rate), "-f", "S16_LE", "-c", "2", "-q"]
+            try:
+                aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
+            except FileNotFoundError:
+                raise SystemExit("aplay not found — install alsa-utils or pass --out <file.wav>")
+            # Pre-buffer ~4 frames (approx 67 ms) on startup
+            for _ in range(4):
+                aplay_proc.stdin.write(sess.tick())
+            aplay_proc.stdin.flush()
+    else:
+        import midi_renderer
+        port = port_override or pick_port(target)
+        setup_msgs = None
+        if target == "mt32" and setup:
+            setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
+        sess = midi_renderer.MidiSession(song_label, target, port, sysex_setup=setup_msgs)
+
     canonical_name = sess.song_label
     yaml_path = ENHANCE_DIR / f"{canonical_name}.yaml"
 
@@ -168,7 +204,6 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
         init_id, init_path = revisions.save_snapshot(canonical_name, initial_text, "session_start")
         rev_history = revisions.list_revisions(canonical_name)
         current_rev_idx = len(rev_history) - 1
-        # Baseline A/B target: revision before current if available, else current
         ab_target_idx = max(0, current_rev_idx - 1)
         sess.load_enhancement(yaml_path)
     elif compare_path and compare_path.exists():
@@ -179,23 +214,7 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
     if solo_enh:
         sess.solo_enh = True
 
-    # Output destination
-    wav_file = None
-    aplay_proc = None
-    if out_wav:
-        import wave
-        wav_file = wave.open(str(out_wav), "wb")
-        wav_file.setnchannels(2)
-        wav_file.setsampwidth(2)
-        wav_file.setframerate(49716)
-    else:
-        aplay_cmd = ["aplay", "-r", "49716", "-f", "S16_LE", "-c", "2", "-q"]
-        try:
-            aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
-        except FileNotFoundError:
-            raise SystemExit("aplay not found — install alsa-utils or pass --out <file.wav>")
-
-    print(f"\n🎵 [OPL3] Auditioning: {canonical_name}")
+    print(f"\n🎵 [{target.upper()}] Auditioning: {canonical_name}")
     print("Controls: [Tab] A/B Toggle  [Space] Enh On/Off  [M] Solo Enh")
     print("          [ [ ] / [ ] ] Revisions  [C] Checkpoint  [U] Revert on Disk  [Q] Quit\n")
 
@@ -204,6 +223,7 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
     max_frames = int(seconds * 60) if seconds else None
     status_msg = ""
     status_timer = 0
+    next_tick = time.perf_counter()
 
     try:
         with RawTerminal() as term:
@@ -266,18 +286,27 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
                         status_timer = 120
                 elif key in (" ", "e", "E"):
                     sess.enable_enh = not sess.enable_enh
+                    if not sess.enable_enh:
+                        sess.silence_enhancements()
+                    elif hasattr(sess, "send_init"):
+                        sess.send_init()
                     status_msg = f"Enhancements: {'ON' if sess.enable_enh else 'OFF'}"
                     status_timer = 90
                 elif key in ("1",):
-                    if 1 in sess.tier_filter:
-                        sess.tier_filter.remove(1)
-                    else:
-                        sess.tier_filter.add(1)
-                    sess.load_enhancement(yaml_path if showing_working_copy else None)
-                    status_msg = f"Tier 1: {'ON' if 1 in sess.tier_filter else 'OFF'}"
-                    status_timer = 90
+                    if hasattr(sess, "tier_filter"):
+                        if 1 in sess.tier_filter:
+                            sess.tier_filter.remove(1)
+                        else:
+                            sess.tier_filter.add(1)
+                        sess.load_enhancement(yaml_path if showing_working_copy else None)
+                        status_msg = f"Tier 1: {'ON' if 1 in sess.tier_filter else 'OFF'}"
+                        status_timer = 90
                 elif key in ("m", "M"):
                     sess.solo_enh = not sess.solo_enh
+                    if sess.solo_enh:
+                        sess.silence_base()
+                    elif hasattr(sess, "send_init"):
+                        sess.send_init()
                     status_msg = f"Solo Enhancements: {'ON' if sess.solo_enh else 'OFF'}"
                     status_timer = 90
                 elif key in ("c", "C"):
@@ -318,6 +347,12 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
                             status_timer = 180
                 elif key in ("p", "P"):
                     paused = not paused
+                    if paused:
+                        if hasattr(sess, "silence_all"):
+                            sess.silence_all()
+                    else:
+                        if hasattr(sess, "send_init"):
+                            sess.send_init()
                     status_msg = "PAUSED" if paused else "RESUMED"
                     status_timer = 60
                 elif key == "LEFT":
@@ -334,16 +369,29 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
                     frame_pcm = sess.tick()
                     total_frames_played += 1
                 else:
-                    frame_pcm = b"\x00" * (828 * 4)
+                    if target == "opl3":
+                        frame_pcm = b"\x00" * (sess.engine.samplerate // 60 * 4)
+                    else:
+                        frame_pcm = None
 
-                if wav_file:
-                    wav_file.writeframes(frame_pcm)
-                elif aplay_proc and aplay_proc.stdin:
-                    try:
-                        aplay_proc.stdin.write(frame_pcm)
-                        aplay_proc.stdin.flush()
-                    except BrokenPipeError:
-                        break
+                if target == "opl3":
+                    if wav_file and frame_pcm:
+                        wav_file.writeframes(frame_pcm)
+                    elif aplay_proc and aplay_proc.stdin and frame_pcm:
+                        try:
+                            aplay_proc.stdin.write(frame_pcm)
+                            aplay_proc.stdin.flush()
+                        except BrokenPipeError:
+                            break
+
+                # Frame pacing for real-time playback
+                if not out_wav:
+                    next_tick += 1.0 / 60.0
+                    sleep_dur = next_tick - time.perf_counter()
+                    if sleep_dur > 0:
+                        time.sleep(sleep_dur)
+                    elif sleep_dur < -0.1:
+                        next_tick = time.perf_counter()
 
                 # Status line rendering (~4 Hz update)
                 if total_frames_played % 15 == 0:
@@ -351,7 +399,7 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
                     tot_sec = sess.total_frames // 60
                     enh_state = "SOLO" if sess.solo_enh else ("ON" if sess.enable_enh else "OFF")
                     active_rev = f"Rev {rev_history[ab_target_idx][0]}" if not showing_working_copy and rev_history else "Working"
-                    banner = f"\r▶ {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | Enh: {enh_state:<4} | Layer: {active_rev:<8}"
+                    banner = f"\r▶ {curr_sec:02d}:{sess.current_frame%60:02d}/{tot_sec:02d}:00 | Target: {target.upper():<4} | Enh: {enh_state:<4} | Layer: {active_rev:<8}"
                     if status_timer > 0:
                         banner += f" | {status_msg}"
                         status_timer -= 15
@@ -360,14 +408,18 @@ def run_opl3_audition(song_label: str, compare_path: Path | None,
 
     finally:
         sys.stdout.write("\n")
-        if wav_file:
-            wav_file.close()
-            print(f"Wrote audio to {out_wav}")
-        if aplay_proc:
-            if aplay_proc.stdin:
-                aplay_proc.stdin.close()
-            aplay_proc.terminate()
-            aplay_proc.wait()
+        if target == "opl3":
+            if wav_file:
+                wav_file.close()
+                print(f"Wrote audio to {out_wav}")
+            if aplay_proc:
+                if aplay_proc.stdin:
+                    aplay_proc.stdin.close()
+                aplay_proc.terminate()
+                aplay_proc.wait()
+        else:
+            if hasattr(sess, "silence_all"):
+                sess.silence_all()
 
 
 # ---------------------------------------------------------------------------
@@ -504,49 +556,17 @@ def main():
 
     canonical_song = resolve_song_label(args.song, all_tracks)
 
-    # OPL3 target
-    if args.target == "opl3":
-        run_opl3_audition(
-            song_label=canonical_song,
-            compare_path=args.compare,
-            no_enh=args.no_enh,
-            solo_enh=args.solo_enh,
-            seconds=args.seconds,
-            out_wav=args.out,
-        )
-        return
-
-    # MIDI targets (MT-32 / GM)
-    mdir = MIDI_DIR / args.target
-    if not mdir.is_dir():
-        raise SystemExit(
-            f"{mdir} missing — run `make assets` "
-            f"(or gb_to_midi.py --target {args.target})"
-        )
-    hits = sorted(p for p in mdir.glob("*.mid") if canonical_song in p.stem)
-    exact = [p for p in hits if p.stem == canonical_song]
-    if exact:
-        hits = exact
-    if len(hits) != 1:
-        raise SystemExit(
-            f"song {canonical_song!r} matches {[p.stem for p in hits] or 'nothing'}"
-        )
-    mid = hits[0].read_bytes()
-
-    if args.target == "mt32" and args.setup:
-        msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
-        mid = with_setup(mid, msgs)
-        print(
-            f"prepended {len(msgs)} setup SysEx messages "
-            "(--setup: expect shifted part routing on standalone MUNT)"
-        )
-
-    port = args.port or pick_port(args.target)
-    with tempfile.NamedTemporaryFile(suffix=".mid") as tmp:
-        tmp.write(mid)
-        tmp.flush()
-        print(f"playing {hits[0].stem} -> port {port}")
-        subprocess.run(["aplaymidi", "-p", port, tmp.name], check=True)
+    run_interactive_audition(
+        target=args.target,
+        song_label=canonical_song,
+        port_override=args.port,
+        compare_path=args.compare,
+        no_enh=args.no_enh,
+        solo_enh=args.solo_enh,
+        seconds=args.seconds,
+        out_wav=args.out,
+        setup=args.setup,
+    )
 
 
 if __name__ == "__main__":

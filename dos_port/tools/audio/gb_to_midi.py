@@ -83,6 +83,7 @@ class NoteEv:
     chan: int            # GB channel 1-4 (4 = noise/drums)
     key: int             # midi note, or noise instrument id when chan == 4
     vel: int
+    fade: int = 0
 
 
 @dataclass
@@ -196,7 +197,7 @@ class ChanSim:
                     if vel:
                         self.notes.append(NoteEv(
                             start, self.frame - start, self.chan,
-                            self._note_key(a[0]), vel))
+                            self._note_key(a[0]), vel, self.fade))
             elif name == "rest":
                 self._advance(a[0])
             elif name == "drum_note":
