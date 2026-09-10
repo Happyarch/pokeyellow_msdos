@@ -187,7 +187,7 @@ def run_interactive_audition(
         if target == "mt32" and setup:
             setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
         sess = midi_renderer.MidiSession(song_label, target, port, sysex_setup=setup_msgs)
-        rate = 49716
+        rate = 48000
         if out_wav:
             import wave
             wav_file = wave.open(str(out_wav), "wb")
@@ -919,6 +919,145 @@ def print_sfx_list(sfx_list: list[str]):
 
 
 # ---------------------------------------------------------------------------
+# Pre-caching authentic Game Boy audio for instant audition startup
+# ---------------------------------------------------------------------------
+def precache_all_gb_audio(samplerate: int = 48000):
+    cache_dir = AUDIO_DIR / ".gb_cache"
+    music_dir = cache_dir / "music"
+    sfx_dir = cache_dir / "sfx"
+    music_dir.mkdir(parents=True, exist_ok=True)
+    sfx_dir.mkdir(parents=True, exist_ok=True)
+
+    print("⚡ Initializing Game Boy APU sound emulator...")
+    t_start = time.time()
+    from opl_renderer import (
+        GbApuEngine, DRUM_PARAMS, midi_key_to_gb_freq, midi_key_to_gb_wave_freq,
+        sfx_from_headers, simulate_sfx_events
+    )
+    from pret_audio import AudioROM
+    from gen_audio_data import parse_music_constants
+    from gb_to_midi import simulate_song, build_addr_map, songs_from_headers
+
+    engine = GbApuEngine(samplerate=samplerate)
+    rom = AudioROM(ROOT)
+    amap = build_addr_map(rom)
+    music_headers = songs_from_headers(rom)
+    sfx_headers = sfx_from_headers(rom)
+    consts, _ = parse_music_constants()
+
+    print("🔊 Pre-caching all Sound Effects...")
+    sfx_items = [
+        (c, h) for c, h in consts.items()
+        if c.startswith("SFX_") and h in sfx_headers
+    ]
+    sfx_items.sort()
+    sfx_bytes = 0
+    manifest_sfx = {}
+
+    for idx, (c, h) in enumerate(sfx_items, 1):
+        ch_list = sfx_headers[h]
+        events, sfx_frames = simulate_sfx_events(rom, amap, ch_list)
+        engine.reset()
+        pcm = []
+        for f in range(sfx_frames + 15):
+            for ev in events.get(f, []):
+                ev_type = ev[0]
+                v = ev[1]
+                if ev_type == "noise":
+                    nr43, vol, fade_p, fade_d = ev[3]
+                    engine.trigger_noise(nr43, vol=vol, fade_period=fade_p, fade_dir=fade_d)
+                elif ev_type == "square":
+                    freq, duty, vol, fade_p, fade_d = ev[3]
+                    if v in (0, 1):
+                        engine.trigger_pulse(v, freq, duty=duty, vol=vol, fade_period=fade_p, fade_dir=fade_d)
+                    elif v == 2:
+                        engine.trigger_wave(freq, vol_code=1)
+                elif ev_type == "sweep":
+                    if v == 0:
+                        engine.write_reg(0xFF10, ev[3])
+                elif ev_type == "off":
+                    engine.silence_channel(v)
+            pcm.append(engine.generate_frame())
+        buf = b"".join(pcm)
+        sfx_file = sfx_dir / f"{c}.pcm"
+        sfx_file.write_bytes(buf)
+        sfx_bytes += len(buf)
+        manifest_sfx[c] = {
+            "header": h,
+            "frames": sfx_frames + 15,
+            "bytes": len(buf),
+        }
+        print(f"\r  [{idx}/{len(sfx_items)}] {c:<32} ({len(buf) // 1024} KB)", end="", flush=True)
+    print()
+
+    print("🎵 Pre-caching all Music Tracks...")
+    music_items = sorted(music_headers.items())
+    music_bytes = 0
+    manifest_music = {}
+
+    for idx, (h, addr) in enumerate(music_items, 1):
+        song = simulate_song(rom, amap, h, addr)
+        loop_end = song.end or max((n.frame + n.dur for n in song.notes), default=600)
+        base_events = {}
+        for n in song.notes:
+            v = n.chan - 1
+            is_drum = (n.chan == 4)
+            fade = getattr(n, "fade", 0)
+            base_events.setdefault(n.frame, []).append(("on", v, (n.key, n.vel, fade, is_drum)))
+            off_f = min(n.frame + n.dur, loop_end)
+            base_events.setdefault(off_f, []).append(("off", v, None))
+
+        engine.reset()
+        pcm = []
+        for f in range(loop_end):
+            for ev_type, v, args in base_events.get(f, []):
+                if ev_type == "on":
+                    key, vel, fade, is_drum = args
+                    if is_drum or v == 3:
+                        p = DRUM_PARAMS.get(key, (8, 1, 34))
+                        engine.trigger_noise(p[2], vol=p[0], fade_period=p[1], fade_dir=0)
+                    elif v in (0, 1):
+                        gb_vol = min(15, max(1, (vel - 15) // 7))
+                        fade_p = abs(fade) if fade != 0 else 0
+                        fade_d = 1 if fade < 0 else 0
+                        freq = midi_key_to_gb_freq(key)
+                        engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_p, fade_dir=fade_d)
+                    elif v == 2:
+                        freq = midi_key_to_gb_wave_freq(key)
+                        engine.trigger_wave(freq, vol_code=1)
+                elif ev_type == "off":
+                    engine.silence_channel(v)
+            pcm.append(engine.generate_frame())
+        buf = b"".join(pcm)
+        mus_file = music_dir / f"{h}.pcm"
+        mus_file.write_bytes(buf)
+        music_bytes += len(buf)
+        manifest_music[h] = {
+            "loop_start": song.loop_start or 0,
+            "loop_end": loop_end,
+            "bytes": len(buf),
+        }
+        print(f"\r  [{idx}/{len(music_items)}] {h:<32} ({len(buf) // (1024*1024)} MB)", end="", flush=True)
+    print()
+
+    manifest = {
+        "samplerate": samplerate,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "total_sfx": len(sfx_items),
+        "total_music": len(music_items),
+        "sfx": manifest_sfx,
+        "music": manifest_music,
+    }
+    import json
+    (cache_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
+
+    total_time = time.time() - t_start
+    total_mb = (sfx_bytes + music_bytes) / (1024 * 1024)
+    print(f"\n✅ Successfully pre-cached {len(sfx_items)} SFX and {len(music_items)} music tracks ({total_mb:.1f} MB total) in {total_time:.1f}s.")
+    print(f"📁 Cache directory: {cache_dir}\n")
+
+
+# ---------------------------------------------------------------------------
 # Main CLI
 # ---------------------------------------------------------------------------
 def main():
@@ -927,6 +1066,11 @@ def main():
         "song",
         nargs="?",
         help="song or SFX label, substring, or fuzzy name (e.g. PalletTown, SFX_GO_OUTSIDE, Go_Outside)",
+    )
+    ap.add_argument(
+        "--init",
+        action="store_true",
+        help="precache authentic Game Boy APU reference audio for all sounds and music",
     )
     ap.add_argument(
         "-l", "--list", "--list-music",
@@ -973,6 +1117,10 @@ def main():
         help="prepend the MT-32 setup SysEx (reverb/reserves/routing/vol)",
     )
     args = ap.parse_args()
+
+    if args.init:
+        precache_all_gb_audio()
+        return
 
     music_map, sfx_map = get_audio_catalog()
     all_tracks = sorted(set(music_map.values()))

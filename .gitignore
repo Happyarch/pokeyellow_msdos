@@ -151,3 +151,4 @@ dos_port/tools/audio/libmidiout.so
 dos_port/tools/audio/libgbapu.so
 dos_port/tools/audio/.gb_snd_emu/
 dos_port/tools/audio/.revisions/
+dos_port/tools/audio/.gb_cache/

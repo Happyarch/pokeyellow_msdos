@@ -19,6 +19,7 @@ AUDIO_DIR = AUDITION_DIR.parent
 ROOT = AUDIO_DIR.parents[2]
 LIB_PATH = AUDIO_DIR / "libnukedopl.so"
 GB_LIB_PATH = AUDIO_DIR / "libgbapu.so"
+CACHE_DIR = AUDIO_DIR / ".gb_cache"
 
 sys.path.insert(0, str(AUDIO_DIR))
 from pret_audio import AudioROM
@@ -524,8 +525,15 @@ class SongSession:
         self.engine.load_patch(2, "wave", "center")
         self.engine.load_patch(3, "noise", "center")
 
-        # Game Boy APU engine for authentic GB sound toggle
-        self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
+        # Game Boy APU engine / pre-rendered PCM cache for authentic GB sound toggle
+        cache_file = CACHE_DIR / "music" / f"{self.song_label}.pcm"
+        if cache_file.exists():
+            self.gb_pcm = cache_file.read_bytes()
+            self.gb_engine = None
+        else:
+            self.gb_pcm = None
+            self.gb_engine = None
+
         self.gb_sound = False
         self.active_base_notes: dict[int, tuple[int, int, int, bool]] = {}
 
@@ -543,23 +551,27 @@ class SongSession:
         if self.gb_sound:
             self.silence_base()
             self.silence_enhancements()
-            # Immediately trigger currently sounding notes on GB APU
-            for v, (key, vel, fade, is_drum) in self.active_base_notes.items():
-                if is_drum or v == 3:
-                    params = DRUM_PARAMS.get(key, (8, 1, 34))
-                    init_vol, fade_period, nr43 = params
-                    self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
-                elif v in (0, 1):
-                    gb_vol = min(15, max(1, (vel - 15) // 7))
-                    fade_period = abs(fade) if fade != 0 else 0
-                    fade_dir = 1 if fade < 0 else 0
-                    freq = midi_key_to_gb_freq(key)
-                    self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
-                elif v == 2:
-                    freq = midi_key_to_gb_wave_freq(key)
-                    self.gb_engine.trigger_wave(freq, vol_code=1)
+            if self.gb_pcm is None:
+                if self.gb_engine is None:
+                    self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
+                # Immediately trigger currently sounding notes on GB APU
+                for v, (key, vel, fade, is_drum) in self.active_base_notes.items():
+                    if is_drum or v == 3:
+                        params = DRUM_PARAMS.get(key, (8, 1, 34))
+                        init_vol, fade_period, nr43 = params
+                        self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                    elif v in (0, 1):
+                        gb_vol = min(15, max(1, (vel - 15) // 7))
+                        fade_period = abs(fade) if fade != 0 else 0
+                        fade_dir = 1 if fade < 0 else 0
+                        freq = midi_key_to_gb_freq(key)
+                        self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                    elif v == 2:
+                        freq = midi_key_to_gb_wave_freq(key)
+                        self.gb_engine.trigger_wave(freq, vol_code=1)
         else:
-            self.gb_engine.reset()
+            if self.gb_engine:
+                self.gb_engine.reset()
             # Immediately trigger currently sounding notes on OPL3
             for v, (key, vel, fade, is_drum) in self.active_base_notes.items():
                 self.engine.key_on(v, key, vel=vel, fade=fade, is_drum=is_drum)
@@ -568,6 +580,10 @@ class SongSession:
     def resume_playback(self):
         """Restores currently sounding notes when unpausing."""
         if self.gb_sound:
+            if self.gb_pcm is not None:
+                return  # Direct PCM streaming needs no note state
+            if self.gb_engine is None:
+                self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
             for v, (key, vel, fade, is_drum) in self.active_base_notes.items():
                 if is_drum or v == 3:
                     params = DRUM_PARAMS.get(key, (8, 1, 34))
@@ -656,7 +672,7 @@ class SongSession:
             v_local = v % 9
             car_slot = arr_base + MOD_SLOTS[v_local] + 3
             self.engine.write_reg(0x40 + car_slot, 0x3F)
-        if hasattr(self, "gb_engine") and self.gb_engine:
+        if hasattr(self, "gb_engine") and self.gb_engine is not None:
             self.gb_engine.reset()
 
     def tick(self) -> bytes:
@@ -677,26 +693,36 @@ class SongSession:
         if self.gb_sound:
             self.silence_base()
             self.silence_enhancements()
-            for ev_type, v, args in self.base_events.get(f, []):
-                if ev_type == "on":
-                    key, vel, fade, is_drum = args
-                    if is_drum or v == 3:
-                        params = DRUM_PARAMS.get(key, (8, 1, 34))
-                        init_vol, fade_period, nr43 = params
-                        self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
-                    elif v in (0, 1):
-                        gb_vol = min(15, max(1, (vel - 15) // 7))
-                        fade_period = abs(fade) if fade != 0 else 0
-                        fade_dir = 1 if fade < 0 else 0
-                        freq = midi_key_to_gb_freq(key)
-                        self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
-                    elif v == 2:
-                        freq = midi_key_to_gb_wave_freq(key)
-                        self.gb_engine.trigger_wave(freq, vol_code=1)
-                elif ev_type == "off":
-                    self.gb_engine.silence_channel(v)
+            if self.gb_pcm is not None:
+                frame_len = (self.engine.samplerate // 60) * 4
+                offset = f * frame_len
+                if offset + frame_len <= len(self.gb_pcm):
+                    frame_pcm = self.gb_pcm[offset : offset + frame_len]
+                else:
+                    frame_pcm = b"\x00" * frame_len
+            else:
+                if self.gb_engine is None:
+                    self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
+                for ev_type, v, args in self.base_events.get(f, []):
+                    if ev_type == "on":
+                        key, vel, fade, is_drum = args
+                        if is_drum or v == 3:
+                            params = DRUM_PARAMS.get(key, (8, 1, 34))
+                            init_vol, fade_period, nr43 = params
+                            self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                        elif v in (0, 1):
+                            gb_vol = min(15, max(1, (vel - 15) // 7))
+                            fade_period = abs(fade) if fade != 0 else 0
+                            fade_dir = 1 if fade < 0 else 0
+                            freq = midi_key_to_gb_freq(key)
+                            self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                        elif v == 2:
+                            freq = midi_key_to_gb_wave_freq(key)
+                            self.gb_engine.trigger_wave(freq, vol_code=1)
+                    elif ev_type == "off":
+                        self.gb_engine.silence_channel(v)
 
-            frame_pcm = self.gb_engine.generate_frame()
+                frame_pcm = self.gb_engine.generate_frame()
             self.engine.generate_frame()  # Keep OPL chip clocks in sync
         else:
             # Service Base Events on OPL3
@@ -724,7 +750,8 @@ class SongSession:
 
             self.engine.step_envelopes()
             frame_pcm = self.engine.generate_frame()
-            self.gb_engine.generate_frame()  # Keep GB APU clocks in sync
+            if self.gb_engine is not None:
+                self.gb_engine.generate_frame()  # Keep GB APU clocks in sync
 
         # Advance frame
         self.current_frame += 1
@@ -733,7 +760,7 @@ class SongSession:
             # Silence all voices on loop wrap to prevent stuck notes
             for v in range(18):
                 self.engine.key_off(v)
-            if self.gb_sound:
+            if self.gb_sound and self.gb_engine is not None:
                 self.gb_engine.reset()
 
         return frame_pcm
@@ -743,7 +770,7 @@ class SongSession:
         self.current_frame = target
         for v in range(18):
             self.engine.key_off(v)
-        if self.gb_sound:
+        if self.gb_sound and self.gb_engine is not None:
             self.gb_engine.reset()
 
 
@@ -881,7 +908,6 @@ class SfxSession:
 
     def __init__(self, sfx_query: str, delay_seconds: float = 2.5):
         self.engine = OplEngine()
-        self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
         self.rom = AudioROM(ROOT)
         self.amap = build_addr_map(self.rom)
         self.sfx_headers = sfx_from_headers(self.rom)
@@ -893,6 +919,16 @@ class SfxSession:
 
         self.ch_list = self.sfx_headers[self.header_label]
         self.events, self.sfx_frames = simulate_sfx_events(self.rom, self.amap, self.ch_list)
+
+        cache_file = CACHE_DIR / "sfx" / f"{self.canonical_name}.pcm"
+        if not cache_file.exists():
+            cache_file = CACHE_DIR / "sfx" / f"{self.header_label}.pcm"
+        if cache_file.exists():
+            self.gb_pcm = cache_file.read_bytes()
+            self.gb_engine = None
+        else:
+            self.gb_pcm = None
+            self.gb_engine = None
 
         self.delay_seconds = max(0.2, float(delay_seconds))
         self.delay_frames = int(self.delay_seconds * 60)
@@ -986,6 +1022,8 @@ class SfxSession:
     def toggle_gb_sound(self) -> bool:
         """Toggles between OPL3 FM synthesis and authentic Real Game Boy sound chip."""
         self.gb_sound = not self.gb_sound
+        if self.gb_sound and self.gb_pcm is None and self.gb_engine is None:
+            self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
         self.retrigger()
         return self.gb_sound
 
@@ -1005,14 +1043,15 @@ class SfxSession:
             v_local = v % 9
             car_slot = arr_base + MOD_SLOTS[v_local] + 3
             self.engine.write_reg(0x40 + car_slot, 0x3F)
-        if hasattr(self, "gb_engine") and self.gb_engine:
+        if hasattr(self, "gb_engine") and self.gb_engine is not None:
             self.gb_engine.reset()
 
     def retrigger(self):
         self.current_frame = 0
         for v in range(4):
             self.engine.key_off(v)
-        self.gb_engine.reset()
+        if hasattr(self, "gb_engine") and self.gb_engine is not None:
+            self.gb_engine.reset()
 
     def tick(self) -> bytes:
         frame_len = (self.engine.samplerate // 60) * 4
@@ -1026,20 +1065,23 @@ class SfxSession:
                 v = ev[1]
 
                 if self.gb_sound:
-                    if ev_type == "noise":
-                        nr43, vol, fade_p, fade_d = ev[3]
-                        self.gb_engine.trigger_noise(nr43, vol=vol, fade_period=fade_p, fade_dir=fade_d)
-                    elif ev_type == "square":
-                        freq, duty, vol, fade_p, fade_d = ev[3]
-                        if v in (0, 1):
-                            self.gb_engine.trigger_pulse(v, freq, duty=duty, vol=vol, fade_period=fade_p, fade_dir=fade_d)
-                        elif v == 2:
-                            self.gb_engine.trigger_wave(freq, vol_code=1)
-                    elif ev_type == "sweep":
-                        if v == 0:
-                            self.gb_engine.write_reg(0xFF10, ev[3])
-                    elif ev_type == "off":
-                        self.gb_engine.silence_channel(v)
+                    if self.gb_pcm is None:
+                        if self.gb_engine is None:
+                            self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
+                        if ev_type == "noise":
+                            nr43, vol, fade_p, fade_d = ev[3]
+                            self.gb_engine.trigger_noise(nr43, vol=vol, fade_period=fade_p, fade_dir=fade_d)
+                        elif ev_type == "square":
+                            freq, duty, vol, fade_p, fade_d = ev[3]
+                            if v in (0, 1):
+                                self.gb_engine.trigger_pulse(v, freq, duty=duty, vol=vol, fade_period=fade_p, fade_dir=fade_dir)
+                            elif v == 2:
+                                self.gb_engine.trigger_wave(freq, vol_code=1)
+                        elif ev_type == "sweep":
+                            if v == 0:
+                                self.gb_engine.write_reg(0xFF10, ev[3])
+                        elif ev_type == "off":
+                            self.gb_engine.silence_channel(v)
                 else:
                     hw_chan = v + 5
                     ch_cfg = self.profile.get(hw_chan, {}) if not self.is_raw else {}
@@ -1068,7 +1110,7 @@ class SfxSession:
         else:
             for v in range(4):
                 self.engine.key_off(v)
-            if self.gb_sound:
+            if self.gb_sound and self.gb_engine is not None:
                 self.gb_engine.reset()
 
         self.current_frame += 1
@@ -1079,9 +1121,15 @@ class SfxSession:
 
         if self.gb_sound:
             self.engine.generate_frame()  # Keep OPL chip clocks in sync
+            if self.gb_pcm is not None:
+                offset = f * frame_len
+                if offset + frame_len <= len(self.gb_pcm):
+                    return self.gb_pcm[offset : offset + frame_len]
+                return b"\x00" * frame_len
             return self.gb_engine.generate_frame()
         else:
-            self.gb_engine.generate_frame()  # Keep GB APU clocks in sync
+            if self.gb_engine is not None:
+                self.gb_engine.generate_frame()  # Keep GB APU clocks in sync
             return self.engine.generate_frame()
 
 

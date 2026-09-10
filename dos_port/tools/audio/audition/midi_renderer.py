@@ -18,6 +18,7 @@ AUDITION_DIR = Path(__file__).resolve().parent
 AUDIO_DIR = AUDITION_DIR.parent
 ROOT = AUDIO_DIR.parents[2]
 MIDI_LIB_PATH = AUDIO_DIR / "libmidiout.so"
+CACHE_DIR = AUDIO_DIR / ".gb_cache"
 
 sys.path.insert(0, str(AUDIO_DIR))
 from pret_audio import AudioROM
@@ -121,7 +122,15 @@ class MidiSession:
         self.solo_enh = False
         self.current_frame = 0
 
-        self.gb_engine = GbApuEngine()
+        # Game Boy APU engine / pre-rendered PCM cache for authentic GB sound toggle
+        cache_file = CACHE_DIR / "music" / f"{self.song_label}.pcm"
+        if cache_file.exists():
+            self.gb_pcm = cache_file.read_bytes()
+            self.gb_engine = None
+        else:
+            self.gb_pcm = None
+            self.gb_engine = None
+
         self.gb_sound = False
         self.gb_events: dict[int, list[tuple]] = {}
         self.active_gb_notes: dict[int, tuple] = {}
@@ -246,34 +255,42 @@ class MidiSession:
 
     def silence_all(self):
         self.midi.all_notes_off()
-        if hasattr(self, "gb_engine") and self.gb_engine:
+        if hasattr(self, "gb_engine") and self.gb_engine is not None:
             self.gb_engine.reset()
 
     def toggle_gb_sound(self) -> bool:
         self.gb_sound = not self.gb_sound
         if self.gb_sound:
             self.silence_all()
-            for v, (key, vel, fade, is_drum) in self.active_gb_notes.items():
-                if is_drum or v == 3:
-                    params = DRUM_PARAMS.get(key, (8, 1, 34))
-                    init_vol, fade_period, nr43 = params
-                    self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
-                elif v in (0, 1):
-                    gb_vol = min(15, max(1, (vel - 15) // 7))
-                    fade_period = abs(fade) if fade != 0 else 0
-                    fade_dir = 1 if fade < 0 else 0
-                    freq = midi_key_to_gb_freq(key)
-                    self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
-                elif v == 2:
-                    freq = midi_key_to_gb_wave_freq(key)
-                    self.gb_engine.trigger_wave(freq, vol_code=1)
+            if self.gb_pcm is None:
+                if self.gb_engine is None:
+                    self.gb_engine = GbApuEngine(samplerate=48000)
+                for v, (key, vel, fade, is_drum) in self.active_gb_notes.items():
+                    if is_drum or v == 3:
+                        params = DRUM_PARAMS.get(key, (8, 1, 34))
+                        init_vol, fade_period, nr43 = params
+                        self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                    elif v in (0, 1):
+                        gb_vol = min(15, max(1, (vel - 15) // 7))
+                        fade_period = abs(fade) if fade != 0 else 0
+                        fade_dir = 1 if fade < 0 else 0
+                        freq = midi_key_to_gb_freq(key)
+                        self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                    elif v == 2:
+                        freq = midi_key_to_gb_wave_freq(key)
+                        self.gb_engine.trigger_wave(freq, vol_code=1)
         else:
-            self.gb_engine.reset()
+            if self.gb_engine is not None:
+                self.gb_engine.reset()
             self.send_init()
         return self.gb_sound
 
     def resume_playback(self):
         if self.gb_sound:
+            if self.gb_pcm is not None:
+                return  # Direct PCM streaming needs no note state
+            if self.gb_engine is None:
+                self.gb_engine = GbApuEngine(samplerate=48000)
             for v, (key, vel, fade, is_drum) in self.active_gb_notes.items():
                 if is_drum or v == 3:
                     params = DRUM_PARAMS.get(key, (8, 1, 34))
@@ -305,27 +322,37 @@ class MidiSession:
 
         if self.gb_sound:
             self.silence_all()
-            for ev_type, v, args in self.gb_events.get(f, []):
-                if ev_type == "on":
-                    self.active_gb_notes[v] = args
-                    key, vel, fade, is_drum = args
-                    if is_drum or v == 3:
-                        params = DRUM_PARAMS.get(key, (8, 1, 34))
-                        init_vol, fade_period, nr43 = params
-                        self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
-                    elif v in (0, 1):
-                        gb_vol = min(15, max(1, (vel - 15) // 7))
-                        fade_period = abs(fade) if fade != 0 else 0
-                        fade_dir = 1 if fade < 0 else 0
-                        freq = midi_key_to_gb_freq(key)
-                        self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
-                    elif v == 2:
-                        freq = midi_key_to_gb_wave_freq(key)
-                        self.gb_engine.trigger_wave(freq, vol_code=1)
-                elif ev_type == "off":
-                    self.active_gb_notes.pop(v, None)
-                    self.gb_engine.silence_channel(v)
-            frame_pcm = self.gb_engine.generate_frame()
+            if self.gb_pcm is not None:
+                frame_len = (48000 // 60) * 4
+                offset = f * frame_len
+                if offset + frame_len <= len(self.gb_pcm):
+                    frame_pcm = self.gb_pcm[offset : offset + frame_len]
+                else:
+                    frame_pcm = b"\x00" * frame_len
+            else:
+                if self.gb_engine is None:
+                    self.gb_engine = GbApuEngine(samplerate=48000)
+                for ev_type, v, args in self.gb_events.get(f, []):
+                    if ev_type == "on":
+                        self.active_gb_notes[v] = args
+                        key, vel, fade, is_drum = args
+                        if is_drum or v == 3:
+                            params = DRUM_PARAMS.get(key, (8, 1, 34))
+                            init_vol, fade_period, nr43 = params
+                            self.gb_engine.trigger_noise(nr43, vol=init_vol, fade_period=fade_period, fade_dir=0)
+                        elif v in (0, 1):
+                            gb_vol = min(15, max(1, (vel - 15) // 7))
+                            fade_period = abs(fade) if fade != 0 else 0
+                            fade_dir = 1 if fade < 0 else 0
+                            freq = midi_key_to_gb_freq(key)
+                            self.gb_engine.trigger_pulse(v, freq, duty=2, vol=gb_vol, fade_period=fade_period, fade_dir=fade_dir)
+                        elif v == 2:
+                            freq = midi_key_to_gb_wave_freq(key)
+                            self.gb_engine.trigger_wave(freq, vol_code=1)
+                    elif ev_type == "off":
+                        self.active_gb_notes.pop(v, None)
+                        self.gb_engine.silence_channel(v)
+                frame_pcm = self.gb_engine.generate_frame()
         else:
             if effective_base:
                 for msg in self.base_events.get(f, []):
@@ -341,7 +368,8 @@ class MidiSession:
             self.current_frame = self.loop_start
             self.silence_all()
             if self.gb_sound:
-                self.gb_engine.reset()
+                if self.gb_engine is not None:
+                    self.gb_engine.reset()
             else:
                 self.send_init()
 
@@ -352,6 +380,7 @@ class MidiSession:
         self.silence_all()
         self.current_frame = target
         if self.gb_sound:
-            self.gb_engine.reset()
+            if self.gb_engine is not None:
+                self.gb_engine.reset()
         else:
             self.send_init()
