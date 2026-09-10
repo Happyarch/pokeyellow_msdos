@@ -1,0 +1,298 @@
+# Music_Cities1 — Cities1 (the busy city theme). Tier-1 + tier-2 + tier-3.
+#
+# Authored against music_analysis.py output (frame-exact: E major, K-S 0.884,
+# runner-up B major 0.719 = the dominant, not ambiguous; 4/4, tempo 144 with a
+# Hall-of-Fame alternate tempo 232; 32 measures, loop_start 0, frames.end
+# 3456) and audio/music/cities1.asm, per audio-enhance-opl3 /
+# audio-enhance-mt32 / music-theory skills.
+#
+# Score-analysis note: there is NO dedicated Cities1 description in
+# docs/references/pokemon_score_transcriptions/descriptions/ (not in the skill
+# index), so the key/feel reading comes from the deterministic analysis plus
+# the remaster spec's own brief (bright/busy/motoric city cue, harmonically
+# stable, strongly loop-dependent) and its Celadon/Vermilion bracket: less
+# playful than Celadon, more internal relief than Vermilion's "everything
+# plays all the time". Compared with Vermilion (A major, 12 measures, zero
+# rests), Cities1 is a 32-measure E-major loop with real phrase contour —
+# an opening dialogue (mm1-16, ch2 mostly octave 5 over a busy ch1/ch3
+# motor) and a lifted second half (mm17-32, ch2 up to octave 6).
+#
+# The track: melody is ch2 (106 notes, C#4..F#6 — mostly long octave-5/6
+# tones with octave-4 dips at mm4/8/12/16); ch1 is the motoric inner line
+# (199 notes, density 1.55, A3..B4); ch3 is the patterned glue (181 notes,
+# density 1.41, D#4..B4); ch4 is steady drums (density 0.82). No chromatic
+# tricks to preserve — diatonic E major with applied dominants (B7, F#7,
+# G#7); the one chromatic visitor is ch2's C-natural passing tone
+# (mm29-31), which no enhancement voice doubles.
+#
+# Register audit (simulate_song): octave 2 is EMPTY (ch1 floors at A3 = 57,
+# with only two A3 hits in 32 measures); octave 3 holds ONLY A3 (2x) and
+# B3 (34x) — C3..G#3 never sound once. Octave 4 (C#4..B4) is packed by
+# ch1+ch3; octave 5 carries the melody (A5/G#5/B5/F#5 long tones); octave 6
+# carries the second-half melody (C#6/C6/D#6/E6/F#6). Consequences:
+#   * sub_bass in octave 2 (E2..B2 roots) has nothing to collide with.
+#   * low_pad capped at G#3 (56) is unison-proof BY CONSTRUCTION — no GB
+#     voice ever sounds C3..G#3, so no pad note can share a pitch with the
+#     base, whatever the rhythm. A3/B3 are simply never used by the pad.
+#   * Octave 5 is free in exactly four measures: ch2 dips to octave 4 for
+#     the whole of mm4/8/12/16 (per-measure max F#4/G#4, verified
+#     frame-exact) and ch1/ch3 never reach C5 anywhere. A tier-2 violin in
+#     C#5..F#5 confined to those four measures couples the vacant melody
+#     register — unison-proof by register AND time. Everywhere else the
+#     melody holds octave 5/6, so the violin rests (it follows the source's
+#     own first-half-only dip structure).
+#
+#   Tier 1 (2 voices — city-theme budget, held for a busy 32-bar loop):
+#     sub_bass — chord roots in octave 2, half-measure harmonic rhythm
+#                from the analysis (whole-measure holds on static harmony,
+#                same-root holds across quality changes e.g. B->B7). The
+#                harmonic floor the GB speaker implied but couldn't play.
+#     low_pad  — octave-3 chord tones C#3..G#3, 3rd/5th only (root where
+#                the 3rd is occupied or the leading tone — never the LT,
+#                never a chord 7th, never A3/B3). Voice-led by step and
+#                common tone with long holds (G#3/E3/F#3/D#3 pedals).
+#                Entirely under the GB floor, so unison is impossible.
+#
+#   Tier 2 (1 voice — the MT-32/GM body layer):
+#     high_strings — violin-section swells (MT-32 Str Sect 2 / GM String
+#                Ensemble 2, a different section from the pad's Sect 1) in
+#                octave 5, sounding ONLY in mm4/8/12/16 where the melody
+#                dips to octave 4: m4 D#5->F#5 (B7 3rd -> F#m7 root, contrary
+#                to the B2->F#2 bass), m8 E5->D#5 (Emaj7 root -> G#7 5th,
+#                contrary), m12 F#5 hold (B7 5th, all static), m16 C#5 hold
+#                (F#7 5th -> C#m7 root; not A# — the LT). Every entry comes
+#                from rest, so no approach parallels; motion against the
+#                bass is contrary or oblique throughout (the static F#3/G#3
+#                pads underneath make mm4/8 oblique-or-contrary by
+#                construction). Never the LT, never a chord 7th, always the
+#                top voice (ch2 sits an octave below in these bars).
+#                A sustained octave-4/5 comp was still rejected (unison
+#                collisions / 2nds under the lead), as was a piano doubling
+#                of the octave-2 roots (redundant layering, low-end mud) and
+#                an m29-30 octave-6 peak (F#6 sustains a tritone against
+#                ch2's C-natural passing tone; B5 unisons the melody; D#6/A6
+#                are 7ths/3rds of the wrong quality).
+#
+#   Tier 3 (1 voice — color only, dropped first under pressure):
+#     sparkle  — six celesta pings (MT-32 Celesta 1 / GM Celesta) marking
+#                phrase opens and arrivals, all on pitches the melody never
+#                uses (G#6/A6) or uses only far away (E6/F#6): m1 + m9 (E,
+#                3rd), m17 + m25 (A, root), m19 (E arrival, root), m29 (B7
+#                peak, 5th). NOTHING at m32 — the loop lands on B7->E and
+#                must hand back to m1 sounding open, never finished.
+#
+# Harmony follows the analysis template verbatim (I/I7/vi7/vii°/ii7/V7/
+# vii7/IV7/III7/IV/iii7/ii — E major). Two applied dominants needed a
+# sounding-pitch cross-check and both keep the source's spelling: m16 F#7
+# (II7 = V/V) takes C#3 (5th), not the chromatic 3rd A# (a doubled leading
+# tone); m8/m31 G#7 (III7) takes G#3/D#3 (root/5th), never the 7th F#.
+# The missing chord 3rds the analysis implies but no GB voice states are
+# left missing — the pad only doubles what the progression already says.
+#
+# Voice leading (bass vs pad, half-measure slots — every transition
+# walked): no parallel P5/P8 anywhere. Structural devices: oblique motion
+# under static pedal (m3-m4 F#3 pedal over F#2->B2->F#2; m8-m9 G#3 hold
+# across the barline; m17-m18 C#3 triple hold), contrary motion out of
+# every root-position change (m7->m8 P5->M3, m11->m12 P8->M3,
+# m16->m17 P8->M3, m25->m26 P5->P8), similar motion only into imperfect
+# intervals (3->3, 5->3) or as inner-voice hidden 5ths/octaves at P5 bass
+# leaps (m10->m11, m23->m24 — stepwise pad preferred over leaping to dodge
+# them; the skill ranks stepwise inner motion above hidden-perfect
+# avoidance for non-outer voices, and the true outer pair bass/ch2-melody
+# never moves in parallel). Three spots were reworked from the first
+# draft to kill real parallels: m4 is now a static F#3 pedal (was M3->P5
+# similar), m25b1 is C#3 not E3 (was P5->P5 with m24), m27b1 is G#3 not E3
+# and m28b3 is C#3 not E3 (was P8->P8 then P5->P5), m31b1 is A3 (F#m7 3rd —
+# ch1's only two A3 hits sit at frames 715/1174, mm7/11, so m31 is clear;
+# verified by simulation, not assumed) and m32b1 is G#3 (was P8->P8).
+#
+# Loop seam: the loop IS bar 1 (loop_start 0), so no note may cross frame
+# 3456. Last events use d 1.95 (release a hair early for a clean re-key;
+# f1 == end is legal, f1 > end is not). Beat math is exact here (3456 f /
+# 128 beats = 27 f/beat, uniform beat_frames), but the 1.95 convention is
+# kept from Pallet/Vermilion so the same YAML compiles identically at the
+# Hall-of-Fame alternate tempo (232 BPM) — all timing is musical position
+# (measure/beat/duration), never frames, so the enhancement stays
+# sample-locked to the base channels at both tempos.
+#
+# Patches match the approved Pallet Town / Vermilion set (same Masuda
+# high-register family): sub_bass -> MT-32 SynBass1 / GM Synth Bass 1;
+# low_pad -> MT-32 Str Sect 1 / GM Pad 2 (warm); high_strings -> MT-32
+# Str Sect 2 / GM String Ensemble 2; sparkle -> MT-32 Celesta 1 / GM Celesta.
+
+schema: 1
+song: Music_Cities1
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 64                   # Vermilion level; ch4 motor runs throughout
+    velocity: 76
+    events:
+      - {at: 1, pattern: bass_body}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 72                   # Pallet/Vermilion level; 3 busy GB lines + drums
+    velocity: 80
+    events:
+      - {at: 1, pattern: pad_body}
+
+  - name: high_strings
+    tier: 2                      # MT-32/GM only — no opl_patch allowed
+    mt32_patch: 50               # MT-32 Str Sect 2 (sister section to pad's 49)
+    gm_program: 50               # GM String Ensemble 2
+    pan: center
+    volume: 60                   # under the pad; violin register cuts on its own
+    velocity: 78
+    events:
+      - {at: 1, pattern: violin_body}
+
+  - name: sparkle
+    tier: 3                      # color/flourish — dropped first under pressure
+    mt32_patch: 23               # MT-32 Celesta 1
+    gm_program: 9                # GM Celesta
+    pan: center
+    volume: 64
+    velocity: 80
+    events:
+      - {at: 1, pattern: sparkle_body}
+
+patterns:
+  # Chord roots, octave 2 (E2..B2) — far below ch1's A3 floor. Half-measure
+  # harmonic rhythm from the analysis; static harmony holds whole measures.
+  bass_body:
+    measures: 32
+    events:
+      - {m: 1,  b: 1, d: 4,    n: E2}     # E / Emaj7 (I/I7) — root hold
+      - {m: 2,  b: 1, d: 4,    n: C#2}    # C#m7   (vi7)
+      - {m: 3,  b: 1, d: 2,    n: D#2}    # D#dim  (vii°)
+      - {m: 3,  b: 3, d: 2,    n: F#2}    # F#m7   (ii7)
+      - {m: 4,  b: 1, d: 2,    n: B2}     # B7     (V7)
+      - {m: 4,  b: 3, d: 2,    n: F#2}    # F#m7   (ii7)
+      - {m: 5,  b: 1, d: 4,    n: D#2}    # D#dim / D#m7 (vii°/vii7) — root hold
+      - {m: 6,  b: 1, d: 2,    n: B2}     # B7     (V7)
+      - {m: 6,  b: 3, d: 2,    n: D#2}    # D#dim  (vii°)
+      - {m: 7,  b: 1, d: 2,    n: C#2}    # C#m7   (vi7)
+      - {m: 7,  b: 3, d: 2,    n: A2}     # Amaj7  (IV7)
+      - {m: 8,  b: 1, d: 2,    n: E2}     # Emaj7  (I7)
+      - {m: 8,  b: 3, d: 2,    n: G#2}    # G#7    (III7)
+      - {m: 9,  b: 1, d: 4,    n: E2}     # E / Emaj7 — root hold
+      - {m: 10, b: 1, d: 4,    n: C#2}    # C#m7   (vi7)
+      - {m: 11, b: 1, d: 4,    n: F#2}    # F#m7   (ii7)
+      - {m: 12, b: 1, d: 4,    n: B2}     # B7     (V7)
+      - {m: 13, b: 1, d: 4,    n: D#2}    # D#dim / D#m7 — root hold
+      - {m: 14, b: 1, d: 2,    n: B2}     # B7     (V7)
+      - {m: 14, b: 3, d: 2,    n: D#2}    # D#dim  (vii°)
+      - {m: 15, b: 1, d: 2,    n: C#2}    # C#m7   (vi7)
+      - {m: 15, b: 3, d: 2,    n: E2}     # E      (I)
+      - {m: 16, b: 1, d: 2,    n: F#2}    # F#7    (II7 = V/V)
+      - {m: 16, b: 3, d: 2,    n: C#2}    # C#m7   (vi7)
+      - {m: 17, b: 1, d: 4,    n: A2}     # A      (IV) — second half opens
+      - {m: 18, b: 1, d: 2,    n: A2}     # Amaj7  (IV7)
+      - {m: 18, b: 3, d: 2,    n: F#2}    # F#m7   (ii7)
+      - {m: 19, b: 1, d: 4,    n: E2}     # E      (I)
+      - {m: 20, b: 1, d: 4,    n: E2}     # Emaj7  (I7) — root hold
+      - {m: 21, b: 1, d: 4,    n: B2}     # B / B7 (V/V7) — root hold
+      - {m: 22, b: 1, d: 2,    n: B2}     # B7     (V7, run continuation)
+      - {m: 22, b: 3, d: 2,    n: G#2}    # G#m7   (iii7)
+      - {m: 23, b: 1, d: 2,    n: E2}     # E      (I)
+      - {m: 23, b: 3, d: 2,    n: C#2}    # C#m7   (vi7)
+      - {m: 24, b: 1, d: 2,    n: G#2}    # G#m7   (iii7)
+      - {m: 24, b: 3, d: 2,    n: B2}     # B7     (V7)
+      - {m: 25, b: 1, d: 2,    n: A2}     # A      (IV) — final phrase
+      - {m: 25, b: 3, d: 2,    n: C#2}    # C#m    (vi)
+      - {m: 26, b: 1, d: 4,    n: F#2}    # F#m7 / F#m (ii7/ii) — root hold
+      - {m: 27, b: 1, d: 2,    n: E2}     # E      (I)
+      - {m: 27, b: 3, d: 2,    n: C#2}    # C#m7   (vi7, runs into m28)
+      - {m: 28, b: 1, d: 2,    n: C#2}    # C#m7   (continuation)
+      - {m: 28, b: 3, d: 2,    n: A2}     # Amaj7  (IV7)
+      - {m: 29, b: 1, d: 4,    n: B2}     # B7     (V7) — full-measure peak
+      - {m: 30, b: 1, d: 4,    n: B2}     # B7     (run continuation)
+      - {m: 31, b: 1, d: 2,    n: F#2}    # F#m7   (ii7)
+      - {m: 31, b: 3, d: 2,    n: G#2}    # G#7    (III7)
+      - {m: 32, b: 1, d: 2,    n: E2}     # E      (I)
+      - {m: 32, b: 3, d: 1.95, n: B2}     # B7     (V7) — HC into the loop
+
+  # Octave-3 tenor (C#3..G#3 only — never A3/B3, never the GB floor): 3rd/5th
+  # tones with stepwise/common-tone motion. Ceiling G#3 (56) < A3 (57), so
+  # unison with any GB voice is impossible by construction (verified: C3..G#3
+  # never sound in 32 measures). LT and chord 7ths never doubled.
+  pad_body:
+    measures: 32
+    events:
+      - {m: 1,  b: 1, d: 4,    n: G#3}    # E / Emaj7  3rd — common-tone hold
+      - {m: 2,  b: 1, d: 4,    n: E3}     # C#m7   3rd
+      - {m: 3,  b: 1, d: 4,    n: F#3}    # D#dim 3rd / F#m7 root — hold
+      - {m: 4,  b: 1, d: 4,    n: F#3}    # B7 5th / F#m7 root — static pedal
+      - {m: 5,  b: 1, d: 4,    n: D#3}    # D#dim / D#m7 root — hold
+      - {m: 6,  b: 1, d: 4,    n: F#3}    # B7 5th / D#dim 3rd — hold
+      - {m: 7,  b: 1, d: 4,    n: E3}     # C#m7 3rd / Amaj7 5th — hold
+      - {m: 8,  b: 1, d: 4,    n: G#3}    # Emaj7 3rd / G#7 root — hold
+      - {m: 9,  b: 1, d: 4,    n: G#3}    # E / Emaj7  3rd — hold across barline
+      - {m: 10, b: 1, d: 4,    n: E3}     # C#m7   3rd
+      - {m: 11, b: 1, d: 4,    n: F#3}    # F#m7   root (stepwise; hidden 8ve noted)
+      - {m: 12, b: 1, d: 4,    n: D#3}    # B7     3rd
+      - {m: 13, b: 1, d: 4,    n: D#3}    # D#dim / D#m7 root — hold
+      - {m: 14, b: 1, d: 2,    n: F#3}    # B7     5th
+      - {m: 14, b: 3, d: 2,    n: D#3}    # D#dim  root
+      - {m: 15, b: 1, d: 4,    n: E3}     # C#m7 3rd / E root — hold
+      - {m: 16, b: 1, d: 2,    n: C#3}    # F#7    5th (not A# — the LT)
+      - {m: 16, b: 3, d: 2,    n: E3}     # C#m7   3rd
+      - {m: 17, b: 1, d: 4,    n: C#3}    # A      3rd
+      - {m: 18, b: 1, d: 4,    n: C#3}    # Amaj7 3rd / F#m7 5th — hold
+      - {m: 19, b: 1, d: 4,    n: E3}     # E      root
+      - {m: 20, b: 1, d: 4,    n: G#3}    # Emaj7  3rd
+      - {m: 21, b: 1, d: 4,    n: F#3}    # B / B7 5th — hold
+      - {m: 22, b: 1, d: 2,    n: F#3}    # B7     5th — hold
+      - {m: 22, b: 3, d: 2,    n: G#3}    # G#m7   root
+      - {m: 23, b: 1, d: 2,    n: G#3}    # E      3rd — hold
+      - {m: 23, b: 3, d: 2,    n: E3}     # C#m7   3rd
+      - {m: 24, b: 1, d: 4,    n: D#3}    # G#m7 5th / B7 3rd — hold
+      - {m: 25, b: 1, d: 4,    n: C#3}    # A 3rd / C#m root — hold
+      - {m: 26, b: 1, d: 4,    n: F#3}    # F#m7 / F#m root — hold
+      - {m: 27, b: 1, d: 2,    n: G#3}    # E      3rd (not E — parallels)
+      - {m: 27, b: 3, d: 2,    n: E3}     # C#m7   3rd
+      - {m: 28, b: 1, d: 2,    n: G#3}    # C#m7   5th (static bass — oblique)
+      - {m: 28, b: 3, d: 2,    n: C#3}    # Amaj7  3rd (not E — parallels)
+      - {m: 29, b: 1, d: 4,    n: D#3}    # B7     3rd
+      - {m: 30, b: 1, d: 4,    n: D#3}    # B7     3rd — hold
+      - {m: 31, b: 1, d: 2,    n: A3}     # F#m7   3rd — ch1 A3 hits are mm7/11
+      - {m: 31, b: 3, d: 2,    n: G#3}    # G#7    root
+      - {m: 32, b: 1, d: 2,    n: G#3}    # E      3rd — hold (not E — parallels)
+      - {m: 32, b: 3, d: 1.95, n: D#3}    # B7     3rd — seam release
+
+  # Tier-2 violin swells: octave-5 chord tones (C#5..F#5) in mm4/8/12/16
+  # only — the four measures where ch2 dips to octave 4 and ch1/ch3 never
+  # exceed B4, so no base voice shares the register in these bars. 3rd/5th/
+  # root only; every entry from rest; contrary or oblique vs the bass.
+  violin_body:
+    measures: 32
+    events:
+      - {m: 4,  b: 1, d: 2, n: D#5}     # B7     (3rd) — contrary to B2->F#2
+      - {m: 4,  b: 3, d: 2, n: F#5}     # F#m7   (root)
+      - {m: 8,  b: 1, d: 2, n: E5}      # Emaj7  (root) — contrary to E2->G#2
+      - {m: 8,  b: 3, d: 2, n: D#5}     # G#7    (5th)
+      - {m: 12, b: 1, d: 4, n: F#5}     # B7     (5th) — all static
+      - {m: 16, b: 1, d: 4, n: C#5}     # F#7 5th / C#m7 root — hold (not A#)
+
+  # Tier-3 celesta pings at phrase points only. G#6/A6 never sound in the
+  # melody; E6/F#6 sound only far from their ping slots (m18/m25-26 vs m19,
+  # m26 vs m29 — no overlap). Nothing at the m32 seam: the loop stays open.
+  sparkle_body:
+    measures: 32
+    events:
+      - {m: 1,  b: 1, d: 1, n: G#6}     # E   (3rd) — loop opens
+      - {m: 9,  b: 1, d: 1, n: G#6}     # E   (3rd) — phrase repeat
+      - {m: 17, b: 1, d: 1, n: A6}      # A   (root) — second half lifts
+      - {m: 19, b: 1, d: 1, n: E6}      # E   (root) — E-major arrival
+      - {m: 25, b: 1, d: 1, n: A6}      # A   (root) — final phrase
+      - {m: 29, b: 1, d: 1, n: F#6}     # B7  (5th) — pre-loop peak
