@@ -11,6 +11,9 @@ tools/translation.db-shm
 tools/translation.db-journal
 scratch/
 POKEMON.DSV
+# Scratch test-save staging (raw GB .sav under gb/, converted .dsv under
+# dos/); never committed — fixtures live in tests/fixtures/ instead.
+save/
 .nasmflags.stamp
 MEMDUMP.TXT
 MEMDUMP.BIN

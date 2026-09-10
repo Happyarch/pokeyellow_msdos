@@ -4680,27 +4680,108 @@ asm_0dbd:
 .noPreviousMapReturn:
     movzx eax, byte [ebp + wCurMapTileset]    ; bit 7 already cleared by the snapshot above
     call StageTilesetBlobs
-    ; A continue lands here with NPC sprite data unrestored: the save slice
-    ; covers wNumSprites but the sprite arrays live in unsaved flat .bss, and
-    ; the InitSprites call further down is skipped with the header reload. A
-    ; nonzero restored count over zeroed text ids then sends DisplayTextID's
-    ; sprite path to row 0x7F8, out of the map text table (measured cr2 page
-    ; fault at DisplayTextID.readFirstByte with edx=0x7F8). Repopulate from
-    ; the persisted sprite-count pointer instead of reloading the header.
-    ; DEVIATION{class=data-model; pret=home/overworld.asm:LoadMapHeader; behavior=repopulate NPC sprite data on the already-loaded early-return path from the persisted sprite-count pointer, mirroring the full path's battle-over skip and validating the count; evidence=the save slice covers wNumSprites but the sprite arrays live in unsaved flat .bss, so a continue left count-nonzero with zeroed text ids and DisplayTextID faulted row 0x7F8 out of the map text table, measured cr2 page fault at readFirstByte with edx 0x7F8; lifetime=permanent}
-    ; W_OBJECT_DATA_PTR_TEMP rides the save slice (in-EBP GB WRAM restored by
-    ; the load), so only the port-local count pointer needs restoring here;
-    ; InitSprites reads both.
+
+    ; Normalize port-specific pointers that are incompatible when continuing
+    ; from an authentic Game Boy save (which contains GB cartridge ROM/WRAM addresses).
+    ; DEVIATION{class=banking; pret=home/overworld.asm:LoadMapHeader; behavior=normalize wCurMapDataPtr tileset pointers view pointer connection headers and sprite pointers from the compiled map header on continue to support authentic Game Boy saves under the flat memory model; evidence=Game Boy SRAM saves carry banked ROM addresses and GB-specific WRAM offsets that corrupt tileset graphics trigger the block clamp and hide sprites; lifetime=permanent}
+    mov byte [ebp + wTilesetBank], 0x01
+    mov word [ebp + wTilesetBlocksPtr], OW_BLOCKS_GBADDR
+    mov word [ebp + wTilesetGfxPtr],   OW_GFX_GBADDR
+    mov word [ebp + wTilesetCollisionPtr],  OW_COLL_GBADDR
+
+    ; Recompute wCurrentTileBlockMapViewPointer and block coordinates for the
+    ; DOS port's 40x25 extended viewport. An authentic Game Boy save stores
+    ; a 20x18 GB viewport pointer into wOverworldMap ($C749), which lies outside
+    ; the port's wOverworldMap ($CE4A..$D74A) and trips the OOB clamp in
+    ; LoadCurrentMapView, filling the screen with dummy border tiles.
+    movzx eax, byte [ebp + wCurMapWidth]
+    add eax, MAP_BORDER * 2             ; stride = width + 2*MAP_BORDER
+    movzx ebx, byte [ebp + wYCoord]
+    shr ebx, 1                          ; block Y
+    add ebx, MAP_BORDER
+    sub ebx, SCREEN_BLOCK_HEIGHT / 2    ; view row
+    movzx ecx, byte [ebp + wXCoord]
+    shr ecx, 1                          ; block X
+    add ecx, MAP_BORDER
+    sub ecx, SCREEN_BLOCK_WIDTH / 2     ; view col
+    imul eax, ebx
+    add eax, ecx
+    add eax, wOverworldMap
+    mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
+    mov al, [ebp + wXCoord]
+    and al, 1
+    mov [ebp + wXBlockCoord], al
+    mov al, [ebp + wYCoord]
+    and al, 1
+    mov [ebp + wYBlockCoord], al
+
+    call GetMapHeaderPointer                ; ESI = flat address of wCurMap's compiled header
+
+    ; Refresh wCurMapDataPtr from compiled header (offset +3, blocks_ptr: 0x3BA0 for indoor, 0x4000+ for outdoor)
+    mov ax, [esi + 3]
+    mov [ebp + wCurMapDataPtr], ax
+
+    ; Refresh connection headers if any connections exist on this map
+    lea esi, [esi + W_CUR_MAP_HEADER_SIZE]  ; ESI -> connection headers (or object_data_ptr)
+    mov byte [ebp + wNorthConnectedMap], MAP_NO_CONNECTION
+    mov byte [ebp + W_SOUTH_CONNECTED_MAP], MAP_NO_CONNECTION
+    mov byte [ebp + W_WEST_CONNECTED_MAP],  MAP_NO_CONNECTION
+    mov byte [ebp + W_EAST_CONNECTED_MAP],  MAP_NO_CONNECTION
+
+    mov al, [ebp + wCurMapConnections]
+    test al, CONNECTION_NORTH
+    jz .earlyNoNorth
+    mov edi, wNorthConnectedMap
+    call CopyMapConnectionHeader
+.earlyNoNorth:
+    mov al, [ebp + wCurMapConnections]
+    test al, CONNECTION_SOUTH
+    jz .earlyNoSouth
+    mov edi, W_SOUTH_CONNECTED_MAP
+    call CopyMapConnectionHeader
+.earlyNoSouth:
+    mov al, [ebp + wCurMapConnections]
+    test al, CONNECTION_WEST
+    jz .earlyNoWest
+    mov edi, W_WEST_CONNECTED_MAP
+    call CopyMapConnectionHeader
+.earlyNoWest:
+    mov al, [ebp + wCurMapConnections]
+    test al, CONNECTION_EAST
+    jz .earlyNoEast
+    mov edi, W_EAST_CONNECTED_MAP
+    call CopyMapConnectionHeader
+.earlyNoEast:
+
+    ; ESI now points to object_data_ptr
+    movzx eax, word [esi]
+    mov [ebp + W_OBJECT_DATA_PTR_TEMP], ax   ; base of object data
+    add eax, ebp                             ; EAX = flat object data address
+
+    ; Advance past border block
+    inc eax
+
+    ; Advance past warps (wWarpEntries in WRAM was already restored from SRAM)
+    movzx ecx, byte [eax]                    ; warp count
+    inc eax
+    shl ecx, 2                               ; * 4 bytes per warp entry
+    add eax, ecx
+
+    ; Advance past signs (wNumSigns/signs in WRAM were already restored from SRAM)
+    movzx ecx, byte [eax]                    ; sign count
+    inc eax
+    lea ecx, [ecx + ecx * 2]                 ; * 3 bytes per sign
+    add eax, ecx
+
+    ; EAX is now the flat address of the sprite_count byte in map_headers.inc
+    sub eax, ebp                             ; convert to 16-bit GB offset
+    mov [overworld_sprite_count_ptr], ax
+    mov [ebp + wSpriteCountPtrSave], ax
+
+    ; Repopulate NPC sprite data unless returning from battle/blackout
     mov al, [ebp + wStatusFlags4]
     test al, (1 << BIT_BATTLE_OVER_OR_BLACKOUT)
-    jnz .skipEarlyInitSprites               ; battle return preserves sprite state (full-path rule)
-    movzx eax, word [ebp + wSpriteCountPtrSave]
-    test eax, eax
-    jz .skipEarlyInitSprites                ; pre-fix save (cell never written): keep old behavior
-    movzx ecx, byte [ebp + eax]             ; sprite_count byte at the persisted offset
-    cmp ecx, MAX_OBJECT_EVENTS
-    ja .skipEarlyInitSprites                ; garbage offset: InitSprites trusts the count for slot writes
-    mov [overworld_sprite_count_ptr], ax
+    jnz .skipEarlyInitSprites
     call InitSprites
 .skipEarlyInitSprites:
     pop edi
