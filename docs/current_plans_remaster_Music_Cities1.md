@@ -56,25 +56,26 @@
 
 ## Purpose
 
-Remaster `Cities1` for the MS-DOS port by revising both shipped MIDI renderings:
+Remaster `Cities1` for the MS-DOS port across its shipped targets:
 
-- `dos_port/assets/midi/gm/Music_Cities1.mid`
-- `dos_port/assets/midi/mt32/Music_Cities1.mid`
+- OPL3 Tier-1 runtime enhancement stream (`dos_port/tools/audio/enhancements/Music_Cities1.yaml` compiled into the build)
+- `dos_port/assets/midi/gm/Music_Cities1.mid` (General MIDI rendering)
+- `dos_port/assets/midi/mt32/Music_Cities1.mid` (Roland MT-32 rendering)
 
-The remaster must preserve the Game Boy composition in `audio/music/cities1.asm` as the source of truth while improving the arrangement quality on the target synths.
+The remaster must preserve the Game Boy composition in `audio/music/cities1.asm` as the source of truth while improving the arrangement quality across all target synths.
 
 ### Why this is a pipeline change, not a file edit
 
-Both `.mid` files under `dos_port/assets/midi/` are build products of `gb_to_midi.py`, generated from the GB source plus per-song enhancement configuration (`dos_port/tools/audio/enhancements/`, `dos_port/tools/audio/overrides/`). They are not committed as hand-authored masters — the Makefile regenerates them from that pipeline, so editing the `.mid` bytes directly is not a remaster, it is a change that the next `make assets` silently discards. 
+The audio assets under `dos_port/assets/midi/` and the OPL3 enhancement streams in `dos_port/assets/opl_enh_data.inc` are build products of `gb_to_midi.py` and `midi_to_stream.py`, generated from the GB source plus per-song enhancement configuration (`dos_port/tools/audio/enhancements/Music_Cities1.yaml`, `dos_port/tools/audio/overrides/Music_Cities1.yaml`). They are not committed as hand-authored masters — the Makefile regenerates them from that pipeline, so editing the `.mid` bytes directly is not a remaster, it is a change that the next `make assets` silently discards. 
 
-The spec is framed strictly around the override/enhancement source files rather than the shipped `.mid` files themselves because the build toolchain is the authoritative source of truth. Any change directly to the `.mid` binary payload bypasses the compiler, breaking reproducibility and ensuring the next asset compile clobbers the edit. The source-side configuration is the only place where timing and patch assignments can be maintained under version control and verified programmatically (via `yaml_lint.py`).
+The spec is framed strictly around the override/enhancement source files rather than the generated asset files themselves because the build toolchain is the authoritative source of truth. Any change directly to the `.mid` binary payload bypasses the compiler, breaking reproducibility and ensuring the next asset compile clobbers the edit. The source-side configuration is the only place where timing and patch assignments can be maintained under version control and verified programmatically (via `yaml_lint.py`).
 
 The actual deliverable of this remaster is therefore:
 
-- a `Music_Cities1` enhancement/override definition (YAML, in the same location and format as existing per-song overrides under `dos_port/tools/audio/overrides/` and/or `dos_port/tools/audio/enhancements/`) encoding the tier-1 (OPL3/GM) and tier-2/3 (MT-32) changes described below, following `audio-enhance-opl3` and `audio-enhance-mt32` conventions
-- the regenerated `.mid` files produced by running the standard asset build (`make assets` / the `gb_to_midi.py` target for this song) from that definition
+- a `Music_Cities1` enhancement/override definition (`dos_port/tools/audio/enhancements/Music_Cities1.yaml` and/or `dos_port/tools/audio/overrides/Music_Cities1.yaml`) encoding the tier-1 (OPL3/GM) and tier-2/3 (MT-32) changes described below, following `audio-enhance-opl3` and `audio-enhance-mt32` conventions
+- the regenerated asset files produced by running the standard asset build (`make assets` / the `gb_to_midi.py` target for this song) from that definition
 
-Any reviewer step that inspects the `.mid` files must first confirm they are current build output of the checked-in override, not a hand-edited artifact — regenerate-and-diff, not edit-in-place.
+Any reviewer step that inspects the audio assets must first confirm they are current build output of the checked-in YAML, not a hand-edited artifact — regenerate-and-diff, not edit-in-place.
 
 ## Source of Truth
 
@@ -156,6 +157,15 @@ That diagnosis follows from the GB writing itself, not from a style preference. 
 - keep rhythmic motion present, but avoid overcomplicating the accompaniment
 - maintain a city-theme brightness rather than turning the track into a lounge, battle, or cinematic cue
 - keep the harmonic progression, structural form, and phrase-level melodic/bass relationship identical between the GM and MT-32 renderings (see "Why the musical backbone must be identical" below)
+
+### OPL3-specific goals (Tier 1)
+
+The OPL3 runtime overlay should prioritize:
+
+- conservative extra channels that sound clean through 2-operator FM synthesis
+- strict voice limits (adhering to the 10-voice enhancement pool, voices 4–13)
+- avoidance of dense chord clusters or clashing FM sidebands that cause harsh distortion
+- natural decay envelopes and complementary frequency registers that let the base GB pulse channels cut through cleanly
 
 ### GM-specific goals
 
@@ -295,12 +305,13 @@ A reviewer should verify both improvement and faithfulness with four checks. All
 
 ### 0. Build-provenance check
 
-Confirm the shipped `.mid` files are current build output, not stale or hand-edited.
+Confirm the audio definition is valid and generated assets are current build output, not stale or hand-edited.
 
 The reviewer should confirm:
 
-- the `Music_Cities1` GM/MT-32 files are byte-reproducible from a clean `make assets` run against the checked-in override/enhancement source
-- no diff exists between a fresh regeneration and the committed files
+- `python3 dos_port/tools/audio/yaml_lint.py dos_port/tools/audio/enhancements/Music_Cities1.yaml` exits 0 with no errors or warnings
+- the `Music_Cities1` GM/MT-32 MIDI files and OPL3 streams are byte-reproducible from a clean `make assets` run against the checked-in YAML source
+- no diff exists between a fresh regeneration and the committed assets
 
 ### 1. Score-level check
 
@@ -316,24 +327,39 @@ The reviewer should confirm:
 
 ### 2. Listening check
 
-Audition both renderings.
+Audition all target renderings using the host-side audition tool (`dos_port/tools/audio/audition.py`), followed by in-DOS driver verification.
 
-To ensure consistency and avoid subjective variations across different emulators or wavetable synths, the audition and comparison checks must be anchored to the following fixed reference targets:
-- **General MIDI (GM) Baseline Target:** The GM rendering must be auditioned using **FluidSynth** loaded with the standard **FluidR3_GM.sf2** soundfont. The reviewer must confirm the GM version sounds cleaner, fuller, and has clear voice/register separation under this baseline configuration without becoming muddy or overpacked. Anchoring the review to this target prevents varying outcomes caused by different host-side wavetable cards or thin default software synths.
-- **Roland MT-32 Baseline Target:** The MT-32 rendering must be auditioned using **MUNT (mt32emu-qt)** with the standard Roland MT-32 ROMs.
+To ensure consistency and avoid subjective variations across different emulators or soundfonts, the audition and comparison checks are anchored to the following fixed reference targets:
+
+- **OPL3 Target:** Auditioned host-side via `tools/audio/audition.py Cities1` (or `palet`/`cities` via fuzzy match). Confirms clean 2-op FM playback at native 48 kHz with software volume envelopes and authentic noise drum percussion. Verify no voice pool exhaustion (max 10 enhancement voices) or FM distortion.
+- **General MIDI (GM) Baseline Target:** Auditioned host-side via `tools/audio/audition.py --target gm Cities1` against **FluidSynth** loaded with standard **FluidR3_GM.sf2**. The reviewer must confirm the GM version sounds cleaner, fuller, and has clear voice/register separation without becoming muddy or overpacked.
+- **Roland MT-32 Baseline Target:** Auditioned host-side via `tools/audio/audition.py --target mt32 Cities1` (with `mt32emu-qt &` running) using standard Roland MT-32 ROMs.
+
+**Interactive A/B Testing & Hot-Reload:**
+The reviewer and arranger should use `audition.py`'s interactive TUI during audition:
+- **`[Tab]`**: Instantly flip between the working YAML and baseline/previous checkpoint mid-song without losing playback position.
+- **`[Space]`**: Toggle enhancements On / Off (Pure GB ↔ Enhanced) to verify additions against the raw composition.
+- **`[M]`**: Solo enhancements to inspect only newly authored voices.
+- **`[ [ ]` / `[ ] ]`**: Step through snapshots saved in `tools/audio/.revisions/Music_Cities1/`.
+- **Live Hot-Reload**: Save modifications to `Music_Cities1.yaml` in an editor or via an LLM, and `audition.py` updates playback instantly.
+
+**In-DOS End-to-End Driver Verification:**
+- OPL3: `dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CITIES1 /LOOP` (test `/NOENH` live toggle).
+- MT-32: `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CITIES1 /LOOP` (verify MPU-401 driver playback).
 
 The reviewer should confirm:
 
-- the GM version sounds cleaner and fuller than the current shipped GM rendering under the baseline target, using the current shipped file and the GB source as the two fixed reference points (not a free-floating "better" judgment)
+- the OPL3 tier-1 overlay adds warmth and support without masking the GB pulse lead or causing FM clipping
+- the GM version sounds cleaner and fuller than the current shipped GM rendering under the baseline target, using the current shipped file and the GB source as reference points
 - the MT-32 version sounds richer than GM without losing clarity under its baseline target
 - the melody remains the foreground voice throughout
 - the ending loops naturally without a jarring reset, in both the normal-tempo and Hall-of-Fame alternate-tempo execution
 - the track still feels like a city theme, not a rearranged medley
-- the enhancement/base channels stay in sync through at least two loop cycles in each of the generated files
+- the enhancement/base channels stay in sync through at least two loop cycles in each target
 
 ### Why the reviewer judgment is anchored this way
 
-The decision does not rest on "sounds better" as a free-floating opinion. The reference point is the GB source and the shipped renders, with the source determining faithfulness and the current MIDIs determining whether the remaster is an improvement over the baseline. In practice, a reviewer's ears settle the listening check, but the ears are not free to invent criteria: they are checking against the score and against the prior files. The baseline targets (FluidSynth and MUNT) guarantee that both the developer and the reviewer are auditing identical timbres and dynamic ranges, removing hardware-specific variance from the verification process.
+The decision does not rest on "sounds better" as a free-floating opinion. The reference point is the GB source and the shipped renders, with the source determining faithfulness and the current MIDIs determining whether the remaster is an improvement over the baseline. In practice, a reviewer's ears settle the listening check, but the ears are not free to invent criteria: they are checking against the score and against the prior files. The baseline targets guarantee that both the developer and the reviewer are auditing identical timbres and dynamic ranges, removing hardware-specific variance from the verification process.
 
 ### 3. Faithfulness check
 
@@ -350,8 +376,8 @@ The reviewer should confirm:
 
 The remaster is done when all of the following are true:
 
-- the change is captured entirely as override/enhancement configuration, and all shipped `.mid` files (GM/MT-32) are regenerated from it, not edited by hand
-- both normal-tempo MIDIs have been updated from the same arrangement intent
+- the change is captured entirely as override/enhancement configuration (`Music_Cities1.yaml`), passes `yaml_lint.py` with 0 errors/warnings, and all shipped assets are regenerated from it, not edited by hand
+- OPL3 tier-1 enhancement stream compiles and sounds clean through host NukedOPL and in-DOS OPL shim
 - the GM files are cleaner, more legible, and more balanced than the current ones under the baseline FluidSynth target
 - the MT-32 files are richer and more expressive than the GM files under the baseline MUNT target, while sharing the same harmonic progression and structural form
 - all generated files still read as `Cities1`
