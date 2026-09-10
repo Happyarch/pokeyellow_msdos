@@ -12,7 +12,8 @@ import hashlib
 from pathlib import Path
 import shutil
 
-AUDIO_DIR = Path(__file__).resolve().parent
+AUDITION_DIR = Path(__file__).resolve().parent
+AUDIO_DIR = AUDITION_DIR.parent
 REVISIONS_DIR = AUDIO_DIR / ".revisions"
 ENHANCE_DIR = AUDIO_DIR / "enhancements"
 

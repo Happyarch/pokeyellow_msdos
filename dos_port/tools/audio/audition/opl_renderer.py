@@ -14,7 +14,8 @@ import subprocess
 import sys
 import tempfile
 
-AUDIO_DIR = Path(__file__).resolve().parent
+AUDITION_DIR = Path(__file__).resolve().parent
+AUDIO_DIR = AUDITION_DIR.parent
 ROOT = AUDIO_DIR.parents[2]
 LIB_PATH = AUDIO_DIR / "libnukedopl.so"
 
@@ -34,7 +35,7 @@ POOL_OPL2_SAFE = 5
 def ensure_synth_built():
     """Ensures libnukedopl.so is compiled."""
     if not LIB_PATH.exists():
-        src = AUDIO_DIR / "opl_synth.cpp"
+        src = AUDITION_DIR / "opl_synth.cpp"
         nuked = ROOT / "dos_port" / "tools" / "dosbox-x" / "src" / "hardware" / "nukedopl.cpp"
         inc = ROOT / "dos_port" / "tools" / "dosbox-x" / "src" / "hardware"
         cmd = [

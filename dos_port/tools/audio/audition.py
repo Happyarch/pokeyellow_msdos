@@ -41,6 +41,7 @@ TIMBRES = AUDIO_DIR / "mt32" / "timbres.yaml"
 ENHANCE_DIR = AUDIO_DIR / "enhancements"
 
 sys.path.insert(0, str(AUDIO_DIR))
+sys.path.insert(0, str(AUDIO_DIR / "audition"))
 from gen_mt32_patches import build_messages  # noqa: E402
 import yaml  # noqa: E402
 import revisions  # noqa: E402
