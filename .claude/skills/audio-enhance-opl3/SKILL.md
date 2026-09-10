@@ -175,8 +175,8 @@ nature; the OPL3 voice budget (polyphony) still counts them.
 ## Auditioning (how to actually hear it)
 
 The listen loop lives in the **build-and-debug** skill ("Auditioning music").
-Short form: host-side `tools/audio/audition.py --target gm <Song>` for fast
-iteration, then the real OPL3 shim end-to-end with
-`dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`. The track is the
-`TRACK=` make variable — never edit the Makefile or debug_dump.asm to swap
-songs, and never do full DOS rebuilds just to hear a YAML tweak.
+Short form: `tools/audio/audition.py <Song>` (defaults to `--target opl3`: native
+host-side 49.7 kHz FM synthesis via NukedOPL with live hot-reload, position-locked
+`[Tab]` A/B toggling, and disk-persisted revisions in `tools/audio/.revisions/`).
+Then verify the real OPL3 shim in-DOS with `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
+Never do full DOS rebuilds just to hear a YAML tweak — use `audition.py`.

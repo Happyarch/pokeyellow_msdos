@@ -972,23 +972,36 @@ by design; there is no migration path.)
 Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
 `audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
 
-**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` plays the
-generated `assets/midi/<target>/<Song>.mid` straight to an ALSA synth:
+**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` defaults to
+OPL3 synthesis (`--target opl3`): authentic 49.7 kHz FM via NukedOPL with live
+file hot-reloading and position-locked A/B testing:
 
 ```sh
+# OPL3 (default) — instant host FM synthesis, zero external synths needed:
+tools/audio/audition.py Music_PalletTown
+
+# While playing in OPL3 mode:
+#   [Tab]         A/B toggle: flips between working copy and previous revision/checkpoint
+#   [Space] / [E] Toggle enhancements On / Off (Pure GB vs. Enhanced)
+#   [M]           Solo enhancements (mutes base GB channels)
+#   [ [ ] / [ ] ] Step through disk revisions (.revisions/<Song>/)
+#   [U]           Revert YAML on disk to selected revision
+#   [C]           Save manual checkpoint
+#   [Q]           Quit
+
+# MIDI targets (ALSA port to MUNT / fluidsynth):
 mt32emu-qt &                                        # MUNT, for --target mt32
-tools/audio/audition.py Music_Celadon               # --target mt32 is the default
+tools/audio/audition.py --target mt32 Music_Celadon
 tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
 tools/audio/audition.py --port 128:0 Music_Celadon  # pin the ALSA port
 ```
 
-The MT-32 setup SysEx is **off by default** (`--setup` opts in): standalone
-mt32emu-qt mishandles that System Area write on its live input and shifts part
-routing. For the real boot upload use `dos_port/run-mt32`.
+Revisions are stored on disk in `tools/audio/.revisions/<Song>/` (gitignored),
+so parallel agent commits in git cannot disrupt or lose your A/B iteration history.
 
-Edit `tools/audio/mt32/timbres.yaml` / `tools/audio/overrides/*.yaml` /
-`tools/audio/enhancements/*.yaml` →
-`make assets` → re-run audition.py → listen. That's the whole loop.
+Edit `tools/audio/enhancements/<Song>.yaml` in your editor or have an LLM edit it →
+`audition.py` automatically hot-reloads the changes live → press `[Tab]` to hear the A/B diff.
+That's the whole loop.
 
 **2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
 driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
@@ -1006,9 +1019,13 @@ sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
 exits — that's the byte-verification mode, not the listening mode.
 
 **Enhancements on/off (A/B) — the two targets differ (verified 2026-07-07):**
-- **OPL3**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm` streams) —
-  the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
-  TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
+- **OPL3**:
+  - **Host-side (fastest)**: run `tools/audio/audition.py <Song>` and press `[Space]`
+    or `[Tab]` to flip between pure GB, previous revisions, or the active enhancement
+    without stopping playback.
+  - **In-DOS (end-to-end)**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm`
+    streams) — the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
+    TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
 - **MT-32/GM**: enhancements are **baked into the MIDI stream at asset-gen
   time** (`gb_to_midi.py` folds `enhancements/<Song>.yaml` in; `mpu401.asm`
   never checks `/NOENH` — passing it is harmless but does nothing). The plain

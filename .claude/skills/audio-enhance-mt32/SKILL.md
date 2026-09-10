@@ -180,8 +180,8 @@ other tier 2–3 voices.
 ## Auditioning (how to actually hear it)
 
 The listen loop lives in the **build-and-debug** skill ("Auditioning music").
-Short form: `mt32emu-qt &` then `tools/audio/audition.py <Song>` (prepends the
-timbres.yaml setup SysEx, so MUNT hears what mt32_upload programs at boot);
+Short form: `mt32emu-qt &` then `tools/audio/audition.py --target mt32 <Song>` (pass
+`--setup` to prepend the timbres.yaml setup SysEx; `--target opl3` is now the default);
 end-to-end via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
 The track is the `TRACK=` make variable — never edit the Makefile or
 debug_dump.asm to swap songs.
