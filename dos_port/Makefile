@@ -4130,7 +4130,7 @@ assets/town_map_text.inc: tools/generators/gen_town_map_text.py tools/generators
 
 src/data/audio_data.o: assets/audio_rom.inc
 src/data/pokemon/cries.o: assets/cry_data.inc
-src/audio/opl_shim.o: assets/opl_patches.inc
+src/audio/opl_shim.o: assets/opl_patches.inc assets/sfx_data.inc
 src/audio/opl_enh.o: assets/enh_streams.inc assets/audio_constants.inc
 
 src/audio/tandy_shim.o: assets/tandy_tables.inc
@@ -4151,6 +4151,8 @@ assets/mt32_sysex.inc: tools/audio/gen_mt32_patches.py \
 	python3 tools/audio/gen_mt32_patches.py
 assets/opl_patches.inc: tools/audio/gen_opl_patches.py
 	python3 tools/audio/gen_opl_patches.py
+assets/sfx_data.inc: tools/audio/gen_sfx_data.py $(wildcard tools/audio/sfx/*.yaml) assets/audio_constants.inc
+	python3 tools/audio/gen_sfx_data.py
 
 # SN76489 attenuation tables for the Tandy shim.
 assets/tandy_tables.inc: tools/audio/gen_tandy_tables.py
@@ -5105,7 +5107,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
 		assets/colors/palettes.inc \
         assets/bg_map_attributes.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
-        assets/opl_patches.inc assets/music_streams.inc assets/mt32_sysex.inc \
+        assets/opl_patches.inc assets/sfx_data.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
         assets/font_1bpp.inc assets/font_extra_2bpp.inc \

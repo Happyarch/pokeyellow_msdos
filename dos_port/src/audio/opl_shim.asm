@@ -333,7 +333,23 @@ opl_pass:
 .noRestart:
     cmp byte [edi + VS_KEY], 0
     jz .next
+    ; keep sweep register in sync for pulse 1
+    test ebx, ebx
+    jnz .noSweepSync
+    mov al, [ebp + rAUD1SWEEP]
+    cmp al, [edi + VS_SWEEP]
+    je .noSweepSync
+    mov [edi + VS_SWEEP], al
+    mov word [edi + VS_SWACC], 0
+.noSweepSync:
     ; frequency follow (engine vibrato / pitch slides / NR43 rewrites)
+    ; Pulse 1 with active hardware sweep manages its own frequency via voice_sweep;
+    ; comparing against static NRx3/NRx4 would clobber the swept frequency every tick.
+    test ebx, ebx
+    jnz .doFreqFollow
+    test byte [edi + VS_SWEEP], 0x70
+    jnz .fsame
+.doFreqFollow:
     mov cl, [ebp + esi + 3]
     mov ch, [ebp + esi + 4]
     and ch, 7
@@ -356,6 +372,7 @@ opl_pass:
     je .fpatch
     mov al, ah
 .fpatch:
+    call voice_get_sfx_patch
     cmp al, [edi + VS_PATCH]
     je .running
     call voice_loadpatch
@@ -372,6 +389,36 @@ opl_pass:
     cmp ebx, 4
     jb .chLoop
 .off:
+    ret
+
+; ---------------------------------------------------------------------------
+; voice_get_sfx_patch — check if an active SFX overrides the patch on channel EBX.
+; Input:  EBX = channel (0-3), AL = current patch
+; Output: AL = overridden patch (or unchanged if no override)
+; Preserves EBX, ECX, EDX, ESI, EDI.
+; ---------------------------------------------------------------------------
+voice_get_sfx_patch:
+    push edx
+    push esi
+    mov dl, [ebp + wChannelSoundIDs + CHAN5 + ebx]
+    test dl, dl
+    jz .done
+    mov esi, OplSfxPatches
+.scan:
+    cmp byte [esi], 0xFF
+    je .done
+    cmp byte [esi], dl
+    jne .next
+    cmp byte [esi + 1], bl
+    jne .next
+    mov al, [esi + 2]           ; matched: load custom patch index
+    jmp .done
+.next:
+    add esi, 4
+    jmp .scan
+.done:
+    pop esi
+    pop edx
     ret
 
 ; ---------------------------------------------------------------------------
@@ -394,6 +441,7 @@ voice_keyon:
     je .noOverride
     mov al, ah
 .noOverride:
+    call voice_get_sfx_patch
     call voice_loadpatch
     ; envelope from NRx2 (the wave channel has none — NR32 is a level)
     mov al, [ebp + esi + 2]
@@ -599,34 +647,46 @@ voice_sweep:
     and cl, 7                   ; period
     jz .done
     movzx eax, cl
-    imul eax, 60
-    movzx ecx, word [edi + VS_SWACC]
-    add ecx, 128
-    cmp ecx, eax
+    imul eax, 60                ; threshold = period * 60
+    movzx edx, word [edi + VS_SWACC]
+    add edx, 128                ; accumulate 128 Hz clock
+    cmp edx, eax
     jb .store
-    sub ecx, eax
-    mov [edi + VS_SWACC], cx
-    ; f' = f +/- (f >> n)
+.loop:
+    sub edx, eax
+    push eax
+    push edx
     movzx eax, word [edi + VS_FREQ]
     mov edx, eax
     mov cl, [edi + VS_SWEEP]
-    and cl, 7
+    and cl, 7                   ; shift
+    jz .noFreqChange
     shr eax, cl
     test byte [edi + VS_SWEEP], 8
     jnz .down
     add edx, eax
     cmp edx, 2048
-    jb .apply
-    jmp voice_keyoff            ; overflow silences the channel (GB rule)
+    jb .stepOk
+    ; overflow: silences channel (GB rule)
+    pop edx
+    pop eax
+    mov word [edi + VS_SWACC], 0
+    jmp voice_keyoff
 .down:
     sub edx, eax
-    jns .apply
+    jns .stepOk
     xor edx, edx
-.apply:
+.stepOk:
     mov [edi + VS_FREQ], dx
+.noFreqChange:
+    pop edx
+    pop eax
+    cmp edx, eax
+    jae .loop
+    mov [edi + VS_SWACC], dx
     jmp voice_setfreq
 .store:
-    mov [edi + VS_SWACC], cx
+    mov [edi + VS_SWACC], dx
 .done:
     ret
 
@@ -723,6 +783,7 @@ voice_volume:
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .clamp
 .mute:
+    call voice_keyoff
     mov al, 63
 .clamp:
     cmp al, 63
@@ -827,6 +888,7 @@ OplRegGroups:
     db 0x20, 0x40, 0x60, 0x80, 0xE0
 
 %include "assets/opl_patches.inc"
+%include "assets/sfx_data.inc"
 
 section .bss
 

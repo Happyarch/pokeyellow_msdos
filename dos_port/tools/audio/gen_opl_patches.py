@@ -127,18 +127,23 @@ PATCHES = {
     # Crisp click (menu open, button clicks):
     # Ultra-short transient snick with rapid decay for tactile UI feedback.
     "noise_click":       [0x08, 0x18, 0xF0, 0x08, 0x00, 0x01, 0x00, 0xF1, 0x08, 0x00, 0x04],
-    # Soft poof (pokeball opening / smoke):
-    # Rapidly decaying soft noise burst.
-    "noise_poof":        [0x05, 0x20, 0xF2, 0x07, 0x00, 0x01, 0x04, 0xF3, 0x07, 0x00, 0x06],
-    # Soft pulse (high sweeps like ball toss, psychic):
+    # Scratchy poof (pokeball opening / smoke):
+    # Inharmonic noise hash with bite, controlled feedback, and sustained envelope.
+    "noise_poof":        [SUS | 0x0B, 0x08, 0xF0, 0x06, 0x00, SUS | 0x01, 0x00, 0xF0, 0x06, 0x00, 0x0C],
+    # Soft pulse (high sweeps like psychic):
     # Rounded waveform with reduced feedback to eliminate piercing treble whistle.
     "pulse_soft":        [SUS | 0x01, 0x2C, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x04, AD_PULSE, SR, 0x00, 0x02],
+    # Tilted square pulse for high-frequency SFX (Poké Ball toss, beam):
+    # Additive 2-op synthesis combining OPL3 Waveform 6 (50% square) with an
+    # in-phase feedback-skewed sine wave (FB=5) to reproduce the analog RC high-pass
+    # decay curve and left-leaning fin shape of the Game Boy APU, with no KSL treble roll-off.
+    "square_sfx":        [SUS | 0x01, 0x0C, AD, SR, 0x00, SUS | 0x01, 0x02, AD, SR, 0x06, 0x0B],
 }
 
 PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
                "sub_bass", "soft_pad", "duty_clean",
                "noise_soft_whoosh", "noise_heavy_thud", "noise_crunch",
-               "noise_click", "noise_poof", "pulse_soft"]
+               "noise_click", "noise_poof", "pulse_soft", "square_sfx"]
 
 # Per-song OPL patch overrides for the BASE channels (tier 0). Normally a
 # base channel's FM patch is picked purely from the GB duty-cycle value
