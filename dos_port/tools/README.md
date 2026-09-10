@@ -44,6 +44,9 @@ and is what CI/the build actually depends on. Run from the repo root or
   GB-charmap converter `gb_text.py` wraps.
 - `dosbox_mcp/`, `mgba_mcp/` — MCP server implementations; see
   **`build-and-debug`** for how they're launched.
+- `audio/audition/` — host-side OPL3 synthesis backend (NukedOPL C++ wrapper
+  `opl_synth.cpp`), OPL stream coordinator (`opl_renderer.py`), and
+  disk-persisted revision tracker (`revisions.py`).
 
 ## Human-facing tools — full usage in a skill
 
@@ -64,7 +67,7 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `golden_diff.py`, `goldencheck.sh` | Fidelity differ / one-scenario check-and-diff | `build-and-debug` |
 | `saveconv.py` | `--verify`/`--info FILE` validates a `.dsv` (size/magic/version/checksum); `--to-dos IN.sav OUT.dsv` / `--to-gb IN.dsv OUT.sav` convert (header prepend/strip — the v2 payload IS a raw `.sav`). Run on every `save_real_load` golden. | `build-and-debug` |
 | `dosbox_mcp/`, `mgba_mcp/`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side); the DOSBox-X side launches via `dos_port/run-mcp` | `build-and-debug` |
-| `audio/audition.py` | Host-side MIDI audition (fastest way to hear a track) | `build-and-debug` |
+| `audio/audition.py` | Host-side music audition & A/B testing: default `--target opl3` (live 49.7 kHz FM via NukedOPL with hot-reload, position-locked `[Tab]` A/B toggle, and persistent `.revisions/`) + MIDI (`--target mt32`/`gm`) | `build-and-debug` |
 | `faithdiff`, `label_status`, `lint_pret_labels`, `update_label_db`, `fidelity_gate` | Pret-fidelity gate: label DB, per-routine diff, pre-commit check | `faithfulness-review` |
 | `label_status --subsystem PAT` | "what is left in <area>" from the terminal: per-pret-file missing/stub/translated rollup + the gap names with their port callers. A thin VIEW over the same `labels` table the graph viewer reads — the viewer covers the same question interactively (status filter + path search); this covers it in a shell | `faithfulness-review` |
 | `dependency_graph.py` | Interactive, canvas-rendered pret/DOS dependency viewer backed read-only by `translation.db`. Resolves unmodeled-pret-dir provenance — read `display_status`, not `status` | `build-and-debug` |
