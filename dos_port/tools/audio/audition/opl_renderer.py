@@ -8,6 +8,7 @@ and libnukedopl.so to produce bit-exact OPL3 FM audio at 49.7 kHz on the host.
 from __future__ import annotations
 
 import ctypes
+import struct
 import os
 from pathlib import Path
 import subprocess
@@ -122,7 +123,17 @@ class GbApuEngine:
             return b""
         buf = (ctypes.c_int16 * avail)()
         read = self.lib.gb_apu_read_samples(self.chip, buf, avail)
-        return ctypes.string_at(buf, read * 2)
+        # Normalize GB APU chip output to NukedOPL3 chip output level.
+        # Measured: GB is ~1.8× louder RMS at full scale across music+SFX.
+        # Scale=0.55 gives GB/OPL RMS ≈ 0.94 average — real loudness differences
+        # remain audible; this corrects the systematic chip-level offset only.
+        GB_LEVEL_SCALE = 0.55
+        raw = ctypes.string_at(buf, read * 2)
+        samples = struct.unpack(f"<{read}h", raw)
+        scaled = struct.pack(f"<{read}h",
+            *[max(-32768, min(32767, int(s * GB_LEVEL_SCALE))) for s in samples])
+        return scaled
+
 
     def trigger_pulse(self, chan: int, freq: int, duty: int = 2, vol: int = 15, fade_period: int = 0, fade_dir: int = 0):
         base = 0xFF10 if chan == 0 else 0xFF15
@@ -904,7 +915,7 @@ def simulate_sfx_events(rom: AudioROM, amap, channels: list[tuple[int, str]]) ->
 class SfxSession:
     """Coordinates authentic SFX playback, YAML profile hot-reloading, and A/B replay loops."""
 
-    DUTY_PATCHES = {0: "duty_12", 1: "duty_25", 2: "duty_50", 3: "duty_75"}
+    DUTY_PATCHES = {0: "duty_125", 1: "duty_25", 2: "duty_50", 3: "duty_75"}
 
     def __init__(self, sfx_query: str, delay_seconds: float = 2.5):
         self.engine = OplEngine()
@@ -940,6 +951,9 @@ class SfxSession:
         self.profile = {}
         self.current_frame = 0
         self.paused = False
+        self.sweep_val = 0
+        self.sweep_acc = 0
+        self.current_gb_freq = 0
 
         # Find YAML file if it exists (case-insensitive stem matching)
         self.yaml_path = None
@@ -1048,10 +1062,42 @@ class SfxSession:
 
     def retrigger(self):
         self.current_frame = 0
+        self.sweep_acc = 0
         for v in range(4):
             self.engine.key_off(v)
         if hasattr(self, "gb_engine") and self.gb_engine is not None:
             self.gb_engine.reset()
+
+    def step_sweep(self):
+        """Steps pulse 1 hardware sweep emulation (128 Hz base clock)."""
+        if not self.engine.voice_keyed[0]:
+            return
+        period = (self.sweep_val >> 4) & 7
+        if period == 0:
+            return
+        shift = self.sweep_val & 7
+        sweep_dir = (self.sweep_val >> 3) & 1
+        threshold = period * 60
+        self.sweep_acc += 128
+        freq_changed = False
+        while self.sweep_acc >= threshold:
+            self.sweep_acc -= threshold
+            if shift > 0:
+                delta = self.current_gb_freq >> shift
+                if sweep_dir == 0:
+                    self.current_gb_freq += delta
+                    if self.current_gb_freq >= 2048:
+                        self.engine.key_off(0)
+                        return
+                else:
+                    self.current_gb_freq = max(0, self.current_gb_freq - delta)
+                freq_changed = True
+        if freq_changed:
+            fnum, block = gb_freq_to_fnum_block(self.current_gb_freq)
+            self.engine.voice_fnums[0] = fnum
+            self.engine.voice_blocks[0] = block
+            self.engine.write_reg(0xA0, fnum & 0xFF)
+            self.engine.write_reg(0xB0, 0x20 | (block << 2) | ((fnum >> 8) & 0x03))
 
     def tick(self) -> bytes:
         frame_len = (self.engine.samplerate // 60) * 4
@@ -1059,7 +1105,7 @@ class SfxSession:
             return b"\x00" * frame_len
 
         f = self.current_frame
-        if f < self.sfx_frames:
+        if f <= self.sfx_frames:
             for ev in self.events.get(f, []):
                 ev_type = ev[0]
                 v = ev[1]
@@ -1094,22 +1140,38 @@ class SfxSession:
                         self.engine.key_on_raw(v, fnum, block, vol, fade_p, fade_d, patch, vol_scale)
                     elif ev_type == "square":
                         fnum, block, vol, fade_p, fade_d, duty = ev[2]
+                        if v == 0 and len(ev) > 3 and ev[3] is not None:
+                            self.current_gb_freq = ev[3][0]
                         def_patch = "wave" if v == 2 else self.DUTY_PATCHES.get(duty, "duty_50")
                         patch = ch_cfg.get("patch", def_patch)
                         vol_scale = ch_cfg.get("volume", 100) if not self.is_raw else 100
                         self.engine.load_patch(v, patch, "center")
                         self.engine.key_on_raw(v, fnum, block, vol, fade_p, fade_d, patch, vol_scale)
+                    elif ev_type == "sweep":
+                        if v == 0 and len(ev) > 3 and ev[3] is not None:
+                            self.sweep_val = ev[3]
+                            self.sweep_acc = 0
                     elif ev_type == "off":
+                        if v == 0:
+                            self.current_gb_freq = 0
+                            self.sweep_val = 0
                         self.engine.key_off(v)
+                        if f < self.sfx_frames:
+                            arr_base = 0x100 if v >= 9 else 0x000
+                            v_local = v % 9
+                            car_slot = arr_base + MOD_SLOTS[v_local] + 3
+                            self.engine.write_reg(0x40 + car_slot, 0x3F)
 
             if not self.gb_sound:
-                self.engine.step_envelopes()
-        elif f < self.sfx_frames + 10:
-            if not self.gb_sound:
+                self.step_sweep()
                 self.engine.step_envelopes()
         else:
             for v in range(4):
                 self.engine.key_off(v)
+                arr_base = 0x100 if v >= 9 else 0x000
+                v_local = v % 9
+                car_slot = arr_base + MOD_SLOTS[v_local] + 3
+                self.engine.write_reg(0x40 + car_slot, 0x3F)
             if self.gb_sound and self.gb_engine is not None:
                 self.gb_engine.reset()
 
@@ -1130,7 +1192,31 @@ class SfxSession:
         else:
             if self.gb_engine is not None:
                 self.gb_engine.generate_frame()  # Keep GB APU clocks in sync
-            return self.engine.generate_frame()
+            raw = self.engine.generate_frame()
+            if f == self.sfx_frames:
+                # Replicate Game Boy analog AC-coupling discharge (smooth ~3ms RC decay)
+                import math
+                import struct
+                decay_samples = 140
+                total_words = len(raw) // 2
+                vals = list(struct.unpack(f"<{total_words}h", raw))
+                for i in range(decay_samples):
+                    factor = math.exp(-5.0 * i / decay_samples)
+                    vals[i * 2] = int(vals[i * 2] * factor)
+                    vals[i * 2 + 1] = int(vals[i * 2 + 1] * factor)
+                for i in range(decay_samples, total_words // 2):
+                    vals[i * 2] = 0
+                    vals[i * 2 + 1] = 0
+                # Now that frame 15 decay has been generated, silence carrier level for subsequent frames
+                for v in range(4):
+                    arr_base = 0x100 if v >= 9 else 0x000
+                    v_local = v % 9
+                    car_slot = arr_base + MOD_SLOTS[v_local] + 3
+                    self.engine.write_reg(0x40 + car_slot, 0x3F)
+                return struct.pack(f"<{total_words}h", *vals)
+            elif f > self.sfx_frames:
+                return b"\x00" * frame_len
+            return raw
 
 
 

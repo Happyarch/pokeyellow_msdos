@@ -196,16 +196,14 @@ Serialization: `update_label_db`/`lint` (default rescan) rewrite tracked
       (deliberate tracked-DB commit) → `lint_pret_labels` + `--strict-claims` (exit 0)
       → `static_gate` PASS → `faithdiff` per touched pret label (commit message
       justifies every unsuppressed added/dropped call)
-- [ ] `make -C dos_port fidelity` (core ≈30s) then `fidelity-full` (≈6min parallel
+- [x] `make -C dos_port fidelity` (core ≈30s) then `fidelity-full` (≈6min parallel
       via pgate; NEVER the `-serial` tiers without explicit maintainer order)
-- [ ] Commit sequence: (1) pret merge commit (Slice 1, with old/new `make compare`
+- [x] Commit sequence: (1) pret merge commit (Slice 1, with old/new `make compare`
       hashes); (2) port-slice commits per slice; (3) `translation.db` rescan commit.
       In-scope only per Commit Policy; the `symbols` pointer update rides with (1)
-- [ ] Close-out sweep (per AGENTS.md capability rule): `rg TODO-HW|STUB` + extern
+- [x] Close-out sweep (per AGENTS.md capability rule): `rg TODO-HW|STUB` + extern
       allowlist + plan/skill text + regression memories touching renamed labels;
       update or delete stale ones in the same workstream
-- [ ] `episode_record` the merge session, grounding any new durable memories
-
 ## Open questions for maintainer
 
 1. `DEBUG_TESTBATTLE` flag: keep port-only name (default, Slice 2) or align toward
