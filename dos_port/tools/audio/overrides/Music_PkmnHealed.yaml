@@ -1,0 +1,43 @@
+# Music_PkmnHealed — per-song MIDI overrides (see README.md for schema).
+#
+# Registers verified from the frame-exact sim: ch1 is the low B2/E2
+# arpeggio (B2 B2 E2 ... E2 B2) whose pitch_slides the MIDI path drops
+# (gb_to_midi.py: timbre/expression, no MIDI v1) — the slides stay on
+# the GB/OPL shim, so the MIDI rendering is plain pitches; ch2 is the
+# very high melody (B5 B5 B5 G#5, then a long E6); ch3 is the soft wave
+# pulse (E4 E4 E4 G#4, then E4). No noise channel, so no drums: section.
+# One-shot jingle (135 frames, loop: null), E major throughout.
+#
+# The score description (pokemon_center_recovery.md) calls out the
+# electronic/computerized character of the healing machine. ch1 is not
+# a bass voice at all — it is the machine itself: an alternating heal
+# pulse synced to the machine animation that happens to live in a music
+# channel (user analysis 2026-09-10). So it gets no bass patch (Syn Bass
+# 1 tried, sounded off; Elec Bass superseded untried): Echo Bell, whose
+# delay repeats deepen a mechanical ostinato without adding harmony
+# (same treatment as Lavender's atonal ostinato). ch2 is the gentle
+# part — Doctor Solo breathes the stratospheric E6 (kept from audition;
+# PalletTown/TitleScreen lead precedent). ch3 is the warm part — Warm
+# Bell beds the wave pulse (Whistle 1 tried 2026-09-10, too piping —
+# reverted); GM gets Music Box, the closest chime cousin. Narrow
+# centered stage: a 5-beat machine jingle gets no wide panning.
+channels:
+  1:
+    mt32_program: "Echo Bell"     # the machine pulse, not a bass line
+                                  # (Sitar tried 2026-09-10, too buzzy —
+                                  # reverted; Syn Bass 1 off, Elec Bass
+                                  # superseded untried)
+    gm_program: "FX 7 (echoes)"
+    volume: 96
+    pan: 56
+  2:
+    mt32_program: "Doctor Solo"   # audition experiment 2026-09-10: breathy synth
+                                  # lead on the stratospheric E6 melody
+    gm_program: "Lead 2 (sawtooth)"
+    volume: 104                   # melody carries
+    pan: 72
+  3:
+    mt32_program: "Warm Bell"     # soft bed under the wave pulse (Whistle 1
+                                  # tried 2026-09-10, too piping — reverted)
+    gm_program: "Music Box"
+    volume: 92                    # texture, below the melody
