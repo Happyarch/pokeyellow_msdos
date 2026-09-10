@@ -26,8 +26,7 @@ generator) — `make -C dos_port assets` regenerates everything consistently
 and is what CI/the build actually depends on. Run from the repo root or
 `dos_port/`; each script's own docstring says which.
 
-`tools/audio/gen_*.py` is the music-pipeline's equivalent set and stays under
-`audio/` (it was already isolated from this clutter, so it wasn't moved here).
+`tools/audio/gen_*.py` is the audio pipeline's equivalent set (music and SFX data generators: `gen_audio_data.py`, `gen_opl_patches.py`, `gen_sfx_data.py`) and stays under `audio/`. `tools/audio/build_gb_apu.sh` builds the host-side Game Boy APU reference library (`libgbapu.so`) with `clang++`.
 
 ## Shared libraries (no CLI — imported by generators and/or editors)
 
@@ -45,8 +44,10 @@ and is what CI/the build actually depends on. Run from the repo root or
 - `dosbox_mcp/`, `mgba_mcp/` — MCP server implementations; see
   **`build-and-debug`** for how they're launched.
 - `audio/audition/` — host-side OPL3 synthesis backend (NukedOPL C++ wrapper
-  `opl_synth.cpp`), OPL stream coordinator (`opl_renderer.py`), and
-  disk-persisted revision tracker (`revisions.py`).
+  `opl_synth.cpp`), authentic Game Boy APU emulator backend (`gb_synth.cpp`,
+  `gb_apu.py` ctypes wrapper around `Basic_Gb_Apu`), OPL/MIDI stream
+  coordinators (`opl_renderer.py`, `midi_renderer.py`), and disk-persisted
+  revision tracker (`revisions.py`).
 
 ## Human-facing tools — full usage in a skill
 
@@ -67,12 +68,12 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `golden_diff.py`, `goldencheck.sh` | Fidelity differ / one-scenario check-and-diff | `build-and-debug` |
 | `saveconv.py` | `--verify`/`--info FILE` validates a `.dsv` (size/magic/version/checksum); `--to-dos IN.sav OUT.dsv` / `--to-gb IN.dsv OUT.sav` convert (header prepend/strip — the v2 payload IS a raw `.sav`). Run on every `save_real_load` golden. | `build-and-debug` |
 | `dosbox_mcp/`, `mgba_mcp/`, `run_mgba_mcp.sh`, `build_dosbox_mcp.sh`, `build_mgba.sh` | Live symbolic debugging (DOSBox-X port side / mGBA golden side); the DOSBox-X side launches via `dos_port/run-mcp` | `build-and-debug` |
-| `audio/audition.py` | Host-side music audition & A/B testing across OPL3 (default: native 48 kHz FM via NukedOPL), MT-32 (MUNT), and General MIDI (FluidSynth); all targets feature live hot-reload, position-locked `[Tab]` A/B toggle, solo/mute, and persistent `.revisions/` | `build-and-debug` |
+| `audio/audition.py` | Host-side music and SFX audition & A/B testing across OPL3 (native 48 kHz FM via NukedOPL), MT-32 (MUNT), General MIDI (FluidSynth), and authentic Game Boy hardware (Blargg's `Basic_Gb_Apu`). Features live hot-reload, position-locked `[Tab]` revision A/B toggle, `[G]` Game Boy APU reference toggle (with non-destructive enhancement suppression) across all targets, dedicated SFX auditioning mode (`--list-sfx`, `[Tab]` Tuned OPL3 vs Real GB, `[X]` auto-alternate), solo/mute, and persistent `.revisions/` | `build-and-debug` |
 | `faithdiff`, `label_status`, `lint_pret_labels`, `update_label_db`, `fidelity_gate` | Pret-fidelity gate: label DB, per-routine diff, pre-commit check | `faithfulness-review` |
 | `label_status --subsystem PAT` | "what is left in <area>" from the terminal: per-pret-file missing/stub/translated rollup + the gap names with their port callers. A thin VIEW over the same `labels` table the graph viewer reads — the viewer covers the same question interactively (status filter + path search); this covers it in a shell | `faithfulness-review` |
 | `dependency_graph.py` | Interactive, canvas-rendered pret/DOS dependency viewer backed read-only by `translation.db`. Resolves unmodeled-pret-dir provenance — read `display_status`, not `status` | `build-and-debug` |
 | `gen_progress_report`, `project_state`, `buildprobe.py` | Derived project state → `docs/translation_progress.md`: per-subsystem pret-label coverage plus the `DEVIATION`/`BUG`/`GLITCH`/`STUB` ledger. Read-only by default (`--scan` refreshes the DB first). Extensionless by convention — a report tool, not one of the `generators/` scripts | not yet owned by a skill; each has a `Usage:`/docstring block — read that first |
-| `gen_audio_enhancement_report` | Derived per-song audio status → `docs/audio_enhancement_status.md`: which of the 49 songs have `audio/enhancements/*.yaml` (and which tiers), which have `audio/overrides/*.yaml`, and orphan files that match neither. Standalone, not a Makefile target. The one non-derived column, "Approved", is sign-off the maintainer enters by ear — record it by invoking the tool itself with `MUSIC_<CONST>=1`/`=0` (never by hand-editing `audio/enhancement_approvals.json`, which the tool owns) | not yet owned by a skill; docstring first |
+| `gen_audio_enhancement_report` | Derived audio status → `docs/audio_enhancement_status.md`: covers all 49 music tracks (tier 1-3 enhancements, overrides, approvals) and all 167 sound effects (tuned profiles from `sfx/*.yaml`, patches, approvals), plus orphan checks. Standalone, not a Makefile target. "Approved" sign-offs are entered by ear via CLI with fuzzy match support (e.g. `damage=1`/`=0`, `pallet=1`/`=0`, or exact constants) targeting `audio/enhancement_approvals.json` | not yet owned by a skill; docstring first |
 | ~~`build_index`, `work_queue`, `process_placements`~~ | **DELETED 2026-08-02, with their `functions` / `stubs` / `translation_log` tables, at the maintainer's direction.** The hand-maintained translation work queue: its statuses only moved when an agent remembered to run `work_queue complete`/`wired`/`verified`, that bookkeeping was abandoned, and by the end it reported 97 `translated` against the label DB's 1673. `gen_progress_report` was moved off it 2026-07-27, after which nothing read it at all. **Do not resurrect this pattern.** The replacement is not another queue — it is `translation.db`'s label tables, which are *derived by rescanning the tree* and therefore cannot drift from it. Recoverable from git if ever needed | — |
 
 `tests/`, `test_label_db.py`, `validate_scenarios.py` are regression suites,
