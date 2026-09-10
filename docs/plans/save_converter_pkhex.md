@@ -2,7 +2,7 @@
 
 Created: 2026-09-10  
 Topic: Interoperability between Pokémon Yellow DOS `.dsv` save format and standard Game Boy `.sav` format (CLI Converter + PKHeX Integration)  
-Status: Stage 1 complete 2026-09-10 (`dos_port/tools/dsv2sav.c`, verified end-to-end — see §2); Stage 2 not started
+Status: Stage 1 complete 2026-09-10 (`dos_port/tools/dsv2sav.c`, verified end-to-end — see §2); Stage 2 complete 2026-09-10 (plugin toolchain + core + wine GUI verification, both export dialogs proven — see §2)
 
 ---
 
@@ -20,8 +20,8 @@ This plan defines two interoperability deliverables:
    - Ships as a standalone tool in `dos_port/tools/dsv2sav.c` (while `saveconv.py` remains in the tree for the internal golden test harness).
 
 2. **Stage 2: PKHeX Plugin (`PokemonYellowDOS`)**
-   - A C# plugin targeting .NET 8.0 implementing PKHeX's `IPlugin` interface.
-   - Automatically intercepts and loads 32,775-byte `.dsv` files via `TryLoadFile`, bypassing the `SaveHandlerFooterRTC` false-positive trap.
+   - A C# plugin targeting .NET 10 (`net10.0-windows`) implementing PKHeX's `IPlugin` interface.
+   - Loads 32,775-byte `.dsv` files through a custom `ISaveReader` registered in `SaveUtil.CustomSaveReaders`, so PKHeX's normal pipeline opens them ahead of the `SaveHandlerFooterRTC` false-positive trap.
    - Integrates with PKHeX's `SAV1` class for full Pokémon Yellow editing (party, PC boxes, Pokédex, trainer data).
    - Provides "Export as .dsv (DOS Port)" and "Export as .sav (Standard GB)" menu options under PKHeX's Tools menu.
 
@@ -41,15 +41,17 @@ This plan defines two interoperability deliverables:
   - [x] Verify byte-for-byte output equivalence against Python `saveconv.py` on test fixtures (`yellow_100.sav`).
   - [x] Test on both little-endian and big-endian targets (e.g., via `qemu-ppc` or big-endian toolchain check).
 
-- [ ] **Stage 2: PKHeX Plugin (`PokemonYellowDOS.dll`)**
-  - [ ] Set up .NET 8.0 Class Library project referencing `PKHeX.Core`.
-  - [ ] Implement `DsvFormat` C# utility class (endian-neutral header build, validate, strip, checksum).
-  - [ ] Implement DeSmuME collision check in C# with user-friendly warning dialog.
-  - [ ] Implement `IPlugin` interface (`TryLoadFile`, `Name`, `Priority`, `SaveFileEditor`, `PKMEditor`).
-  - [ ] Wire `TryLoadFile` to instantiate `SAV1` with stripped 32 KiB SRAM payload.
-  - [ ] Add menu actions for exporting `.dsv` (re-wrapping `SAV1.Write()` with recalculated DOS header) and `.sav`.
-  - [ ] Add unit test suite for plugin format detection, corrupted file handling, and export correctness.
-  - [ ] Build release DLL and author installation documentation (`README.md`).
+- [ ] **Stage 2: PKHeX Plugin (`PokemonYellowDOS.dll`)** — toolchain + core DONE 2026-09-10, GUI verification open
+  - [x] Set up Class Library projects referencing `PKHeX.Core` (`dos_port/tools/pkhex_plugin/`: `PokemonYellowDOS.Core` on plain `net10.0`, `PokemonYellowDOS` plugin shell on `net10.0-windows`, `PokemonYellowDOS.Tests` on `net10.0`).
+  - [x] Implement `DsvFormat` C# utility class (header build, validate, strip, checksum).
+  - [x] Implement `DsvSaveReader : ISaveReader`, registered in `SaveUtil.CustomSaveReaders` at plugin `Initialize`; it validates the `.dsv`, strips the 7-byte header, and delegates the payload to PKHeX's own Gen-1 detection.
+  - [x] Implement DeSmuME collision check with user-friendly warning dialog (`DsvPlugin.TryLoadFile` guard; `OpenFromPath` consults plugins first).
+  - [x] Implement `IPlugin` (`Name`, `Priority`, `SaveFileEditor`/`PKMEditor` set from `Initialize` args, `NotifySaveLoaded`, `NotifyDisplayLanguageChanged`, `TryLoadFile`).
+  - [x] Add Tools-menu actions exporting `.dsv` (`SAV1.Write()` re-wrapped with a recalculated DOS header) and `.sav` (`Menu_Tools` items added from `Initialize` args).
+  - [x] Add unit test suite: 18 xUnit tests green on Linux (`DsvFormatTests` hermetic vectors + `DsvSaveReaderTests` against `yellow_100.sav`). Export asserts idempotence + equivalence-with-stock PKHeX behavior, not byte identity (`Write()` normalizes box layout; second write is a fixed point).
+  - [x] Write installation documentation (`pkhex_plugin/README.md`: legal/build/install sections).
+  - [x] Verify under wine with the real app (26.08.26): plugin `Initialize` runs in-process; the exact `Main.OpenFile` pipeline (`FileUtil.GetSupportedFile` → registered `DsvSaveReader` → `SAV1` YW / OT Player1 / party 6) opens a `.dsv` built from `yellow_100.sav`, using the shipped DLLs against the installed Core 26.8.26 (cross-version binding fine).
+  - [x] GUI end-to-end (§6.2) — DONE 2026-09-10: maintainer opened a `.dsv` in PKHeX 26.08.26 under wine (File > Open), edited, exported, and booted CONTINUE in DOSBox-X cleanly — twice. First pass used the raw `.sav` export (converted losslessly with `saveconv.py --to-dos` before staging); second pass used the plugin's Export-as-`.dsv` dialog directly (valid v2 header, staged as-is) and also booted clean. Note for future testers: PKHeX File > Save writes the raw payload without the DOS header — the `.dsv` wrapper only comes from the plugin's Tools-menu export.
 
 ---
 
@@ -243,14 +245,19 @@ static int validate_dsv(const char *path, const uint8_t *data, size_t len) {
 ## 5. Stage 2 Specification: PKHeX Plugin (`PokemonYellowDOS`)
 
 ### 5.1 Project Configuration
-Directory: `dos_port/tools/pkhex_plugin/PokemonYellowDOS/`
+Directory: `dos_port/tools/pkhex_plugin/`, three projects:
 
-`PokemonYellowDOS.csproj`:
+- `PokemonYellowDOS.Core/` (plain `net10.0`, no WinForms): `DsvFormat.cs` + `DsvSaveReader.cs`. Builds and runs on Linux.
+- `PokemonYellowDOS/` (`net10.0-windows` + `UseWindowsForms`): `DsvPlugin.cs`. Linux builds compile-only (`EnableWindowsTargeting`); runs inside PKHeX on Windows/wine.
+- `PokemonYellowDOS.Tests/` (plain `net10.0` + xUnit): the suite. Plain `net10.0` because the WindowsDesktop *runtime* does not exist on Linux, so a `-windows` testhost cannot execute there (and a cross-TFM `ProjectReference` is a hard NU1201 error, which is why the tested core is split out instead of living in the plugin shell).
+
+`PokemonYellowDOS.csproj` (the shell; `PokemonYellowDOS.Core.csproj` is the same minus `TargetFramework`/`UseWindowsForms`/`EnableWindowsTargeting`/`AssemblyTitle`):
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>Pokémon Yellow DOS Port PKHeX Plugin</AssemblyTitle>
@@ -259,10 +266,12 @@ Directory: `dos_port/tools/pkhex_plugin/PokemonYellowDOS/`
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PKHeX.Core" Version="*" />
+    <PackageReference Include="PKHeX.Core" Version="26.7.7" />
+    <ProjectReference Include="..\PokemonYellowDOS.Core\PokemonYellowDOS.Core.csproj" />
   </ItemGroup>
 </Project>
 ```
+`PKHeX.Core` is pinned at `26.7.7` (matches `dos_port/tools/savegen`; a floating version is non-reproducible). The plugin must run on PKHeX's own framework, so this tracks the app (PKHeX requires .NET 10).
 
 ### 5.2 Core Format Handling (`DsvFormat.cs`)
 ```csharp
@@ -323,23 +332,101 @@ public static class DsvFormat
 }
 ```
 
-### 5.3 Plugin Entry Point (`DsvPlugin.cs`)
+### 5.3 Load Path (`DsvSaveReader.cs`)
+
+Loading goes through a custom `ISaveReader` registered in PKHeX's public
+`SaveUtil.CustomSaveReaders` registry, so `FileUtil.GetSupportedFile` opens
+`.dsv` through the normal pipeline (backups, title, editors — everything stock
+PKHeX does), ahead of the `SaveHandlerFooterRTC` trap. The reader only claims
+32775-byte files with valid `DOSV` magic + version + checksum, and delegates the
+stripped payload to PKHeX's own Gen-1 detection, so language/version handling
+matches opening a raw `.sav` exactly.
+
+```csharp
+using System.Diagnostics.CodeAnalysis;
+using PKHeX.Core;
+
+namespace PokemonYellowDOS;
+
+public sealed class DsvSaveReader : ISaveReader
+{
+    public bool IsRecognized(long dataLength) => dataLength == DsvFormat.TotalSize;
+
+    public bool TryRead(Memory<byte> data, [NotNullWhen(true)] out SaveFile? result, string? path = null)
+    {
+        result = null;
+        if (data.Length != DsvFormat.TotalSize)
+            return false;
+        if (!DsvFormat.IsDsv(data.Span))
+            return false;
+
+        var payload = DsvFormat.ExtractPayload(data.Span);
+        SaveFile? sav;
+        try
+        {
+            // Fresh copy per call: SaveFile aliases its input buffer and
+            // Write() mutates it in place, so never hand over shared state.
+            sav = SaveUtil.GetSaveFile(new Memory<byte>(payload), path);
+        }
+        catch
+        {
+            return false;
+        }
+        if (sav is not SAV1)
+            return false;
+        result = sav;
+        return true;
+    }
+}
+```
+
+### 5.4 Plugin Entry Point (`DsvPlugin.cs`)
+
+`DsvPlugin : IPlugin` registers the reader, contributes the Tools-menu export
+items, and keeps the DeSmuME collision guard. `Initialize` receives
+`(ISaveFileProvider, IPKMView, ToolStrip menuStrip, Version)`; menus attach
+under the `Menu_Tools` item. `TryLoadFile` handles only the DeSmuME case
+(`OpenFromPath` consults plugins before its own checks) and returns false for
+valid DOS-port files, which the registered reader loads through the pipeline.
+
 ```csharp
 using System.Windows.Forms;
 using PKHeX.Core;
 
 namespace PokemonYellowDOS;
 
-public class DsvPlugin : IPlugin
+public sealed class DsvPlugin : IPlugin
 {
     public string Name => "Pokémon Yellow DOS Save (.dsv)";
     public int Priority => 1;
 
-    public ISaveFileProvider SaveFileEditor { get; set; } = null!;
-    public IPKMView PKMEditor { get; set; } = null!;
+    public ISaveFileProvider SaveFileEditor { get; private set; } = null!;
+    public IPKMView PKMEditor { get; private set; } = null!;
 
-    public void Initialize(params object[] args) { }
+    public void Initialize(params object[] args)
+    {
+        SaveFileEditor = (ISaveFileProvider)Array.Find(args, static z => z is ISaveFileProvider)!;
+        PKMEditor = (IPKMView)Array.Find(args, static z => z is IPKMView)!;
+
+        if (!SaveUtil.CustomSaveReaders.OfType<DsvSaveReader>().Any())
+            SaveUtil.CustomSaveReaders.Add(new DsvSaveReader());
+
+        if (Array.Find(args, static z => z is ToolStrip) is not ToolStrip menuStrip)
+            return;
+        if (menuStrip.Items.Find("Menu_Tools", false) is not [ToolStripDropDownItem tools])
+            return;
+        const string menuName = "Menu_PokemonYellowDOS";
+        if (tools.DropDownItems.Find(menuName, false).Length != 0)
+            return; // already added (re-initialize guard)
+        var ourMenu = new ToolStripMenuItem("Pokémon Yellow DOS") { Name = menuName };
+        ourMenu.DropDownItems.Add(new ToolStripMenuItem("Export as .dsv (DOS Port)...", null, ExportDsv));
+        ourMenu.DropDownItems.Add(new ToolStripMenuItem("Export as .sav (Standard GB)...", null, ExportSav));
+        tools.DropDownItems.Add(ourMenu);
+    }
+
     public void NotifySaveLoaded() { }
+
+    public void NotifyDisplayLanguageChanged(string language) { }
 
     public bool TryLoadFile(string filePath)
     {
@@ -347,46 +434,35 @@ public class DsvPlugin : IPlugin
         try { data = File.ReadAllBytes(filePath); }
         catch { return false; }
 
-        if (DsvFormat.IsDeSmuME(data))
-        {
-            MessageBox.Show(
-                "This file appears to be a Nintendo DS (DeSmuME) save file.\n\n" +
-                "DeSmuME and the Pokémon Yellow DOS port both use the .dsv extension, but their formats differ.\n" +
-                "Please export a raw save in DeSmuME via File -> Export Backup Memory.",
-                "DeSmuME Save Detected",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-            return false;
-        }
-
-        if (!DsvFormat.IsDsv(data))
+        if (!DsvFormat.IsDeSmuME(data))
             return false;
 
-        byte[] payload = DsvFormat.ExtractPayload(data);
-        var sav1 = new SAV1(payload);
-
-        SaveFileEditor.SAV = sav1;
-        return true;
-    }
-
-    public IEnumerable<ToolStripItem> GetActionButtons()
-    {
-        var menu = new ToolStripMenuItem("Pokémon Yellow DOS");
-        menu.DropDownItems.Add(new ToolStripMenuItem("Export as .dsv (DOS Port)...", null, ExportDsv));
-        menu.DropDownItems.Add(new ToolStripMenuItem("Export as .sav (Standard GB)...", null, ExportSav));
-        yield return menu;
+        MessageBox.Show(
+            "This file appears to be a Nintendo DS (DeSmuME) save file.\n\n" +
+            "DeSmuME and the Pokémon Yellow DOS port both use the .dsv extension, but their formats differ.\n" +
+            "Please export a raw save in DeSmuME via File -> Export Backup Memory.",
+            "DeSmuME Save Detected",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
+        return true; // handled (rejected with guidance)
     }
 
     private void ExportDsv(object? sender, EventArgs e)
     {
-        if (SaveFileEditor.SAV is not SAV1 sav1)
+        if (SaveFileEditor.SAV is not SAV1 sav)
         {
             MessageBox.Show("Current save is not a Generation 1 save file.", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        sav1.SetChecksums();
-        byte[] payload = sav1.Write();
+        // Write() recomputes checksums (there is no SetChecksums API) and
+        // inherits stock-PKHeX export semantics exactly.
+        byte[] payload = sav.Write().ToArray();
+        if (payload.Length != DsvFormat.PayloadSize)
+        {
+            MessageBox.Show($"Unexpected save size {payload.Length} bytes (expected {DsvFormat.PayloadSize}).", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
         byte[] dsvData = DsvFormat.BuildDsv(payload);
 
         using var sfd = new SaveFileDialog
@@ -405,14 +481,13 @@ public class DsvPlugin : IPlugin
 
     private void ExportSav(object? sender, EventArgs e)
     {
-        if (SaveFileEditor.SAV is not SAV1 sav1)
+        if (SaveFileEditor.SAV is not SAV1 sav)
         {
             MessageBox.Show("Current save is not a Generation 1 save file.", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
-        sav1.SetChecksums();
-        byte[] payload = sav1.Write();
+        byte[] payload = sav.Write().ToArray();
 
         using var sfd = new SaveFileDialog
         {
@@ -474,7 +549,7 @@ cmp /tmp/test.sav /tmp/test_ppc.sav
 
 ### 6.2 Manual End-to-End Verification
 1. Boot the DOS port in DOSBox-X, save the game (`POKEMON.DSV`).
-2. Copy `POKEMON.DSV` to a Windows machine running PKHeX with `PokemonYellowDOS.dll` in `plugins/`.
+2. Copy `POKEMON.DSV` somewhere the wine prefix can see it and open it with the system `pkhex` wrapper (`pkhex` loads `PokemonYellowDOS.dll` + `PokemonYellowDOS.Core.dll` from the `plugins/` folder next to `PKHeX.exe`) via **File > Open or drag-drop** — not via command-line argument (startup files are parsed before plugins attach, so CLI-open cannot work for plugin formats).
 3. Open `POKEMON.DSV` directly in PKHeX. Verify OT name, ID, party Pokémon stats/moves, Pokédex count, and current PC box load cleanly.
 4. Modify a Pokémon (e.g. adjust IVs or level), use "Export as .dsv", and save back to `POKEMON.DSV`.
 5. Copy back to DOSBox-X drive C: and boot the game. Confirm "CONTINUE" loads with modified stats and no save corruption error.

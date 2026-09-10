@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0-windows (not net8.0): PKHeX itself requires .NET 10, PKHeX.Core
+         26.7.7 targets net10.0, and the host SDK is 10.0.111. A plugin must run
+         on the host app's framework, so this tracks it. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Linux builds compile-only (CI/toolchain check); the DLL runs inside
+         PKHeX on Windows. This is the documented switch for that. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyTitle>Pokémon Yellow DOS Port PKHeX Plugin</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <Authors>Pokémon Yellow DOS Port Contributors</Authors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pinned, not floating: a floating Version="*" is non-reproducible.
+         26.7.7 matches dos_port/tools/savegen (same dependency, same posture). -->
+    <PackageReference Include="PKHeX.Core" Version="26.7.7" />
+    <ProjectReference Include="..\PokemonYellowDOS.Core\PokemonYellowDOS.Core.csproj" />
+  </ItemGroup>
+
+</Project>
