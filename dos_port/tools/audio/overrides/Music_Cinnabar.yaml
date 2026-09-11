@@ -1,0 +1,45 @@
+# Music_Cinnabar — per-song MIDI overrides (see README.md for schema).
+#
+# Cinnabar Island + lab rooms (CINNABAR_ISLAND, CINNABAR_LAB + trade/
+# metronome/fossil rooms, CINNABAR_MART_COPY — data/maps/songs.asm).
+# G major, 12 measures, loop IS the whole piece (loop_start m1, no intro,
+# frames.end 1296), tempo 144, 3 channels (no noise).
+#
+# Score note (docs/references/pokemon_score_transcriptions/descriptions/
+# cinnabar_island.md): G major, "flowing melody and sprightly accompaniment"
+# — Masuda wears the warm/peoply mask, no mystery, no danger. And the
+# compositional signature: m8, sq2 plays a three-note stepwise gesture and
+# repeats it while fading volume — a hand-built delay (fractional-feedback
+# echo via volume manipulation, since the GB has no delay effect). Any
+# override voice with a long release, or any enhancement in octave 5 at m8,
+# would step on the one trick the track is known for: the m8 echo stays
+# naked (short natural decay only — never Warm Bell / Atmosphere wash).
+#
+# Registers from simulate_song: ch1 flowing line (52 notes, C#4..F#5, 41 in
+# octave 4 — the theme); ch2 descant + echo (59 notes, F#4..A5, 38 in
+# octave 5, density 1.23); ch3 sprightly 8th-note chatter (93 notes,
+# F#4..A5, density 1.94 — the busiest wave channel in the town set).
+# Octaves 2 AND 3 are empty (ch1 floors at C#4); the whole texture packs
+# octaves 4-5. Chords diatonic G major with applied color (I/ii/vii°/
+# vi7/V7/vii7/ii7/V/iii7 — analysis score 0.86, not ambiguous).
+#
+# Light-lyrical family (Pallet/SSAnne-proven, not Cities2 symphonic —
+# this track wants lightness, not weight), one family per GB channel:
+channels:
+  1:
+    mt32_program: "Flute 1"     # the flowing theme; bows through the 6-beat
+    gm_program: "Flute"         # holds where a piano would die with holes
+    volume: 100                 # theme foreground
+    pan: 48                     # theme left, descant right
+  2:
+    mt32_program: "Violin 1"    # solo violin articulates the m8 echo gesture
+                                # honestly — short bowed decay, no wash
+    gm_program: "Violin"
+    volume: 96                  # descant just under the theme
+    pan: 80
+  3:
+    mt32_program: "Harp 1"      # dry pluck keeps the 8th-note chatter
+    gm_program: "Orchestral Harp"  # articulate; kills the Warm Bell wash
+    volume: 78                  # motor audible but under both lines (density
+                                # 1.94 chatter must not dominate)
+    pan: 64
