@@ -1,4 +1,8 @@
 {
+  "MUSIC_CELADON": {
+    "approved": true,
+    "date": "2026-09-11"
+  },
   "MUSIC_CINNABAR": {
     "approved": true,
     "date": "2026-09-11"
@@ -19,6 +23,10 @@
     "approved": true,
     "date": "2026-08-12"
   },
+  "MUSIC_JIGGLYPUFF_SONG": {
+    "approved": true,
+    "date": "2026-09-11"
+  },
   "MUSIC_LAVENDER": {
     "approved": true,
     "date": "2026-08-12"
@@ -34,6 +42,10 @@
   "MUSIC_PKMN_HEALED": {
     "approved": true,
     "date": "2026-09-10"
+  },
+  "MUSIC_POKECENTER": {
+    "approved": true,
+    "date": "2026-09-11"
   },
   "MUSIC_SS_ANNE": {
     "approved": true,
