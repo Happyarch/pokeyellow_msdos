@@ -1,7 +1,6 @@
 ; surfing_pikachu.asm — Surfing Pikachu minigame
 ; Mirror of pret engine/minigame/surfing_pikachu.asm
-;
-; Check-only translation for Chunk 2.
+; Linked translation.
 
 bits 32
 

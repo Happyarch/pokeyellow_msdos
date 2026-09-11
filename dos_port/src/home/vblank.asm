@@ -49,7 +49,6 @@ extern render_sprites
 extern g_bg_whiteout           ; src/ppu/ppu.asm — 1 = blank BG, full-screen takeover
 extern g_obj_over_window        ; src/ppu/ppu.asm — OBJ-vs-window z-order (GB order when set)
 extern g_surface_redraw_cb      ; src/ppu/ppu.asm — cinematic per-frame surface-mirror hook
-extern draw_player_marker
 extern present
 extern ReadJoypad               ; src/home/joypad.asm — pret VBlank joypad sampler (home/vblank.asm:44)
 extern pad_quit
@@ -257,7 +256,6 @@ DelayFrame:
     call render_sprites         ; …then OBJ over both
     PERF_MARK PERF_SPRITES
 .composited:
-    call draw_player_marker     ; legacy placeholder (no-op unless explicitly enabled)
     call present
     PERF_MARK PERF_PRESENT
 %ifdef DEBUG_PERF

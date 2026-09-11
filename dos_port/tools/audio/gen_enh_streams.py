@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pret_audio import AudioROM                       # noqa: E402
 from gen_audio_data import sound_id                   # noqa: E402
 from gen_opl_patches import PATCHES, PATCH_ORDER      # noqa: E402
-from yaml_lint import lint                            # noqa: E402
+from yaml_lint import lint, first_body_notes               # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
@@ -200,6 +200,10 @@ def main():
             print(f"  {label}: lint FAILED — skipped "
                   f"({len(rep.errors)} errors; run yaml_lint.py for detail)")
             continue
+        # The OPL stream loops a single body: scope unrolled files down to
+        # intro + first body (dup copies and evolving later bodies are an
+        # MT-32/GM affair).
+        resolved = first_body_notes(resolved, analysis)
         msgs = []
         result = compile_song(resolved, analysis, msgs.append)
         for m in msgs:

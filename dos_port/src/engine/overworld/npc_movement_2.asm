@@ -1,4 +1,4 @@
-; npc_movement_2.asm — OW-1.6 (pure-logic leaf, CHECK-ONLY).
+; npc_movement_2.asm — OW-1.6 (pure-logic leaf).
 ;
 ; Intended repo path: dos_port/src/engine/overworld/npc_movement_2.asm
 ;
@@ -13,15 +13,12 @@
 ; Likewise the rival (trainer class RIVAL1/2/3, checked via wEngagedTrainerClass
 ; against the inlined RivalIDs table) leaves after his battles, so he is also
 ; excluded. Every other defeated trainer falls through to .notRival and gets
-; frozen via the (currently check-only) SetSpriteMovementBytesToFF.
+; frozen via SetSpriteMovementBytesToFF.
 ;
 ; Register map (SM83 -> x86): A->AL, HL->ESI, B->BH (BC->BX per project convention),
 ; RAM is EBP-relative (see CLAUDE.md / asm-translation skill). RivalIDs is a small
 ; FLAT host data table (not GB memory), so ESI walks it directly without the EBP
 ; bias — same convention pathfinding.asm uses for its flat movement-byte pointer.
-;
-; Build (check-only): nasm -f coff -I include/ -I . -o npc_movement_2.o \
-;                           src/engine/overworld/npc_movement_2.asm
 ; ---------------------------------------------------------------------------
 
 ; This file used to carry its own %ifndef copies of wSpriteIndex, hSpriteIndex,

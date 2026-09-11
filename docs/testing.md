@@ -211,13 +211,16 @@ make -C dos_port goldencheck SCENARIO=<name>   # one scenario
 dos_port/tools/goldencheck.sh <name>           # same, directly
 ```
 
-Scenario inventory lives in `dos_port/tools/scenario_manifest.json`. Measured
-from that file (re-measure; do not copy this number):
+Scenario inventory lives in `dos_port/tools/scenario_manifest.json`. Do not
+hardcode scenario counts in documentation — query the live inventory:
 
-- **37 scenarios total**
-- **16** in the `core` tier (`make fidelity`), **37** in `full`
-  (`make fidelity-full`)
-- `disabled_scenarios` is **empty** — nothing is switched off
+```sh
+python3 dos_port/tools/validate_scenarios.py
+# Or check tier breakdown via:
+python3 dos_port/tools/generators/gen_scenario_registry.py --names core | wc -w
+python3 dos_port/tools/generators/gen_scenario_registry.py --names full | wc -w
+```
+- Query `scenario_manifest.json` for current tier members (`core`, `full`) and disabled scenarios.
 
 Each entry declares its `build_flags`, `port_entry_gate`, mGBA
 `navigation_script`, dump type/artifact/timeout, `must_hit` labels, and the

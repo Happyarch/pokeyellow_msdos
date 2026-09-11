@@ -316,7 +316,7 @@ class Song:
 
 
 def simulate_song(rom: AudioROM, amap, label: str,
-                  channels: list[tuple[int, str]]) -> Song:
+                  channels: list[tuple[int, str]], unroll: int = 1) -> Song:
     song = Song(label)
     tempo = TempoTimeline()
 
@@ -403,6 +403,28 @@ def simulate_song(rom: AudioROM, amap, label: str,
                 song.warnings.append(
                     f"ch{n.chan} note (key {n.key}) spans the loop point — "
                     "loop restart will retrigger it")
+
+    if unroll > 1:
+        # Ramp-and-hold unroll: duplicate the loop body so the merged span
+        # is intro + N bodies, then move the loop region to the final
+        # (hold) body — intro + ramp play once, the hold loops forever.
+        # Engine state repeats by construction (that is what the detected
+        # loop means), so offset copies are exact. Runs after _rewind_loop
+        # and the loop-point warning above, which both read identically on
+        # periodic-identical content.
+        if song.loop_start is None:
+            raise ValueError(f"{label}: unroll={unroll} on a song that plays once")
+        period = song.end - song.loop_start
+        body_notes = [n for n in song.notes if n.frame >= song.loop_start]
+        body_pans = [p for p in song.pans if p.frame >= song.loop_start]
+        for k in range(1, unroll):
+            for n in body_notes:
+                song.notes.append(NoteEv(n.frame + k * period, n.dur,
+                                         n.chan, n.key, n.vel, n.fade))
+            for p in body_pans:
+                song.pans.append(PanEv(p.frame + k * period, p.chan, p.value))
+        song.loop_start += (unroll - 1) * period
+        song.end += (unroll - 1) * period
     return song
 
 
@@ -485,6 +507,21 @@ def meta(mtype: int, payload: bytes) -> bytes:
 # ---------------------------------------------------------------------------
 PAN_CC = {"left": 20, "center": 64, "right": 108}
 FREE_MELODIC_CH = [4, 5, 6, 7, 8]      # 0-based; base music uses 1-3 + 9
+
+
+def unroll_for(label: str) -> int:
+    """Top-level `unroll` of enhancements/<label>.yaml (default 1).
+
+    Lenient by design: anything missing or invalid means 1 — lint() is
+    the loud gate for bad values, and the asset build must never break
+    on a work-in-progress arrangement."""
+    try:
+        doc = yaml.safe_load((Path(__file__).resolve().parent
+                              / "enhancements" / f"{label}.yaml").read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return 1
+    n = doc.get("unroll", 1)
+    return n if isinstance(n, int) and n >= 1 else 1
 
 
 def load_enhancement(label: str):
@@ -634,7 +671,8 @@ def main():
             continue                          # alternate entry points etc.
         if args.songs and args.songs not in label:
             continue
-        song = simulate_song(rom, amap, label, channels)
+        song = simulate_song(rom, amap, label, channels,
+                             1 if args.no_enhance else unroll_for(label))
         ov = load_overrides(label)
         enh = None if args.no_enhance else load_enhancement(label)
         write_midi(out_dir / f"{label}.mid", song, ov, args.target, enh)

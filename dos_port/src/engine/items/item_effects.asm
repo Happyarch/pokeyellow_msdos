@@ -1794,8 +1794,7 @@ ItemUseBall:
     dec byte [ebp + wNumSafariBalls]    ; dec [hl] — remove a Safari Ball
 
 .skipSafariZoneCode:
-    ; call RunDefaultPaletteCommand — TODO-HW: palette HAL (Phase 5), no-op here.
-    ; Same palette-HAL treatment as pokedex_entry.asm and league_pc.asm.
+    call RunDefaultPaletteCommand
     mov byte [ebp + wPokeBallAnimData], 0x43   ; successful-capture value
     call LoadScreenTilesFromBuffer1
     mov esi, ItemUseText00
@@ -2224,7 +2223,7 @@ ItemUseBall:
 ; ball!" / "Don't be a thief!" — the ball is still consumed.
 ; ---------------------------------------------------------------------------
 ThrowBallAtTrainerMon:
-    ; call RunDefaultPaletteCommand — TODO-HW: palette HAL (Phase 5), no-op (DEVIATION 3).
+    call RunDefaultPaletteCommand
     call LoadScreenTilesFromBuffer1     ; restore the saved screen
     call Delay3
     mov byte [ebp + wAnimationID], TOSS_ANIM
@@ -2785,7 +2784,7 @@ ItemUseTMHM:
     pop eax
     call GBPalWhiteOutWithDelay3
     call ClearSprites
-    ; call RunDefaultPaletteCommand — TODO-HW: default palette set (Phase 5), no-op
+    call RunDefaultPaletteCommand
     jmp LoadScreenTilesFromBuffer1      ; jp — restore the saved screen
 
 .checkIfAbleToLearnMove:
@@ -2971,12 +2970,10 @@ Func_d85d:
 ; Source: engine/items/item_effects.asm:ItemUseRepel / ItemUseSuperRepel /
 ; ItemUseMaxRepel / ItemUseRepelCommon / PrintItemUseTextAndRemoveItem.
 ;
-; These are the first-ever writers of wRepelRemainingSteps, which brings the
-; already-translated TryDoWildEncounter `.lastRepelStep` branch
-; (engine/battle/wild_encounters.asm) to life. That branch calls DisplayTextID,
-; which is still a ret-stub (owned by docs/current_plan_script_engine.md), so the
-; "REPEL's effect wore off." message does not display yet — the step counter and
-; the encounter suppression themselves are fully live. See home_stubs.asm.
+; These are the writers of wRepelRemainingSteps, which brings the
+; TryDoWildEncounter `.lastRepelStep` branch
+; (engine/battle/wild_encounters.asm) to life. That branch calls DisplayTextID
+; (src/home/text_script.asm) to display the "REPEL's effect wore off." message.
 ; ===========================================================================
 
 global ItemUseRepel

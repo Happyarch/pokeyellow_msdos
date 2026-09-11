@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 # pgate — run golden scenarios in parallel against tmpfs shadow copies.
 #
 # Wall clock becomes ~= the SLOWEST SINGLE SCENARIO instead of the sum of all of

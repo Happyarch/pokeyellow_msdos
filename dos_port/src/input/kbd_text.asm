@@ -3,7 +3,7 @@
 ; NO PRET COUNTERPART: link cable plan Stage 5 step 1. This is a port-only
 ; input widget (lowercase, descriptive name per the "new port-only routines...
 ; get descriptive names" rule) sitting on top of the raw-scancode ring
-; src/input/joypad.asm's kbd_isr feeds. It is the shared input layer Stage 5's
+; src/input/kbd_isr.asm's kbd_isr feeds. It is the shared input layer Stage 5's
 ; link setup UI (address/name entry) and the later KBD_NAMING naming-screen
 ; path both consume — NO consumer is wired this step, so kbd_text_edit must
 ; link and be callable but nothing calls it in a normal build yet.
@@ -25,7 +25,7 @@
 ;   Drains the scancode ring on entry so keys buffered before the widget was
 ;   entered (e.g. the Enter/click that opened this field) are never replayed
 ;   into it. The normal joypad mapping keeps running throughout -- this widget
-;   layers on top of it, it does not suspend it (see src/input/joypad.asm).
+;   layers on top of it, it does not suspend it (see src/input/kbd_isr.asm).
 ;
 ; ECHO SHAPE: modeled directly on how naming_screen.asm echoes wStringBuffer
 ; (src/engine/menus/naming_screen.asm:PrintNicknameAndUnderscores /

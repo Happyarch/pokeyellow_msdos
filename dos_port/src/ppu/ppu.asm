@@ -11,14 +11,13 @@
 ;   IO_SCX/IO_SCY — background scroll (wraps at 256 px)
 ;   IO_BGP        — DMG palette: 4 × 2-bit shade, bits 1-0 = color 0
 ;
-; STRATEGY (scanline + decoded tile cache): the whole BG/window tile-data
-; region ($8000-$97FF, 384 tiles) is pre-decoded from 2bpp to 8bpp once into
-; tile_cache (BGP shade baked in), and re-decoded only when VRAM tile data or
-; BGP changes (g_tilecache_dirty / BGP compare). render_bg then builds each
-; output scanline by COPYING decoded tile rows (8 bytes/tile) into
-; bg_scanline_buf and copying 320 px from the (SCX & 7) fine offset — no
-; per-pixel bit decoding in the hot path. Both axes scroll pixel-smooth; the GB
-; tilemap wraps at (SCX/8 + col) & 31 and (y + SCY) >> 3 & 31.
+; STRATEGY (native-width surface + decoded tile cache): the whole BG/window
+; tile-data region ($8000-$97FF, 384 tiles) is pre-decoded from 2bpp to 8bpp into
+; tile_cache, re-decoded only when VRAM tile data changes (g_tilecache_dirty).
+; render_bg decodes tile IDs onto a 48×36-tile (384×288 px) surface (`bg_surface`),
+; updating only cells whose tile ID changed via `surf_shadow`. It then blits a
+; 320×200 viewport into the back buffer at signed pixel offset (Xoff, Yoff) derived
+; from coarse block alignment and fine H_SCX/H_SCY offsets for smooth scrolling.
 ;
 ; 2bpp tile format: each tile row is 2 bytes — byte 0 = low bitplane,
 ; byte 1 = high bitplane, bit 7 = leftmost pixel.
@@ -47,20 +46,8 @@ global render_window
 global render_sprites
 global SnapshotRenderedTileMap
 global RefreshCollisionTileMap
-global draw_player_marker
-global g_player_marker_on
 global g_tilecache_dirty
 global tile_pal
-
-; Player placeholder marker — the player sprite is always at the fixed screen
-; center (pret keeps the camera locked on the player and scrolls the BG). Until
-; the OAM sprite renderer lands (Phase 1 open item), draw a simple two-tone box
-; there so it's obvious where "you" are. Tile (8,8): 16×16 px at (64,64).
-PLAYER_MARKER_X    equ 64
-PLAYER_MARKER_Y    equ 64
-PLAYER_MARKER_SIZE equ 16
-PLAYER_MARKER_SHADE equ 3       ; darkest DMG shade for the outline/body
-PLAYER_MARKER_INNER equ 0       ; lightest shade for the inner square
 
 ; Decoded tile cache: the BG/window tile-data region $8000-$97FF is 0x1800
 ; bytes = 384 tiles of 16 bytes. Each is pre-decoded once to 8bpp (64 bytes)
@@ -374,8 +361,6 @@ tile_pal:    resb TILE_CACHE_TILES
 alignb 4
 rebuild_tile_index: resd 1
 rebuild_rows_left:  resd 1
-alignb 4
-g_player_marker_on: resb 1 ; nonzero → draw_player_marker paints the placeholder
 alignb 4
 spr_oam_ptr: resd 1        ; GB-relative offset of the current OAM entry
 spr_count:   resd 1        ; OAM entries left to process
@@ -2066,52 +2051,3 @@ decode_win_row8:
 %endrep
     popad
     jmp .next_tile
-
-; ---------------------------------------------------------------------------
-; draw_player_marker — paint the player placeholder into the back buffer.
-;
-; No-op unless g_player_marker_on is set (so it only shows in the overworld,
-; not the title screen). Draws a PLAYER_MARKER_SIZE square of the darkest shade
-; with a half-size lighter square inset, centered on the fixed player screen
-; position. Call after render_bg, before present.
-;
-; In:  EBP = GB memory base. All registers preserved.
-; ---------------------------------------------------------------------------
-draw_player_marker:
-    cmp byte [g_player_marker_on], 0
-    jz .ret
-    pushad
-
-    ; Outer square: PLAYER_MARKER_SIZE × PLAYER_MARKER_SIZE of the body shade.
-    mov edx, PLAYER_MARKER_Y
-    mov ecx, PLAYER_MARKER_SIZE                  ; rows remaining
-.outer_row:
-    imul edi, edx, RENDER_W
-    lea edi, [ebp + GB_BACKBUF + edi + PLAYER_MARKER_X]
-    push ecx
-    mov ecx, PLAYER_MARKER_SIZE
-    mov al, PLAYER_MARKER_SHADE
-    rep stosb
-    pop ecx
-    inc edx
-    dec ecx
-    jnz .outer_row
-
-    ; Inner square: half size, inset by a quarter, in the lighter shade.
-    mov edx, PLAYER_MARKER_Y + PLAYER_MARKER_SIZE / 4
-    mov ecx, PLAYER_MARKER_SIZE / 2
-.inner_row:
-    imul edi, edx, RENDER_W
-    lea edi, [ebp + GB_BACKBUF + edi + PLAYER_MARKER_X + PLAYER_MARKER_SIZE / 4]
-    push ecx
-    mov ecx, PLAYER_MARKER_SIZE / 2
-    mov al, PLAYER_MARKER_INNER
-    rep stosb
-    pop ecx
-    inc edx
-    dec ecx
-    jnz .inner_row
-
-    popad
-.ret:
-    ret

@@ -89,7 +89,7 @@ extern LoadScreenTilesFromBuffer1   ; src/home/tilemap.asm
 extern SaveScreenTilesToBuffer2     ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern GBPalWhiteOut                ; src/home/palettes.asm — the real pret routine
-extern DoClearSaveDialogue          ; engine/movie/oak_speech/clear_save.asm (temporary DEVIATION: plain reset)
+extern DoClearSaveDialogue          ; engine/movie/oak_speech/clear_save.asm (real dialog, clears SRAM)
 ; --- the Yellow graphics/placement half (its own pret mirror) ---------------
 extern LoadYellowTitleScreenGFX          ; src/engine/movie/title_yellow.asm
 extern TitleScreen_PlacePokemonLogo      ; src/engine/movie/title_yellow.asm

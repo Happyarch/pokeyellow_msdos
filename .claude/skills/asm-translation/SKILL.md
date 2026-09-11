@@ -169,10 +169,11 @@ do not report the raw counts as a bug tally.
 
 ## Memory Model
 
-`EBP` = base of a ~96 KB DPMI allocation (64 KB GB space + 8 KB CGB VRAM bank 1
-+ 160×144 back buffer). Access emulated GB memory as `[EBP + constant]` where
-constants come from `dos_port/include/gb_memmap.inc`. All offsets derived from
-`constants/hardware.inc`.
+`EBP` = base of a 160 KiB (`0x28000`) flat DPMI allocation (64 KB GB space +
+64,000-byte 320×200 native back buffer `GB_BACKBUF` at `0x12000` + resident
+emulated SRAM banks 1–3 at `$22000–$27FFF`). Access emulated GB memory as
+`[EBP + constant]` where constants come from `dos_port/include/gb_memmap.inc`.
+All offsets derived from `constants/hardware.inc`.
 
 ### The port is a Game Boy with MORE WRAM (prefix-sum expansion)
 

@@ -76,19 +76,10 @@ extern UpdateCurMonHPBar            ; engine/battle/core.asm — faithful HP-bar
                                      ; header note #2 (substitutes pret's inlined hlcoord +
                                      ; predef UpdateHPBar2, which IS this routine's body)
 extern DrawHUDsAndHPBars            ; engine/battle/core.asm — full HUD+bar redraw
-; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
-extern PlayCurrentMoveAnimation
+extern PlayCurrentMoveAnimation     ; src/engine/battle/effects.asm
 ; --- battle_text.inc streams (Tier-1 generated; global in core.o) ---
 extern FellAsleepBecameHealthyText
 extern RegainedHealthText
-; FLAG FOR MASTER: StartedSleepingEffect (pret data/text/text_5.asm:216,
-; "_StartedSleepingEffect", wrapped by engine/battle/move_effects/heal.asm's local
-; `StartedSleepingEffect: text_far _StartedSleepingEffect`) was checked against
-; dos_port/assets/battle_text.inc and is NOT currently emitted there — only
-; FellAsleepBecameHealthyText and RegainedHealthText (this routine's other two strings)
-; are present. tools/generators/gen_battle_text.py needs the missing label added (Tier-1, generator-
-; owned — do not hand-add to the .inc) before this handler can link. Externed here on the
-; assumption it lands under this same name.
 extern StartedSleepingEffect
 
 ; --- local: REST move id ---

@@ -20,9 +20,10 @@ Exit status: 0 clean (warnings are informational), 1 any error, 2 usage.
 from __future__ import annotations
 
 import argparse
+import math
 import re
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import yaml
@@ -123,15 +124,54 @@ class Report:
 
 
 class BeatMap:
-    def __init__(self, grid: dict, end_frame: int):
+    def __init__(self, grid: dict, end_frame: int,
+                 loop_start: int | None = None,
+                 loop_pos: dict | None = None):
         self.beats = grid["beat_frames"]
         self.bpm = grid["beats_per_measure"]
         self.end = end_frame
+        self.span_end = end_frame    # lint() widens this for unroll > 1
+        self.span_bodies = 1         # ...along with this, for messages
+        # Loop-body geometry for unrolled (multi-iteration) songs. The body
+        # is beats [body_start, len(beats)) = frames [loop_frame, end);
+        # period folds any later beat index back into it. One-shots
+        # (loop_start None) keep period None: past-the-end stays an error.
+        self.period = None
+        self.body_start = 0.0
+        self.body_len = float(len(self.beats))
+        self.loop_frame = 0
+        if loop_start is not None and loop_pos is not None:
+            self.loop_frame = loop_start
+            self.body_start = self.index_of(loop_pos["m"],
+                                            loop_pos.get("b", 1))
+            # Total beats in intro + one body, from the musical length —
+            # NOT len(beats): a beat map may omit the final (zero-width)
+            # beat when nothing starts on it (m9b4 here: its frame IS end).
+            total = grid["measures"] * grid["beats_per_measure"]
+            self.body_len = total - self.body_start
+            self.period = end_frame - loop_start
 
     def frame_at(self, beat_index: float) -> float:
-        """Fractional beat index (0-based) -> frame, linear inside a beat."""
-        i = int(beat_index)
-        frac = beat_index - i
+        """Fractional beat index (0-based) -> frame, linear inside a beat.
+        Past the one-body beat list, folds by loop period (unrolled songs);
+        without a loop that stays out-of-song, caught by the caller."""
+        f = float(beat_index)
+        if self.period is not None and f >= len(self.beats):
+            rel = f - self.body_start
+            k = math.floor(rel / self.body_len + 1e-9)
+            local = self.body_start + (rel - k * self.body_len)
+            if local >= len(self.beats):
+                # Past the listed beats: the omitted zero-width final beat
+                # (its frame IS the body end). Continuous with the approach
+                # from below, which interpolates beats[-1] -> end.
+                return self.loop_frame + (k + 1) * self.period
+            return (self.loop_frame + k * self.period
+                    + (self._raw(local) - self.loop_frame))
+        return self._raw(f)
+
+    def _raw(self, f: float) -> float:
+        i = int(f)
+        frac = f - i
         if i >= len(self.beats):
             return float(self.end + 1)   # out of song → caught by caller
         base = self.beats[i]
@@ -217,10 +257,12 @@ def _resolve_events(events, bm: BeatMap, base_transpose: int,
         idx = bm.index_of(m + at_measure, b)
         f0 = bm.frame_at(idx)
         f1 = bm.frame_at(idx + d)
-        if f1 > bm.end:
+        if f1 > bm.span_end:
+            nb = bm.span_bodies
             rep.err(f"{where}: m{m + at_measure} b{b} d{d} runs past the "
-                    f"song end (frame {int(f1)} > {bm.end}); events must "
-                    "stay inside intro + one loop body")
+                    f"song end (frame {int(f1)} > {bm.span_end}); events must "
+                    f"stay inside intro + {nb if nb > 1 else 'one'} "
+                    f"loop body" + ("ies" if nb > 1 else ""))
             continue
         vel = ev.get("v", default_vel)
         if not isinstance(vel, int) or not 1 <= vel <= 127:
@@ -236,6 +278,24 @@ def _resolve_events(events, bm: BeatMap, base_transpose: int,
                                     max(1, int(round(f1 - f0))),
                                     key + base_transpose, vel))
     return out
+
+
+def first_body_notes(resolved: list[ResolvedChannel],
+                     analysis: dict) -> list[ResolvedChannel]:
+    """Scoped view for the 1-body OPL path: intro + first loop body only.
+
+    Unrolled files resolve the full span (lint + the MT-32/GM merge need
+    it); the OPL enhancement stream loops a single body, so it must not
+    see auto-duplicated copies or evolving later bodies. Returns new
+    channels with notes filtered — verdicts were already recorded by
+    lint(), this changes no judgment."""
+    frames = analysis["frames"]
+    if frames.get("loop_start") is None:
+        return resolved
+    cutoff = frames["end"]          # loop_start + one period by construction
+    return [replace(c, notes=[n for n in c.notes
+                              if n.frame + n.dur <= cutoff])
+            for c in resolved]
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +324,24 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         rep.err(f"unknown song label {label!r}")
         return rep, [], {}
     analysis = load_analysis(label)
-    bm = BeatMap(analysis["grid"], analysis["frames"]["end"])
+    frames = analysis["frames"]
+    bm = BeatMap(analysis["grid"], frames["end"],
+                 frames.get("loop_start"), analysis.get("loop"))
+    # Unrolled songs (loop ramp-and-hold): the file opts in with top-level
+    # `unroll: N` (default 1). Positions may then address N loop bodies and
+    # the lint span widens to loop_frame + N periods; the merged loop region
+    # is the final body (see enhancements/README.md).
+    unroll = doc.get("unroll", 1)
+    if not isinstance(unroll, int) or unroll < 1:
+        rep.err(f"unroll must be an integer >= 1 (got {doc.get('unroll')!r})")
+        unroll = 1
+    if unroll > 1:
+        if bm.period is None:
+            rep.err(f"unroll > 1 needs a looped song ({label} plays once)")
+            unroll = 1
+        else:
+            bm.span_end = bm.loop_frame + unroll * bm.period
+            bm.span_bodies = unroll
 
     patterns = doc.get("patterns") or {}
     if not isinstance(patterns, dict):
@@ -341,6 +418,18 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                     "remap every hit to a different drum; remove it")
             transpose = 0
 
+        # Evolving channels author every loop iteration explicitly (ramps);
+        # the rest author intro + one body and the compiler repeats the body.
+        # Evolving tier 1 is unrepresentable: the OPL enhancement stream
+        # plays exactly one loop body.
+        evolving = bool(ch.get("evolving", False))
+        if evolving and tier == 1:
+            rep.err(f"{ctx}: evolving tier-1 channels can't loop-ramp — "
+                    "the OPL enhancement stream plays exactly one loop body; "
+                    "keep tier 1 identical every iteration (or ramp in tier 2+)")
+        if evolving and unroll == 1:
+            rep.warn(f"{ctx}: evolving set but unroll == 1 — flag has no effect")
+
         notes = _resolve_events(ch.get("events"), bm, transpose, velocity,
                                 patterns, rep, ctx)
         if not notes:
@@ -377,6 +466,29 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                     rep.err(f"{ctx}: note {n.key} (frame {n.frame}) outside "
                             f"tier-{tier} range {lo}-{hi} after transpose")
                     break
+
+        # Unroll auto-duplication: non-evolving channels author intro + one
+        # body; the compiler repeats the body across iterations. Evolving
+        # channels author every iteration explicitly. Duplicated copies are
+        # exact offsets of lint-clean notes against periodic-identical base
+        # content, so §7 needs no re-check on the copies.
+        if unroll > 1 and not evolving:
+            # unroll > 1 implies a looped song (enforced above), so period
+            # is set; the assert is for the type checker, not the runtime.
+            assert bm.period is not None
+            duped: list[ResolvedNote] = []
+            for n in notes:
+                if n.frame < bm.loop_frame:
+                    continue            # intro plays once
+                if n.frame + n.dur > bm.loop_frame + bm.period:
+                    rep.err(f"{ctx}: note at frame {n.frame} crosses the "
+                            f"loop-body end — non-evolving channels can't "
+                            f"span bodies (shorten it or set evolving: true)")
+                    break
+                for k in range(1, unroll):
+                    duped.append(ResolvedNote(n.frame + k * bm.period,
+                                              n.dur, n.key, n.vel))
+            notes = sorted(notes + duped, key=lambda n: (n.frame, n.key))
 
         resolved.append(ResolvedChannel(name, tier, opl if tier == 1 else
                                         None, mt32, gm, pan, volume,

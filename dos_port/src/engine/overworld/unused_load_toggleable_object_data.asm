@@ -19,10 +19,9 @@
 ; dd ptr) and the skip stride scales. The final copy's source is a flat ROM label,
 ; so an inline flat->WRAM rep movsb replaces CopyData (EBP-relative on both
 ; operands) — cf. map_sprites.asm:ShowTextStream.
+; Linked in GAME_SRCS (OW-7.2).
 ;
-; Check-only.
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
+; Build: nasm -f coff -I include/ -I . -o unused_load_toggleable_object_data.o \
 ;                     src/engine/overworld/unused_load_toggleable_object_data.asm
 ; ---------------------------------------------------------------------------
 

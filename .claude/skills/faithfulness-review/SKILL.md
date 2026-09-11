@@ -35,20 +35,18 @@ are a tool, not a manual procedure.
                           **Invoked by .githooks/pre-commit**, so it
                           runs whether or not you remember it — install with
                           `make -C dos_port install-hooks`. It rescans the label
-                          DB (`update_label_db`) and then runs BOTH
-                          lint_pret_labels modes, the label-DB pytest suite,
-                          validate_scenarios.py, and check_ram_addresses.py
-                          (every pret RAM/HRAM label must sit where rgblink put
-                          it in pokeyellow.sym; the port's deliberate
-                          relocations are baselined in
-                          tools/ram_address_baseline.json). That last one exists
-                          because a NASM `equ` is FILE-LOCAL, so two files could
-                          declare one pret label at DIFFERENT addresses and still
-                          assemble, link and pass every other gate — six wrong
-                          addresses shipped that way. THE RATCHET GOES BOTH WAYS: a
-                          class that shrank fails too, until the baseline is
-                          lowered deliberately (`--update-baseline`) with a
-                          stated reason.
+                          DB (`update_label_db`) and then runs all 8 checks:
+                            1. update_label_db (shared rescan)
+                            2. lint_pret_labels vs baseline
+                            3. lint_pret_labels --strict-claims vs baseline
+                            4. pytest tools/test_label_db.py
+                            5. validate_scenarios.py (manifest vs registry)
+                            6. check_ram_addresses.py (pret labels vs pokeyellow.sym)
+                            7. check_ram_collisions.py (detects port-introduced RAM aliasing)
+                            8. check_ram_straddle.py (WRAM growth vs address expressions)
+                          THE RATCHET GOES BOTH WAYS: a class that shrank fails too,
+                          until the baseline is lowered deliberately (`--update-baseline`)
+                          with a stated reason.
                           Because it rescans (and is reached through `make -C
                           dos_port static_gate`), it is a SERIALIZED resource —
                           never run it concurrently with another agent's build
@@ -59,7 +57,9 @@ are a tool, not a manual procedure.
                           OUTRIGHT any key ADDED to
                           `tools/pret_label_allowlist.json`** (in
                           `relocated_labels`, `relocated_files`,
-                          `structural_findings` or `suppress`), staged or not,
+                          `structural_findings` or `suppress`; current allowlist has
+                          0 relocated_labels, 0 suppress, 0 structural_findings, and
+                          27 sanctioned bank-split relocated_files), staged or not,
                           and refuses the commit — maintainer directive,
                           2026-08-02, commit `3f1b12be`. Only REMOVALS and edits
                           to an existing row take the tolerance path (staging the

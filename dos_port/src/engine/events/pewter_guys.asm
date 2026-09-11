@@ -12,10 +12,7 @@
 ; RAM is EBP-relative; the coord/movement tables are FLAT host data — pret's
 ; embedded `dw <label>` pointers become `dd` (4-byte flat host pointers), so the
 ; entry stride is db,db,dd = 6 bytes (pret: db,db,dw = 4) and the pointer loads
-; are 32-bit. Check-only until the Pewter map scripts that call it are ported.
-;
-; Build (check): nasm -f coff -I include/ -I . -o pewter_guys.o \
-;                     src/engine/events/pewter_guys.asm
+; are 32-bit.
 ; ---------------------------------------------------------------------------
 
 %include "gb_memmap.inc"

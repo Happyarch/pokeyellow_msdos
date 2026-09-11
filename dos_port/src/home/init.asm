@@ -79,7 +79,6 @@ extern StageIndoorMapBlk     ; src/home/overworld.asm
 extern InitializeToggleableObjectsFlags ; src/engine/overworld/toggleable_objects.asm
 extern text_engine_init      ; src/home/text.asm
 extern EnterMap              ; src/home/overworld.asm
-extern g_player_marker_on    ; src/ppu/ppu.asm
 ; Boot-asset externs — definitions live in src/data/maps/map_headers.asm (D.1)
 extern overworld_gfx
 extern OVERWORLD_GFX_SIZE
@@ -593,7 +592,6 @@ SetupPlayerSprite:
     mov byte [ebp + wFontLoaded],   0
     mov byte [ebp + wMovementFlags], 0
     mov byte [ebp + hAutoBGTransferEnabled],        0
-    mov byte [g_player_marker_on], 0
     ret
 
 ; ---------------------------------------------------------------------------

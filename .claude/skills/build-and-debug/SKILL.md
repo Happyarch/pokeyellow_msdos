@@ -47,8 +47,8 @@ dos_port/
     gb_memmap.inc          ← EBP-relative offsets for GB memory regions
     gb_macros.inc          ← BUG_FIX_LEVEL macro, BUG/GLITCH comment conventions
   boot/
-    entry.asm              ← DPMI entry, memory alloc, /FIXALL|/FIXCRIT parsing, main loop
-    video.asm              ← VGA mode 13h, test pattern, 2× blit
+    entry.asm              ← DPMI entry, memory alloc, command-line parsing, main loop
+    video.asm              ← VGA mode 13h, 1:1 native 320×200 present
     timing.asm             ← PIT 60 Hz, tick ISR, vblank sync
   src/home/
     copy2.asm              ← FillMemory / CopyVideoData (FillMemory was the first
@@ -72,7 +72,9 @@ dos_port/
     colorize.py            ← palette CLI (--gen/--verify/--edit/--export-png/
                              --import-png); colors/editor.py is the pygame editor
     saveconv.py            ← GB .sav ↔ DOS .dsv converter (--verify|--info/
-                             --to-dos/--to-gb)
+                              --to-dos/--to-gb; Python)
+    dsv2sav.c              ← portable standalone C save converter (--to-sav/
+                              --to-dsv/--verify; DeSmuME footer probe)
     static_gate            ← whole-tree lint ratchet; run by .githooks/pre-commit
     fidelity_gate          ← per-change, per-label fidelity chain (+ move battery)
     run_headless.sh        ← build a DEBUG_* image, run it headless, extract every
@@ -157,7 +159,7 @@ Output EXE is **`dos_port/PKMN.EXE`** — DOS 8.3 name required for DOSBox-X `-c
 > wins).
 
 ```sh
-# Reference ROM (requires rgbds per .rgbds-version — 1.0.2 at 2026-08-02)
+# Reference ROM (requires rgbds per .rgbds-version — 1.0.3 at 2026-09-11)
 make compare
 
 # DOS port (canonical; scripts below are wrappers)
@@ -174,9 +176,21 @@ make -C dos_port assets DEBUG_WARPS=1  # include debug warp entries
 dos_port/build                         # build (passes args to make)
 dos_port/run                           # build + launch in DOSBox-X
 
+# Clean targets (safe)
+make -C dos_port clean                 # safe: $(ALL_OBJS), PKMN.EXE, .nasmflags, pkmn.sym
+make -C dos_port clean-image           # delete PKMN.IMG
+
 # Single file assembly check
 nasm -f coff -I dos_port/include -I dos_port -o /dev/null dos_port/src/home/copy2.asm
 ```
+
+> [!WARNING]
+> **Avoid root-level `make clean` / `make tidy` in this tree.** It deletes
+> pret-built intermediates (gfx `.2bpp`, etc.) that `make -C dos_port assets`
+> needs, and regenerating them means a full pret build you probably did not want.
+> `make -C dos_port clean` remains the safe one: only `$(ALL_OBJS)`, `PKMN.EXE`,
+> the `.nasmflags` stamp and `pkmn.sym` — never assets, and **not** `PKMN.IMG`
+> (that is `make clean-image`). Redoing the root build needs rgbds at `.rgbds-version` (1.0.3).
 
 DOSBox-X is driven by the tracked repo config **`dos_port/dosbox-x.conf`**, loaded
 automatically by `dos_port/run`. It overrides the user's system config for:
@@ -259,8 +273,8 @@ symbol-annotated disassembly, and paused-frame PNG dumps.
 
 **Symbols are always fresh and include NASM local labels.** The link rule
 generates `pkmn.sym` from PKMN.EXE's own COFF symbol table
-(`tools/generators/gen_symfile.py` — 12885 symbols in the `pkmn.sym` on disk at
-2026-08-02, e.g. `_AdvancePlayerSprite.scroll`; gen_symfile prints
+(`tools/generators/gen_symfile.py` — ~21.5k symbols in the `pkmn.sym` on disk,
+e.g. `_AdvancePlayerSprite.scroll`; gen_symfile prints
 `N symbols` to stderr at every link, so read it there rather than trusting
 this line, or `wc -l < dos_port/pkmn.sym`).
 The server stats the file on every resolution and reloads transparently, so a
@@ -491,18 +505,16 @@ render state is not the evidence.
 make -C dos_port goldencheck SCENARIO=status_p1
 
 # Core pre-commit tier: representative status/start/overworld/party/bag/text/
-# datastruct/battle/menu coverage (16 scenarios as of 2026-08-02 — do not quote
-# this number, it grows; measure with
+# datastruct/battle/menu coverage (do not quote hardcoded counts; measure with:
 #   python3 tools/generators/gen_scenario_registry.py --names core | wc -w)
 make -C dos_port fidelity
 
-# Full active suite (= core + the long tail, so it is the WHOLE registry:
-# 37 scenarios as of 2026-08-02; this line said 19, then 33, both wrong by the
-# time they were read). Same rule — measure, do not quote:
+# Full active suite (= core + the long tail, the whole manifest):
+# Always measure dynamically rather than quoting numbers:
 #   python3 tools/generators/gen_scenario_registry.py --names full | wc -w
 # The registry itself is tools/scenario_manifest.json (each entry carries its
 # tier, DEBUG_* build flags, Lua script, dump contract and must_hit list);
-# `disabled_scenarios` is the retirement list, empty at 2026-08-02.
+# `disabled_scenarios` is the retirement list, empty.
 make -C dos_port fidelity-full
 
 # Regenerate every Lua golden into a temp dir and diff against committed
@@ -530,16 +542,13 @@ Makefile` was empty for four days — so the documented gate commands stayed
 serial while the parallel runner sat unused beside them. Agents budgeted ~30 min
 for a full run, or skipped it.
 
-Measured on the 96-thread host, same tree, same scenarios:
+Measured on the 96-thread host:
+- Core tier: parallel wall clock is roughly ~30 s.
+- Full tier: parallel wall clock is roughly a few minutes (~4.6× faster than serial).
+Query the scenario count dynamically with `python3 dos_port/tools/validate_scenarios.py`.
 
-| tier | scenarios | serial | parallel |
-|------|-----------|--------|----------|
-| core | 16 | (not re-timed) | **30 s** |
-| full | 66 | **~1750 s** | **378 s** (~4.6x) |
-
-**Do not quote the old figures** — "core ~2m50s / full ~4m45s" and
-"fidelity-full is ~15 min" both date from the 17-scenario battery era; the
-registry is 66. Re-measure.
+**Do not quote the old serial figures** — "core ~2m50s / full ~4m45s" and
+"fidelity-full is ~15 min" both date from the 17-scenario battery era. Re-measure.
 
 **`fidelity-serial` / `fidelity-full-serial` keep the one-at-a-time loops, and
 you must NOT use them unless the maintainer explicitly asks** (directive,
@@ -616,7 +625,7 @@ Rules and gotchas:
 - `goldencheck.sh` already runs against a **copy** of `PKMN.IMG` in a scratch
   dir, so it's immune to the live-session image-contention trap (below), and
   the NASMFLAGS stamp rebuilds the `DEBUG_*` objects automatically. It also
-  `mdel`s `GBSTATE.BIN`/`DUMP.BIN`/`FRAME.BIN` **and `POKEMON.DSV`** out of the
+  `mdel`s `GBSTATE.BIN`/`DUMP.BIN`/`FRAME.BIN`/`PAL.BIN` **and `POKEMON.DSV`** out of the
   copy before running (fixed 2026-07-28): `make image` deliberately preserves a
   save already inside `PKMN.IMG`, so a `.dsv` left by an earlier run would be
   read at boot by `SramLoadImage` and silently change what the scenario sees.
@@ -941,131 +950,55 @@ into `assets/ui_layout_<subsystem>.inc`. `ui_layout/seed_from_battle.py` /
 existing battle layout / from pret's `TextBoxCoordTable` — run once when adding
 a new subsystem's sidecar, not part of the normal edit loop.
 
-**Save converter:** `tools/saveconv.py` is complete — no stub paths remain.
-The `.dsv` format is documented in `src/save/dsv_io.asm`'s own header (**version
-2**: a 7-byte header + a 32768-byte payload that IS the raw SRAM image in real
-`.sav` bank order, 32775 total).
+**Save converter:** `tools/dsv2sav.c` (portable C99 standalone) and `tools/saveconv.py`
+(pure Python 3) are complete bidirectional GB/DOS save converters. The `.dsv` format is
+documented in `src/save/dsv_io.asm`'s own header (**version 2**: a 7-byte header +
+a 32768-byte payload that IS the raw SRAM image in real `.sav` bank order, 32775 total:
+4-byte magic `DOSV`, 1-byte version `0x02`, 2-byte LE additive checksum, 32768-byte payload).
+
+Because the v2 payload IS a raw `.sav`, conversion is a lossless header prepend/strip and
+the round trip is byte-identical (`--to-dos X.sav Y.dsv && --to-gb Y.dsv Z.sav` reproduces `X`).
+
+CLI usage (both tools accept `--to-sav`/`--to-dsv` and `--to-gb`/`--to-dos` interchangeably):
 
 ```sh
-tools/saveconv.py --verify POKEMON.DSV        # --info is an alias
-tools/saveconv.py --to-dos  in.sav  out.dsv   # prepend the header + checksum
-tools/saveconv.py --to-gb   in.dsv  out.sav   # validate, then strip the header
+# Portable C implementation (zero dependencies; compile with any C99/C89 compiler):
+gcc -O2 -std=c99 dos_port/tools/dsv2sav.c -o dos_port/tools/dsv2sav
+dos_port/tools/dsv2sav --to-sav POKEMON.DSV POKEMON.SAV   # DOS .dsv -> GB .sav
+dos_port/tools/dsv2sav --to-dsv POKEMON.SAV POKEMON.DSV   # GB .sav -> DOS .dsv
+dos_port/tools/dsv2sav --verify POKEMON.DSV               # validate header & checksum
+
+# Python equivalent (direct execution, no compiler needed; used by golden harness):
+python3 dos_port/tools/saveconv.py --to-gb POKEMON.DSV POKEMON.SAV
+python3 dos_port/tools/saveconv.py --to-dos POKEMON.SAV POKEMON.DSV
+python3 dos_port/tools/saveconv.py --verify POKEMON.DSV
 ```
 
-Because the v2 payload IS a raw `.sav`, conversion is a header prepend/strip and
-the round trip is byte-identical. All three modes share one `validate_dsv()`, so
-they cannot disagree about what a loadable file is.
+`--verify` (and alias `--info`) applies exactly the checks `dsv_io.asm:SramLoadImage` makes
+before scattering a file into the SRAM banks — total size 32775, `DOSV` magic, version byte,
+and the 16-bit LE **additive** payload checksum (`sum(payload) & 0xFFFF`, wrapping at 16 bits,
+not a CRC) — so a file it accepts is one the port will load, and a file it rejects is one
+the port drops into its corrupt-save branch. Exit 0 + a summary on success; exit 1 with the
+expected-vs-found value on the first mismatch. The 32768-byte payload stays opaque — it is
+the raw four-bank SRAM image (`4 * GB_SRAM_BANK_SIZE`), and its internal block boundaries
+belong to `gb_memmap.inc`; a second copy here would drift. (A **v1** file — the retired
+WRAM-block payload — fails the version byte by design; there is no migration path.)
 
-It applies exactly the checks `dsv_io.asm:SramLoadImage` makes before scattering a
-file into the SRAM banks — total size 32775, `DOSV` magic, version byte, and the
-16-bit LE **additive** payload checksum (`sum(payload) & 0xFFFF`, not a CRC) — so a
-file it accepts is one the port will load, and a file it rejects is one the port
-drops into its corrupt-save branch. Exit 0 + a summary on success; exit 1 with
-the expected-vs-found value on the first mismatch. The 32768-byte payload stays
-opaque — it is the raw four-bank SRAM image (`4 * GB_SRAM_BANK_SIZE`), and its
-internal block boundaries belong to `gb_memmap.inc`; a second copy here would
-drift. (A **v1** file — the retired WRAM-block payload — fails the version byte
-by design; there is no migration path.)
+`dsv2sav.c` additionally features a **DeSmuME footer probe**: DeSmuME (the Nintendo DS
+emulator) also uses the `.dsv` extension but appends a 122-byte footer ending in
+`|-DESMUME SAVE-|`. If passed a DS save, `dsv2sav` identifies it and instructs the user to
+export raw backup memory (`File -> Export Backup Memory`) rather than reporting a generic
+size failure.
 
-## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
+For direct GUI editing, `tools/pkhex_plugin/` provides a PKHeX C# plugin supporting
+seamless `.dsv` loading and saving.
 
-Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
-`audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
+## Auditioning music
 
-**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` provides a
-unified interactive TUI across **OPL3** (default: authentic 48 kHz FM via NukedOPL
-with software envelopes and authentic noise drums), **MT-32** (direct ALSA sequencer
-client to MUNT), and **General MIDI** (FluidSynth / hardware synth). All targets feature
-live file hot-reloading and position-locked A/B testing:
-
-```sh
-# OPL3 (default) — instant host FM synthesis, zero external synths needed:
-tools/audio/audition.py Music_PalletTown
-# Fuzzy song matching & track listing:
-tools/audio/audition.py palet                       # auto-resolves to Music_PalletTown
-tools/audio/audition.py --list                      # list all 49 tracks & enhancement tiers
-
-# MIDI targets (direct ALSA sequencer to MUNT / fluidsynth):
-mt32emu-qt &                                        # launch MUNT for --target mt32
-tools/audio/audition.py --target mt32 Music_Celadon
-tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
-tools/audio/audition.py --port 128:0 Music_Celadon  # specify custom ALSA port
-
-# Interactive controls (available in OPL3, MT-32, and General MIDI):
-#   [Tab]         A/B toggle: flips between working copy and previous revision/checkpoint
-#   [Space] / [E] Toggle enhancements On / Off (Pure GB vs. Enhanced)
-#   [M]           Solo enhancements (mutes base GB channels)
-#   [ [ ] / [ ] ] Step through disk revisions (.revisions/<Song>/)
-#   [U]           Revert YAML on disk to selected revision
-#   [C]           Save manual checkpoint
-#   [P]           Pause / resume playback
-#   [Left]/[Right]Seek -4s / +4s
-#   [Q]           Quit
-```
-
-Revisions are stored on disk in `tools/audio/.revisions/<Song>/` (gitignored),
-so parallel agent commits in git cannot disrupt or lose your A/B iteration history.
-
-Edit `tools/audio/enhancements/<Song>.yaml` in your editor or have an LLM edit it →
-`audition.py` automatically hot-reloads the changes live → press `[Tab]` to hear the A/B diff.
-That's the whole loop.
-
-**2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
-driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
-**never edit the Makefile or debug_dump.asm to swap songs**:
-
-```sh
-dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP   # OPL3, loops forever
-dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
-```
-
-`TRACK=` takes any `MUSIC_*` constant from `assets/audio_constants.inc`
-(default `MUSIC_GAME_CORNER`); the bank resolves via the generated
-`<name>_BANK` constant. Without `/LOOP` the harness plays the Phase-A demo
-sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
-exits — that's the byte-verification mode, not the listening mode.
-
-**Enhancements on/off (A/B) — host-side vs in-DOS:**
-- **Host-side (`audition.py`)**:
-  - Works identically for **both OPL3 and MT-32/GM**: press `[Space]` to toggle
-    enhancements On/Off or `[Tab]` to flip between working copy and previous
-    revisions mid-playback without stopping or rebuilding anything.
-- **In-DOS (end-to-end driver verification)**:
-  - **OPL3**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm` streams) —
-    the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
-    TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
-  - **MT-32/GM**: in the DOS executable, enhancements are **baked into the MIDI
-    stream at asset-gen time** (`gb_to_midi.py` folds `enhancements/<Song>.yaml` in;
-    `mpu401.asm` does not evaluate `/NOENH`). In-DOS verification of the plain
-    stream requires regenerating assets:
-    ```sh
-    python3 tools/audio/gb_to_midi.py --target mt32 --songs GameCorner --no-enhance
-    python3 tools/audio/midi_to_stream.py --target mt32
-    dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
-    make -C dos_port assets   # afterwards: restore the enhanced streams
-    ```
-    (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
-    picks the regen up automatically.)
-- A song with no `tools/audio/enhancements/<Song>.yaml` sounds identical with or
-  without any of this: enhanced == plain until a YAML exists. Which songs have
-  one changes — list it, don't recall it
-  (`ls dos_port/tools/audio/enhancements/*.yaml`). At 2026-08-02 there are five:
-  CinnabarMansion, GameCorner, GymLeaderBattle, Lavender, PalletTown.
-
-Anti-patterns (both caused a real lost session, 2026-07-07):
-- Rebuilding PKMN.EXE / booting DOSBox-X repeatedly to hear a YAML tweak —
-  use audition.py; the DOS build is for driver verification only.
-- **Root-level `make clean` / `make tidy` in this tree.** It deletes
-  pret-built intermediates (gfx `.2bpp`, etc.) that `make -C dos_port assets`
-  needs, and regenerating them means a full pret build you probably did not want.
-  It is a costly detour, NOT the unrecoverable one this line used to claim: the
-  older text said the pret tree "is contaminated and can NOT rebuild them
-  end-to-end (`make yellow` fails)", which stopped being true at `ea26854a` —
-  `make compare` passes in-tree today (verified 2026-07-26, re-verified
-  2026-07-28 post-merge). `make -C dos_port clean` remains the safe one: only
-  `$(ALL_OBJS)`, `PKMN.EXE`, the `.nasmflags` stamp and `pkmn.sym` — never
-  assets, and **not** `PKMN.IMG` (that is `make clean-image`). Redoing the root
-  build needs rgbds at `.rgbds-version` (1.0.2).
+The music auditioning workflow is documented in the **`audio-enhance-opl3`** and **`audio-enhance-mt32`** skills ("Auditioning music").
+- **Host-side iteration:** `tools/audio/audition.py <Song>` (instant authentic 48 kHz FM via NukedOPL, MT-32 via MUNT, or General MIDI via FluidSynth; live hot-reloading on YAML edits, position-locked `[Tab]` A/B toggling, and disk revisions in `.revisions/`).
+- **In-DOS driver verification:** `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_*> /LOOP` (end-to-end hardware driver verification).
+- **Anti-pattern:** Never rebuild PKMN.EXE or boot DOSBox-X repeatedly to hear a YAML tweak — use `audition.py`.
 
 ## Key Reference URLs
 

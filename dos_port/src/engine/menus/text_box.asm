@@ -168,11 +168,9 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; DisplayTextBoxID_ — draw the text box selected by [wTextBoxID].
-; pret ref: engine/menus/text_box.asm:DisplayTextBoxID_
 ; In:  [wTextBoxID]. TWO_OPTION_MENU additionally consumes the yes_no.asm box
-;      parameters (yn_box_col/row via its entry points) — DEVIATION: the port's
-;      DisplayTwoOptionMenu takes its box position from yes_no.asm state, not
-;      pret's b/c/hl register triple (window-projected model, see yes_no.asm).
+;      parameters (yn_box_col/row via its entry points).
+; DEVIATION{class=projection; pret=engine/menus/text_box.asm:DisplayTextBoxID_; behavior=DisplayTwoOptionMenu takes box position from yes_no.asm state instead of b/c/hl registers; evidence=window-projected model in yes_no.asm; lifetime=permanent}
 ; Out: table paths draw into wTileMap (canvas); function handlers as pret
 ;      (DoBuySellQuitMenu returns CF + wChosenMenuItem/wMenuExitMethod).
 ; ---------------------------------------------------------------------------
@@ -300,8 +298,8 @@ GetTextBoxIDCoords:
 ; GetTextBoxIDText — load the text pointer + text coords from a
 ; TextBoxTextAndCoordTable entry. pret ref: text_box.asm:GetTextBoxIDText
 ; In:  ESI = entry text fields (FLAT).
-; Out: EAX = flat text pointer (DEVIATION: pret returns it in DE; the port's
-;      16-bit DX cannot hold a flat pointer — EAX is PlaceString's source reg),
+; Out: EAX = flat text pointer
+; DEVIATION{class=data-model; pret=engine/menus/text_box.asm:GetTextBoxIDText; behavior=returns flat pointer in EAX instead of 16-bit pointer in DE; evidence=16-bit DX cannot hold a flat 32-bit pointer and EAX is PlaceString source reg; lifetime=permanent}
 ;      ESI = screen address of the text's upper-left corner (EBP-relative).
 ; ---------------------------------------------------------------------------
 GetTextBoxIDText:

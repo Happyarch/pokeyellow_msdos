@@ -51,6 +51,7 @@ extern ResetMapTrainerState          ; src/engine/overworld/map_sprites.asm (por
 extern ClearSprites                 ; src/home/clear_sprites.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
+extern LoadScreenTilesFromBuffer2   ; src/home/tilemap.asm
 extern DelayFrames                  ; src/home/delay.asm  (In: BL = frame count)
 extern UpdateCGBPal_BGP             ; src/home/cgb_palettes.asm
 extern UpdateCGBPal_OBP0            ; src/home/cgb_palettes.asm
@@ -114,9 +115,7 @@ RestoreScreenTilesAndReloadTilePatterns:
     ; ($8000-$87FF), i.e. exactly the map-sprite tiles this reloads. Every port
     ; caller is an overworld-context exit, so the reload is in-context here.
     call ReloadMapSpriteTilePatterns
-    ; TODO(unimplemented): call LoadScreenTilesFromBuffer2
-    ;   (now a linkable global in src/home/tilemap.asm — wire when this path is
-    ;   next audited; the call is still dropped here)
+    call LoadScreenTilesFromBuffer2
     call LoadTextBoxTilePatterns
     ; Restored 2026-08-15. This call was pret's and had been dropped as
     ; TODO(unimplemented) long after the dispatcher it needs went live, so every

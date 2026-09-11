@@ -111,7 +111,7 @@ extern ParalyzedMayNotAttackText
 ; --- data (pret data/battle/stat_mod_names.asm, generated asset) ---
 extern StatModTextStrings               ; src/data/battle/stat_mod_names.asm
 
-; --- substitute show/hide: ret-stubs in core_stubs.asm ---
+; --- substitute show/hide (src/engine/battle/animations.asm) ---
 extern HideSubstituteShowMonAnim     ; src/engine/battle/animations.asm
 extern ReshowSubstituteAnim          ; src/engine/battle/animations.asm
 

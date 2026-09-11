@@ -34,6 +34,8 @@ bits 32
 %include "gb_constants.inc"
 %include "gb_macros.inc"                ; BUG_FIX_LEVEL
 %include "gb_text.inc"                  ; text_far / text_end wrappers
+%include "assets/event_constants.inc"
+%include "events.inc"
 
 section .text
 
@@ -550,21 +552,15 @@ DisplayPlayerBlackedOutText:
     mov al, [ebp + wStatusFlags6]
     and al, ~(1 << BIT_ALWAYS_ON_BIKE) & 0xFF
     mov [ebp + wStatusFlags6], al
-    ; CheckEvent EVENT_IN_SAFARI_ZONE ; jr z,.didnotblackoutinsafari
-    ; TODO(home-rectify M1.3 follow-up): the event-flag system (CheckEvent /
-    ;   EventFlagAddressA over wEventFlags) is non-home. The Safari-zone cleanup
-    ;   below is gated on EVENT_IN_SAFARI_ZONE; until the event system lands, treat
-    ;   the event as clear (skip cleanup) — faithful for the common (non-safari)
-    ;   blackout, and the safari cleanup is logged as follow-up glue.
-    jmp .didnotblackoutinsafari
-    ; --- faithful safari-blackout cleanup (currently unreachable; kept for the port) ---
-    ; xor a
-    ; mov [ebp + wNumSafariBalls], al
-    ; mov [ebp + wSafariSteps], al
-    ; mov [ebp + wSafariSteps + 1], al
-    ; EventFlagAddressA EVENT_IN_SAFARI_ZONE →
-    ;   mov [ebp + wNextSafariZoneGateScript], al
-    ;   mov [ebp + wSafariZoneGateCurScript], al
+    CheckEvent EVENT_IN_SAFARI_ZONE
+    jz .didnotblackoutinsafari
+    xor al, al
+    mov [ebp + wNumSafariBalls], al
+    mov [ebp + wSafariSteps], al
+    mov [ebp + wSafariSteps + 1], al
+    ResetEvent EVENT_IN_SAFARI_ZONE
+    mov [ebp + wNextSafariZoneGateScript], al
+    mov [ebp + wSafariZoneGateCurScript], al
 .didnotblackoutinsafari:
     jmp HoldTextDisplayOpen
 

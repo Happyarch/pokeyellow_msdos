@@ -1330,7 +1330,7 @@ TextCommand_START:
 ; This was previously WRONG, not merely deviant: it read 3 bytes and combined them
 ; into a GB offset, so it computed a garbage pointer AND desynced the outer stream
 ; by one byte. It never fired because the only producers are unlinked
-; (text_script.asm is check-only; gen_battle_text.py inlines far text instead of
+; (text_script.asm is now linked; gen_battle_text.py inlines far text instead of
 ; emitting the command) — see docs/current_plan_text_engine.md finding T-1.
 TextCommand_FAR:
     ; ESI -> operand: dd <flat target>. EBX = current cursor (carried forward).

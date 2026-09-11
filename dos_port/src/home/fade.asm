@@ -21,8 +21,6 @@
 ;   fade exactly, on whatever palettes the slot tables hold. This is INDEPENDENT of the
 ;   Phase-5 work of translating the true CGB color values into the VGA DAC:
 ;   these routines only choose shade indices, never RGB. Hence "implementable now".
-;   The GB's UpdateCGBPal_{BGP,OBP0,OBP1} calls (which push CGB RGB) are the only
-;   Phase-5-blocked part; they are elided here with ; TODO-HW: comments.
 ;
 ; Register mapping used (SM83 -> x86): A->AL, HL->(flat data ptr in EDI here,
 ;   since the FadePal tables live in the port's own .data, not GB address space),

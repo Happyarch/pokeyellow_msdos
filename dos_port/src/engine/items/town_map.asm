@@ -609,7 +609,7 @@ LoadTownMap:
 .doneDecode:
     call EnableLCD
     mov bh, SET_PAL_TOWN_MAP            ; ld b, SET_PAL_TOWN_MAP
-    call RunPaletteCommand              ; ret-stub until the Phase 5 palette engine
+    call RunPaletteCommand              ; home/palettes.asm
     call Delay3
     call GBPalNormal
     xor al, al

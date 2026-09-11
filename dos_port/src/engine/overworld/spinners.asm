@@ -18,10 +18,7 @@
 ;
 ; Facility_GFX / Gym_GFX (the tileset sheets the "restore" entries copy back) are
 ; incbin'd here as file-local labels (INTERIM — the port loads tilesets dynamically;
-; retire + source from the tileset loader when unified). Check-only.
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
-;                     src/engine/overworld/spinners.asm
+; retire + source from the tileset loader when unified).
 ; ---------------------------------------------------------------------------
 
 bits 32

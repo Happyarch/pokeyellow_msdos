@@ -76,6 +76,7 @@ BankswitchCommon:
 ; ===========================================================================
 ; Bankswitch — allowlist stub (divergence §2 item 4). No banks in the flat DPMI
 ; model: jump straight to the target in ESI (HL). B (bank) is ignored.
+; DEVIATION{class=banking; pret=home/bankswitch2.asm:Bankswitch; behavior=jump straight to target in ESI without bank switching; evidence=flat 32-bit DPMI memory model has all code resident so bank in BH is ignored; lifetime=permanent}
 ; ===========================================================================
 Bankswitch:
     jmp esi

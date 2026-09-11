@@ -29,18 +29,9 @@
 ; usual. Map ids / <MAP>_WIDTH / tileset ids come from the generated
 ; assets/map_dims.inc (Tier-1 — pret constants, never hand-encoded).
 ;
-; Retires the PrepareForSpecialWarp ret-stub in main_menu_stubs.asm (dup_def
-; suppressed: stub stays LINKED for its caller until OW-7.2 promotion, same
-; pattern as SpawnPikachu/EnterMapAnim).
-;
 ; Register map (SM83 -> x86): A->AL, B->BH, C->BL, HL->ESI. GB memory is
 ; [ebp+offset]. bit/res-then-branch preserves the tested ZF via a saved copy
 ; (x86 `and [mem]` sets flags) or a direct `test [mem],imm`.
-;
-; Check-only (HOME_CHECK_SRCS).
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
-;                     src/engine/overworld/special_warps.asm
 ; ---------------------------------------------------------------------------
 
 bits 32

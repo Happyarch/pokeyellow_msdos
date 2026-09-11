@@ -21,40 +21,27 @@
 %endif
 
 ; ---------------------------------------------------------------------------
-; Translation comment conventions
+; Translation comment conventions — MACHINE-PARSED ANNOTATIONS
 ;
-; BUG(critical): <description>
-;   A bug that can cause buffer overflows, OOB writes, save corruption, or
-;   arbitrary code execution. Fixed when BUG_FIX_LEVEL >= 1.
-;   Template:
-;     ; BUG(critical): <what goes wrong>
-;     ; pret ref: <source file>:<label>, docs/bugs_and_glitches.md#L<line>
-;     %if BUG_FIX_LEVEL >= 1
-;       ; ... fixed implementation
-;     %else
-;       ; ... original (buggy) behavior
-;     %endif
+; Exactly four kinds: DEVIATION, BUG, GLITCH, STUB.
+; Must adhere to single-line format:
+;   ; KIND{class=<class>; pret=<file>:<Label>; behavior=<what differs>; evidence=<why true>; lifetime=<what retires it>}
 ;
-; BUG(cosmetic): <description>
-;   A minor behavioral or visual bug that does not threaten save data or
-;   system stability. Fixed when BUG_FIX_LEVEL >= 2.
-;   Same template as above but %if BUG_FIX_LEVEL >= 2.
+; Required fields for all kinds: class, pret, behavior, evidence, lifetime.
+; In addition:
+;   - GLITCH also requires: safety=<safety assessment>
+;   - STUB also requires:   label=<symbol name>; class must be 'stub' or 'temporary'
 ;
-; GLITCH: <name> — <description>
-;   An intentional glitch that users may exploit (MissingNo, item dup, etc.).
-;   Safety tag: "safe under DPMI" or "unsafe on bare HW if ACE reachable".
-;   These are never fixed by any flag — they are preserved behavior.
-;   Example:
-;     ; GLITCH: MissingNo encounter — reads past end of species table
-;     ; Safety: safe under DPMI (bounded to emulated WRAM)
+; Allowed classes: HAL, banking, projection, data-model, timing, stub, temporary.
+; Syntax rule: No ';' or '}' allowed inside field values (the parser splits on ';').
 ;
-; TODO-HW: <description>
-;   A GB hardware I/O access that has not yet been translated.
-;   The original code is preserved as a comment; a stub (nop or ret) is emitted.
-;   Example:
-;     ; TODO-HW: write to rLCDC ($FF40) to enable/disable LCD
-;     ;   original: ld [rLCDC], a
-;     ;   pending: software renderer reads [EBP + IO_LCDC] to determine render state
+; BUG pairs the annotation with a compile-time conditional block:
+;   ; BUG{class=data-model; pret=...; behavior=...; evidence=...; lifetime=...}
+;   %if BUG_FIX_LEVEL >= 1  ; 1 = critical only, 2 = all
+;     ; fixed implementation
+;   %else
+;     ; original (buggy) behavior
+;   %endif
 ; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
@@ -89,14 +76,14 @@
     dec esi
 %endmacro
 
-; Load byte from HRAM offset (ldh a, [offset]) — offset is $FF00-relative
+; Load byte from HRAM/IO offset (ldh a, [offset]) — offset is $FF00-relative ($FF00-$FFFE)
 %macro GB_LDH_A 1
-    mov al, [ebp + GB_IO + (%1 & 0x7F)]
+    mov al, [ebp + GB_IO + (%1 & 0xFF)]
 %endmacro
 
-; Store AL to HRAM offset (ldh [offset], a)
+; Store AL to HRAM/IO offset (ldh [offset], a)
 %macro GB_LDH 1
-    mov [ebp + GB_IO + (%1 & 0x7F)], al
+    mov [ebp + GB_IO + (%1 & 0xFF)], al
 %endmacro
 
 %endif ; GB_MACROS_INC

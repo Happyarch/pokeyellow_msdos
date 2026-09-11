@@ -108,12 +108,10 @@ PalletTownOakText:
     call ShowTextStream
     ret
 
-; ---------------------------------------------------------------------------
 ; PalletTown_Script — the map's per-frame _Script (RunMapScript dispatches here
-; via MapScriptPointers[PALLET_TOWN]). Faithful skeleton of scripts/PalletTown.asm:
+; via MapScriptPointers[PALLET_TOWN]). Faithful translation of scripts/PalletTown.asm:
 ; PalletTown_Script: the event-gate, then CallFunctionInTable on the current-script
-; index. The cutscene state routines themselves are deferred (they need scripted
-; NPC movement + the Pikachu battle) and recorded as stubs below.
+; index to advance the Oak cutscene and battle states.
 ; ---------------------------------------------------------------------------
 PalletTown_Script:
     CheckEvent EVENT_GOT_POKEBALLS_FROM_OAK   ; ZF=1 ⇒ flag clear

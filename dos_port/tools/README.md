@@ -17,7 +17,7 @@ Every `gen_*.py` script that turns pret source (or a hand-authored sidecar)
 into a generated `assets/*.inc`, plus `gen_all_assets.py` (the orchestrator
 `make assets` calls) and `gb_text.py` (the charmap-encode helper the string
 generators share — see the project's two-tier rule in
-`.claude/skills/project-conventions/SKILL.md` for why text strings are
+`.agents/skills/project-conventions/SKILL.md` for why text strings are
 generated data, never hand-encoded).
 
 Don't run these standalone unless you're iterating on one asset (e.g.
@@ -26,7 +26,7 @@ generator) — `make -C dos_port assets` regenerates everything consistently
 and is what CI/the build actually depends on. Run from the repo root or
 `dos_port/`; each script's own docstring says which.
 
-`tools/audio/gen_*.py` is the audio pipeline's equivalent set (music and SFX data generators: `gen_audio_data.py`, `gen_opl_patches.py`, `gen_sfx_data.py`) and stays under `audio/`. `tools/audio/build_gb_apu.sh` builds the host-side Game Boy APU reference library (`libgbapu.so`) with `clang++`.
+`tools/audio/gen_*.py` is the audio pipeline's equivalent set (music and SFX data generators: `gen_audio_data.py`, `gen_opl_patches.py`, `gen_sfx_data.py`, `gen_enh_streams.py`, `gen_pika_pcm.py`, `gen_mt32_patches.py`, `gen_tandy_tables.py`) and stays under `audio/`. `tools/audio/build_gb_apu.sh` builds the host-side Game Boy APU reference library (`libgbapu.so`) with `clang++`.
 
 ## Shared libraries (no CLI — imported by generators and/or editors)
 
@@ -76,8 +76,7 @@ detailed usage lives (invoke it, don't guess flags from `--help` alone).
 | `gen_audio_enhancement_report` | Derived audio status → `docs/audio_enhancement_status.md`: covers all 49 music tracks (tier 1-3 enhancements, overrides, approvals) and all 167 sound effects (tuned profiles from `sfx/*.yaml`, patches, approvals), plus orphan checks. Standalone, not a Makefile target. "Approved" sign-offs are entered by ear via CLI with fuzzy match support (e.g. `damage=1`/`=0`, `pallet=1`/`=0`, or exact constants) targeting `audio/enhancement_approvals.json` | not yet owned by a skill; docstring first |
 | ~~`build_index`, `work_queue`, `process_placements`~~ | **DELETED 2026-08-02, with their `functions` / `stubs` / `translation_log` tables, at the maintainer's direction.** The hand-maintained translation work queue: its statuses only moved when an agent remembered to run `work_queue complete`/`wired`/`verified`, that bookkeeping was abandoned, and by the end it reported 97 `translated` against the label DB's 1673. `gen_progress_report` was moved off it 2026-07-27, after which nothing read it at all. **Do not resurrect this pattern.** The replacement is not another queue — it is `translation.db`'s label tables, which are *derived by rescanning the tree* and therefore cannot drift from it. Recoverable from git if ever needed | — |
 
-`tests/`, `test_label_db.py`, `validate_scenarios.py` are regression suites,
-not tools you run for output — see their own headers.
+`tests/`, `test_label_db.py`, `validate_scenarios.py`, `check_ram_addresses.py`, `check_ram_collisions.py`, `check_ram_straddle.py`, and `static_gate` are regression and verification suites (run via `make static_gate` or pre-commit hook), not tools you run for data output — see their own headers.
 
 ### Dependency graph viewer
 

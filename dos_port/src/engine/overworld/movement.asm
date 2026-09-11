@@ -26,7 +26,7 @@
 ;
 ; Direction constraint is read from wMapSpriteData[(slot-1)*2] (pret wMapSpriteData;
 ; OW-A.2 P2 relocated it there from the bespoke SPRITESTATEDATA2 offset 0x1).
-; Scripted NPC movement (MOVEMENTBYTE1 < WALK) is a stub — not yet implemented.
+; Scripted NPC movement (MOVEMENTBYTE1 < WALK) is fully implemented.
 ;
 ; Build: nasm -f coff -I include/ -I . -o movement.o src/engine/overworld/movement.asm
 
@@ -152,7 +152,7 @@ npc_dbg_record:
 ; Status dispatch (SPRITESTATEDATA1_MOVEMENTSTATUS):
 ;   0 → InitializeSpriteStatus (first-frame init)
 ;   1 → CheckSpriteAvailability; if visible and player not walking: direction
-;       selection → TryWalking (WALK/STAY) or stub (scripted <WALK)
+;       selection → TryWalking (WALK/STAY) or scripted (<WALK)
 ;   2 → UpdateSpriteMovementDelay (countdown to next walk)
 ;   3 → UpdateSpriteInWalkingAnimation (pixel-step animation)
 ;   4 → Func_5357 (finish-step / item-ball emerge / STAY-and-face)
@@ -174,7 +174,7 @@ UpdateNPCSprite:
     ; Re-read status after availability check
     mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS]
     test al, 0x80                        ; BIT_FACE_PLAYER (bit 7): NPC must face player
-    jnz .facePlayer                      ; stub: fall through to NotYetMoving
+    jnz .facePlayer
 
     ; Freeze NPC if text/font is loaded (dialog open)
     mov bl, [ebp + wFontLoaded]

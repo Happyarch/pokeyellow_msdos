@@ -57,7 +57,7 @@ Common mandatory routes:
 - Touching stubs, generated data, annotations, active plans, or BUG/GLITCH tags:
   `project-conventions`.
 - Building, running, debugging, fidelity harnesses, DOSBox-X, dumps, assets,
-  auditioning, or inspecting pret/DOS dependency and caller/callee graphs:
+  or inspecting pret/DOS dependency and caller/callee graphs:
   `build-and-debug`.
 - Reviewing pret fidelity or changed pret labels: `faithfulness-review`.
 - Music analysis or arrangement: `score-analysis`, then `music-theory`, then the
@@ -76,9 +76,8 @@ Full index, by task:
 - **`build-and-debug`** — building/running the port, asset regen, DOSBox-X config,
   memory-dump (`DUMP.BIN`) / back-buffer (`FRAME.BIN`) / GB-state (`GBSTATE.BIN`)
   debugging recipes, the golden fidelity harness (mGBA vs DOSBox-X, `goldencheck`
-  / `make fidelity`), music auditioning (audition.py / `DEBUG_AUDIO TRACK=`),
-  the interactive dependency graph + agent-facing JSON caller/callee API, the
-  repo layout map, reference URLs.
+  / `make fidelity`), the interactive dependency graph + agent-facing JSON
+  caller/callee API, the repo layout map, reference URLs.
 - **`faithfulness-review`** — the pre-commit fidelity gate for any change touching
   a pret-labeled routine: faithdiff / lint_pret_labels / label_status / golden
   scenarios, and the justification rules.
@@ -89,11 +88,12 @@ Full index, by task:
 - **`music-theory`** — chord ID, voice leading, voicing; foundation for both
   enhance skills, also standalone for analysis/review.
 - **`audio-enhance-opl3`** — tier-1 conservative FM channels (must sound good on
-  OPL3; cascades up to MT-32/GM). Do this tier first.
+  OPL3; cascades up to MT-32/GM). Do this tier first. Also documents how to
+  audition tracks (`audition.py` / `DEBUG_AUDIO TRACK=`).
 - **`audio-enhance-mt32`** — tier 2–3 MT-32/GM channels on top of existing
   tier 1 (never duplicating it).
 - To *listen* to any result, that's not an arranger question — it's
-  `build-and-debug` → "Auditioning music" (host-side `audition.py` for fast
+  `audio-enhance-opl3` → "Auditioning music" (host-side `audition.py` for fast
   iteration; `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_*> /LOOP` in-DOS).
 
 Rule of thumb: writing/reviewing x86 from pret source → `asm-translation` +

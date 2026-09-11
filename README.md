@@ -141,7 +141,7 @@ make -C dos_port PKMN.EXE LD=i586-pc-msdosdjgpp-ld
 Copy the resulting `PKMN.EXE` and `CWSDPMI.EXE` into your DOSBox-X mount and run
 `PKMN` — or use the run scripts below, which do it for you.
 
-#### Run scripts
+#### Run scripts and CLI flags
 
 The bash launchers have PowerShell counterparts, with the same argument
 convention (`/...` tokens are `PKMN.EXE` flags, everything else goes to make):
@@ -154,10 +154,17 @@ convention (`/...` tokens are `PKMN.EXE` flags, everything else goes to make):
 | `.\run-spk.ps1` | `run-spk` | Sound Blaster off — PC-speaker PWM cry |
 | `.\run-tandy.ps1` | `run-tandy` | Tandy 1000 SN76489 PSG |
 
+Common CLI flags for `PKMN.EXE` (pass after `run` or directly in DOS):
+- Audio: `/NOENH` (disable FM/MT-32 enhancements, play raw GB audio), `/LOOP` (loop track in `DEBUG_AUDIO=1`), `/MUNT`, `/GM`
+- Network: `/COM1`, `/COM2` (UART serial null-modem), `/IPX` (IPX network socket), `/TCP <host>:<port>` (TCP packet driver)
+- Printer: `/PRN` (LPT1 printer pass-through), `/PRNFILE` (print to disk file)
+- Video / Engine: `SKIP_TITLE=1` (make flag: boots directly to overworld map)
+
 ```powershell
 cd dos_port
 .\run.ps1 SKIP_TITLE=1
 .\run.ps1 DEBUG_AUDIO=1 /LOOP /NOENH
+```
 $env:MT32_ROMDIR = 'C:\roms\mt32'; .\run-mt32.ps1 DEBUG_AUDIO=1 /LOOP
 ```
 
@@ -240,9 +247,9 @@ pull in GPLv3's obligation to convey corresponding source.
 **Run in DOSBox / DOSBox-X:**
 ```dosbox
 [cpu]
-cputype=386
+cputype=386_prefetch
 core=normal
-cycles=50000
+cycles=fixed 23880
 ```
 A DPMI host must be available — the DJGPP stub accepts any DPMI 0.9 host:
 - **CWSDPMI** (`CWSDPMI.EXE` in the same directory or on PATH) — the standard
@@ -263,6 +270,8 @@ A DPMI host must be available — the DJGPP stub accepts any DPMI 0.9 host:
 | Enter | Start |
 | Right Shift / Tab | Select |
 | Esc | Quit to DOS |
+
+Standard PC analog game port joysticks (port `0x201`) are supported out-of-the-box (D-pad stick, Button 1 = A, Button 2 = B). Custom keybindings and gamepad calibration can be configured and are persisted to `POKEMON.CFG`.
 
 ---
 
@@ -285,7 +294,10 @@ A DPMI host must be available — the DJGPP stub accepts any DPMI 0.9 host:
 | — | ECX | Loop counter / scratch |
 
 ### Memory Model
-`EBP` holds the base of a 72 KB flat allocation that mirrors the GB address space.
+`EBP` holds the base of a 160 KiB (`0x28000`) flat DPMI allocation. Layout:
+- `[EBP + 0x0000..0xFFFF]`: Emulated 64 KB GB address space (ROM bank 0, VRAM, SRAM bank 0 at `$A000`, WRAM, HRAM).
+- `[EBP + 0x12000..0x219FF]`: Native 320×200 back buffer (`GB_BACKBUF`, 64,000 bytes).
+- `[EBP + 0x22000..0x27FFF]`: Resident emulated SRAM banks 1–3 (3 × 8 KiB).
 All emulated memory accesses use `[EBP + GB_addr]` offsets defined in
 `dos_port/include/gb_memmap.inc`. Offsets derived from `constants/hardware.inc`.
 
@@ -321,6 +333,7 @@ enabled on bare hardware.
 - [ROADMAP.md](ROADMAP.md) — Development phases and acceptance criteria
 - [docs/current_plan_backlog.md](docs/current_plan_backlog.md) — Deferred tails
   with no other owner (the tracker TODO.md used to be)
+- [docs/testing.md](docs/testing.md) — Golden fidelity harness and testing workflows
 - [docs/register_map.md](docs/register_map.md) — SM83→x86 register mapping (living doc)
 - [docs/glitch_safety.md](docs/glitch_safety.md) — Glitch sandbox guidance
 - [docs/references/README.md](docs/references/README.md) — GB hardware and DOS programming references
@@ -329,10 +342,15 @@ enabled on bare hardware.
 
 ## Network Multiplayer
 
-The Game Boy link cable I/O (`$FF01`/`$FF02`, serial SB/SC registers) is
-isolated and flagged with `; TODO-HW: network HAL` comments throughout. Transport
-protocol (IPX, raw serial/null-modem, or packet-driver TCP/IP) is undecided.
-This is a Phase 4 item — see [ROADMAP.md](ROADMAP.md).
+Phase 4 Link Cable is live! The network HAL (`src/net/`) translates Game Boy serial
+link communication across multiple real DOS transport protocols:
+- **Serial null-modem UART** (`/COM1`, `/COM2`) with 8250/16550 FIFO support.
+- **Novell IPX** (`/IPX`) for local DOS networks and DOSBox IPX tunneling.
+- **TCP/IP** (`/TCP host:port`) via the DOS Packet Driver interface (INT 0x60).
+
+An in-game transport setup UI is presented at Cable Club desks, supporting both
+Link Battles and Pokémon Trading between two DOS instances or between DOS and
+a real Game Boy via adapter.
 
 ---
 

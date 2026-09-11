@@ -122,14 +122,6 @@ extern text_row_stride      ; src/home/text.asm — linked (GAME_SRCS); active
                              ; wTileMap row stride (20 overworld default / 40
                              ; when a caller writes wTileMap directly)
 
-; CLOSURE: ForceBikeOrSurf lives in src/engine/overworld/player_gfx.asm, which
-; is `global`-exported there but the FILE sits in HOME_CHECK_SRCS (check-only,
-; NOT in LINK_SRCS) per dos_port/Makefile. So this extern resolves for a
-; standalone `nasm -f coff` check of THIS file (unresolved externs are fine
-; per the ticket's verify step) but WOULD NOT resolve at final link time until
-; player_gfx.asm (or at least ForceBikeOrSurf) is promoted to GAME_SRCS. Until
-; then, this file must also be treated as check-only (or CheckForceBikeOrSurf
-; carved out) — see the CLOSURE REPORT in the task write-up.
 extern ForceBikeOrSurf       ; src/home/overworld.asm
 
 extern IsPlayerStandingOnDoorTile ; src/engine/overworld/doors.asm

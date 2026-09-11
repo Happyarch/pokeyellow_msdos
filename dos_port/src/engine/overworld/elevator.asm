@@ -21,11 +21,9 @@
 ; has no analog in the port's native-width renderer (the VRAM torus is gone), so
 ; there is nothing to redraw. ScheduleNorthRowRedraw is mirrored in
 ; src/home/overworld.asm but stays unreached. ; PROJ: no vBGMap ring in the port.
+; Linked in GAME_SRCS (OW-7.2).
 ;
-; Check-only.
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
-;                     src/engine/overworld/elevator.asm
+; Build: nasm -f coff -I include/ -I . -o elevator.o src/engine/overworld/elevator.asm
 ; ---------------------------------------------------------------------------
 
 bits 32

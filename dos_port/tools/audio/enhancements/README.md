@@ -51,6 +51,19 @@ in the skills (`music-theory`, `audio-enhance-opl3`, `audio-enhance-mt32`).
   error. For songs whose loop return differs from the first statement
   (see the score-analysis skill), author against the loop *body* — it,
   not the first statement, is what repeats.
+- **Unrolled songs** (loop ramp-and-hold): a file opts in with top-level
+  `unroll: N` (default 1). The merged span is then intro + N loop
+  bodies and the loop region is the *final* body — intro + ramp play
+  once, the hold body loops forever (this mirrors the engine, whose
+  `.mainloop` runs past the intro). Non-`evolving` channels author
+  intro + one body and the compiler repeats the body across iterations;
+  an `evolving: true` channel authors every iteration explicitly
+  (ramps). Positions past the first body resolve by loop-period folding
+  through the analysis beat map. Tier 1 + `evolving` is an error: the
+  OPL enhancement stream plays exactly one loop body, so a tier-1 ramp
+  is unrepresentable (the OPL path accordingly sees intro + first body
+  only). First use: `Music_MeetEvilTrainer.yaml` (`unroll: 2`,
+  heartbeat ramp into a tachycardic hold).
 
 ## File shape
 
@@ -97,7 +110,11 @@ patterns:
 | Field | Type | Rules |
 |-------|------|-------|
 | `schema` | int | Must be `1`. |
+| `unroll` | int ≥ 1 | Loop ramp-and-hold span: intro + N loop bodies, loop region = final body. Default 1 (intro + one body). |
 | `song` | string | Song label as in `music_constants.asm` / stream names; must match the filename. |
+| `channels[].name` | slug | Unique within the file; used in lint/audition reports. |
+| `channels[].tier` | 1, 2, 3 | Tier 1 = OPL3+MT-32/GM; 2–3 = MT-32/GM only (3 dropped before 2 under polyphony pressure). |
+| `channels[].evolving` | bool | Default false. True = author every unrolled iteration explicitly (ramps). Non-evolving channels auto-duplicate their body across iterations. Tier 1 + `evolving: true` is an error (OPL plays one body). |
 | `channels[].name` | slug | Unique within the file; used in lint/audition reports. |
 | `channels[].tier` | 1, 2, 3 | Tier 1 = OPL3+MT-32/GM; 2–3 = MT-32/GM only (3 dropped before 2 under polyphony pressure). |
 | `channels[].opl_patch` | string | Required iff tier 1. A `PATCHES` key in `gen_opl_patches.py`. |
@@ -119,7 +136,7 @@ patterns:
 3. All patch references resolve: `opl_patch` ∈ `PATCHES`, custom
    `mt32_patch` strings ∈ `timbres.yaml`, ints in 1–128.
 4. Every position resolves inside the song per the analysis beat map;
-   nothing past the loop end; pattern instances fit their declared span
+   nothing past the loop end (intro + `unroll` loop bodies); pattern instances fit their declared span
    and don't overlap within a channel.
 5. Note range: within the target's usable range (per the hardware
    constraint references) after channel + instance transpose.
@@ -131,6 +148,10 @@ patterns:
    octaves by construction.
 8. Per-song voice budget: warn > 6 tier-1 channels or > 5 total added
    melodic parts (only 5 free MT-32 melodic parts exist).
+9. Unroll consistency: `unroll` is an integer ≥ 1 (default 1); `unroll` >
+   1 needs a looped song. Non-`evolving` channels must not span loop-body
+   boundaries (shorten the note or set `evolving: true`); `evolving` tier-1
+   channels are an error.
 
 ## Compile path
 

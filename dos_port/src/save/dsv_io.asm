@@ -1,7 +1,7 @@
 ; dsv_io.asm — DOS save-file HAL (.dsv v2 raw SRAM image) for the save layer.
 ;
 ; The Game Boy save is a battery-backed SRAM image. Since the resident-SRAM work
-; (docs/current_plan_sram_pc_storage.md stages 1-4) the port emulates all four
+; (docs/plans/sram_pc_storage.md stages 1-4) the port emulates all four
 ; SRAM banks in memory, so every pret save/load routine now reads and writes the
 ; real s* addresses exactly as pret does. What the port still lacks is the
 ; battery: this file is the whole of it. Two entry points move the 32 KiB image

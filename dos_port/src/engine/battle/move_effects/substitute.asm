@@ -30,8 +30,7 @@ global SubstituteEffect_
 extern PrintText                    ; src/home/window.asm — ESI = flat text stream
 extern DelayFrames                  ; src/home/delay.asm — BL = frame count
 extern DrawHUDsAndHPBars            ; engine/battle/core.asm — jpfar target in pret; flat tail-call here
-; --- allowlist anim stub (§2 item 1: literal subanim, ANIMATION=OFF path) ---
-extern PlayCurrentMoveAnimation
+extern PlayCurrentMoveAnimation     ; src/engine/battle/effects.asm
 ; AnimationSubstitute is the literal hard-coded substitute pop-up subanim pret
 ; reaches when wOptions/BIT_BATTLE_ANIMATION is SET (animations off — see the
 ; comment at .selectAnim below). It is REAL as of battle_animations Stage 5d

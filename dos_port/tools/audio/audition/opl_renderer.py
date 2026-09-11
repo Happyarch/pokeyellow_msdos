@@ -27,7 +27,7 @@ from pret_audio import AudioROM
 from gen_audio_data import parse_music_constants
 from gen_opl_patches import PATCHES, PATCH_ORDER
 from gb_to_midi import simulate_song, build_addr_map, songs_from_headers, NoteEv
-from yaml_lint import lint
+from yaml_lint import lint, first_body_notes
 
 MOD_SLOTS = [0x00, 0x01, 0x02, 0x08, 0x09, 0x0A, 0x10, 0x11, 0x12]
 PAN_BITS = {"left": 0x10, "right": 0x20, "center": 0x30}
@@ -636,6 +636,10 @@ class SongSession:
             print(f"  [OPL] Enhancement lint errors: {rep.errors}")
             return
 
+        # The OPL stream loops a single body: scope unrolled files down to
+        # intro + first body (dup copies and evolving later bodies are an
+        # MT-32/GM affair).
+        resolved = first_body_notes(resolved, analysis)
         self.enh_channels = resolved
         tier1 = [c for c in resolved if c.tier in self.tier_filter and c.notes]
         if not tier1:

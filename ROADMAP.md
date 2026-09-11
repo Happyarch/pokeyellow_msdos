@@ -1,18 +1,17 @@
 # Pokémon Yellow DOS Port — Development Roadmap
 
 High-level phase view — the coarse map only. Live status/scope lives in
-`CLAUDE.md` ("Current Phase") and in the active plan set. **Do not maintain a
+`AGENTS.md` / `CLAUDE.md` ("Current Phase") and in the active plan set. **Do not maintain a
 plan list by hand anywhere; generate it:**
 
 ```sh
 dos_port/tools/project_state --plans     # the authoritative plan inventory
 ```
 
-That currently emits 11 `docs/current_plan*.md` / `docs/current_plans*.md`
-entries with per-plan completed/open checkbox counts. Deferred tails with no
-other owner live in `docs/current_plan_backlog.md`. Files under `docs/plans/`
-are the **archive** — completed or superseded plans kept for provenance; they
-are not the work queue.
+Run that command for active `docs/current_plan_*.md` entries with per-plan
+completed/open checkbox counts. Deferred tails with no other owner live in
+`docs/current_plan_backlog.md`. Files under `docs/plans/` are the **archive** —
+completed or superseded plans kept for provenance; they are not the work queue.
 
 **Current focus: Phase 2 (game loop).**
 
@@ -30,8 +29,8 @@ produced, and what a reader should expect to find as a result:
 - **`dos_port/tools/fidelity_gate`** — the per-change, per-label evidence chain,
   including the relocation move battery.
 - **The golden fidelity harness matured** — `dos_port/tools/scenario_manifest.json`
-  holds 37 scenarios (16 `core`, 37 `full`), with an empty `disabled_scenarios`
-  list.
+  holds the scenario inventory (query `python3 dos_port/tools/validate_scenarios.py`),
+  with an empty `disabled_scenarios` list.
 - **Structured annotations replaced free-form ones** — `DEVIATION` / `BUG` /
   `GLITCH` / `STUB` in the machine-parsed `{class=…; pret=…; …}` form.
 - **Lint debt driven down to a single documented `aux_misplaced` finding**
@@ -81,12 +80,11 @@ PC box UI is a faithful pret mirror
 acceptance awaiting maintainer sign-off.
 
 Acceptance criteria:
-- GB memory model live: 72 KB DPMI allocation, EBP-relative access working
+- GB memory model live: 160 KiB flat DPMI allocation (`0x28000`), EBP-relative access working
 - Software PPU:
-  - Tile renderer (8×8 tiles from VRAM, 2bpp → 8bpp palette lookup)
-  - Background tilemap render (32×32 tilemap, SCX/SCY scroll)
-  - OAM/sprite renderer (40 sprites, 8×8 and 8×16, priority)
-  - Window layer
+  - Native 48×36 tile (384×288 px) surface renderer with dirty-cell shadow tracking (`bg_surface`), 320×200 viewport blit at signed (Xoff, Yoff), smooth SCX/SCY sub-block scrolling
+  - OAM sprite renderer (40 sprites, 8×8 and 8×16, priority, palette mapping)
+  - Window layer composited over background (with `g_obj_over_window` override for full-screen UI)
 - Joypad: DOS keyboard/INT 9h + DOS Game Port (0x201) → Virtual Joypad HAL (`input_hal.asm`, `kbd_isr.asm`, `gamepad_hal.asm`), extensible on-disk key rebinding via `POKEMON.CFG` (`input_cfg.asm`), and faithful pret `_Joypad`/`ReadJoypad` engine (`src/engine/joypad.asm`).
 - Save/load: DOS file I/O (INT 21h) behind resident emulated SRAM; `.dsv` v2
   format defined and shipping
@@ -141,18 +139,10 @@ What it claimed and what was measured:
 dos_port/tools/project_state --plans          # every active plan + open counts
 dos_port/tools/label_status --callers <Label> # is a given routine linked/reached
 ```
-then read the owning `docs/current_plan_*.md`. The live Phase-2 plans are
-`current_plan_overworld_realign.md`, `current_plan_items.md`,
-`current_plan_battle_completion.md` and `plans/menu_intro.md`; deferred
-tails with no other owner are in `docs/current_plan_backlog.md`.
-(`current_plan_overworld_events.md` was retired 2026-08-28 — archived at
-`docs/plans/overworld_events.md`, its overworld-seam work adopted by the
-realign plan's Stage J and its evidence tails filed as backlog #37.)
-
-⚠ **Those first three carry a maintainer directive (2026-08-02): re-measure
-before executing.** Their open-item lists come from a 2026-07-12 hand survey done
-*before* the analysis tooling existed, and at least one confirmed stale claim
-survives in them. Do that pass first; do not work them top-down.
+then read the owning `docs/current_plan_*.md`. Always query the live active
+plans with `dos_port/tools/project_state --plans`. Deferred tails with no other
+owner live in `docs/current_plan_backlog.md`. Completed and retired plans are
+archived under `docs/plans/`.
 
 ---
 
@@ -265,17 +255,14 @@ Acceptance criteria:
       `dos_port/tools/colorize.py`, `assets/colors/palettes.{json,inc}`, runtime
       stages R1–R3 all ticked). Remaining Phase 5 work is per-asset palette
       authoring, not tooling.
-- [~] CGB BG attribute planes: `data/cgb/bg_map_attributes.asm` is consumed and
-      `LoadBGMapAttributes` is ported (2026-08-09). The port resolves the
+- [x] CGB BG attribute planes: `data/cgb/bg_map_attributes.asm` is consumed and
+      `LoadBGMapAttributes` is ported. The port resolves the
       per-cell plane to its per-tile-id `tile_pal` and re-applies it every frame,
       which is what the hardware's VRAM-bank-1 plane does. Live on the title,
       status, pokédex-entry and trainer-card screens; the Yellow intro's
-      `YellowIntroPaletteAction` is ported too. **Battle needs no per-cell
-      compositor layer** — measured: its only colliding tile is the HP-bar
-      segment, already solved by the existing `$C0-$C8` gauge clones. Left: the
-      two per-cell runtime handlers (`HandleBadgeFaceAttributes`,
-      `HandlePartyHPBarAttributes`, both stubs) and the two inline intro
-      attribute boxes, all of which need a real per-cell layer.
+      `YellowIntroPaletteAction` is ported too. Both per-cell runtime handlers
+      (`HandleBadgeFaceAttributes` and `HandlePartyHPBarAttributes`) are implemented
+      and live.
 - [ ] Fullscreen scaling options: 2× nearest-neighbor (default), integer scale options
 - [ ] Packaging: documentation, DOSBox config example (a working one already
       exists at `dos_port/dosbox-x.conf`, used by `dos_port/run`), 86Box config
@@ -287,9 +274,8 @@ Acceptance criteria:
 
 **Goal:** All known glitches preserved and documented; dangerous glitches safely isolated.
 
-Bug categorization: the working inventory is **`docs/bug_categorization.md`**
-(tracked by `docs/current_plan_bug_tagging.md`); `docs/bugs_and_glitches.md` is
-the small upstream-pret list, not the full catalogue.
+Bug categorization: the working inventory is **`docs/bug_categorization.md`**;
+`docs/bugs_and_glitches.md` is the small upstream-pret list, not the full catalogue.
 - **Critical**: buffer overflows, OOB writes, save corruption, arbitrary code execution paths
 - **Cosmetic**: wrong text, minor visual/behavioral differences
 - **Intentional glitch**: MissingNo, item duplication, item slot $FF, ACE routes
@@ -300,10 +286,9 @@ Acceptance criteria:
       `; BUG{class=…; pret=…; behavior=…; evidence=…; lifetime=…}` (and
       `GLITCH{…}` / `DEVIATION{…}` / `STUB{…}`). **The old free-form
       `; BUG(level):` syntax is dead — do not write it.** Tagging is well under
-      way, not finished: `dos_port/src` currently carries 46 `BUG{`, 10
-      `GLITCH{`, 192 `DEVIATION{` and 21 `STUB{` annotations (grep counts,
-      2026-08-02 — re-measure rather than quoting these). Progress and the
-      remaining sweep live in `docs/current_plan_bug_tagging.md`.
+      way: `dos_port/src` currently carries 52 `BUG{`, 11
+      `GLITCH{`, 735 `DEVIATION{` and 0 `STUB{` annotations (all stubs
+      retired).
 - [x] Bug-fix level selected at build time: `make BUG_FIX_LEVEL=N` gating
       `%if BUG_FIX_LEVEL >= N` blocks (`dos_port/include/gb_macros.inc`)
 - [ ] Startup warning emitted when running with critical glitches enabled on bare

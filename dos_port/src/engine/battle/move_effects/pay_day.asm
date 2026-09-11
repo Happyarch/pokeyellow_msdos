@@ -75,8 +75,6 @@ extern CoinsScatteredText           ; assets/battle_text.inc (generated Tier-1 d
 ; branch, also already present). NAME_BUFFER_LENGTH = 20
 ; (constants/text_constants.asm:8), so the union's 20-byte span comfortably
 ; covers wPayDayMoney's 3 bytes at the same base.
-; FLAG FOR MASTER: add `wTotalPayDayMoney equ 0xCCE5` and
-; `wPayDayMoney equ 0xCD6D` to gb_memmap.inc proper.
 
 ; ===========================================================================
 ; PayDayEffect_ — pret engine/battle/effects.asm:PayDayEffect.

@@ -16,11 +16,9 @@
 ; the virtual OBP1 register ([ebp+IO_OBP1]). The AdjustOAMBlock{X,Y}Pos2
 ; primitives (pret engine/battle/animations.asm) take ESI = GB OAM
 ; offset (hl), BL = count (c), and read wCoordAdjustmentAmount.
+; Linked in GAME_SRCS (overworld-events Stage 4).
 ;
-; Check-only until the battle-animation OAM primitives + palette shim land.
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
-;                     src/engine/overworld/cut2.asm
+; Build: nasm -f coff -I include/ -I . -o cut2.o src/engine/overworld/cut2.asm
 ; ---------------------------------------------------------------------------
 
 bits 32

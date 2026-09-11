@@ -7,7 +7,7 @@
 ; (net_hal.asm) sit above; this file knows nothing about frames.
 ;
 ; Patterns copied from the two existing drivers, per the plan:
-;   - ISR install/restore: src/input/joypad.asm — DPMI 0204h save / 0205h
+;   - ISR install/restore: src/input/kbd_isr.asm — DPMI 0204h save / 0205h
 ;     install, DS via [cs:uisr_ds], manual EOI, restore from cleanup. Like
 ;     the keyboard ISR, this one does NOT chain to the old handler.
 ;   - Bounded waits: src/audio/mpu401.asm — every poll is bounded, CF on

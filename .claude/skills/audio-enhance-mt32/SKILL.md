@@ -179,7 +179,7 @@ other tier 2–3 voices.
 
 ## Auditioning (how to actually hear it)
 
-The listen loop lives in the **build-and-debug** skill ("Auditioning music").
+The listen loop is documented in the **`audio-enhance-opl3`** skill ("Auditioning music").
 Short form: `mt32emu-qt &` then `tools/audio/audition.py --target mt32 <Song>` (or fuzzy match
 like `tools/audio/audition.py --target mt32 celadon`; pass `--setup` to prepend the timbres.yaml
 setup SysEx; `--target opl3` is default).

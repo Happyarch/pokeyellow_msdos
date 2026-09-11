@@ -82,13 +82,6 @@ extern wMapSpriteData            ; map_sprites.asm — [movbyte2, textid] per sl
 extern IsStarterPikachuAliveInOurParty ; src/engine/pikachu/pikachu_status.asm
 extern _DisplayPokedex                 ; src/engine/events/display_pokedex.asm
 
-; ---------------------------------------------------------------------------
-; Scaffold memmap symbol not yet in gb_memmap.inc (carried in with CheckCoords).
-; ---------------------------------------------------------------------------
-%ifndef W_COORD_INDEX
-W_COORD_INDEX   equ 0xD88B   ; wCoordIndex  — PLACEHOLDER, sym-verify vs pret Yellow
-%endif
-
 section .text
 
 ; ---------------------------------------------------------------------------
@@ -103,8 +96,7 @@ section .text
 ;
 ; NOTE(port): a list entry is <Y> <X> <dd flat pointer to RLE data> (6-byte stride);
 ; pret stores the movement-data pointer as a GB 16-bit dw (4-byte stride). The
-; producer arrow-movement tables are owned by map-script waves (deferred). This
-; routine is CHECK-only until those tables exist.
+; producer arrow-movement tables are owned by map scripts.
 ; ---------------------------------------------------------------------------
 DecodeArrowMovementRLE:
 .scan:

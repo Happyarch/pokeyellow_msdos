@@ -172,12 +172,87 @@ nature; the OPL3 voice budget (polyphony) still counts them.
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement — see what good output looks like |
 | music-theory skill | All theory references | Always read first |
 
-## Auditioning (how to actually hear it)
+## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
 
-The listen loop lives in the **build-and-debug** skill ("Auditioning music").
-Short form: `tools/audio/audition.py <Song>` (defaults to `--target opl3`: native
-host-side 48 kHz FM synthesis via NukedOPL with software volume envelopes, authentic
-noise drum instruments, live hot-reload, position-locked `[Tab]` A/B toggling, fuzzy song
-search, and disk-persisted revisions in `tools/audio/.revisions/`).
-Then verify the real OPL3 shim in-DOS with `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
-Never do full DOS rebuilds just to hear a YAML tweak — use `audition.py`.
+Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
+`audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
+
+**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` provides a
+unified interactive TUI across **OPL3** (default: authentic 48 kHz FM via NukedOPL
+with software envelopes and authentic noise drums), **MT-32** (direct ALSA sequencer
+client to MUNT), and **General MIDI** (FluidSynth / hardware synth). All targets feature
+live file hot-reloading and position-locked A/B testing:
+
+```sh
+# OPL3 (default) — instant host FM synthesis, zero external synths needed:
+tools/audio/audition.py Music_PalletTown
+# Fuzzy song matching & track listing:
+tools/audio/audition.py palet                       # auto-resolves to Music_PalletTown
+tools/audio/audition.py --list                      # list all 49 tracks & enhancement tiers
+
+# MIDI targets (direct ALSA sequencer to MUNT / fluidsynth):
+mt32emu-qt &                                        # launch MUNT for --target mt32
+tools/audio/audition.py --target mt32 Music_Celadon
+tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
+tools/audio/audition.py --port 128:0 Music_Celadon  # specify custom ALSA port
+
+# Interactive controls (available in OPL3, MT-32, and General MIDI):
+#   [Tab]         A/B toggle: flips between working copy and previous revision/checkpoint
+#   [Space] / [E] Toggle enhancements On / Off (Pure GB vs. Enhanced)
+#   [M]           Solo enhancements (mutes base GB channels)
+#   [ [ ] / [ ] ] Step through disk revisions (.revisions/<Song>/)
+#   [U]           Revert YAML on disk to selected revision
+#   [C]           Save manual checkpoint
+#   [P]           Pause / resume playback
+#   [Left]/[Right]Seek -4s / +4s
+#   [Q]           Quit
+```
+
+Revisions are stored on disk in `tools/audio/.revisions/<Song>/` (gitignored),
+so parallel agent commits in git cannot disrupt or lose your A/B iteration history.
+
+Edit `tools/audio/enhancements/<Song>.yaml` in your editor or have an LLM edit it →
+`audition.py` automatically hot-reloads the changes live → press `[Tab]` to hear the A/B diff.
+That's the whole loop. Never rebuild PKMN.EXE or boot DOSBox-X repeatedly to hear a YAML tweak.
+
+**2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
+driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
+**never edit the Makefile or debug_dump.asm to swap songs**:
+
+```sh
+dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP   # OPL3, loops forever
+dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
+```
+
+`TRACK=` takes any `MUSIC_*` constant from `assets/audio_constants.inc`
+(default `MUSIC_GAME_CORNER`); the bank resolves via the generated
+`<name>_BANK` constant. Without `/LOOP` the harness plays the Phase-A demo
+sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
+exits — that's the byte-verification mode, not the listening mode.
+
+**Enhancements on/off (A/B) — host-side vs in-DOS:**
+- **Host-side (`audition.py`)**:
+  - Works identically for **both OPL3 and MT-32/GM**: press `[Space]` to toggle
+    enhancements On/Off or `[Tab]` to flip between working copy and previous
+    revisions mid-playback without stopping or rebuilding anything.
+- **In-DOS (end-to-end driver verification)**:
+  - **OPL3**: the tier-1 layer is a *runtime* overlay (`opl_enh.asm` streams) —
+    the `/NOENH` exe flag disables it live: `dos_port/run DEBUG_AUDIO=1
+    TRACK=... /LOOP /NOENH`. No rebuild of assets needed.
+  - **MT-32/GM**: in the DOS executable, enhancements are **baked into the MIDI
+    stream at asset-gen time** (`gb_to_midi.py` folds `enhancements/<Song>.yaml` in;
+    `mpu401.asm` does not evaluate `/NOENH`). In-DOS verification of the plain
+    stream requires regenerating assets:
+    ```sh
+    python3 tools/audio/gb_to_midi.py --target mt32 --songs GameCorner --no-enhance
+    python3 tools/audio/midi_to_stream.py --target mt32
+    dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
+    make -C dos_port assets   # afterwards: restore the enhanced streams
+    ```
+    (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
+    picks the regen up automatically.)
+- A song with no `tools/audio/enhancements/<Song>.yaml` sounds identical with or
+  without any of this: enhanced == plain until a YAML exists. Which songs have
+  one changes — list it, don't recall it
+  (`ls dos_port/tools/audio/enhancements/*.yaml`). At 2026-09-11 there are 16 YAML files
+  (see `docs/audio_enhancement_status.md` for live per-track statuses).

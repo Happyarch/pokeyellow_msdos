@@ -252,7 +252,7 @@ def scan_pret_scripts(exclude):
 # "a genuine port addition" with "a faithful pret label the scanner cannot see".
 # This names-only table is the same fix `script_labels` already applies to
 # scripts/ — no status, no call graph, provenance only.
-AUX_PRET_DIRS = ('audio', 'data', 'gfx', 'ram')
+AUX_PRET_DIRS = ('audio', 'data', 'gfx', 'ram', 'text')
 
 
 def scan_pret_aux(exclude):

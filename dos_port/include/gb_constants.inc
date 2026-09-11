@@ -893,8 +893,6 @@
 ; --- Pikachu map script flags (wPikachuMapScriptFlags) ---
 %define BIT_PIKACHU_MAP_SURF_SELECT  1
 
-%endif ; GB_CONSTANTS_INC
-
 ; ---------------------------------------------------------------------------
 ; SRAM bank numbers, from the pret linker script layout.link:248-255
 ;   SRAM $0 "Sprite Buffers" | $1 "Save Data" | $2 "Saved Boxes 1" | $3 "Saved Boxes 2"
@@ -907,3 +905,5 @@
 %define SRAM_BANK_SAVE_DATA       1
 %define SRAM_BANK_SAVED_BOXES_1   2
 %define SRAM_BANK_SAVED_BOXES_2   3
+
+%endif ; GB_CONSTANTS_INC

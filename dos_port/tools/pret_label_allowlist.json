@@ -121,11 +121,5 @@
   }
  },
  "relocated_labels": {},
- "suppress": [
-  {
-   "rule": "non_ret_stub",
-   "key": "DisplayPCMainMenu",
-   "why": "documented DEVIATION integration stub: arms menu vars (wMaxMenuItem etc.) so PCMainMenu dispatch runs on defined state \u2014 minimal contract, no box draw"
-  }
- ]
+ "suppress": []
 }

@@ -494,7 +494,7 @@ BillsPCDeposit:
     jmp .asm_215cf                           ; jr
 .asm_215c9:
     mov al, [ebp + wCurPartySpecies]
-    call PlayCry                             ; ret-stub today (home_stubs.asm)
+    call PlayCry                             ; home/audio.asm
 .asm_215cf:
     mov dh, PIKAHAPPY_DEPOSITED              ; farcall_ModifyPikachuHappiness: ld d, kind
     call ModifyPikachuHappiness              ; REAL (engine/events/pikachu_happiness.asm)
@@ -558,7 +558,7 @@ BillsPCWithdraw:
     jmp .asm_21666                           ; jr
 .asm_21660:
     mov al, [ebp + wCurPartySpecies]
-    call PlayCry                             ; ret-stub today (home_stubs.asm)
+    call PlayCry                             ; home/audio.asm
 .asm_21666:
     xor al, al                               ; BOX_TO_PARTY
     mov [ebp + wMoveMonType], al
@@ -598,7 +598,7 @@ BillsPCRelease:
     call RemovePokemon
     call WaitForSoundToFinish
     mov al, [ebp + wCurPartySpecies]
-    call PlayCry                             ; ret-stub today (home_stubs.asm)
+    call PlayCry                             ; home/audio.asm
     mov esi, MonWasReleasedText
     call BillsPCPrintText
     jmp BillsPCMenu

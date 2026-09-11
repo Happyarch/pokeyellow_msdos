@@ -1,7 +1,6 @@
 # Bug / Glitch Categorization Ledger
 
-Deliverable of `docs/current_plan_bug_tagging.md` Phase A (also the TODO Phase 6
-categorization deliverable). Comment-only `BUG`/`GLITCH` tags — zero behavior
+Deliverable of Phase 6 bug tagging and categorization. Comment-only `BUG`/`GLITCH` tags — zero behavior
 change at `BUG_FIX_LEVEL=0`. Sources: `docs/bugs_and_glitches.md` (pret bug
 list) and `docs/references/yellow_glitches.md` (full glitch catalogue,
 referenced from `docs/glitch_safety.md`).

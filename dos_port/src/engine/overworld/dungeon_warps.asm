@@ -48,20 +48,6 @@ bits 32
 ; ---------------------------------------------------------------------------
 ; wWhichDungeonWarp (0xD71D) is defined in gb_memmap.inc (root-verified vs
 ; ram/wram.asm: wStatusFlags3 0xD72C − 15 bytes = 0xD71D).
-%ifndef W_COORD_INDEX
-; wCoordIndex -- ram/wram.asm:1015, inside a UNION/NEXTU scratch-byte group
-; (ram/wram.asm:1000-1023) where wCoordIndex aliases wSavedY/wTempSCX/
-; wWhichTrade/wDexMaxSeenMon/.../wSwappedMenuItem/wRodResponse/
-; wOptionsCursorLocation (all zero-width labels stacked at the SAME address;
-; only the trailing `db` at ram/wram.asm:1022 allocates the byte). The
-; union's base address was not independently re-derived in this session
-; (deeply nested UNION/ENDU blocks with NUM_BADGES-sized gaps upstream, at
-; ram/wram.asm:906-1027); reusing the value already declared in this port's
-; src/engine/overworld/hidden_events.asm (its own PLACEHOLDER for the same
-; symbol) so both files agree rather than introducing a second guess.
-W_COORD_INDEX         equ 0xD88B   ; ram/wram.asm:1015 wCoordIndex
-%endif
-
 ; wStatusFlags3 bit -- constants/ram_constants.asm (wStatusFlags3 const_def block)
 %ifndef BIT_ON_DUNGEON_WARP
 %endif

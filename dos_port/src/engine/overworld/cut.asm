@@ -13,7 +13,7 @@
 ; take flat source pointers (EDX); GetCutOrBoulderDustAnimationOffsets returns the
 ; block Y/X in BH/BL.
 ;
-; Leaves: UpdateCGBPal_OBP1 is externed (unported palette, shared with dust_smoke).
+; Leaves: UpdateCGBPal_OBP1 is externed (src/home/cgb_palettes.asm, shared with dust_smoke).
 ; The FAR text streams (_NothingToCutText/_UsedCutText) are Tier-1 generated
 ; (assets/cut_text.inc via gen_overworld_strings.py). AnimCut is NO LONGER a
 ; ret-stub — cut2.asm landed (OW-6.1) and links.
@@ -178,7 +178,7 @@ UsedCut:
     mov edx, CutTreeBlockSwaps                  ; ld de, CutTreeBlockSwaps (flat)
     call ReplaceTreeTileBlock
     call RedrawMapView
-    call AnimCut                                ; pret: farcall (banking elided; ret-stub OW-6.1)
+    call AnimCut                                ; pret: farcall (banking elided; src/engine/overworld/cut2.asm)
     mov byte [ebp + wUpdateSpritesEnabled], 1
     mov al, SFX_CUT
     call PlaySound

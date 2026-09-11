@@ -56,7 +56,7 @@ Common mandatory routes:
 - Touching stubs, generated data, annotations, active plans, or BUG/GLITCH tags:
   `project-conventions`.
 - Building, running, debugging, fidelity harnesses, DOSBox-X, dumps, assets,
-  auditioning, or inspecting pret/DOS dependency and caller/callee graphs:
+  or inspecting pret/DOS dependency and caller/callee graphs:
   `build-and-debug`.
 - Reviewing pret fidelity or changed pret labels: `faithfulness-review`.
 - Music analysis or arrangement: `score-analysis`, then `music-theory`, then the
@@ -75,9 +75,8 @@ Full index, by task:
 - **`build-and-debug`** — building/running the port, asset regen, DOSBox-X config,
   memory-dump (`DUMP.BIN`) / back-buffer (`FRAME.BIN`) / GB-state (`GBSTATE.BIN`)
   debugging recipes, the golden fidelity harness (mGBA vs DOSBox-X, `goldencheck`
-  / `make fidelity`), music auditioning (audition.py / `DEBUG_AUDIO TRACK=`),
-  the interactive dependency graph + agent-facing JSON caller/callee API, the
-  repo layout map, reference URLs.
+  / `make fidelity`), the interactive dependency graph + agent-facing JSON
+  caller/callee API, the repo layout map, reference URLs.
 - **`faithfulness-review`** — the pre-commit fidelity gate for any change touching
   a pret-labeled routine: faithdiff / lint_pret_labels / label_status / golden
   scenarios, and the justification rules.
@@ -88,11 +87,12 @@ Full index, by task:
 - **`music-theory`** — chord ID, voice leading, voicing; foundation for both
   enhance skills, also standalone for analysis/review.
 - **`audio-enhance-opl3`** — tier-1 conservative FM channels (must sound good on
-  OPL3; cascades up to MT-32/GM). Do this tier first.
+  OPL3; cascades up to MT-32/GM). Do this tier first. Also documents how to
+  audition tracks (`audition.py` / `DEBUG_AUDIO TRACK=`).
 - **`audio-enhance-mt32`** — tier 2–3 MT-32/GM channels on top of existing
   tier 1 (never duplicating it).
 - To *listen* to any result, that's not an arranger question — it's
-  `build-and-debug` → "Auditioning music" (host-side `audition.py` for fast
+  `audio-enhance-opl3` → "Auditioning music" (host-side `audition.py` for fast
   iteration; `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_*> /LOOP` in-DOS).
 
 Rule of thumb: writing/reviewing x86 from pret source → `asm-translation` +
@@ -238,7 +238,8 @@ to track now live in `docs/current_plan_backlog.md` (memory
 early July → 2026-08-02 and bought the correctness tooling this file keeps
 pointing at: the `translation.db` label database and its `aux_labels` /
 `script_labels` provenance tables, `static_gate` + `fidelity_gate`, and the
-37-scenario golden suite (`dos_port/tools/scenario_manifest.json`). That goal is
+golden test suite (`dos_port/tools/scenario_manifest.json`, query count via
+`validate_scenarios.py`). That goal is
 met; the current objective is **completing the port**. Open work is not listed
 here — run `dos_port/tools/project_state --plans`.
 
@@ -431,18 +432,11 @@ file. Full detail → skill **`build-and-debug`**.
 
 **`make -C dos_port fidelity` (core) and `fidelity-full` both run in parallel via
 `tools/pgate.sh`, as of 2026-08-12 (`8742e04c8`).** Measured on the 96-thread
-host: **core 16 scenarios ≈ 30 s; full 89 scenarios ≈ 430 s** (the full tier was
-~1750 s serial). Do not quote the
-old "core ~2m50s / full ~4m45s" or "fidelity-full is ~15 min" figures: they date
-from a 17-scenario battery, and repeating them causes agents to skip the full
-tier or idle waiting for it. Re-measure rather than trusting this line — the
-SCENARIO COUNT is what drifts, and it drifts upward as scenarios are added. This
-said "66 scenarios / 378 s" until 2026-08-16, then "85 / 370 s" until 2026-08-19,
-then "86 / ~430 s" when the WRAM expansion merge brought the surf golden across,
-and on 2026-08-21 three more registered (route_15_binoculars, oaks_lab_posters,
-safari_game_over) and a full run measured 89 / 431 s. That is four corrections to
-one line in five days, which is the point: `validate_scenarios.py` (run by `static_gate`) reports the current
-count, so it is the cheapest way to check this without a full run.
+host: parallel wall clock is roughly ~30 s for core and a few minutes for full
+(serial was ~1750 s — a ~4.6× cut). Query the scenario count dynamically with
+`python3 dos_port/tools/validate_scenarios.py` rather than hardcoding or assuming
+stale numbers. Do not quote old serial numbers ("fidelity-full is ~15 min") or
+budget serial time for gates.
 
 - `fidelity-serial` / `fidelity-full-serial` keep the old one-at-a-time loops.
   **DO NOT USE THEM UNLESS THE MAINTAINER EXPLICITLY ASKS** (maintainer

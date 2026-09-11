@@ -63,6 +63,13 @@ yellow:       pokeyellow.gbc
 yellow_debug: pokeyellow_debug.gbc
 yellow_vc:    pokeyellow.patch
 
+# DOS port delegation — delegates to dos_port/Makefile
+dos:
+	$(MAKE) -C dos_port
+
+clean-dos:
+	$(MAKE) -C dos_port clean
+
 clean: tidy
 	find gfx \
 	     \( -iname '*.1bpp' \

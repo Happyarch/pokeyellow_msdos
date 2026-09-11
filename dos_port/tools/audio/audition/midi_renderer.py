@@ -26,7 +26,7 @@ from gen_audio_data import parse_music_constants
 from gb_to_midi import (
     simulate_song, build_addr_map, songs_from_headers, NoteEv, Song,
     load_overrides, chan_setting, DEFAULT_PROGRAM, DEFAULT_VOLUME,
-    DEFAULT_DRUM_VELOCITY, drum_key, FREE_MELODIC_CH
+    DEFAULT_DRUM_VELOCITY, drum_key, FREE_MELODIC_CH, unroll_for
 )
 from mt32_presets import resolve_program
 from yaml_lint import lint
@@ -105,7 +105,13 @@ class MidiSession:
             else:
                 raise ValueError(f"Song {song_label!r} not found in headers {matches}")
 
-        self.base_song = simulate_song(self.rom, self.amap, self.song_label, self.headers[self.song_label])
+        # Unrolled songs (loop ramp-and-hold) extend the base span and move
+        # the loop region to the hold body, exactly like the asset merge —
+        # otherwise the host session would wrap into the ramp tail. Reads
+        # the saved file; a live-unsaved TUI buffer lags one save behind.
+        self.base_song = simulate_song(self.rom, self.amap, self.song_label,
+                                       self.headers[self.song_label],
+                                       unroll_for(self.song_label))
         self.ov = load_overrides(self.song_label)
         self.loop_start = self.base_song.loop_start or 0
         self.loop_end = self.base_song.end or max((n.frame + n.dur for n in self.base_song.notes), default=600)

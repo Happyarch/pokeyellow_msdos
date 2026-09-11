@@ -4628,14 +4628,13 @@ anim_show_label:
     call PrepareNewGameDebug        ; seed party + bag (player mons for later stages)
     ; --- Stage-1b HUD test data: seed enemy + player battle-mon structs so the HUD
     ; has names / levels / HP to render (real path = LoadBattleMonFromParty, Stage 2/3).
-    ; Enemy "PIDGEY" L3, HP 14/14 (full bar). Names = charmap bytes, $50-terminated.
-    mov byte [ebp + wEnemyMonNick + 0], 0x8F  ; P
-    mov byte [ebp + wEnemyMonNick + 1], 0x88  ; I
-    mov byte [ebp + wEnemyMonNick + 2], 0x83  ; D
-    mov byte [ebp + wEnemyMonNick + 3], 0x86  ; G
-    mov byte [ebp + wEnemyMonNick + 4], 0x84  ; E
-    mov byte [ebp + wEnemyMonNick + 5], 0x98  ; Y
-    mov byte [ebp + wEnemyMonNick + 6], 0x50  ; @
+    ; Enemy "PIDGEY" L3, HP 14/14 (full bar). Fetched from MonsterNames table.
+    mov byte [ebp + wNamedObjectIndex], 0x24  ; PIDGEY
+    call GetMonName
+    lea esi, [ebp + wNameBuffer]
+    lea edi, [ebp + wEnemyMonNick]
+    mov ecx, NAME_LENGTH
+    rep movsb
     ; PIDGEY L13 — at this level its real moveset is GUST + SAND-ATTACK (L5) +
     ; QUICK-ATTACK (L12), so the wild random-move AI visibly varies turn to turn.
     ; Stats are L13-appropriate (≈base+DV at L13) so the damage trades read sensibly.
@@ -4661,14 +4660,12 @@ anim_show_label:
     mov byte [ebp + wCurEnemyLevel], 13
     ; Player "PIKACHU" L18, full 45-HP bar — enough to absorb several enemy turns so
     ; the battle runs long enough to watch the enemy's random move selection vary.
-    mov byte [ebp + wBattleMonNick + 0], 0x8F  ; P
-    mov byte [ebp + wBattleMonNick + 1], 0x88  ; I
-    mov byte [ebp + wBattleMonNick + 2], 0x8A  ; K
-    mov byte [ebp + wBattleMonNick + 3], 0x80  ; A
-    mov byte [ebp + wBattleMonNick + 4], 0x82  ; C
-    mov byte [ebp + wBattleMonNick + 5], 0x87  ; H
-    mov byte [ebp + wBattleMonNick + 6], 0x94  ; U
-    mov byte [ebp + wBattleMonNick + 7], 0x50  ; @
+    mov byte [ebp + wNamedObjectIndex], 0x54  ; PIKACHU
+    call GetMonName
+    lea esi, [ebp + wNameBuffer]
+    lea edi, [ebp + wBattleMonNick]
+    mov ecx, NAME_LENGTH
+    rep movsb
     mov byte [ebp + wBattleMonLevel], 18
     mov word [ebp + wBattleMonHP], 0x2D00     ; big-endian 45
     mov word [ebp + wBattleMonMaxHP], 0x2D00  ; big-endian 45
@@ -4905,13 +4902,12 @@ RunLearnMoveTest:
     ; InitBattle reads wEnemyMonSpecies/Level/Nick to load the enemy pic; the
     ; enemy itself is irrelevant here (LearnMoveFromLevelUp never reads it), so
     ; seed a minimal PIDGEY L13 exactly like RunBattleTest above.
-    mov byte [ebp + wEnemyMonNick + 0], 0x8F  ; P
-    mov byte [ebp + wEnemyMonNick + 1], 0x88  ; I
-    mov byte [ebp + wEnemyMonNick + 2], 0x83  ; D
-    mov byte [ebp + wEnemyMonNick + 3], 0x86  ; G
-    mov byte [ebp + wEnemyMonNick + 4], 0x84  ; E
-    mov byte [ebp + wEnemyMonNick + 5], 0x98  ; Y
-    mov byte [ebp + wEnemyMonNick + 6], 0x50  ; @
+    mov byte [ebp + wNamedObjectIndex], 0x24  ; PIDGEY
+    call GetMonName
+    lea esi, [ebp + wNameBuffer]
+    lea edi, [ebp + wEnemyMonNick]
+    mov ecx, NAME_LENGTH
+    rep movsb
     mov byte [ebp + wEnemyMonLevel], 13
     mov byte [ebp + wEnemyMonSpecies], 0x24   ; PIDGEY (internal index)
 

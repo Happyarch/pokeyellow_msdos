@@ -52,7 +52,8 @@ section .text
 ; pret ref: home/textbox.asm:DisplayTextBoxID
 ; ---------------------------------------------------------------------------
 DisplayTextBoxID:
-    ; TODO-HW(banking): homecall_sf saves/switches/restores the ROM bank around
+    ; DEVIATION{class=banking; pret=home/textbox.asm:DisplayTextBoxID; behavior=plain near call without saving or restoring ROM bank; evidence=flat memory model makes far bank switching unnecessary; lifetime=permanent}
+    ; homecall_sf saves/switches/restores the ROM bank around
     ; the far call; flat memory ⇒ plain near call. Consequence: pret exits with
     ; A and BC clobbered by the bank-restore shuffle, the port with AL and BX
     ; intact. Flags — the contract callers actually read — pass through on both.

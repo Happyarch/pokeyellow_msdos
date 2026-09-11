@@ -883,6 +883,7 @@
 ; wTileMapBackup2 — which ends at 0xF4E8).
 ; DEVIATION{class=data-model; pret=ram/wram.asm:wShadowOAMBackup; behavior=relocate wShadowOAMBackup from pret 0xC508 UNION (port 0xC788 via wTileMap +640) to port-only expanded WRAM 0xF3C0; evidence=0xC788 aliases wTileMapBackup/wSurroundingTiles 0xC788 0x6C0 and wAnimatedObjectsData 0xC788 0xCA — TownMapSpriteBlinkingAnimation 36*4 backup→shadow at wAnimCounter 50 then publishes surrounding-map tiles >=$60 <160 as ghost sprites left of TOWNMAP_X_PX 80, blinking with cursor, measured 2026-09-01; prefix-sum port_addr=pret_addr+Σ(growths<addr) puts pret WRAM end 0xDFFF→0xEDCB, staging 0x2A0+0x2C0→0xF32B, so port-only 0xF3C0 (after W_SURF 0xF100→0xF3C0) is derived not asserted, headroom 0x9A0 to GB_OAM 0xFE00; lifetime=permanent while wTileMap 40×25 swallows 0xC508}
 %define wShadowOAMBackup             0xF3C0   ; port-only 160 B, 0xF3C0→0xF460 (expanded WRAM, was 0xC788 UNION)
+%define wShadowOAMBackup_SIZE        0xA0
 %define wTownMapSpriteBlinkingEnabled 0xDE68
 %define wTownVisitedFlag             0xE4D8   ; = wTownVisitedFlag (2 bytes)
 ; The three below are aliased-scratch lanes, like every other 0xCD3D/0xCEE9 user
@@ -2452,9 +2453,11 @@
 %define W_PORT_SCRATCH               0xF500   ; 124 B, ends 0xF57B
 %define W_PORT_SCRATCH_SIZE          0x7C
 
-%define wEndBattleWinTextPointer     0xF400   ; ** flat-adapted: 4 bytes **
-%define wEndBattleLoseTextPointer    0xF404   ; ** flat-adapted: 4 bytes **
-%define wEndBattleTextRomBank        0xF408
+%define wEndBattleWinTextPointer     0xF460   ; ** flat-adapted: 4 bytes (relocated past wShadowOAMBackup [0xF3C0..0xF460)) **
+%define wEndBattleLoseTextPointer    0xF464   ; ** flat-adapted: 4 bytes **
+%define wEndBattleTextRomBank        0xF468
+%define wCoordIndex                  0xD88B   ; pret ram/wram.asm:1021 wCoordIndex (union alias)
+%define W_COORD_INDEX                0xD88B
 %define wGymCityName                 0xDD2C   ; golden 00:cf5e
 %define wGymLeaderName               0xDD3D   ; golden 00:cf6f
 %define wToggleableObjectIndex       0xD79B   ; golden 00:cc4d

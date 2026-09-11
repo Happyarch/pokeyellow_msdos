@@ -120,9 +120,7 @@ extern set_single_window             ; ppu/ppu.asm
 extern hide_window                   ; ppu/ppu.asm
 extern g_window_count                ; ppu/ppu.asm
 extern g_bg_whiteout                 ; ppu/ppu.asm
-; PlaySound is a REAL body (home/audio.asm), not the "audio HAL stub" this file used
-; to claim — the audio engine is live and music plays. The POKéDEX CRY option is
-; silent only because GetCryData/PlayCry are still ret-stubs (home_stubs.asm; M-32).
+; PlaySound, PlayCry, and GetCryData are real linked routines.
 extern PlaySound                     ; home/audio.asm — a REAL body
 extern GetCryData                    ; src/home/pokemon.asm — pret home/pokemon.asm:157
 extern LoadTownMap_Nest              ; engine/items/town_map.asm — REAL body, linked (M-64)
@@ -954,7 +952,7 @@ DrawDexEntryOnScreen:
     mov esi, HL(1, 1)
     call LoadFlippedFrontSpriteByMonIndex
     mov al, [ebp + wCurPartySpecies]
-    call PlayCry                         ; ret-only STUB (home_stubs.asm, M-32) — see the extern
+    call PlayCry                         ; home/audio.asm
 
     ; --- owned gate (pret: ld a,c / and a / ret z) -----------------------------
     mov al, [saved_owned]

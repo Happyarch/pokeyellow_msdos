@@ -55,8 +55,10 @@ field value** — use commas. Keep the annotation on one line.
 ### Bugs: annotation + fix block
 
 A known bug pairs the annotation with a conditional block. Levels: `1` = critical
-only (`/FIXCRIT`), `2` = all (`/FIXALL`); the Makefile passes `-D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)`
-(default 0), so bare `nasm` runs without `-D BUG_FIX_LEVEL=` will fail on the `%if`.
+only, `2` = all; the Makefile passes `-D BUG_FIX_LEVEL=$(BUG_FIX_LEVEL)` (default 0).
+Note: `BUG_FIX_LEVEL` is a compile-time Makefile flag; the old runtime `/FIXCRIT|/FIXALL`
+flags were removed on 2026-08-16. Bare `nasm` runs without `-D BUG_FIX_LEVEL=` will fail
+on the `%if`.
 
 ```nasm
 ; BUG{class=data-model; pret=home/names.asm:GetName; behavior=HM01 threshold redirects every name type, not only items, to machine-name formatting; evidence=pret GetName unconditional cp HM01 before type dispatch; lifetime=permanent latent Gen-1 behavior}
@@ -86,46 +88,24 @@ done
 dos_port/tools/lint_pret_labels --no-scan --strict-claims
 ```
 
-Re-measured 2026-08-08: `--strict-claims` reports **zero** `legacy_annotation`
-(also zero `hand_encoded_text` / `local_shadow` / `stale_provider`), with
-221 `DEVIATION{}`, 46 `BUG{}`, 10 `GLITCH{}`, 72 `STUB{}` under `dos_port/src`,
-across 14 `*_stubs.asm` files. The 2026-08-02 line said 192/46/10/**21**, and the
-2026-07-25 one said 132/44/13/22 — note `STUB{}` reads 21 → 72 in six days, which
-is not a real jump so much as proof that a prose count is worthless: measure it.
+Re-measured: `--strict-claims` reports **zero** `legacy_annotation`
+(also zero `hand_encoded_text` / `local_shadow` / `stale_provider`).
+All 14 `*_stubs.asm` files are retired (`STUB{}` annotation count is 0).
 
 **A live worked example of why `--strict-claims` matters, from 2026-08-08.** A
 comment reading `; DEVIATION on AnimationWavyScreen in engine/battle/...` — a
 plain PROSE CROSS-REFERENCE with no `{}` — was flagged as `legacy_annotation`,
 correctly. A line that merely *mentions* an annotation kind in the annotation
 position parses as a malformed one. If you want to point at an annotation from
-elsewhere, do not start the line with the keyword.
+elsewhere, write e.g. `see DEVIATION{} block above` or `the AnimationWavyScreen
+deviation`, never the bare name in the comment position.
 
-Treat any figure here as a measurement with a date on it, not an invariant: the
-zero had silently drifted to 2 before this line was first corrected, because
-plain `lint_pret_labels` does not gate on this class — only `--strict-claims`
-does. `static_gate` (and therefore `.githooks/pre-commit`) now runs BOTH modes,
-so the class is automatically ratcheted; it is still not gated to zero by
-anything but this rule. **Re-run the check; do not quote this paragraph as
-evidence.** Three `BUG(critical)`/`BUG(cosmetic)`-looking strings survive and are
-*prose references inside comment text* (`src/home/names2.asm:49`,
-`src/engine/pokemon/experience.asm:136`,
-`src/engine/battle/move_effects/transform.asm:14`) — not annotations, and not a
-precedent. Writing a free-form one now is a regression that `--strict-claims`
-will report.
+---
 
 ## Stub Conventions (all stubs live in a subsystem `*_stubs.asm`)
 
-When a routine must exist at link time but its real body is deferred, the stub
-does **not** go in the `.asm` that mirrors its pret source file — it goes in the
-**subsystem stub file**, `src/<area>/<area>_stubs.asm` (e.g.
-`src/engine/overworld/overworld_stubs.asm`, `src/engine/battle/core_stubs.asm`,
-`src/engine/menus/main_menu_stubs.asm`, `src/home/home_stubs.asm`). This keeps
-every stand-in greppable in one place per subsystem, so retiring stubs later is
-a bounded search, not a tree-wide hunt.
-
-Get the live set with `find dos_port/src -name '*_stubs.asm'` rather than
-trusting a list here — the set shrinks as stubs retire (`pc_stubs.asm`, which
-this paragraph named for months, was deleted in `0c9afce5`).
+All 14 legacy `*_stubs.asm` files have been deleted/retired (`STUB{}` count is 0).
+If temporary stubs are ever needed during future subsystem work, follow these rules:
 
 **Rules:**
 1. **Keep the pret label.** The stub carries the exact pret routine name (see
@@ -308,263 +288,17 @@ single commit but too specific to belong in `ROADMAP.md`.
   subdirectory holds completed plans for reference.
 - Start a new work item by creating a new `docs/current_plan_<topic>.md`.
 
-**Plan notes — NOT an inventory. Get the live list from the generator:**
+**Active Plans & Backlog — Get the live list from the generator:**
 
 ```
 dos_port/tools/project_state --plans
 ```
 
-That is the authority on which plans exist and how many stages each has open, and
-it cannot drift because it reads the tree. CLAUDE.md's Evidence policy says not to
-maintain a second hand-written inventory next to it — so the list below is
-deliberately **not** one. It holds only the durable per-plan *narrative* the
-generator cannot produce: what a plan is for, what its lessons were, and which of
-its tails were deferred and to where.
+That is the authority on which plans exist and how many stages each has open; it cannot drift because it reads the tree. Do not maintain a hand-written inventory in documentation or skills.
 
-Read it for that narrative, never for "what is active". It was last reconciled
-against the generator on **2026-08-02**; entries marked *COMPLETE & archived*
-are history kept for their lessons. When this section and the generator disagree
-about existence, the generator wins and this section is the bug.
-
-One generator caveat worth knowing before you trust its output: it counts only
-checkbox lines (`- [ ]` and the backtick form `` - `[ ]` ``), so a plan written
-as prose or numbered headings reports `0 completed / 0 open` regardless of its
-real state. `current_plan_backlog.md` reads 0/0 while holding 18 numbered items
-(several already marked DONE/FIXED in place) plus a relocation-debt pointer;
-`_bug_tagging` and `_doc_staleness` read 0/0 too. **"0/0" means
-"unparsed", not "empty"** — open the file. (The glob is `current_plan*.md`, not
-`current_plan_*.md`, deliberately, so the plural
-`docs/current_plans_remaster_Music_Cities1.md` is included.)
-
-**A deferred tail is probably NOT untracked.** Several entries below used to end
-"currently untracked"; most of those now live as numbered items in
-`docs/current_plan_backlog.md` — CI wiring, the `battle_menu` golden spec,
-battle-UI session B6, the status-screen front-pic/cry/STATS wire, the
-`LoadPokedexTilePatterns` tileset, the window-compositor gap, interactive
-navigation sweeps, the cable-club warp seam, the faithdiff relocation blind
-spot, and the pret-tree contamination decision. Grep that file before repeating
-the claim.
-
-**A plan with no entry below is normal — go to the file itself.** There is
-deliberately no list of those here: one used to sit at this spot and it drifted
-within days (it named five plans and had already lost
-`docs/current_plan_predef_text.md` entirely by 2026-08-02). Deleted under the
-generated-is-authoritative rule adopted 2026-08-02. To find a plan that has no
-narrative entry, diff the generator's output against the headings below:
-
-```
-dos_port/tools/project_state --plans
-```
-- **Fidelity-harness expansion — COMPLETE & archived** at
-  `docs/plans/fidelity_expansion.md` (2026-07-15). It expanded the golden harness from the
-  original rendered-screen tier into GBSTATE v2 WRAM datastruct comparison, streamed text,
-  item datastruct flows, battle scenarios, full-screen menu scenarios, core/full fidelity
-  tiers, `goldens-verify`, and mask-policy docs. Remaining open findings from that work
-  stay with the normal bug/finding backlog, notably **F-13** (stride-20 dialog scratch /
-  map mirror overlap), **F-14** (▼ after `done` text), and **F-19** (battle enemy-gauge
-  clone masks).
-- **Menu fidelity — COMPLETE & archived** at `docs/plans/menu_fidelity.md` (2026-07-14). All 24
-  rows de-bespoked against pret. Its lesson, worth carrying: **the recurring defect was not bad
-  assembly, it was a confident comment** — false `STUB`/`TODO-HW` claims hiding calls that were
-  droppable only in the comment's imagination. It left ~20 `M-` findings OPEN as a backlog; the
-  harness-facing ones are imported by the fidelity-expansion plan above.
-- **Fidelity harness — COMPLETE & archived** at `docs/plans/fidelity_harness.md`
-  (2026-07-07, branch `fidelity_harness`): mGBA golden differential testing
-  (`make fidelity` / `goldencheck`, 6 scenarios *at the time* — the suite is 37
-  today, see `SCENARIOS` in `tools/golden_diff.py`; mgba-mcp bridge) + static
-  tooling (`update_label_db` / `lint_pret_labels` / `faithdiff` / `label_status`,
-  the `faithfulness-review` skill), plus the dosbox-x unattended-quit fix.
-  Its deferred tails are now **tracked in `docs/current_plan_backlog.md`**:
-  battle_menu golden spec (#9), CI wiring (#4, static tier DONE 2026-07-26 —
-  `static_gate` + `.githooks/pre-commit` + a GitHub workflow), the relocation
-  debt including `FormatMovesString` (the "Relocation debt" pointer section) and
-  the pret-tree contamination decision (#5, premise contradicted, re-check).
-- **Compositor performance — COMPLETE & archived** at
-  `docs/plans/compositor_perf.md` (2026-07-12). The port was running at ~half
-  speed (31–34 ms/frame against a 16.348 ms budget); it now lands every frame
-  inside one PIT tick (work = 30–45% of budget). `render_bg` dirty-skips against
-  a tile-id shadow, `render_window` gathers rows from `tile_cache` once per 8
-  lines, tiles decode through an assembly-time 2bpp→8bpp LUT, and sprites
-  composite from `tile_cache`. Tooling it left behind: `DEBUG_PERF` +
-  `tools/perf_capture.sh` / `read_perf.py` (per-stage PIT profiler) and
-  `tools/pixelcheck.sh` (headless FRAME.BIN pixel-identity check).
-  **Standing invariant:** BG *and* window now read only `tile_cache`, so any
-  VRAM tile-pattern write that fails to arm `g_tilecache_dirty` is **visible
-  corruption**, not just a stale decode. Two negative results are recorded there
-  so they aren't re-attempted blind: the `present` dirty-row diff measured
-  *slower* (rejected), and `wait_vblank` overrun pacing was dropped (no overruns
-  left to pace). Also: **`FRAME.BIN` cannot validate `present`** — it dumps the
-  back buffer, which is `present`'s input.
-- **Audio subsystem (Phase 3) — COMPLETE & archived** at `docs/plans/audio.md`
-  (2026-08-11; there is no `docs/current_plan_audio.md` anymore). Architecture
-  settled 2026-07-05: faithful pret engine translation driving a virtual APU +
-  per-device shims (OPL3/SB Pro floor, Tandy, PC speaker), MT-32-flagship MIDI
-  path via precompiled streams, Pikachu PCM via DSP direct mode / speaker PWM.
-  Phases A-D shipped and are linked/playing (`AUDIO_SRCS` in `dos_port/Makefile`
-  links `audio_hal`, `opl_shim`, `opl_enh`, `tandy_shim`, `spk_shim`, `mpu401`,
-  `sb_pcm`, `spk_pcm`, `pikachu_pcm`, `engine_1..4` and friends); Phase E's
-  tooling (`music_analysis.py`, `yaml_lint.py`, the enhancement merge, the OPL
-  enhancement stream player, the `score-analysis`/`music-theory`/
-  `audio-enhance-*` skills) is also done. **What archived it: per-song
-  arrangement content was the one open item and it was never checkbox-shaped**
-  — a track doesn't need every tier filled in, or any enhancement at all, to
-  be finished, only the maintainer's own sign-off by ear. That status now
-  lives in a generated report instead of a plan checklist:
-  `dos_port/tools/gen_audio_enhancement_report` reads `enhancements/*.yaml` /
-  `overrides/*.yaml` live and writes `docs/audio_enhancement_status.md`
-  (which songs have enhancements, what tiers, which have MT-32/MIDI or
-  OPL3-specific patch overrides); sign-off is recorded by running the tool
-  with `MUSIC_<CONST>=1`/`=0`, which writes
-  `dos_port/tools/audio/enhancement_approvals.json` itself — that file is
-  program-owned and is never hand-edited. Seeded 2026-08-11 with
-  `Music_Lavender`/`Music_GymLeaderBattle`/`Music_PalletTown` per the
-  maintainer's sign-off.
-- **script engine — not active, but the plan file EXISTS. Read it.** There is no
-  `docs/current_plan_script_engine.md` — `eb17e64d` (2026-07-12) recorded it as a
-  RENAME (`R098`) into `docs/plans/`, which is why a delete-log search comes up
-  empty. **This entry used to add "and never archived, so do not go
-  looking in `docs/plans/` either"; that was MEASURED FALSE (2026-07-26) and is
-  the exact opposite of the truth.** The plan is archived at
-  **`docs/plans/current_plan_script_engine.md`** — note it kept its
-  `current_plan_` prefix, against the archive convention two paragraphs above,
-  which is why a `docs/plans/script_engine.md` search finds nothing. The gen-1
-  script system (event-gated dialog, per-map `_Script`/`text_asm`, `DisplayTextID`
-  special cases) was owned by `docs/current_plan_overworld_events.md`, which is
-  **RETIRED (2026-08-28, archived at `docs/plans/overworld_events.md`)**. Its
-  overworld-seam work (trainer-sight hook retirement, Stage 5a wiring,
-  club-map warp) is owned by `docs/current_plan_overworld_realign.md` Stage J;
-  the story-ordered rollout and evidence tails are backlog #37.
-- **Overworld port — COMPLETE & archived** at `docs/plans/overworld_port.md`
-  (there is no `docs/current_plan_overworld_port.md`) — **full faithful port of pret
-  `engine/overworld/`** (staged swarm+solo; branch `overworld-port` cut after the
-  battle-swarm merge). **It also owns the menu live-render defect** — see its
-  "Cross-cutting defect" section (heading now: *menu box-draw geometry + window
-  compositor*) and the Stage 8 verification item.
-  **The VRAM tile-slot explanation for that defect is DISPROVEN, and this entry
-  used to repeat it.** Per the 2026-07-05 correction in the plan: the `$79–$7F`
-  box/border tiles are byte-identical between `font_extra.2bpp` and
-  `font_battle_extra.2bpp`, so `LoadHpBarAndStatusTilePatterns` rewrites them
-  with the same bytes and corrupts nothing; the corruption fires on the *first*
-  menu, with no battle needed. The real defect is menu-engine box-draw geometry
-  plus the canvas↔window compositor, refiled as ticket **OW-A.13**; the
-  compositor half is `docs/current_plan_backlog.md` #14. There is **no stigmergy
-  memory `menu-corruption-vram-tileslots`** — that citation was dead; the live
-  memory for the neighbouring invariant is `compositor-perf-invariants`.
-  (The Pokémon **data/stats** layer — party structs, base stats, `CalcStats`,
-  experience/leveling, `AddPartyMon`, learnset/moves, names — is **complete**; its
-  plan `docs/plans/pokemon_engine.md` is archived DEAD. The **behavior/UI** layer —
-  evolution/`EvolveMon`, `learn_move`, status-screen pages 1&2, post-battle wire —
-  is **complete and archived** at `docs/plans/pokemon_behavior.md` (2026-07-04);
-  its deferred tails are in `docs/current_plan_backlog.md`: status-screen
-  front-pic/cry/STATS-wire is **#12, still open**; Bill's PC full UI is **#11,
-  DONE 2026-07-31** — the whole UI is the faithful pret mirror
-  `src/engine/pokemon/bills_pc.asm`, linked and driven by the `bills_pc_ops` and
-  `box_change_roundtrip` goldens, and the port-only `BillsPC*Logic` fork names
-  are deleted.)
-- **Party mon icons — COMPLETE & archived** at `docs/plans/party_icons_oam.md`
-  (2026-07-12, `f8863164` + `12dfdbe2`). The BG-tile icon hack is gone: icons are OBJ
-  through pret's `engine/gfx/mon_icons.asm`, in the party menu and the naming screen.
-  Two invariants it left behind, both enforced at the primitive
-  (`dos_port/src/home/clear_sprites.asm`, the mirror of pret `home/clear_sprites.asm`
-  — it was `dos_port/src/home/sprites.asm` until the s16 relocation repair, a name
-  that resolved to nothing on the pret side):
-  **`ClearSprites`/`HideSprites` publish `spr_oam_valid = 0`** (the port gates the OAM
-  DMA on `wUpdateSpritesEnabled`, so a cleared shadow OAM never reached the compositor
-  — that is what would ghost overworld sprites onto a whiteout screen), **and they
-  clear `g_obj_over_window`** — the new opt-in flag that gives a screen the GB's
-  OBJ-over-window z-order (the port otherwise composites the window layer last, so the
-  overworld dialog box occludes NPCs). A screen whose window IS the screen and whose
-  OBJ sit on top of it raises it with its window; anything else leaves it alone.
-- **Items/bag layer — COMPLETE & archived** at `docs/plans/items.md`
-  (2026-08-03). `UseItem_`, `ItemUsePtrTable`, and every item-handler family are
-  translated in `src/engine/items/item_effects.asm`; fishing rods were the last
-  family (`fe91b329`) and their retirement deleted `item_use_stubs.asm`. Runtime
-  tails owned by other systems remain in their plans or backlog, notably the
-  in-battle ITEM menu and the Surfboard dismount's simulated-input consumer.
-- **Battle-UI layout pipeline — PIPELINE COMPLETE & archived** at
-  `docs/plans/battle_ui.md` (2026-07-12, branch `menus-port`). Sessions A1-B5 done:
-  `tools/gfx_core/` extracted, every hardcoded battle coordinate migrated into the
-  `ui_layout_battle_sidecar.json` -> `assets/ui_layout_battle.inc` pipeline, editor
-  hardened. **Session B6 (the human-in-the-loop widescreen redesign) is on the back
-  burner at the user's direction** -- it needs a scheduling decision, not
-  engineering. Tracked as **#10 in `docs/current_plan_backlog.md`**.
-- `docs/plans/battle_animations.md` — **in-battle move/item animations**,
-  the dedicated detail owner under `battle_completion` Stage 6. **Stages 0-3 are
-  DONE** (21 completed / 15 open at 2026-08-08); Stage 4 (mon-pic families) is
-  next, then 5 (OAM particle families) and 6 (polish + F-19 evaluation).
-  Its durable lessons, all measured:
-  * **Geometry INVERTS the transitions precedent.** Battle transitions
-    re-parameterized to the full 40x25 canvas and say "do NOT use BCOORD"; here
-    BCOORD (+10 col / +3 row) **is** the rule. Watch the `SCREEN_WIDTH` role
-    split: as a row-STRIDE it is correct verbatim on both sides (each means "my
-    tilemap's stride", 20 there / 40 here), but as a COORDINATE
-    (`5 * SCREEN_WIDTH + 1` = tile (1,5)) it must be re-derived through `BCOORD`,
-    never textually reused.
-  * **On GB the battle screen IS the window layer** (`core.asm` sets `rWY = 0` on
-    entry). That is why pret shakes via `rWX`/`rWY` and why `AnimationWavyScreen`
-    turns the window off before wobbling `rSCX`. The port draws battle on the BG
-    layer, so the equivalent whole-screen displacement is `hSCX`/`hSCY` — the
-    SHADOWS, because `commit_shadow_regs` overwrites the registers each
-    `DelayFrame`.
-  * **`rLY`/`rSTAT` are inert in the port**, so a literal per-scanline effect
-    HANGS. `AnimationWavyScreen` is realized as a per-row displacement HAL
-    (`g_row_xoff` / `g_row_xoff_on`, `src/ppu/ppu.asm`) following the
-    `g_obj_clip` ownership model: default is the identity, the animation arms and
-    clears it.
-  * **A BGP write needs no HAL** — `commit_palette` picks it up from
-    `DelayFrame`, so the whole flash/palette family is a literal translation.
-- `docs/current_plan_map_tool.md` — **overworld map tool** (viewer → border-ring
-  authoring → clamp retirement → block painting), built on `gfx_core`. Needed only
-  battle-UI Session A2 (landed 2026-07-02) — **not** blocked by that plan's
-  deferral. Sequenced after battle.
-- **engine/menus port + UI layout tool** — **COMPLETE & archived** at
-  `docs/plans/menus.md` (2026-07-04, branch `menus-port`). All 10 sessions landed
-  (layout pipeline/editor, faithful `DisplayTextBoxID_`, generic drivers wired,
-  start/bag/party realigned, leaf-screen swarm: PCs/pokédex/naming/options/save/
-  link). The "menu boxes corrupt live but fine in harness" issue is filed on the
-  archived `docs/plans/overworld_port.md` as ticket **OW-A.13** — but note it is
-  **NOT** a VRAM tile-slot defect (that hypothesis was disproven 2026-07-05; see
-  the overworld-port entry above). It is menu box-draw geometry plus the
-  canvas↔window compositor, which is partly a menu-side bug after all.
-  Menu-input lethargy fixed in `JoypadLowSensitivity` (2026-07-04). Other
-  tails are tracked in `docs/current_plan_backlog.md`: `LoadPokedexTilePatterns`
-  tileset (#13), window-compositor gap (#14), interactive navigation sweeps
-  (#15), cable-club warp seam (#17).
-- **RGBDS macro port — COMPLETE & archived** at `docs/plans/macros.md`
-  (there is no `docs/current_plan_macros.md`; it landed in `a7822644`) — **port
-  pret's portable RGBDS macros** to real
-  NASM `%macro`s in `dos_port/include/` (coords, event-macro family, data/gfx
-  helpers, text-command macros), "add macros only" (no call-site retrofit),
-  checkbox-tracked across chunked stages. Excludes redundant-by-design banking
-  macros, generator-owned data macros, and engine-blocked audio/gfx-anim/script
-  templates. **The coords chunk shipped** — `a7822644` ("Translate RGBDS macros:
-  coords, data, events, gfx, text") landed `include/coords.inc`,
-  `data_macros.inc`, `events.inc`, `gfx_macros.inc`, `gb_text.inc`; the old
-  "Stage 1 done, coords chunk A1 is next" line here was stale. The archived plan
-  still carries 16 unchecked boxes against 2 checked, so treat "archived" as
-  "stopped", not "every box ticked" — the remaining chunks were dropped, not
-  done. Its live caveat: the tilemap stride is context-dependent (global
-  `SCREEN_WIDTH=40` vs text.asm's stride-20 / runtime `text_row_stride`), so a
-  coords macro is only correct against the stride its call site uses.
-- **Battle engine** — the backend plan (`battle_engine`) is **complete** and the
-  front-end alignment plan (`battle_pret_alignment`) was **superseded by the battle
-  swarm** (Masters A/B/C, archived at `docs/archive/battle_swarm_*`, merged to
-  `master`); both plans are archived under `docs/plans/`. A live wild battle plays
-  end-to-end (menu, move select, speed-ordered turns, damage, faint, EXP/level-up,
-  RUN). **Remaining battle work HAS an active plan again:**
-  `docs/current_plan_battle_completion.md` (4 done / 32 open at 2026-08-02) —
-  this entry previously asserted "not in a `current_plan_*` file", which is
-  false. The older ledger `docs/archive/battle_audit_findings.md` is still there
-  for open fidelity findings, but it is **archived and partly stale — verify
-  before acting on it.** Two of its Tier-4 claims are measurably wrong:
-  trainer-AI move selection is not dead code (`label_status --callers
-  AIEnemyTrainerChooseMoves` shows `SelectEnemyMove` calling it from
-  `src/engine/battle/core.asm`), and `ReadTrainer` does compute prize money
-  (`src/engine/battle/read_trainer_party.asm` calls `AddBCD` directly in place of
-  pret's `predef AddBCDPredef`). Prefer the active plan.
-
-(NPC implementation is complete and archived at `docs/plans/npc_implementation.md`.
-The move data layer is complete and archived at `docs/plans/moves.md`.)
+- **Generator caveat:** The tool counts only checkbox lines (`- [ ]` and the backtick form `` - `[ ]` ``), so a plan written as prose or numbered headings reports `0 completed / 0 open` regardless of its real state. **"0/0" means "unparsed", not "empty"** — inspect the file directly.
+- **Backlog:** Deferred tails are tracked in `docs/current_plan_backlog.md`. Grep that file before assuming a deferred item or tail is untracked.
+- **Archived plans:** Completed and historical plans reside in `docs/plans/` (read-only reference; do not edit files in `docs/plans/`).
 
 ## Save File Notes (`.dsv` v2 is live; `saveconv.py` is complete)
 

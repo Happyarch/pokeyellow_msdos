@@ -23,11 +23,9 @@
 ; bare `jr nz` spins on wAudioFadeOutControl / wChannelSoundIDs (which the engine
 ; only advances on the frame-loop tick) would hang. They are bounded here to
 ; avoid a lock; a proper engine-tick yield is a promotion-time refinement.
+; Linked in GAME_SRCS (OW-7.2).
 ;
-; Check-only until the palette shim (UpdateCGBPal_OBP1) lands.
-;
-; Build (check): nasm -f coff -I include/ -I . -o /dev/null \
-;                     src/engine/overworld/healing_machine.asm
+; Build: nasm -f coff -I include/ -I . -o healing_machine.o src/engine/overworld/healing_machine.asm
 ; ---------------------------------------------------------------------------
 
 bits 32

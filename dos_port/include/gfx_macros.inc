@@ -30,15 +30,6 @@
     mov %1, ((%2) << 6) | ((%3) << 4) | ((%4) << 2) | (%5)
 %endmacro
 
-%macro dict 2
-    %if %1 == 0
-        test al, al
-    %else
-        cmp al, %1
-    %endif
-    jz %2
-%endmacro
-
 ; ld_hli_a_string: N/A (requires complex compile-time string indexing).
 ; Emit a runtime loop or unroll manually instead.
 
