@@ -30,9 +30,12 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pret_audio import AudioROM                              # noqa: E402
-from gb_to_midi import build_addr_map, simulate_song, songs_from_headers  # noqa: E402
+from gb_to_midi import (build_addr_map, simulate_song, songs_from_headers,  # noqa: E402
+                        unroll_for, fold_switch_frames,
+                        resolve_switch_program, DEFAULT_PROGRAM)
 import music_analysis                                        # noqa: E402
 from gen_opl_patches import PATCHES                          # noqa: E402
+from mt32_presets import resolve_program                     # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 ENHANCE_DIR = HERE / "enhancements"
@@ -98,6 +101,14 @@ class ResolvedNote:
 
 
 @dataclass
+class ResolvedSwitch:
+    frame: int                     # song frame of the 0xC0 (post-fold/dup)
+    mt32: int | str | None         # raw switch values (resolution is per
+    gm: int | str | None           # target, at merge time, 1-based ints here)
+    prog: int | str | None = None  # entry-level `program` fallback (both)
+
+
+@dataclass
 class ResolvedChannel:
     name: str
     tier: int
@@ -109,6 +120,7 @@ class ResolvedChannel:
     is_rhythm: bool = False
     is_percussion: bool = False
     notes: list[ResolvedNote] = field(default_factory=list)
+    switches: list[ResolvedSwitch] = field(default_factory=list)
 
 
 @dataclass
@@ -294,8 +306,215 @@ def first_body_notes(resolved: list[ResolvedChannel],
         return resolved
     cutoff = frames["end"]          # loop_start + one period by construction
     return [replace(c, notes=[n for n in c.notes
-                              if n.frame + n.dur <= cutoff])
+                              if n.frame + n.dur <= cutoff],
+                    switches=[s for s in c.switches if s.frame < cutoff])
             for c in resolved]
+
+
+# ---------------------------------------------------------------------------
+# Timed program switches (mid-song 0xC0s) — shared by lint() and
+# lint_overrides(). Shape/position rules live in _resolve_switch_positions;
+# playback-order semantics (uniqueness, mid-note/sustain, no-op, intent
+# WARNs) live in _check_switches. Callers fold + pre-resolve per-target
+# programs between the two.
+# ---------------------------------------------------------------------------
+SWITCH_KEYS = {"m", "b", "mt32_program", "gm_program", "program"}
+
+
+def _norm_name(name: str) -> str:
+    return "".join(c for c in str(name).lower() if c.isalnum())
+
+
+def _resolve_switch_positions(raw, bm: BeatMap, ctx: str, rep: Report, *,
+                              one_based: bool, timbre_names: set[str],
+                              end: int, bodies: int) -> list[tuple[int, dict]]:
+    """Validate switch shapes, resolve both-target programs and m/b frames.
+
+    Returns [(frame, entry)] in file order for entries that survive shape,
+    program resolution, and range (frame < end; == end is its own ERROR).
+    Every failure is an ERROR on rep. `end` is the exclusive bound (the
+    widened span_end for unrolled songs); one_based selects enhancement
+    (1-based ints) vs override (0-based) numbering.
+    """
+    out: list[tuple[int, dict]] = []
+    if raw is None:
+        return out
+    if not isinstance(raw, list):
+        rep.err(f"{ctx}: switches must be a list")
+        return out
+    for i, entry in enumerate(raw):
+        where = f"{ctx} switch {i + 1}"
+        if not isinstance(entry, dict):
+            rep.err(f"{where}: not a mapping")
+            continue
+        m, b = entry.get("m"), entry.get("b")
+        if isinstance(m, bool) or not isinstance(m, int) or m < 1:
+            rep.err(f"{where}: m must be an integer >= 1 (got {m!r})")
+            continue
+        if isinstance(b, bool) or not isinstance(b, (int, float)) or b < 1:
+            rep.err(f"{where}: b must be a number >= 1 (got {b!r})")
+            continue
+        unknown = set(entry) - SWITCH_KEYS
+        if unknown:
+            rep.err(f"{where}: unknown keys {sorted(unknown)} "
+                    f"(allowed: {sorted(SWITCH_KEYS)})")
+            continue
+        if "opl_patch" in entry:
+            rep.err(f"{where}: opl_patch is tier-1-only and meaningless on "
+                    "a program switch — remove it")
+            continue
+        if entry.get("mt32_program") is None \
+                and entry.get("gm_program") is None \
+                and entry.get("program") is None:
+            rep.err(f"{where}: needs at least one program key "
+                    "(mt32_program and/or gm_program, `program` as fallback)")
+            continue
+
+        # Both-target program resolution. Ints are 1-based (enhancements)
+        # or 0-based (overrides); names resolve per target table.
+        ok = True
+        for key in ("mt32_program", "gm_program", "program"):
+            val = entry.get(key)
+            if val is None:
+                continue
+            table = "mt32" if key == "mt32_program" else "gm"
+            if key == "program":
+                tables = ("mt32", "gm")
+            else:
+                tables = (table,)
+            if isinstance(val, bool) or not isinstance(val, (int, str)):
+                rep.err(f"{where}: {key} must be an int or a preset name "
+                        f"(got {val!r})")
+                ok = False
+            elif isinstance(val, int):
+                lo, hi = (1, 128) if one_based else (0, 127)
+                if not lo <= val <= hi:
+                    base = "1-128 (1-based)" if one_based else "0-127"
+                    rep.err(f"{where}: {key} {val} out of {base}")
+                    ok = False
+            else:
+                if one_based and key == "gm_program":
+                    rep.err(f"{where}: gm_program must be an int 1-128 "
+                            f"(got name {val!r})")
+                    ok = False
+                    continue
+                for t in tables:
+                    try:
+                        resolve_program(val, t, where)
+                    except ValueError as e:
+                        if t == "mt32" and any(
+                                _norm_name(n) == _norm_name(val)
+                                for n in timbre_names):
+                            rep.err(f"{where}: custom timbre {val!r} is not "
+                                    "wired into the switch path — switches "
+                                    "ERROR where tick-0 warns (name a "
+                                    "factory preset instead)")
+                        else:
+                            rep.err(str(e))
+                        ok = False
+        if not ok:
+            continue
+        f = int(round(bm.frame_at(bm.index_of(m, b))))
+        if f == end:
+            rep.err(f"{where}: resolves to frame {f}, exactly the song end "
+                    f"— no note can use it (frame < {end} required)")
+            continue
+        if f > end:
+            rep.err(f"{where}: m{m} b{b} resolves to frame {f}, past the "
+                    f"song end ({end}); switches must stay inside intro + "
+                    f"{bodies if bodies > 1 else 'one'} loop body"
+                    + ("ies" if bodies > 1 else ""))
+            continue
+        out.append((f, entry))
+    return out
+
+
+def _check_switches(ctx: str, rep: Report,
+                    items: list[tuple[int, str, int | None, int | None]], *,
+                    spans: list[tuple[int, int]],
+                    base_mt32: int | None, base_gm: int | None,
+                    loop_frame: int | None, first_note: int | None,
+                    hold_start: int | None = None):
+    """Playback-order semantics for validated switches.
+
+    items: [(frame, tag, prog_mt32|None, prog_gm|None)] in playback order
+    (file order pre-fold, gb_to_midi.fold_switch_frames order post-fold);
+    tag names the switch for messages (e.g. '"Violin 1"/"Violin"'). spans:
+    [(start, end)] note spans of the same channel. base_mt32/base_gm: tick-0
+    0-based programs (None skips that target's no-op check). loop_frame None
+    = one-shot (no intro WARNs). first_note None = noteless channel (no
+    pre-entry WARN). hold_start set only for evolving channels on unrolled
+    songs (divergence WARN below it).
+    """
+    # Strictly increasing unique frames.
+    prev = None
+    for f, tag, _, _ in items:
+        if prev is not None and f <= prev:
+            rep.err(f"{ctx}: switch frames must be strictly increasing and "
+                    f"unique (frame {f} follows {prev})")
+            break
+        prev = f
+
+    # Mid-note / under-sustain: STRICTLY inside a same-channel note span is
+    # an ERROR; landing exactly on a note edge (on or off) is allowed.
+    for f, tag, _, _ in items:
+        hit = next(((s, e) for s, e in spans if s < f < e), None)
+        if hit is not None:
+            rep.err(f"{ctx}: switch {tag} at frame {f} falls strictly "
+                    f"inside a note span ({hit[0]}-{hit[1]}) — a program "
+                    "change mid-note (under sustain) cuts the sounding "
+                    "voice; move it to a silence gap or a note edge "
+                    f"(frame {hit[0]} or {hit[1]})")
+            break
+
+    # No-op: re-asserting the already-active program on either target.
+    # On looped songs the walk starts from the program latched at the loop
+    # wrap (last body switch, else tick-0): a return-to-base switch at the
+    # loop entry is meaningful on every pass after the first, so it must
+    # not warn just because pass 1 already holds it.
+    active_mt32, active_gm = base_mt32, base_gm
+    if loop_frame is not None:
+        for f, _, pm, pg in items:
+            if f > loop_frame:
+                if pm is not None:
+                    active_mt32 = pm
+                if pg is not None:
+                    active_gm = pg
+    for f, tag, pm, pg in items:
+        if pm is not None and active_mt32 is not None:
+            if pm == active_mt32:
+                rep.warn(f"{ctx}: switch {tag} at frame {f} is a no-op "
+                         f"(mt32 program {pm} already active) — remove it")
+            else:
+                active_mt32 = pm
+        if pg is not None and active_gm is not None:
+            if pg == active_gm:
+                rep.warn(f"{ctx}: switch {tag} at frame {f} is a no-op "
+                         f"(gm program {pg} already active) — remove it")
+            else:
+                active_gm = pg
+
+    # Intent WARNs, case-aware. In-loop switches after channel entry are
+    # fine and stay silent.
+    for f, tag, _, _ in items:
+        if loop_frame is not None and f < loop_frame:
+            rep.warn(f"{ctx}: switch {tag} at frame {f} sits in the intro "
+                     f"(loop starts frame {loop_frame}) — intro-fires-once: "
+                     "it sounds on the first pass only; later passes reuse "
+                     "the body's switches (or the tick-0 program). Move it "
+                     "into the body if every pass should use it")
+        elif hold_start is not None and f < hold_start:
+            rep.warn(f"{ctx}: switch {tag} at frame {f} is outside the "
+                     f"looping hold body (starts frame {hold_start}) — "
+                     "first-pass-divergence-confirm: it sounds on the "
+                     "first pass only; the hold keeps its own program. "
+                     "Confirm the divergence is intended")
+        elif first_note is not None and f < first_note:
+            rep.warn(f"{ctx}: switch {tag} at frame {f} precedes the "
+                     f"channel's first entry (frame {first_note}) — "
+                     "pre-entry-holds-loop: it takes effect at that entry "
+                     "and holds for every pass; confirm the silent lead-in "
+                     "should already use it")
 
 
 # ---------------------------------------------------------------------------
@@ -490,9 +709,91 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                                               n.dur, n.key, n.vel))
             notes = sorted(notes + duped, key=lambda n: (n.frame, n.key))
 
+        # Timed program switches: per-channel mid-song 0xC0s, resolved to
+        # frames here and emitted by the merge on the channel's free melodic
+        # part. Tier 1 cannot carry them (the OPL stream plays one body and
+        # knows no programs); rhythm channels route to the drum part, which
+        # carries no programs either.
+        stored_switches: list[ResolvedSwitch] = []
+        raw_switches = ch.get("switches")
+        has_switches = isinstance(raw_switches, list) and len(raw_switches) > 0
+        if has_switches and tier == 1:
+            rep.err(f"{ctx}: tier-1 channels can't carry switches — program "
+                    "changes are MT-32/GM-only and the OPL enhancement "
+                    "stream plays exactly one loop body; ramp timbres in "
+                    "tier 2+ instead")
+        if has_switches and is_rhythm:
+            rep.err(f"{ctx}: rhythm channels route to the MIDI drum part, "
+                    "which carries no programs — switches need a melodic "
+                    "channel")
+        sw_resolved = _resolve_switch_positions(
+            raw_switches, bm, ctx, rep, one_based=True,
+            timbre_names=timbre_names, end=bm.span_end,
+            bodies=bm.span_bodies)
+        if unroll > 1 and not evolving and sw_resolved:
+            # Non-evolving body switches apply every iteration, exactly like
+            # auto-duplicated notes; evolving channels author every
+            # iteration explicitly and skip this.
+            assert bm.period is not None
+            sw_resolved = fold_switch_frames(
+                sw_resolved, first_body=bm.loop_frame, period=bm.period,
+                unroll=unroll)
+        if sw_resolved and not is_rhythm:
+            for f, entry in sw_resolved:
+                sw_gm = entry.get("gm_program", entry.get("program"))
+                if _is_percussive(ch, sw_gm if isinstance(sw_gm, int)
+                                  else gm, False) != is_percussion:
+                    rep.err(f"{ctx}: switch at frame {f} would flip the "
+                            "channel's percussive verdict (pitched <-> "
+                            "percussion) — the range/unison exemptions are "
+                            "judged per channel, so a flip is unrepresentable")
+                    break
+        if sw_resolved:
+            spans = [(n.frame, n.frame + n.dur) for n in notes]
+            first_note = min((n.frame for n in notes), default=None)
+            base_gm = gm - 1 if isinstance(gm, int) else None
+            base_mt32 = mt32 - 1 if isinstance(mt32, int) else base_gm
+            items: list[tuple[int, str, int | None, int | None]] = []
+            for f, entry in sw_resolved:
+                tag = "{" + ", ".join(
+                    f"{k}={entry[k]!r}" for k in
+                    ("mt32_program", "gm_program", "program")
+                    if entry.get(k) is not None) + "}"
+                try:
+                    pm = resolve_switch_program(
+                        entry.get("mt32_program"), entry.get("gm_program"),
+                        ch.get("mt32_patch"), ch.get("gm_program"),
+                        entry.get("program"), None,
+                        "mt32", f"{ctx} switch", one_based=True)
+                except ValueError:
+                    pm = None       # already recorded above; skip no-op
+                try:
+                    pg = resolve_switch_program(
+                        entry.get("mt32_program"), entry.get("gm_program"),
+                        ch.get("mt32_patch"), ch.get("gm_program"),
+                        entry.get("program"), None,
+                        "gm", f"{ctx} switch", one_based=True)
+                except ValueError:
+                    pg = None
+                items.append((f, tag, pm, pg))
+            _check_switches(
+                ctx, rep, items, spans=spans,
+                base_mt32=base_mt32, base_gm=base_gm,
+                loop_frame=bm.loop_frame
+                if frames.get("loop_start") is not None else None,
+                first_note=first_note,
+                hold_start=(bm.loop_frame + (unroll - 1) * bm.period)
+                if evolving and unroll > 1 and bm.period is not None
+                else None)
+            if tier != 1 and not is_rhythm:
+                stored_switches = [ResolvedSwitch(
+                    f, entry.get("mt32_program"), entry.get("gm_program"),
+                    entry.get("program")) for f, entry in sw_resolved]
+
         resolved.append(ResolvedChannel(name, tier, opl if tier == 1 else
                                         None, mt32, gm, pan, volume,
-                                        is_rhythm, is_percussion, notes))
+                                        is_rhythm, is_percussion, notes,
+                                        stored_switches))
 
     # base song (for §6 polyphony and §7 unison doubling)
     amap = build_addr_map(rom)
@@ -536,6 +837,9 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                  f"{OPL_TIER1_WARN}")
 
     all_added = [n for c in resolved for n in c.notes]
+    # Switches add zero sounding notes (a 0xC0 retunes a part but starts no
+    # voice), so they enter no budget here. Future guard: custom timbres may
+    # cost more than 2 partials/note — revisit the x2 when they land.
     worst = max_simultaneous(all_added + base_mel) * 2   # ≈2 partials/note
     if worst > MT32_PARTIALS_WARN:
         rep.warn(f"worst-case MT-32 partial estimate {worst} > "
@@ -554,19 +858,185 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
     return rep, resolved, analysis
 
 
+# ---------------------------------------------------------------------------
+# Override switches (lint_overrides)
+# ---------------------------------------------------------------------------
+def lint_overrides(path: Path) -> tuple[Report, dict]:
+    """Structural validation of override `switches` (timed mid-song 0xC0s).
+
+    ERROR-gated like lint(): any error means the file must not ship as-is.
+    Returns (report, resolved) with resolved mapping GB channel ->
+    [(frame, entry)] post-fold (intro once, body duplicated across unrolled
+    bodies — the same fold the merge applies, so lint and output agree).
+    """
+    rep = Report()
+    try:
+        doc = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        rep.err(f"YAML parse error: {e}")
+        return rep, {}
+    if not isinstance(doc, dict):
+        rep.err("top level must be a mapping")
+        return rep, {}
+    label = path.stem
+    rom = AudioROM()
+    songs = songs_from_headers(rom)
+    if label not in songs:
+        rep.err(f"unknown song label {label!r}")
+        return rep, {}
+    unknown = set(doc) - {"channels", "drums"}
+    if unknown:
+        rep.err(f"unknown top-level keys {sorted(unknown)}")
+    chs = doc.get("channels", {})
+    if chs is None:
+        chs = {}
+    if not isinstance(chs, dict):
+        rep.err("channels: must be a mapping")
+        chs = {}
+
+    def gc_of(key):
+        if type(key) is int:
+            return key
+        if isinstance(key, str) and key.isdigit():
+            return int(key)
+        return None
+
+    for key in chs:
+        gc = gc_of(key)
+        if gc not in (1, 2, 3, 4):
+            rep.err(f"channels.{key}: GB channel must be 1-4")
+        elif gc == 4 and isinstance(chs[key], dict) \
+                and chs[key].get("switches"):
+            rep.err("channels.4: the noise channel routes to the MIDI drum "
+                    "part, which carries no programs — switches need "
+                    "channels 1-3")
+
+    analysis = load_analysis(label)
+    frames = analysis["frames"]
+    bm = BeatMap(analysis["grid"], frames["end"],
+                 frames.get("loop_start"), analysis.get("loop"))
+    unroll = unroll_for(label)
+    if unroll > 1 and bm.period is not None:
+        bm.span_end = bm.loop_frame + unroll * bm.period
+        bm.span_bodies = unroll
+    amap = build_addr_map(rom)
+    base = simulate_song(rom, amap, label, songs[label], unroll)
+    timbre_names = load_timbre_names()
+
+    resolved: dict[int, list] = {}
+    for gc in (1, 2, 3):
+        ch = chs.get(gc, chs.get(str(gc)))
+        if not isinstance(ch, dict):
+            continue
+        raw = ch.get("switches")
+        if raw is None or (isinstance(raw, list) and not raw):
+            continue
+        ctx = f"channel {gc}"
+        sw_res = _resolve_switch_positions(
+            raw, bm, ctx, rep, one_based=False,
+            timbre_names=timbre_names, end=bm.span_end,
+            bodies=bm.span_bodies)
+        if unroll > 1 and base.loop_start is not None and sw_res:
+            period = base.end - base.loop_start
+            sw_res = fold_switch_frames(
+                sw_res, first_body=base.loop_start - (unroll - 1) * period,
+                period=period, unroll=unroll)
+        if sw_res:
+            # Percussion-flip guard: base channels are melodic (drums live
+            # on ch4, already rejected above), so any switch whose gm side
+            # is a GM percussion program flips the verdict. ints are
+            # 0-based here — the PERCUSSION_PATCHES set is 1-based.
+            for f, entry in sw_res:
+                gm_side = entry.get("gm_program", entry.get("program"))
+                if isinstance(gm_side, int):
+                    g1 = gm_side + 1
+                elif isinstance(gm_side, str):
+                    try:
+                        g1 = resolve_program(gm_side, "gm",
+                                             f"{ctx} switch") + 1
+                    except ValueError:
+                        g1 = None   # already recorded; skip flip
+                else:
+                    g1 = None
+                if g1 is not None and g1 in PERCUSSION_PATCHES:
+                    rep.err(f"{ctx}: switch at frame {f} names a GM "
+                            "percussion program — base channels are "
+                            "melodic, so the flip is unrepresentable "
+                            "(percussion lives on the drum part)")
+                    break
+        if sw_res:
+            try:
+                base_mt32 = resolve_program(
+                    ch.get("mt32_program",
+                           ch.get("program", DEFAULT_PROGRAM[gc])),
+                    "mt32", f"{label} ch{gc}")
+            except ValueError:
+                base_mt32 = None    # tick-0 shape, not switches scope
+            try:
+                base_gm = resolve_program(
+                    ch.get("gm_program",
+                           ch.get("program", DEFAULT_PROGRAM[gc])),
+                    "gm", f"{label} ch{gc}")
+            except ValueError:
+                base_gm = None
+            spans = [(n.frame, n.frame + n.dur)
+                     for n in base.notes if n.chan == gc]
+            first_note = min((n.frame for n in base.notes
+                              if n.chan == gc), default=None)
+            items: list[tuple[int, str, int | None, int | None]] = []
+            for f, entry in sw_res:
+                tag = "{" + ", ".join(
+                    f"{k}={entry[k]!r}" for k in
+                    ("mt32_program", "gm_program", "program")
+                    if entry.get(k) is not None) + "}"
+                try:
+                    pm = resolve_switch_program(
+                        entry.get("mt32_program"), entry.get("gm_program"),
+                        ch.get("mt32_program"), ch.get("gm_program"),
+                        entry.get("program"), DEFAULT_PROGRAM[gc],
+                        "mt32", f"{ctx} switch", one_based=False)
+                except ValueError:
+                    pm = None       # already recorded; skip no-op
+                try:
+                    pg = resolve_switch_program(
+                        entry.get("mt32_program"), entry.get("gm_program"),
+                        ch.get("mt32_program"), ch.get("gm_program"),
+                        entry.get("program"), DEFAULT_PROGRAM[gc],
+                        "gm", f"{ctx} switch", one_based=False)
+                except ValueError:
+                    pg = None
+                items.append((f, tag, pm, pg))
+            _check_switches(
+                ctx, rep, items, spans=spans,
+                base_mt32=base_mt32, base_gm=base_gm,
+                loop_frame=bm.loop_frame
+                if frames.get("loop_start") is not None else None,
+                first_note=first_note)
+            resolved[gc] = sw_res
+    return rep, resolved
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("files", nargs="+", type=Path,
-                    help="enhancement YAML file(s) (enhancements/<Song>.yaml)")
+                    help="enhancement YAML file(s) (enhancements/<Song>.yaml) "
+                         "or override file(s) (overrides/<Song>.yaml)")
     args = ap.parse_args()
     failed = False
     for path in args.files:
-        rep, resolved, _ = lint(path)
-        n_notes = sum(len(c.notes) for c in resolved)
-        status = "FAIL" if rep.errors else "ok"
-        print(f"{path.name}: {status} — {len(resolved)} channels, "
-              f"{n_notes} notes, {len(rep.errors)} errors, "
-              f"{len(rep.warnings)} warnings")
+        if "overrides" in path.parts:
+            rep, resolved = lint_overrides(path)
+            n_sw = sum(len(v) for v in resolved.values())
+            status = "FAIL" if rep.errors else "ok"
+            print(f"{path.name}: {status} — {n_sw} switches, "
+                  f"{len(rep.errors)} errors, {len(rep.warnings)} warnings")
+        else:
+            rep, resolved, _ = lint(path)
+            n_notes = sum(len(c.notes) for c in resolved)
+            status = "FAIL" if rep.errors else "ok"
+            print(f"{path.name}: {status} — {len(resolved)} channels, "
+                  f"{n_notes} notes, {len(rep.errors)} errors, "
+                  f"{len(rep.warnings)} warnings")
         for e in rep.errors:
             print(f"  ERROR: {e}")
         for w in rep.warnings:

@@ -469,10 +469,215 @@ def chan_setting(ov: dict, chan: int, key: str, default):
     return ov.get("channels", {}).get(chan, {}).get(key, default)
 
 
+def _override_channel(ov: dict, chan: int) -> dict:
+    """One override channel mapping, tolerating int or digit-string keys."""
+    chs = ov.get("channels", {})
+    if not isinstance(chs, dict):
+        return {}
+    ch = chs.get(chan, chs.get(str(chan)))
+    return ch if isinstance(ch, dict) else {}
+
+
+def channel_switches(ov: dict, chan: int) -> list:
+    """Raw `switches` list of one override channel (empty when absent).
+
+    Lenient by design (like unroll_for): a missing or non-list value means
+    "no switches" — lint_overrides() is the loud gate for bad shapes, and
+    the asset build must never break on a work-in-progress file."""
+    sw = _override_channel(ov, chan).get("switches", [])
+    return sw if isinstance(sw, list) else []
+
+
 def drum_key(ov: dict, instrument: int) -> int:
     m = ov.get("drums", {}).get("map", {})
     return m.get(instrument,
                  DEFAULT_DRUM_MAP.get(instrument, DEFAULT_DRUM_NOTE))
+
+
+# ---------------------------------------------------------------------------
+# Timed program switches (mid-song 0xC0s)
+# ---------------------------------------------------------------------------
+# An override channel may carry `switches: [{m, b, mt32_program?, gm_program?},
+# ...]` — musical positions where the part changes instrument mid-song
+# (pilot: Music_Cities2 ch2 trumpet -> violin -> trumpet). Enhancement
+# channels carry the same shape (1-based ints) in yaml_lint.ResolvedSwitch.
+# Resolution here is shared by the SMF merge below and audition re-sync
+# (audition/midi_renderer.py) — never a third copy of this logic.
+def resolve_switch_program(sw_mt32, sw_gm, fb_mt32, fb_gm, fb_prog,
+                           default_prog, target: str, context: str,
+                           *, one_based: bool) -> int:
+    """One timed switch entry -> 0-based program number for `target`.
+
+    Chain per target: switch key -> channel base key -> `program` fallback
+    -> default (exactly the tick-0 fallback chain). Ints are 1-based for
+    enhancement files, 0-based for overrides; names resolve per target table
+    (MT-32 factory vs GM level 1). A string mt32 value won from the SWITCH
+    entry is ValueError: custom timbres are not wired into the switch path
+    (tick-0 warns and falls back to gm; switches ERROR instead — a mid-song
+    timbre swap that silently played the wrong instrument would be worse
+    than a loud failure). A string mt32 value won from the channel FALLBACK
+    (a custom-timbre base channel) mirrors tick-0 and resolves through the
+    gm side instead.
+    """
+    if target == "mt32":
+        vals = (sw_mt32, fb_mt32, fb_prog, default_prog)
+    else:
+        vals = (sw_gm, fb_gm, fb_prog, default_prog)
+    from_switch = vals[0] is not None
+    val = next((v for v in vals if v is not None), None)
+    if val is None:
+        raise ValueError(f"{context}: no program for target {target!r} "
+                         "and no fallback")
+    if isinstance(val, bool):
+        raise ValueError(f"{context}: program must be an int or a preset "
+                         "name, got bool")
+    if isinstance(val, int):
+        if one_based:
+            if not 1 <= val <= 128:
+                raise ValueError(f"{context}: program {val} out of 1-128 "
+                                 "(switch ints are 1-based)")
+            return val - 1
+        if not 0 <= val <= 127:
+            raise ValueError(f"{context}: program {val} out of range 0-127")
+        return val
+    if isinstance(val, str):
+        if target == "mt32" and not from_switch:
+            try:
+                return resolve_program(val, target, context)
+            except ValueError:
+                pass    # not a factory name: custom-timbre base channel
+            # Custom-timbre base channel (enhancements): mirror the tick-0
+            # warn-and-fall-back-to-gm (tick-0 already warned). Overrides
+            # never reach here — their tick-0 resolve_program raises first.
+            return resolve_switch_program(None, sw_gm, None, fb_gm, fb_prog,
+                                          default_prog, "gm", context,
+                                          one_based=one_based)
+        # Factory-bank names resolve here; custom-timbre names and typos
+        # raise out of resolve_program — the switches-ERROR conformance.
+        return resolve_program(val, target, context)
+    raise ValueError(f"{context}: program must be an int or a preset name, "
+                     f"got {type(val).__name__}")
+
+
+def build_program_timeline(base_prog: int,
+                           switch_progs: list[tuple[int, int]]
+                           ) -> list[tuple[int, int]]:
+    """Base 0-based program + sorted [(frame, prog)] -> [(frame, prog)]
+    timeline starting at frame 0 (for program_at re-sync)."""
+    tl = [(0, base_prog)]
+    for f, p in sorted(switch_progs):
+        if f < 0:
+            continue
+        if f == 0:
+            tl[-1] = (0, p)     # a downbeat switch restates/overrides tick-0
+            continue
+        if p == tl[-1][1]:
+            continue            # re-asserts the active program (lint: no-op)
+        tl.append((f, p))
+    return tl
+
+
+def program_at(timeline: list[tuple[int, int]], frame: int) -> int:
+    """Program active at `frame`: the last timeline entry at or before it."""
+    prog = timeline[0][1]
+    for f, p in timeline:
+        if f <= frame:
+            prog = p
+        else:
+            break
+    return prog
+
+
+def fold_switch_frames(pts: list[tuple[int, dict]], *, first_body: int,
+                       period: int, unroll: int) -> list[tuple[int, dict]]:
+    """Fold body switch frames into first-body coordinates and duplicate them
+    across all unrolled bodies (intro frames fire once) — the switch analogue
+    of simulate_song's note/pan unroll and yaml_lint's note auto-duplication.
+    Shared by the merge (resolve_override_switch_frames) and yaml_lint so the
+    two can never disagree on which bodies a switch sounds in."""
+    out: list[tuple[int, dict]] = []
+    for f, entry in pts:
+        if f < first_body:
+            out.append((f, entry))
+        else:
+            o = (f - first_body) % period
+            for k in range(unroll):
+                out.append((first_body + o + k * period, entry))
+    return sorted(out, key=lambda p: p[0])
+
+
+def resolve_override_switch_frames(label: str, ov: dict,
+                                   song: Song) -> dict[int, list]:
+    """label's override `switches` -> {gb_chan: [(frame, entry)]} in song
+    coordinates. Positions resolve m/b through the song's analysis beat map
+    (span widened for unroll, exactly like yaml_lint); unrolled songs fold +
+    duplicate body switches via fold_switch_frames. Final frame<end
+    filtering. Lenient: malformed entries are skipped — lint_overrides() is
+    the loud gate for them, and the asset build must never break on a
+    work-in-progress file."""
+    have = any(channel_switches(ov, gc) for gc in (1, 2, 3, 4))
+    if not have:
+        return {}
+    from yaml_lint import BeatMap, load_analysis  # lazy: yaml_lint imports us
+    analysis = load_analysis(label)
+    frames = analysis["frames"]
+    bm = BeatMap(analysis["grid"], frames["end"], frames.get("loop_start"),
+                 analysis.get("loop"))
+    unroll = unroll_for(label)
+    if unroll > 1 and bm.period is not None:
+        bm.span_end = bm.loop_frame + unroll * bm.period
+        bm.span_bodies = unroll
+    out: dict[int, list] = {}
+    for gc in (1, 2, 3, 4):
+        pts: list[tuple[int, dict]] = []
+        for entry in channel_switches(ov, gc):
+            if not isinstance(entry, dict):
+                continue
+            m, b = entry.get("m"), entry.get("b")
+            if isinstance(m, bool) or not isinstance(m, int) or m < 1:
+                continue
+            if isinstance(b, bool) or not isinstance(b, (int, float)) \
+                    or b < 1:
+                continue
+            if entry.get("mt32_program") is None \
+                    and entry.get("gm_program") is None \
+                    and entry.get("program") is None:
+                continue
+            pts.append((int(round(bm.frame_at(bm.index_of(m, b)))), entry))
+        if unroll > 1 and song.loop_start is not None and pts:
+            period = song.end - song.loop_start
+            pts = fold_switch_frames(
+                pts, first_body=song.loop_start - (unroll - 1) * period,
+                period=period, unroll=unroll)
+        pts = [(f, e) for f, e in sorted(pts) if f < song.end]
+        if pts:
+            out[gc] = pts
+    return out
+
+
+def override_switch_events(label: str, ov: dict, song: Song,
+                           target: str) -> dict[int, list[tuple[int, int]]]:
+    """{gb_chan: [(frame, 0-based prog)]} target-resolved timed program
+    changes. Shared by the SMF merge (write_midi) and audition re-sync
+    (midi_renderer): both render switches through here, so the .mid and the
+    live audition can never disagree on what a switch means. Channel 4
+    (drums) carries no programs — lint_overrides() ERRORs switches there;
+    the merge skips them."""
+    out: dict[int, list[tuple[int, int]]] = {}
+    frames = resolve_override_switch_frames(label, ov, song)
+    for gc, lst in frames.items():
+        if gc == 4:
+            continue
+        ch = _override_channel(ov, gc)
+        evs = []
+        for f, entry in lst:
+            evs.append((f, resolve_switch_program(
+                entry.get("mt32_program"), entry.get("gm_program"),
+                ch.get("mt32_program"), ch.get("gm_program"),
+                ch.get("program"), DEFAULT_PROGRAM[gc],
+                target, f"{label} ch{gc} switch", one_based=False)))
+        out[gc] = evs
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -581,6 +786,17 @@ def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
         ]
         if not c.is_rhythm:
             evs.append((0, 1, bytes((0xC0 | mc, prog))))
+            for sw in c.switches:
+                if sw.frame >= song.end:
+                    continue            # frame<end filtering, like the base
+                # 1-based ints (-1 rule); a string mt32 (custom timbre)
+                # raises here — switches ERROR where tick-0 warns (lint
+                # gates this first, so the raise only fires on bypass).
+                sprog = resolve_switch_program(
+                    sw.mt32, sw.gm, c.mt32_patch, c.gm_program,
+                    sw.prog, None, target,
+                    f"enh {c.name} switch", one_based=True)
+                evs.append((sw.frame, 1, bytes((0xC0 | mc, sprog))))
         evs.extend([
             (0, 1, bytes((0xB0 | mc, 7, c.volume))),
             (0, 1, bytes((0xB0 | mc, 10, PAN_CC[c.pan]))),
@@ -607,6 +823,7 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
     tracks.append(track_chunk(ev0))
 
     prog_key = "mt32_program" if target == "mt32" else "gm_program"
+    sw_evs = override_switch_events(song.label, ov, song, target)
     for gc in used:
         mc = 9 if gc == 4 else gc             # MIDI channel (0-based)
         evs: list[tuple[int, int, bytes]] = []  # (tick, order, bytes)
@@ -618,6 +835,10 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
                                           DEFAULT_PROGRAM[gc])),
                 target, f"{song.label} ch{gc} {prog_key}")
             evs.append((0, 1, bytes((0xC0 | mc, prog))))
+            for f, sprog in sw_evs.get(gc, []):
+                # order 1: note-offs (0) sort before, note-ons (2) after —
+                # the off -> prog -> on ordering midi_to_stream relies on.
+                evs.append((f, 1, bytes((0xC0 | mc, sprog))))
         vol = chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100))
         pan = chan_setting(ov, gc, "pan", 64)
         evs.append((0, 1, bytes((0xB0 | mc, 7, vol))))

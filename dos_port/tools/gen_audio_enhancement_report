@@ -127,6 +127,34 @@ def patches_of_sfx(sfx_data):
     return ", ".join(parts) if parts else "—"
 
 
+def switches_summary(ovr, enh):
+    """Timed mid-song program switches per song: presence + per-channel
+    summary (structural fact, like everything else here — not lint-clean,
+    run yaml_lint.py for that)."""
+    parts = []
+    for gb_ch in sorted((ovr or {}).get("channels", {}), key=str):
+        c = ovr["channels"][gb_ch]
+        if isinstance(c, dict) and c.get("switches"):
+            parts.append(f"ovr ch{gb_ch}×{len(c['switches'])}")
+    for c in ((enh or {}).get("channels", []) or []):
+        if isinstance(c, dict) and c.get("switches"):
+            parts.append(f"enh {c.get('name', '?')}×{len(c['switches'])}")
+    return ", ".join(parts) if parts else "—"
+
+
+def switch_lines(ch_switches):
+    """['m15 b4 → mt32 Violin 1 / gm Violin', ...] for one channel's list."""
+    lines = []
+    for sw in ch_switches or []:
+        if not isinstance(sw, dict):
+            continue
+        mt32 = sw.get("mt32_program", "—")
+        gm = sw.get("gm_program", "—")
+        lines.append(f"m{sw.get('m', '?')} b{sw.get('b', '?')} → "
+                     f"mt32 {mt32} / gm {gm}")
+    return lines
+
+
 def load_approvals():
     if APPROVALS_PATH.exists():
         return json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
@@ -292,9 +320,10 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
             'yes' if enh else '—',
             ','.join(str(t) for t in tiers) if tiers else '—',
             'yes' if ovr else '—',
+            switches_summary(ovr, enh),
             f'\u2713 {approval["date"]}' if approval else '—',
         ])
-    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Approved'], rows_m), '']
+    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Switches', 'Approved'], rows_m), '']
 
     # ── Per-song detail ──────────────────────────────────────────────────
     detail_labels = sorted(set(enh_by_label) | set(ovr_by_label))
@@ -319,6 +348,13 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                 lines += [md_table(
                     ['Channel', 'Tier', 'OPL Patch', 'MT-32 Patch',
                      'GM Program', 'Pan', 'Volume'], ch_rows), '']
+                for c in enh.get('channels', []):
+                    sl = switch_lines(c.get('switches')) if isinstance(
+                        c, dict) else []
+                    if sl:
+                        lines += [f"Switches on `{c.get('name', '?')}` "
+                                  f"(timed mid-song program changes): "
+                                  + "; ".join(sl) + ".", '']
             ovr = ovr_by_label.get(label)
             if ovr:
                 lines += ['**MT-32/MIDI overrides** (base 4 GB channels'
@@ -334,6 +370,14 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                     lines += [md_table(
                         ['GB Channel', 'MT-32 Program', 'GM Program',
                          'Program (fallback)', 'Volume', 'Pan'], ch_rows), '']
+                for gb_ch in sorted(ovr.get('channels', {}), key=str):
+                    c = ovr['channels'][gb_ch]
+                    sl = switch_lines(c.get('switches')) if isinstance(
+                        c, dict) else []
+                    if sl:
+                        lines += [f"Switches on GB channel {gb_ch} "
+                                  f"(timed mid-song program changes): "
+                                  + "; ".join(sl) + ".", '']
                 drums = ovr.get('drums')
                 if drums:
                     dmap = drums.get('map', {})

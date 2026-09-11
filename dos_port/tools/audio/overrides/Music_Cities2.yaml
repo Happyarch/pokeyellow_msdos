@@ -1,0 +1,67 @@
+# Music_Cities2 — per-song MIDI overrides (see README.md for schema).
+#
+# Cerulean City / Fuchsia City theme (+ 11 interiors: Cerulean trashed
+# house, Melanie's house, Bike Shop, Bill's house, Fuchsia Bill's-grandpa
+# house, Warden's house, Safari Zone gate, Fuchsia meeting room, Vermilion
+# old-rod house, Fuchsia good-rod house, Name Rater's house —
+# data/maps/songs.asm). E major, 18 measures (2-bar intro + 16-bar loop,
+# loop_start m3 b1, frames.end 1998), tempo 148, 3 channels (no noise).
+#
+# Score note (docs/references/pokemon_score_transcriptions/descriptions/
+# cerulean_city.md): 1-bar intro + 16-measure loop = 8 bars light/lively
+# melody (2-bar motive, quick P4 leap down, sq1 mm2-3) -> 4-bar transition
+# (sequence, sq1 drives to a half cadence at m13) -> 4-bar lyrical tune
+# (sq2 SILENT at rehearsal 3, slowly re-enters to the loop). Masuda thins
+# the texture with rests (wave alone at m6 start, pickup to m14) — unlike
+# Vermilion where everything plays constantly. Companion piece:
+# to_bills_origin.md (same E major, same [q. xx] motif inverted P4 up).
+#
+# Registers from simulate_song: ch1 inner line (58 notes, B3..F#5, mostly
+# octave 4 with 12 octave-5 peaks); ch2 MELODY (123 notes, B3..B5, 99 in
+# octave 5); ch3 patterned wave glue (122 notes, C#4..B4, all octave 4).
+# Octave 2 is EMPTY; octave 3 holds only B3 (one hit each on ch1/ch2) —
+# C3..A#3 never sound. Chords are diatonic E major throughout
+# (vi7/bVI7/I/I7/iii7/ii/ii7/VI7/V7/IV7/V — analysis score 0.882, not
+# ambiguous); the one chromatic visitor is the m1 Cmaj7 (bVI7) passing
+# sonority in the intro, before the loop body starts.
+#
+# Candidate A (audition first): string-quartet-core symphonic stack, one
+# instrument family per GB channel. Violin lead over a cello inner line
+# with harp glue — the most distinctive answer to the symphonic brief,
+# deliberately unlike Cities1's trumpet/elec-piano city-pop. Candidate B
+# fallback (Str Sect 3 / Engl Horn / Pizzicato) stays closer to
+# already-approved sounds; Ice Rain on ch3 is a further spacious variant
+# to try only if the harp feels too dry under the hall reverb
+# (timbres.yaml: hall, time 5, level 4 — global, no per-channel send).
+channels:
+  1:
+    mt32_program: "Cello 1"     # lyrical inner line in B3..F#5 = cello territory;
+                                # bows under the violin, drives the m13 HC
+    gm_program: "Cello"
+    volume: 92                  # under the lead
+    pan: 48                     # inner line left, melody right
+  2:
+    mt32_program: "Trumpet 1"    # REVISED (audition 2026-09-11): Violin 1 tried
+                                # first, rejected by ear — ch2 is sharp/stabby
+                                # (quick attacks), not a slow-decay bowed line.
+                                # Trumpet has the fast attack it wants and is
+                                # the Cities1-proven bright lead in E major.
+    gm_program: "Trumpet"
+    volume: 104                 # foreground over cello + harp
+    pan: 80
+    switches:                   # timed mid-song program changes (m/b positions
+                                # resolve through the analysis beat map; the
+                                # merge emits one 0xC0 per entry per target).
+                                # Both points sit EXACTLY on ch2 note boundaries (note-off +
+      # note-on coincide): the entry sounds on the m14 pickup downbeat
+      # (24.05s, dropping into the lyrical section), and the exit sounds
+      # on m18 b2.5 (32.13s, right on the fast 16th-note fanfare pickup
+      # run [B4, C#5, D#5, E5, F#5, G#5, A5]), letting the trumpet
+      # execute the punchy attacks back into the loop at 33.3s.
+      - {m: 14, b: 1, mt32_program: "Violin 1", gm_program: "Violin"}
+      - {m: 18, b: 2.5, mt32_program: "Trumpet 1", gm_program: "Trumpet"}
+  3:
+    mt32_program: "Harp 1"      # plucked orchestral glue for the 8th-note wave
+    gm_program: "Orchestral Harp"  # figures; short decay keeps the wave-alone
+    volume: 72                  # spots (m6, pickup m14) exposed, kills the
+    pan: 64                     # default Warm Bell decay wash

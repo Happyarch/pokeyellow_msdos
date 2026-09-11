@@ -50,6 +50,9 @@ principle).
 - Anything that relies on sample-based realism
 
 **Stick to what FM does well.** The MT-32 tiers exist for the rest.
+Timed mid-song program switches are MT-32/GM-only (see the
+`audio-enhance-mt32` skill) — OPL3 FM voices keep one fixed patch per
+voice; switches never apply to tier-1 `opl_patch`.
 
 ### Patch fields required
 Every tier-1 enhancement channel must specify all three patch fields:

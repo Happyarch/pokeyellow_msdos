@@ -91,6 +91,10 @@ START: You're writing tier 2–3 enhancements for a song
   ├─ "What patch should I use?"
   │     └─► references/hardware_constraints.md — patch selection guide
   │
+  ├─ "A voice should change timbre mid-song?"
+  │     └─► Timed program switches (this skill, below) +
+  │         references/hardware_constraints.md — numbering + lint detail
+  │
   └─ "How should the YAML look?"
         └─► examples/ (this skill — once the hand-crafted example exists)
 ```
@@ -134,6 +138,98 @@ other tier 2–3 voices.
 
 ---
 
+## Timed program switches (MT-32/GM only)
+
+A channel can change its patch mid-song: a per-channel `switches:` list in
+`overrides/*.yaml` (GB voices) and `enhancements/*.yaml` (added voices)
+emits a program change on that channel's MIDI stream. **MIDI-path-only:
+OPL3 FM voices are fixed-patch per voice — switches NEVER apply to tier-1
+`opl_patch`.** (Tier-1 voices keep all three patch fields and cascade up;
+a switch rides the MT-32/GM pair only.)
+
+### Placement law — between notes only
+
+A switch must never fall strictly inside a same-channel note span —
+`yaml_lint.py` reports that as an ERROR. Legal placements: inside a rest,
+exactly at a note-off boundary, or coincident with a note-on (the new patch
+sounds from that note). Musical rule of thumb: **arm in silence, sound on
+phrase boundaries and downbeats** — the timbre analogue of "rest where the
+GB rests": never switch under a sounding note.
+
+### Worked example — Music_Cities2 ch2 trumpet → violin → trumpet (canonical override)
+
+This is the canonical example of **override switching** (re-voicing a base GB
+channel mid-song in `tools/audio/overrides/Music_Cities2.yaml`):
+
+```yaml
+# tools/audio/overrides/Music_Cities2.yaml
+channels:
+  2:
+    mt32_program: "Trumpet 1"
+    gm_program: "Trumpet"
+    volume: 104
+    pan: 80
+    switches:
+      - {m: 14, b: 1, mt32_program: "Violin 1", gm_program: "Violin"}
+      - {m: 18, b: 2.5, mt32_program: "Trumpet 1", gm_program: "Trumpet"}
+```
+
+Section geometry (E major, 18 measures): the loop body is mm3–18, the
+lyrical passage is mm14–18, and both switches sit on note boundaries (the
+new patch sounds immediately on the arriving note):
+
+- `m: 14, b: 1` switches to "Violin 1" / "Violin" at the pickup downbeat
+  (24.05s) where the texture thins into the lyrical section; violin
+  carries through the lyrical phrase in mm. 14–17 and the resolution.
+- `m: 18, b: 2.5` switches back to "Trumpet 1" / "Trumpet" at 32.13s,
+  right on the fast 16th-note fanfare pickup run (`B4, C#5, D#5, E5, F#5, G#5, A5`),
+  giving the trumpet its punchy attacks back before the loop wrap at 33.3s.
+- **Trap avoided**: A score transcription note claimed sq2 was silent in
+  mm13b2–15 and m18b2–intro. In actual GB hardware simulation, channel 2
+  holds continuous sustains across those measures, so placing switches at
+  m15b4 or m18b2 fell strictly mid-note (a `yaml_lint.py` ERROR). Placing
+  at note boundaries (`m: 14, b: 1` and `m: 18, b: 2.5`) aligns with note-offs,
+  satisfying the linter.
+
+### Loop semantics — four intents
+
+| Intent | Shape | What to place |
+|--------|-------|---------------|
+| Loop same as init | Loop body keeps the init patch | Nothing — the channel already holds it at loop entry |
+| Loop different | Whole loop under a second patch | One switch just before loop entry; it latches for the whole loop |
+| In-loop changes | Patch changes inside the body | Switches inside the body; they fire every pass |
+| First pass diverges | First pass X, later passes Y | Init X + one mid-loop switch to Y (X→Y once, then Y→Y) — a deliberate device only, not a default |
+
+`yaml_lint.py` raises case-aware WARNs for suspicious placements (switches
+in the intro, just before loop entry, or creating first-pass divergence) —
+the WARN is a prompt to confirm the intent above, not a failure.
+**Placement is the answer: move the switch; the toolchain never
+auto-fixes.**
+
+### Programs, tiers, and names
+
+Each switch carries the same per-target pair as the channel:
+`mt32_program` + `gm_program` — the two maps do not align, so give both
+every time. **Ship preset NAMES, not numbers**: integer programs are
+0-BASED in overrides files but 1-BASED in enhancements files, and a bare
+number is ambiguous across the two. Names sidestep the trap; the full
+numbering detail lives in
+[hardware_constraints.md](references/hardware_constraints.md#timed-program-switches-midi-path).
+Tier is per-channel: a switch never changes a channel's tier, and if the
+compiler drops a whole layer (highest tier number first), that layer's
+switches vanish with it.
+
+### Say it in voices, verify it in channels
+
+Arrangement intent is stated in theory-voice terms ("the second voice drops
+to a pedal"), but switch placement is verified in hardware-channel terms
+(no note span on that channel contains the switch frame). Transcription
+prose likewise describes theory voices, not hardware channels — one
+hardware channel may carry multiple theory voices, so a "voice" changing
+character does not imply a channel boundary.
+
+---
+
 ## Arrangement Priorities by Track Type
 
 | Track type | Tier-2 additions | Tier-3 additions |
@@ -172,7 +268,7 @@ other tier 2–3 voices.
 
 | File | What it covers | When to read it |
 |------|---------------|-----------------|
-| [hardware_constraints.md](references/hardware_constraints.md) | MT-32 partial count, part layout, patch selection, LA synthesis capabilities, GM differences | When you need to know what's technically possible |
+| [hardware_constraints.md](references/hardware_constraints.md) | MT-32 partial count, part layout, patch selection, LA synthesis capabilities, GM differences, timed-switch numbering + lint detail | When you need to know what's technically possible |
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement |
 | music-theory skill | All theory references | Always read first |
 | audio-enhance-opl3 skill | Tier-1 constraints and approach | To understand what you're building on top of |

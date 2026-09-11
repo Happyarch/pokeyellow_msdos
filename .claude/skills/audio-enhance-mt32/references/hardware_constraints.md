@@ -122,6 +122,56 @@ number (lowest priority) first** — tier 3 before tier 2 before tier 1
 
 ---
 
+## Timed program switches (MIDI path)
+
+A per-channel `switches:` list (in `overrides/*.yaml` for GB voices,
+`enhancements/*.yaml` for added voices) emits a MIDI program change on that
+channel mid-song. The full arranger workflow — placement law, worked
+example, loop intents — lives in the
+[skill](../SKILL.md#timed-program-switches-mt-32gm-only); this section is
+the numbering and verification detail.
+
+### Per-target programs
+
+Every switch carries the same pair as its channel: `mt32_program` for the
+MT-32 stream, `gm_program` for the GM stream. The two maps do NOT align
+(the same reason the channel-level `mt32_patch` / `gm_program` pair
+exists), so give both on every switch.
+
+### The numbering trap — ship preset NAMES, not numbers
+
+If a number must be read or written, know which convention the file uses:
+
+| File | Integer convention |
+|------|--------------------|
+| `overrides/*.yaml` | **0-BASED** (raw MIDI Program Change byte: 0–127) |
+| `enhancements/*.yaml` | **1-BASED** (Roland manual convention, same as `mt32_patch` / `gm_program`: 1–128) |
+
+A bare `64` therefore means two different patches depending on which file
+it sits in. **Avoid the trap by shipping preset NAMES** (strings, e.g.
+`mt32_program: "Violin 1"`) — names are convention-free, and they are what
+the skill's worked example uses. If a number is unavoidable, check the
+table first: the file's base is the whole ballgame.
+
+### Placement verification (what the linter checks)
+
+- **ERROR**: a switch strictly inside a same-channel note span. Move it
+  into a rest, onto a note-off boundary, or coincident with a note-on.
+- **WARN (case-aware)**: a switch in the intro, just before loop entry, or
+  creating first-pass divergence (init X + mid-loop switch to Y). Each maps
+  to one of the skill's four loop intents — confirm the intent matches,
+  then move the switch or keep it deliberately. The toolchain flags; it
+  never auto-fixes.
+- **Tier is per-channel**: a switch never changes a channel's tier. If the
+  compiler drops a whole layer (highest tier number first — tier 3 before
+  tier 2 before tier 1), that layer's switches go with it; surviving layers
+  are unaffected.
+- **MIDI-path-only**: switches emit on the MT-32/GM MIDI streams. OPL3 FM
+  voices are fixed-patch per voice; there is no OPL3 program-change
+  mechanism, so switches never touch `opl_patch`.
+
+---
+
 ## Reverb
 
 MT-32 has built-in reverb (set via SysEx at init):

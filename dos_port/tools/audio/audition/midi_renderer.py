@@ -26,7 +26,9 @@ from gen_audio_data import parse_music_constants
 from gb_to_midi import (
     simulate_song, build_addr_map, songs_from_headers, NoteEv, Song,
     load_overrides, chan_setting, DEFAULT_PROGRAM, DEFAULT_VOLUME,
-    DEFAULT_DRUM_VELOCITY, drum_key, FREE_MELODIC_CH, unroll_for
+    DEFAULT_DRUM_VELOCITY, drum_key, FREE_MELODIC_CH, unroll_for,
+    override_switch_events, build_program_timeline, program_at,
+    resolve_switch_program
 )
 from mt32_presets import resolve_program
 from yaml_lint import lint
@@ -35,6 +37,16 @@ from opl_renderer import (
 )
 
 PAN_CC = {"left": 20, "right": 108, "center": 64}
+
+
+def _msg_order(msg: bytes) -> int:
+    """Playback order inside one frame: offs (0), prog/CC (1), ons (2)."""
+    st = msg[0] & 0xF0
+    if st == 0x80 or (st == 0x90 and msg[2] == 0):
+        return 0
+    if st == 0x90:
+        return 2
+    return 1
 
 
 def ensure_midi_built():
@@ -119,8 +131,10 @@ class MidiSession:
 
         self.base_init_msgs: list[bytes] = []
         self.base_events: dict[int, list[bytes]] = {}
+        self.base_timelines: dict[int, list[tuple[int, int]]] = {}
         self.enh_init_msgs: list[bytes] = []
         self.enh_events: dict[int, list[bytes]] = {}
+        self.enh_timelines: dict[int, list[tuple[int, int]]] = {}
         self.enh_channels_list: list[int] = []
 
         self.enable_base = True
@@ -152,6 +166,7 @@ class MidiSession:
     def _compile_base(self):
         self.base_events.clear()
         self.base_init_msgs.clear()
+        self.base_timelines.clear()
         self.gb_events.clear()
         self.active_gb_notes.clear()
         for n in self.base_song.notes:
@@ -163,6 +178,11 @@ class MidiSession:
             self.gb_events.setdefault(off_f, []).append(("off", v, None))
 
         prog_key = "mt32_program" if self.target == "mt32" else "gm_program"
+        # Timed program switches, resolved through the ONE shared helper the
+        # SMF merge uses (override_switch_events) — the .mid and the live
+        # audition can never disagree on what a switch means.
+        sw_evs = override_switch_events(self.base_song.label, self.ov,
+                                        self.base_song, self.target)
         used = sorted(set(n.chan for n in self.base_song.notes))
         for gc in used:
             mc = 9 if gc == 4 else gc  # MIDI channel 1, 2, 3, or 9
@@ -171,7 +191,10 @@ class MidiSession:
                     chan_setting(self.ov, gc, prog_key,
                                  chan_setting(self.ov, gc, "program", DEFAULT_PROGRAM[gc])),
                     self.target, f"{self.base_song.label} ch{gc} {prog_key}")
-                self.base_init_msgs.append(bytes((0xC0 | mc, prog)))
+                self.base_timelines[mc] = build_program_timeline(
+                    prog, sw_evs.get(gc, []))
+                for f, sprog in sw_evs.get(gc, []):
+                    self.base_events.setdefault(f, []).append(bytes((0xC0 | mc, sprog)))
             vol = chan_setting(self.ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100))
             pan = chan_setting(self.ov, gc, "pan", 64)
             self.base_init_msgs.append(bytes((0xB0 | mc, 7, vol)))
@@ -192,10 +215,17 @@ class MidiSession:
                     self.base_events.setdefault(n.frame, []).append(bytes((0x90 | mc, key, vel)))
                     self.base_events.setdefault(off, []).append(bytes((0x80 | mc, key, 64)))
 
+        # Stable off -> prog/CC -> on ordering inside each frame, matching
+        # the .mid event order (midi_to_stream's parse order) — a switch on
+        # a note edge must sound between the release and the attack.
+        for f in self.base_events:
+            self.base_events[f].sort(key=_msg_order)
+
     def load_enhancement(self, yaml_content: str | Path | None):
         self.silence_enhancements()
         self.enh_events.clear()
         self.enh_init_msgs.clear()
+        self.enh_timelines.clear()
         self.enh_channels_list.clear()
         if not yaml_content:
             return
@@ -233,7 +263,21 @@ class MidiSession:
                 if isinstance(c.mt32_patch, int):
                     prog = c.mt32_patch - 1
             if not c.is_rhythm:
-                self.enh_init_msgs.append(bytes((0xC0 | mc, prog)))
+                sw_list: list[tuple[int, int]] = []
+                for sw in c.switches:
+                    if sw.frame >= self.total_frames:
+                        continue    # frame<end filtering, like the merge
+                    # A string mt32 (custom timbre) raises here — switches
+                    # ERROR where tick-0 silently falls back (lint gates
+                    # this first, so the raise only fires on bypass).
+                    sprog = resolve_switch_program(
+                        sw.mt32, sw.gm, c.mt32_patch, c.gm_program,
+                        sw.prog, None, self.target,
+                        f"enh {c.name} switch", one_based=True)
+                    sw_list.append((sw.frame, sprog))
+                    self.enh_events.setdefault(sw.frame, []).append(
+                        bytes((0xC0 | mc, sprog)))
+                self.enh_timelines[mc] = build_program_timeline(prog, sw_list)
             self.enh_init_msgs.append(bytes((0xB0 | mc, 7, c.volume)))
             self.enh_init_msgs.append(bytes((0xB0 | mc, 10, PAN_CC.get(c.pan, 64))))
 
@@ -242,14 +286,33 @@ class MidiSession:
                 self.enh_events.setdefault(n.frame, []).append(bytes((0x90 | mc, n.key, n.vel)))
                 self.enh_events.setdefault(off, []).append(bytes((0x80 | mc, n.key, 64)))
 
+        for f in self.enh_events:
+            self.enh_events[f].sort(key=_msg_order)
+
         if self.enable_enh or self.solo_enh:
+            for mc, tl in self.enh_timelines.items():
+                self.midi.send(bytes((0xC0 | mc,
+                                      program_at(tl, self.current_frame))))
             for msg in self.enh_init_msgs:
                 self.midi.send(msg)
 
-    def send_init(self):
+    def send_init(self, at_frame: int | None = None):
+        """Re-sync programs + controllers for `at_frame` (default: now).
+
+        Every path that restarts or relocates playback comes through here so
+        a mid-song program switch can never desync the audition from the
+        .mid: resume / reload / seek / toggles send the program active NOW;
+        the loop wrap sends the program active at loop_start. base_init_msgs
+        / enh_init_msgs carry only volume/pan statics now — programs always
+        go through the per-channel timelines."""
+        f = self.current_frame if at_frame is None else at_frame
+        for mc, tl in self.base_timelines.items():
+            self.midi.send(bytes((0xC0 | mc, program_at(tl, f))))
         for msg in self.base_init_msgs:
             self.midi.send(msg)
         if self.enable_enh or self.solo_enh:
+            for mc, tl in self.enh_timelines.items():
+                self.midi.send(bytes((0xC0 | mc, program_at(tl, f))))
             for msg in self.enh_init_msgs:
                 self.midi.send(msg)
 
@@ -317,9 +380,10 @@ class MidiSession:
     def reload_overrides(self):
         self.ov = load_overrides(self.song_label)
         self._compile_base()
-        if self.enable_base and not self.solo_enh:
-            for msg in self.base_init_msgs:
-                self.midi.send(msg)
+        # Full re-sync (programs active NOW + statics): re-asserting a muted
+        # channel's program is inaudible, and routing everything through
+        # send_init keeps the one re-sync path honest.
+        self.send_init()
 
     def tick(self) -> bytes | None:
         f = self.current_frame
@@ -377,7 +441,9 @@ class MidiSession:
                 if self.gb_engine is not None:
                     self.gb_engine.reset()
             else:
-                self.send_init()
+                # Re-sync to the program active at loop_start (not tick-0):
+                # the hold body may run under a switched program.
+                self.send_init(self.loop_start)
 
         return frame_pcm
 

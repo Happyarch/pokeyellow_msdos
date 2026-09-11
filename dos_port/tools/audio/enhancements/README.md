@@ -1,4 +1,4 @@
-# Enhancement YAML — pinned schema (v1)
+# Enhancement YAML — pinned schema (v2)
 
 Per-song **additive** arrangement channels for the LLM music arranger
 (audio plan, Phase E). One file per song: `enhancements/<SongLabel>.yaml`
@@ -109,7 +109,7 @@ patterns:
 
 | Field | Type | Rules |
 |-------|------|-------|
-| `schema` | int | Must be `1`. |
+| `schema` | int | Must be `1` or `2`. `2` adds `switches:`; v1 files stay valid without edits. |
 | `unroll` | int ≥ 1 | Loop ramp-and-hold span: intro + N loop bodies, loop region = final body. Default 1 (intro + one body). |
 | `song` | string | Song label as in `music_constants.asm` / stream names; must match the filename. |
 | `channels[].name` | slug | Unique within the file; used in lint/audition reports. |
@@ -129,9 +129,51 @@ patterns:
 | `patterns.<name>.measures` | int | Span; instance events must fit inside it. |
 | Note names | string | Scientific pitch, **C4 = MIDI 60** (matches `gb_to_midi.py`, where GB octave-4 C ≈ 523 Hz = C5 = 72). `C#4`/`Db4` accepted; a raw MIDI int is also accepted. |
 
+### switches:
+
+Timed mid-song patch changes for tier-2/3 channels (`schema: 2`). A
+`switches:` list nests under a channel; each entry is
+`{m, b, mt32_patch?, gm_program?, program?}` — `m`/`b` are 1-based
+measure/beat (`b` fractional ok), no duration: a switch is
+instantaneous. `program` is the fallback when the per-target key is
+absent. Ints here are **1-based** (Program Change byte is value − 1),
+same as channel-level `mt32_patch`/`gm_program` — the opposite basis
+from overrides, where ints are 0-based raw PC bytes (see
+`overrides/README.md`).
+
+```yaml
+  - name: hc_pad             # PROSPECTIVE — pilot sketch, lands later;
+                             # author nothing against it yet
+    tier: 2
+    mt32_patch: 49           # strings in, choir on the V arrival
+    gm_program: 49
+    switches:
+      - {m: 13, b: 1, mt32_patch: 35, gm_program: 53}
+    events:
+      - {m: 1, b: 1, d: 8, n: [C4, E4]}
+```
+
+Rules:
+
+- Tier is per-channel: a switch never changes tier. Whole-layer drop
+  (tier 3 → 2 → 1 under polyphony pressure) drops the channel with its
+  switches.
+- Tier 1 + `switches:` is REJECTED in v1 (and still rejected under
+  `schema: 2`): the OPL enhancement stream has no patch-select op, so a
+  timed FM re-voicing is unrepresentable — future player work.
+- `opl_patch` inside a switch entry is REJECTED for the same reason.
+- Rhythm channels cannot switch.
+- Loop/unroll follows events: non-`evolving` channels auto-duplicate
+  body switches across iterations (intro switches fire once and latch);
+  an `evolving: true` channel authors switches per iteration explicitly.
+  Seam discipline matches overrides: in channel silence, never under a
+  sustain (lint ERROR); first-pass divergence is a WARN, never auto-fix.
+- `schema: 2` opts a file into `switches:`; `schema: 1` files stay valid
+  without edits.
+
 ## Lint contract (`yaml_lint.py` implements exactly this)
 
-1. `schema == 1`; `song` matches filename and a known song label.
+1. `schema == 1 or 2` (`2` opts into `switches:`); `song` matches filename and a known song label.
 2. Tier/patch-field consistency (rule 4 above).
 3. All patch references resolve: `opl_patch` ∈ `PATCHES`, custom
    `mt32_patch` strings ∈ `timbres.yaml`, ints in 1–128.
@@ -149,9 +191,14 @@ patterns:
 8. Per-song voice budget: warn > 6 tier-1 channels or > 5 total added
    melodic parts (only 5 free MT-32 melodic parts exist).
 9. Unroll consistency: `unroll` is an integer ≥ 1 (default 1); `unroll` >
-   1 needs a looped song. Non-`evolving` channels must not span loop-body
-   boundaries (shorten the note or set `evolving: true`); `evolving` tier-1
-   channels are an error.
+    1 needs a looped song. Non-`evolving` channels must not span loop-body
+    boundaries (shorten the note or set `evolving: true`); `evolving` tier-1
+    channels are an error.
+10. Switches (`schema: 2` only): positions resolve per rule 4; per-target
+    patch references resolve per rule 3. Tier 1 + `switches:`,
+    `opl_patch` inside a switch entry, and switches on rhythm channels
+    are errors. Under-sustain placement is an error; first-pass
+    divergence is a warning.
 
 ## Compile path
 
