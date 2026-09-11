@@ -1,0 +1,166 @@
+# Music_Cinnabar — Tier 1 (foundation: sub_bass + low_pad).
+#
+# Authored against music_analysis.py output (frame-exact: G major, K-S 0.86,
+# runner-up D major 0.681 = the dominant, not ambiguous; 4/4, tempo 144;
+# 12 measures, loop_start m1 (loop IS the whole piece, no intro),
+# frames.end 1296) and audio/music/cinnabar.asm, per audio-enhance-opl3 /
+# music-theory skills. Overrides (audition-approved): ch1 Flute 1,
+# ch2 Violin 1, ch3 Harp 1.
+#
+# The track: ch1 flowing theme line (52 notes, C#4..F#5, mostly octave 4);
+# ch2 descant + the m8 manual delay (59 notes, F#4..A5, mostly octave 5);
+# ch3 sprightly 8th-note chatter (93 notes, F#4..A5, density 1.94 — the
+# busiest wave channel in the town set). Score note (cinnabar_island.md):
+# G major, people-not-places warmth; m8, sq2 plays a three-note stepwise
+# gesture and repeats it while fading volume — Masuda's hand-built echo.
+# That echo is the track's signature: the pad RESTS m8 (the bass sustains
+# underneath in octave 2, two-plus octaves below the echo, supportive not
+# filling). Nothing sustained may sit in octave 5 at m8.
+#
+# Register audit (simulate_song): octaves 2 AND 3 are EMPTY (ch1 floors at
+# C#4 = 61; ch2/ch3 floor at F#4). The whole texture packs octaves 4-5.
+# Consequences:
+#   * sub_bass in octave 2 (D2..B2 roots) has nothing to collide with.
+#   * low_pad uses the FULL octave-3 band (C3..B3) — every pitch there is
+#     unison-proof BY CONSTRUCTION (nothing in the base ever sounds below
+#     C#4). Unlike Cities2 no ceiling cap is needed.
+#
+# Harmony follows the analysis template verbatim (I/ii/vii°/vi7/V7/vii7/
+# ii7/V/iii7 — G major, diatonic with applied V7s, no chromatic visitors).
+# The pad takes 3rds first (5th only for Am's E3, where the 3rd C sits an
+# octave up in the base band), never the leading tone, never a chord 7th.
+#
+# Voice leading (bass vs pad, half-measure slots — every transition
+# walked): no parallel P5/P8 anywhere. Devices: contrary motion out of
+# nearly every root change (m1 M3->P5, m1b3 P5->M3, m9b3 m3->m3,
+# m10 m3->m3, m11b3 m3->M3); similar motion only into imperfect intervals
+# (M3->M3 at m3b3->m4, m3->m3 chains mm4-7, m3->M3 at m10b3->m11).
+# Both voices enter m9 from the m8 gap (bass held G2/D2 through it, pad
+# from rest) — no approach parallels by construction.
+#
+# Loop seam: the loop IS bar 1 (loop_start 0), so no note may cross frame
+# 1296. Last event uses d 1.95 (release a hair early for a clean re-key).
+# All timing is musical position (measure/beat/duration), never frames.
+#
+# Patches use the clearer FM variants proven on Cities2 (68cfe2e73):
+# sub_bass_clear (octave-up sideband for pitch definition) and
+# soft_pad_clear (opened modulator for presence); both cascade to MT-32/GM
+# as SynBass1 / Str Sect 1 + Synth Bass 1 / Pad 2 (warm).
+
+schema: 1
+song: Music_Cinnabar
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 58                   # trimmed from 62 (audition): OPL3 summed
+                                 # sub + wave + pad read bass-heavy; the MT-32
+                                 # SynBass still grounds it at this level
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 1,  b: 3, d: 2, n: A2}      # Am     (ii)
+      - {m: 2,  b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 2,  b: 3, d: 2, n: F#2}     # F#dim  (vii°)
+      - {m: 3,  b: 1, d: 2, n: E2}      # Em7    (vi7)
+      - {m: 3,  b: 3, d: 2, n: D2}      # D7     (V7)
+      - {m: 4,  b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 4,  b: 3, d: 2, n: F#2}     # F#m7   (vii7)
+      - {m: 5,  b: 1, d: 2, n: E2}      # Em7    (vi7)
+      - {m: 5,  b: 3, d: 2, n: F#2}     # F#dim  (vii°)
+      - {m: 6,  b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 6,  b: 3, d: 2, n: F#2}     # F#dim  (vii°)
+      - {m: 7,  b: 1, d: 2, n: E2}      # Em7    (vi7)
+      - {m: 7,  b: 3, d: 2, n: D2}      # D7     (V7)
+      - {m: 8,  b: 1, d: 2, n: G2}      # G      (I) — pad rests (echo bar)
+      - {m: 8,  b: 3, d: 2, n: D2}      # D7     (V7) — bass sustains below
+      - {m: 9,  b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 9,  b: 3, d: 2, n: E2}      # Em     (vi)
+      - {m: 10, b: 1, d: 2, n: A2}      # Am7    (ii7)
+      - {m: 10, b: 3, d: 2, n: F#2}     # F#dim  (vii°)
+      - {m: 11, b: 1, d: 2, n: D2}      # D      (V)
+      - {m: 11, b: 3, d: 2, n: B2}      # Bm7    (iii7)
+      - {m: 12, b: 1, d: 2, n: G2}      # G      (I)
+      - {m: 12, b: 3, d: 1.95, n: F#2}  # F#m7   (vii7) — seam release
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under flute + violin, over the bass
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 2, n: B3}      # G      3rd
+      - {m: 1,  b: 3, d: 2, n: E3}      # Am     5th (3rd C lives an octave up)
+      - {m: 2,  b: 1, d: 2, n: B3}      # G      3rd
+      - {m: 2,  b: 3, d: 2, n: A3}      # F#dim  3rd
+      - {m: 3,  b: 1, d: 2, n: G3}      # Em7    3rd
+      - {m: 3,  b: 3, d: 2, n: F#3}     # D7     3rd
+      - {m: 4,  b: 1, d: 2, n: B3}      # G      3rd
+      - {m: 4,  b: 3, d: 2, n: A3}      # F#m7   3rd
+      - {m: 5,  b: 1, d: 2, n: G3}      # Em7    3rd
+      - {m: 5,  b: 3, d: 2, n: A3}      # F#dim  3rd
+      - {m: 6,  b: 1, d: 2, n: B3}      # G      3rd
+      - {m: 6,  b: 3, d: 2, n: A3}      # F#dim  3rd
+      - {m: 7,  b: 1, d: 2, n: G3}      # Em7    3rd
+      - {m: 7,  b: 3, d: 2, n: F#3}     # D7     3rd
+      # m8 RESTS entirely (echo bar — the manual delay stays naked; the
+      # bass sustains G2/D2 two octaves below, supportive not filling).
+      - {m: 9,  b: 1, d: 2, n: B3}      # G      3rd — resumes after the echo
+      - {m: 9,  b: 3, d: 2, n: G3}      # Em     3rd
+      - {m: 10, b: 1, d: 2, n: C3}      # Am7    3rd
+      - {m: 10, b: 3, d: 2, n: A3}      # F#dim  3rd
+      - {m: 11, b: 1, d: 2, n: F#3}     # D      3rd
+      - {m: 11, b: 3, d: 2, n: D3}      # Bm7    3rd
+      - {m: 12, b: 1, d: 2, n: B3}      # G      3rd
+      - {m: 12, b: 3, d: 1.95, n: A3}   # F#m7   3rd — seam release
+
+  # Tier 2 (MT-32/GM only — no opl_patch): piano comping with the harp.
+  # Elec Piano 1 (the GameCorner ep_comp precedent: Rhodes-warm, proven
+  # against GB pulses), playing OFF-BEAT stabs (b2/b4, d 0.5) while the pad
+  # sustains on b1/b3 — comping rhythm vs sustained harmony, so the two
+  # never fuse and no parallel motion can arise (different attack points).
+  # Octave-3 single tones, root of the current half-measure chord except
+  # where the pad already holds nearby motion (5th chosen instead); every
+  # stab was walked against the sustained pad pitch — no shared pitches,
+  # nearest approach a 3rd. The harp (override ch3) keeps the 8th-note
+  # surface in octaves 4-5; the piano states the changes underneath it —
+  # foundation vs decoration, not competition. Rests m8 with the pad (echo
+  # bar). Tier 2, so OPL3 never sees it (its EP struggles stay out of the
+  # FM mix by construction).
+  - name: piano_comp
+    tier: 2                      # MT-32/GM only — no opl_patch allowed
+    mt32_patch: 5                # MT-32 Elec Piano 1, 1-based
+    gm_program: 5                # GM Electric Piano 1, 1-based
+    pan: left                    # away from the violin (right); balances flute
+    volume: 62                   # comping presence under flute + violin
+    velocity: 72                 # tossed-off stabs, not hammered
+    events:
+      - {m: 1,  b: 2, d: 0.5, n: G3}    # G roots against pad B3/E3
+      - {m: 1,  b: 4, d: 0.5, n: A3}    # Am
+      - {m: 2,  b: 2, d: 0.5, n: G3}    # G
+      - {m: 2,  b: 4, d: 0.5, n: C3}    # F#dim 5th (pad holds A3)
+      - {m: 3,  b: 2, d: 0.5, n: E3}    # Em7
+      - {m: 3,  b: 4, d: 0.5, n: A3}    # D7 5th (pad holds F#3)
+      - {m: 4,  b: 2, d: 0.5, n: G3}    # G
+      - {m: 4,  b: 4, d: 0.5, n: C#3}   # F#m7 5th (pad holds A3)
+      - {m: 5,  b: 2, d: 0.5, n: E3}    # Em7
+      - {m: 5,  b: 4, d: 0.5, n: C3}    # F#dim 5th
+      - {m: 6,  b: 2, d: 0.5, n: G3}    # G
+      - {m: 6,  b: 4, d: 0.5, n: C3}    # F#dim 5th
+      - {m: 7,  b: 2, d: 0.5, n: E3}    # Em7
+      - {m: 7,  b: 4, d: 0.5, n: A3}    # D7 5th
+      - {m: 9,  b: 2, d: 0.5, n: G3}    # G — resumes after the echo
+      - {m: 9,  b: 4, d: 0.5, n: B3}    # Em 5th (pad holds G3)
+      - {m: 10, b: 2, d: 0.5, n: A3}    # Am7
+      - {m: 10, b: 4, d: 0.5, n: C3}    # F#dim 5th
+      - {m: 11, b: 2, d: 0.5, n: D3}    # D
+      - {m: 11, b: 4, d: 0.5, n: F#3}   # Bm7 5th (pad holds D3)
+      - {m: 12, b: 2, d: 0.5, n: G3}    # G
+      - {m: 12, b: 4, d: 0.5, n: C#3}   # F#m7 5th (pad holds A3)
