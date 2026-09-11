@@ -711,17 +711,18 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
 
         # Timed program switches: per-channel mid-song 0xC0s, resolved to
         # frames here and emitted by the merge on the channel's free melodic
-        # part. Tier 1 cannot carry them (the OPL stream plays one body and
-        # knows no programs); rhythm channels route to the drum part, which
-        # carries no programs either.
+        # part. Switches are MT-32/GM-side only: no switch entry may carry
+        # an opl_patch key (rejected as an unknown key by
+        # _resolve_switch_positions) — the OPL enhancement stream player
+        # bakes the channel's tick-0 patch per key-on and has no
+        # patch-select op, so the OPL side keeps its tick-0 timbre across
+        # switches by construction. Tier-1 channels may carry switches
+        # (e.g. a pad that is strings under one section, voices under
+        # another); rhythm channels route to the drum part, which carries
+        # no programs either.
         stored_switches: list[ResolvedSwitch] = []
         raw_switches = ch.get("switches")
         has_switches = isinstance(raw_switches, list) and len(raw_switches) > 0
-        if has_switches and tier == 1:
-            rep.err(f"{ctx}: tier-1 channels can't carry switches — program "
-                    "changes are MT-32/GM-only and the OPL enhancement "
-                    "stream plays exactly one loop body; ramp timbres in "
-                    "tier 2+ instead")
         if has_switches and is_rhythm:
             rep.err(f"{ctx}: rhythm channels route to the MIDI drum part, "
                     "which carries no programs — switches need a melodic "
@@ -759,22 +760,36 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                     f"{k}={entry[k]!r}" for k in
                     ("mt32_program", "gm_program", "program")
                     if entry.get(k) is not None) + "}"
-                try:
-                    pm = resolve_switch_program(
-                        entry.get("mt32_program"), entry.get("gm_program"),
-                        ch.get("mt32_patch"), ch.get("gm_program"),
-                        entry.get("program"), None,
-                        "mt32", f"{ctx} switch", one_based=True)
-                except ValueError:
-                    pm = None       # already recorded above; skip no-op
-                try:
-                    pg = resolve_switch_program(
-                        entry.get("mt32_program"), entry.get("gm_program"),
-                        ch.get("mt32_patch"), ch.get("gm_program"),
-                        entry.get("program"), None,
-                        "gm", f"{ctx} switch", one_based=True)
-                except ValueError:
+                # A target the entry does not address (no target key and no
+                # `program` fallback) keeps its tick-0 program in the merge
+                # — pass None so the no-op check skips that target instead
+                # of advising to remove a meaningful single-target entry.
+                if entry.get("mt32_program") is None \
+                        and entry.get("program") is None:
+                    pm = None
+                else:
+                    try:
+                        pm = resolve_switch_program(
+                            entry.get("mt32_program"),
+                            entry.get("gm_program"),
+                            ch.get("mt32_patch"), ch.get("gm_program"),
+                            entry.get("program"), None,
+                            "mt32", f"{ctx} switch", one_based=True)
+                    except ValueError:
+                        pm = None   # already recorded above; skip no-op
+                if entry.get("gm_program") is None \
+                        and entry.get("program") is None:
                     pg = None
+                else:
+                    try:
+                        pg = resolve_switch_program(
+                            entry.get("mt32_program"),
+                            entry.get("gm_program"),
+                            ch.get("mt32_patch"), ch.get("gm_program"),
+                            entry.get("program"), None,
+                            "gm", f"{ctx} switch", one_based=True)
+                    except ValueError:
+                        pg = None
                 items.append((f, tag, pm, pg))
             _check_switches(
                 ctx, rep, items, spans=spans,
@@ -785,7 +800,11 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                 hold_start=(bm.loop_frame + (unroll - 1) * bm.period)
                 if evolving and unroll > 1 and bm.period is not None
                 else None)
-            if tier != 1 and not is_rhythm:
+            # Stored for the MIDI merge on every melodic tier (1 included —
+            # tier-1 switches are MT-32/GM-side; the OPL stream player and
+            # audition OPL renderer read notes + tick-0 opl_patch only and
+            # never see this list).
+            if not is_rhythm:
                 stored_switches = [ResolvedSwitch(
                     f, entry.get("mt32_program"), entry.get("gm_program"),
                     entry.get("program")) for f, entry in sw_resolved]
@@ -989,22 +1008,34 @@ def lint_overrides(path: Path) -> tuple[Report, dict]:
                     f"{k}={entry[k]!r}" for k in
                     ("mt32_program", "gm_program", "program")
                     if entry.get(k) is not None) + "}"
-                try:
-                    pm = resolve_switch_program(
-                        entry.get("mt32_program"), entry.get("gm_program"),
-                        ch.get("mt32_program"), ch.get("gm_program"),
-                        entry.get("program"), DEFAULT_PROGRAM[gc],
-                        "mt32", f"{ctx} switch", one_based=False)
-                except ValueError:
-                    pm = None       # already recorded; skip no-op
-                try:
-                    pg = resolve_switch_program(
-                        entry.get("mt32_program"), entry.get("gm_program"),
-                        ch.get("mt32_program"), ch.get("gm_program"),
-                        entry.get("program"), DEFAULT_PROGRAM[gc],
-                        "gm", f"{ctx} switch", one_based=False)
-                except ValueError:
+                # Unaddressed targets keep tick-0 in the merge — pass None
+                # so the no-op check skips them (see enhancement site).
+                if entry.get("mt32_program") is None \
+                        and entry.get("program") is None:
+                    pm = None
+                else:
+                    try:
+                        pm = resolve_switch_program(
+                            entry.get("mt32_program"),
+                            entry.get("gm_program"),
+                            ch.get("mt32_program"), ch.get("gm_program"),
+                            entry.get("program"), DEFAULT_PROGRAM[gc],
+                            "mt32", f"{ctx} switch", one_based=False)
+                    except ValueError:
+                        pm = None   # already recorded; skip no-op
+                if entry.get("gm_program") is None \
+                        and entry.get("program") is None:
                     pg = None
+                else:
+                    try:
+                        pg = resolve_switch_program(
+                            entry.get("mt32_program"),
+                            entry.get("gm_program"),
+                            ch.get("mt32_program"), ch.get("gm_program"),
+                            entry.get("program"), DEFAULT_PROGRAM[gc],
+                            "gm", f"{ctx} switch", one_based=False)
+                    except ValueError:
+                        pg = None
                 items.append((f, tag, pm, pg))
             _check_switches(
                 ctx, rep, items, spans=spans,

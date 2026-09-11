@@ -158,10 +158,16 @@ Rules:
 - Tier is per-channel: a switch never changes tier. Whole-layer drop
   (tier 3 → 2 → 1 under polyphony pressure) drops the channel with its
   switches.
-- Tier 1 + `switches:` is REJECTED in v1 (and still rejected under
-  `schema: 2`): the OPL enhancement stream has no patch-select op, so a
-  timed FM re-voicing is unrepresentable — future player work.
-- `opl_patch` inside a switch entry is REJECTED for the same reason.
+- Switches are MT-32/GM-side only and this includes tier 1: a tier-1
+  channel may carry switches (e.g. a pad that is strings under one
+  section, voices under another) — the OPL enhancement stream player
+  bakes the channel's tick-0 `opl_patch` per key-on and has no
+  patch-select op, so the OPL side keeps its tick-0 timbre across switch
+  points by construction. Per-target divergence of this kind already
+  ships on base channels (override switches), so no new inconsistency
+  class is created.
+- `opl_patch` inside a switch entry is REJECTED (unknown key): there is
+  no encoding by which the OPL side could honor it.
 - Rhythm channels cannot switch.
 - Loop/unroll follows events: non-`evolving` channels auto-duplicate
   body switches across iterations (intro switches fire once and latch);
@@ -195,10 +201,10 @@ Rules:
     boundaries (shorten the note or set `evolving: true`); `evolving` tier-1
     channels are an error.
 10. Switches (`schema: 2` only): positions resolve per rule 4; per-target
-    patch references resolve per rule 3. Tier 1 + `switches:`,
-    `opl_patch` inside a switch entry, and switches on rhythm channels
-    are errors. Under-sustain placement is an error; first-pass
-    divergence is a warning.
+    patch references resolve per rule 3. `opl_patch` inside a switch entry,
+    and switches on rhythm channels are errors (tier-1 channels may carry
+    switches — see the switches section). Under-sustain placement is an
+    error; first-pass divergence is a warning.
 
 ## Compile path
 

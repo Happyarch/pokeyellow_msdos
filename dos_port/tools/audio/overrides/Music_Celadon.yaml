@@ -15,13 +15,37 @@ channels:
   1:
     mt32_program: "Square Wave"   # keep the chip-lead character on sq1
     pan: 44                       # sq1 slightly left / sq2 slightly right
+    switches:                     # DEMO paired with the ch2 swap: sq1 turns
+                                  # lyrical at rehearsal 2 (sustained B-G-D-G
+                                  # line), so it gets breath (Flute 1) while
+                                  # ch2 gets bow (Violin 1) — family contrast
+                                  # preserved inside the B section. Both points
+                                  # verified as exact ch1 note edges.
+      - {m: 2, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 10, b: 1, mt32_program: "Flute 1", gm_program: "Flute"}
   2:
     mt32_program: "Doctor Solo"   # resonant synth lead, different family
                                   # from sq1 so the contrary-motion /
                                   # independent line (rehearsal 2) reads
-                                  # as its own voice
+                                  # as its own voice (kept per audition —
+                                  # the trumpet swap was reverted)
+    gm_program: "Lead 4 (chiff)"  # GM voice (was default square before the
+                                  # switch work); chiff is the Dungeon2-
+                                  # precedented match for Doctor Solo
     volume: 106                   # default 96; nudge the melody line up
     pan: 84
+    switches:                     # DEMO: rehearsal-2 independence (m10) with
+                                  # return at the loop top (m2). Both points
+                                  # verified as exact ch2 note edges (no note
+                                  # sounds through 972 or 108/1836), so the
+                                  # between-notes ERROR passes clean. File
+                                  # order is by frame; playback across the wrap
+                                  # reads m10 -> ... -> m17 -> (wrap) -> m2.
+                                  # The m2 return re-states tick-0: no-op on
+                                  # pass 1, load-bearing every pass after
+                                  # (loop-aware no-op seed stays silent).
+      - {m: 2, b: 1, mt32_program: "Doctor Solo", gm_program: "Lead 4 (chiff)"}
+      - {m: 10, b: 1, mt32_program: "Violin 1", gm_program: "Violin"}
   3:
     mt32_program: "Pizzicato"     # dry pluck for the eighth-note D pedal
                                   # and the treble crossing line; kills the

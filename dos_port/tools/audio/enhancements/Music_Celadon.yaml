@@ -1,0 +1,144 @@
+# Music_Celadon — Tier 1 (foundation: sub_bass + low_pad).
+#
+# Authored against music_analysis.py output (frame-exact: D major, K-S 0.896,
+# runner-up G major 0.785 = the subdominant color, not ambiguous; 4/4, tempo
+# 144; 17 measures = 1-bar intro (m1) + 16-bar body A A' B B' (mm2-17),
+# loop_start m2 frame 108, frames.end 1836) and audio/music/celadon.asm, per
+# audio-enhance-opl3 / music-theory skills. Overrides (demo): ch1 Square
+# Wave -> Flute 1 at m10b1 -> Square Wave at m2b1; ch2 Doctor Solo ->
+# Violin 1 at m10b1 -> Doctor Solo at m2b1; ch3 Pizzicato throughout.
+#
+# The track: binary A A' B B' matching the bustling metro mood
+# (celadon_city.md) — A has both squares in homophony/contrary motion over
+# a D-pedal wave; rehearsal 2 (B, m10) turns sq1 lyrical while sq2 breaks
+# independent; the treble wave crosses both squares deliberately, separated
+# by timbre family rather than register. ch1 79 notes D4..G5 (mostly octave
+# 4); ch2 melody 91 notes A4..D6 (mostly octave 5, touches 6); ch3 131
+# notes C#4..G5, density 1.93, crossing everywhere. Chords are
+# Mixolydian-flavored D major (G/IV, Cmaj7/bVII7, Bm7/vi7, D7/I7, Am7/v7,
+# F#m7/iii7 — analysis score 0.896). The one chromatic visitor is the m1
+# intro C#dim (vii°) and the m3/m7 Cmaj7 bVII (chromatic C natural): bass
+# states the roots (C#2, C2), the pad never doubles the chromatic pitch.
+#
+# Register audit (simulate_song): octaves 2 AND 3 are EMPTY (ch1 floors at
+# D4 = 62; ch2/ch3 floor at A4/C#4) while octaves 4-5 pack three-deep.
+# Consequences:
+#   * sub_bass in octave 2 (C2..G2 roots) has nothing to collide with.
+#   * low_pad uses the FULL octave-3 band (C3..B3) — every pitch there is
+#     unison-proof BY CONSTRUCTION (nothing in the base ever sounds below
+#     C#4). No ceiling cap needed.
+#
+# Harmony: analysis template verbatim except two template gaps closed from
+# sounding pitches — m4 (no template entry) sounds D-F#-A throughout
+# (D major, full bar), m6 sounds G-B-D throughout (G major, full bar,
+# the A' repeat of m2), m9/m10/m14 are full-bar singles (D / G / G).
+# The pad takes 3rds first (5th only for Am7's E3-adjacent choices where
+# noted), never the leading tone (C# over D major), never a chord 7th.
+#
+# Voice leading (bass vs pad, half-measure slots — every transition
+# walked): no parallel P5/P8 anywhere. Mostly similar motion into
+# imperfect intervals (M3->M3 chains mm1-4, m3 chains mm4-7) with contrary
+# turns at the phrase joints (m1 M3->P5, m1b3 P5->M3, m5 m3->M3, m9b3
+# m3->m3, m11b3 m3->M3, m13 m3->M3). The m10 G entry and m14 G repeat both
+# arrive contrary off the D-major close.
+#
+# Loop seam: intro (m1) + one body (mm2-17); the loop returns to m2 (G),
+# so no note may cross frame 1836. Last event uses d 1.95 (release a hair
+# early for a clean re-key). All timing is musical position, never frames.
+#
+# Patches use the clearer FM variants proven on Cities2 (68cfe2e73):
+# sub_bass_clear and soft_pad_clear; both cascade to MT-32/GM as SynBass1 /
+# Str Sect 1 + Synth Bass 1 / Pad 2 (warm).
+
+schema: 1
+song: Music_Celadon
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 62                   # town level; no ch4 motor in this track
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 2, n: C#2}     # C#dim  (vii°) — intro
+      - {m: 1,  b: 3, d: 2, n: D2}      # Dmaj7  (I7)
+      - {m: 2,  b: 1, d: 4, n: G2}      # G      (IV) — loop body opens
+      - {m: 3,  b: 1, d: 2, n: C2}      # Cmaj7  (bVII7) — chromatic root, bass only
+      - {m: 3,  b: 3, d: 2, n: D2}      # D      (I)
+      - {m: 4,  b: 1, d: 4, n: D2}      # D      (I) — full bar (sounding pitches)
+      - {m: 5,  b: 1, d: 2, n: B2}      # Bm7    (vi7)
+      - {m: 5,  b: 3, d: 2, n: G2}      # G      (IV)
+      - {m: 6,  b: 1, d: 4, n: G2}      # G      (IV) — A' opens (m2 repeat)
+      - {m: 7,  b: 1, d: 2, n: C2}      # Cmaj7  (bVII7)
+      - {m: 7,  b: 3, d: 2, n: D2}      # D      (I)
+      - {m: 8,  b: 1, d: 2, n: D2}      # D7     (I7)
+      - {m: 8,  b: 3, d: 2, n: C#2}     # C#dim  (vii°)
+      - {m: 9,  b: 1, d: 4, n: D2}      # D      (I) — full bar
+      - {m: 10, b: 1, d: 4, n: G2}      # G      (IV) — B opens (rehearsal 2)
+      - {m: 11, b: 1, d: 2, n: A2}      # Am7    (v7)
+      - {m: 11, b: 3, d: 2, n: G2}      # G      (IV)
+      - {m: 12, b: 1, d: 2, n: D2}      # D7     (I7)
+      - {m: 12, b: 3, d: 2, n: G2}      # Gmaj7  (IV7)
+      - {m: 13, b: 1, d: 2, n: A2}      # Am7    (v7)
+      - {m: 13, b: 3, d: 2, n: D2}      # D7     (I7)
+      - {m: 14, b: 1, d: 4, n: G2}      # G      (IV) — B' opens
+      - {m: 15, b: 1, d: 2, n: A2}      # Am7    (v7)
+      - {m: 15, b: 3, d: 2, n: G2}      # G      (IV)
+      - {m: 16, b: 1, d: 2, n: D2}      # D7     (I7)
+      - {m: 16, b: 3, d: 2, n: G2}      # Gmaj7  (IV7)
+      - {m: 17, b: 1, d: 2, n: F#2}     # F#m7   (iii7)
+      - {m: 17, b: 3, d: 1.95, n: D2}   # D      (I) — seam release into m2 (G)
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under the squares + descant, over the bass
+    velocity: 80
+    switches:                   # MT-32-only program changes (no gm_program
+                                # key: GM keeps Pad 2 warm throughout, and a
+                                # missing per-target key skips that target's
+                                # no-op check). Strings under the B-section
+                                # violin (m10), voices (Chorale) under the
+                                # A-section Doctor Solo (m2) — the string pad
+                                # clashed with the synth lead. Both points are
+                                # exact pad note edges (m2b1/m10b1 start held
+                                # B3 notes), so the between-notes ERROR passes
+                                # clean. OPL keeps soft_pad_clear throughout
+                                # (no patch-select op — by construction).
+      - {m: 2, b: 1, mt32_program: "Chorale"}       # Chorale — A sections, non-strings
+      - {m: 10, b: 1, mt32_program: "Str Sect 1"}   # Str Sect 1 — B sections, strings
+    events:
+      - {m: 1,  b: 1, d: 2, n: E3}      # C#dim  3rd — intro
+      - {m: 1,  b: 3, d: 2, n: F#3}     # Dmaj7  3rd
+      - {m: 2,  b: 1, d: 4, n: B3}      # G      3rd — body opens, hold
+      - {m: 3,  b: 1, d: 2, n: E3}      # Cmaj7  3rd (not C — chromatic)
+      - {m: 3,  b: 3, d: 2, n: F#3}     # D      3rd
+      - {m: 4,  b: 1, d: 4, n: F#3}     # D      3rd — hold
+      - {m: 5,  b: 1, d: 2, n: D3}      # Bm7    3rd
+      - {m: 5,  b: 3, d: 2, n: B3}      # G      3rd
+      - {m: 6,  b: 1, d: 4, n: B3}      # G      3rd — hold
+      - {m: 7,  b: 1, d: 2, n: E3}      # Cmaj7  3rd
+      - {m: 7,  b: 3, d: 2, n: F#3}     # D      3rd
+      - {m: 8,  b: 1, d: 2, n: F#3}     # D7     3rd
+      - {m: 8,  b: 3, d: 2, n: E3}      # C#dim  3rd
+      - {m: 9,  b: 1, d: 4, n: F#3}     # D      3rd — hold
+      - {m: 10, b: 1, d: 4, n: B3}      # G      3rd — B opens, hold
+      - {m: 11, b: 1, d: 2, n: C3}      # Am7    3rd
+      - {m: 11, b: 3, d: 2, n: B3}      # G      3rd
+      - {m: 12, b: 1, d: 2, n: F#3}     # D7     3rd
+      - {m: 12, b: 3, d: 2, n: B3}      # Gmaj7  3rd
+      - {m: 13, b: 1, d: 2, n: C3}      # Am7    3rd
+      - {m: 13, b: 3, d: 2, n: F#3}     # D7     3rd
+      - {m: 14, b: 1, d: 4, n: B3}      # G      3rd — hold
+      - {m: 15, b: 1, d: 2, n: C3}      # Am7    3rd
+      - {m: 15, b: 3, d: 2, n: B3}      # G      3rd
+      - {m: 16, b: 1, d: 2, n: F#3}     # D7     3rd
+      - {m: 16, b: 3, d: 2, n: B3}      # Gmaj7  3rd
+      - {m: 17, b: 1, d: 2, n: A3}      # F#m7   3rd
+      - {m: 17, b: 3, d: 1.95, n: F#3}  # D      3rd — seam release

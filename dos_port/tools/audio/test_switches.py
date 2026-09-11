@@ -474,14 +474,21 @@ class SwitchTest(unittest.TestCase):
         ch.update(kw)
         return ch
 
-    def test_enh_tier1_switches_error(self):
+    def test_enh_tier1_switches_allowed(self):
+        # Tier-1 channels may carry MT-32/GM switches (the OPL side keeps
+        # its tick-0 patch by construction); only an opl_patch key inside
+        # a switch entry is an error (no patch-select op in the stream).
+        p = self._enh_path([self._ch("pad", 1, [
+            {"m": 16, "b": 1, "mt32_patch": 50, "gm_program": 50}])])
+        rep, _, _ = lint(p)
+        self.assertFalse(any("tier-1" in e and "switch" in e
+                             for e in rep.errors))
         opl = next(iter(PATCHES))
         p = self._enh_path([dict(self._ch("pad", 1, [
-            {"m": 16, "b": 1, "mt32_program": 50, "gm_program": 50}]),
-            opl_patch=opl)])
+            {"m": 16, "b": 1, "mt32_patch": 50, "gm_program": 50,
+             "opl_patch": opl}]))])
         rep, _, _ = lint(p)
-        self.assertTrue(any("tier-1" in e and "switch" in e
-                            for e in rep.errors))
+        self.assertTrue(any("opl_patch" in e for e in rep.errors))
 
     def test_enh_rhythm_switches_error(self):
         ch = self._ch("kit", 2, [{"m": 16, "b": 1, "gm_program": 49}],
@@ -736,7 +743,7 @@ class SwitchTest(unittest.TestCase):
     # -- compatibility ------------------------------------------------------
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
-        self.assertEqual(len(files), 16)
+        self.assertEqual(len(files), 19)
         bad = []
         for path in files:
             rep, _, _ = lint(path)
@@ -750,19 +757,21 @@ class SwitchTest(unittest.TestCase):
         labels = {lbl for n, lbl in consts.items() if n.startswith("MUSIC_")}
         files = sorted((HERE / "overrides").glob("*.yaml"))
         canonical = [p for p in files if p.stem in labels]
-        # 15 on disk: the 14 tracked canonical files plus the untracked
-        # Cities2 pilot (the one orphan, Music_GymLeaderBattle_enh.yaml,
+        # 17 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
         # matches no song label and is never read by load_overrides).
-        self.assertEqual(len(canonical), 15)
+        self.assertEqual(len(canonical), 17)
+        switched = {"Music_Cities2": {2: 2}, "Music_Celadon": {1: 2, 2: 2}}
         bad = []
         for path in canonical:
             rep, resolved = lint_overrides(path)
             if rep.errors:
                 bad.append((path.name, rep.errors))
-            if path.stem != "Music_Cities2":
+            if path.stem not in switched:
                 self.assertEqual(resolved, {}, path.name)  # no switches yet
             else:
-                self.assertEqual(len(resolved[2]), 2)
+                self.assertEqual(
+                    {c: len(v) for c, v in resolved.items()},
+                    switched[path.stem], path.name)
         self.assertEqual(bad, [])
 
 
