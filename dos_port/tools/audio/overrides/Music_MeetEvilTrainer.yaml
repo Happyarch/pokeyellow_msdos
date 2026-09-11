@@ -1,0 +1,32 @@
+# Music_MeetEvilTrainer — per-song MIDI overrides (see README.md for schema).
+#
+# Registers verified from the frame-exact sim: ch1 is the relentless D4
+# quarter-note pedal (C#4–D4 pickup only) — a ticking clock; ch2 is the
+# chromatic villain melody (B4/A#4 pickup, D#5–D5–C#5–C5 descent, B4
+# pedal, A# rubs, G–G#–A–A# climb, G4–D#5); ch3 is F#4 offbeat stabs
+# plus long A#4s rubbed against the B pedal. No noise channel, so no
+# drums: section. Intro m1–m5b3, loop body m5b4 (frame 441) to end 813.
+#
+# The score description (encounter_bad_guy_trainer.md) demands the
+# chromatic mischief stay mischievous. ch1 keeps its 8-bit tick: delay
+# would smear the quarters, so it stays a square. ch2 gets the dark
+# reed (user pick 2026-09-10): Oboe, home territory for G4–D#5 —
+# Engl Horn is the fallback if the topChorus bites. ch3 stabs get Warm
+# Bell (attack for the F# accents, body for the A# longs); GM gets
+# Music Box. Slightly wider stage than a jingle: a confrontation, not
+# a machine.
+channels:
+  1:
+    mt32_program: "Square Wave"   # the ticking clock stays 8-bit-sharp
+    gm_program: "Lead 1 (square)"
+    volume: 100
+    pan: 52
+  2:
+    mt32_program: "Oboe"          # dark reed villainy (Engl Horn fallback)
+    gm_program: "Oboe"
+    volume: 104                   # melody carries
+    pan: 76
+  3:
+    mt32_program: "Warm Bell"     # accent attack + rub body
+    gm_program: "Music Box"
+    volume: 92                    # texture, below the melody
