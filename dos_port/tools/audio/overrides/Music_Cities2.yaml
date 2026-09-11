@@ -47,7 +47,8 @@ channels:
                                 # Trumpet has the fast attack it wants and is
                                 # the Cities1-proven bright lead in E major.
     gm_program: "Trumpet"
-    volume: 104                 # foreground over cello + harp
+    volume: 100                 # foreground over cello + harp; eased from 104
+                                # so the tier-3 celesta pings read (audition)
     pan: 80
     switches:                   # timed mid-song program changes (m/b positions
                                 # resolve through the analysis beat map; the

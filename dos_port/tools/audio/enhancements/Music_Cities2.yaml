@@ -169,3 +169,27 @@ channels:
       - {m: 17, b: 1, d: 2, n: C#6}     # F#m    (ii) 5th
       - {m: 17, b: 3, d: 2, n: D#6}     # G#m7   (iii7) 5th
       - {m: 18, b: 1, d: 1.95, n: E6}   # E      (I) root — ends with the tune
+
+  # Tier 3 (color only — dropped first under pressure): celesta sparkle.
+  # Four single pings marking phrase arrivals, nothing more. Octave 6
+  # throughout (base ceiling is B5, so unison is impossible by register),
+  # on pitches the melody never touches (G#6/A6) or chord-safe roots/fifths
+  # spelled to dodge the veil line (m14 takes G#6, a 3rd above the veil's
+  # E6, never its unison). Nothing at the m18 seam — the loop lands on
+  # E and must hand back to m3 sounding open, never finished.
+  - name: sparkle
+    tier: 3                      # color/flourish — dropped first under pressure
+    mt32_patch: 36               # MT-32 Glasses, 1-based — glass-harmonica
+                                 # voice: the tapped-wineglass ting (audition).
+                                 # GM stays on Celesta (no melodic triangle
+                                 # exists in GM; Tinkle Bell 113 would flip
+                                 # the channel percussive and fail lint).
+    gm_program: 9                # GM Celesta, 1-based
+    pan: center                  # arrivals marked neutrally, not staged
+    volume: 70                   # lifted one step — pings read subtly at 64
+    velocity: 84                 # a touch more attack so each ping speaks
+    events:
+      - {m: 3,  b: 1, d: 1, n: G#6}     # G#m7   (root) — loop body opens
+      - {m: 9,  b: 1, d: 1, n: D#6}     # G#m7   (5th) — mid-phrase arrival
+      - {m: 14, b: 1, d: 1, n: G#6}     # E      (3rd) — violin entry
+      - {m: 17, b: 1, d: 1, n: A6}      # F#m    (3rd) — final lift
