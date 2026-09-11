@@ -107,11 +107,20 @@ def addr_add(addr: int, offset: int) -> tuple[int, int, int]:
     return (lin >> 14) & 0x7F, (lin >> 7) & 0x7F, lin & 0x7F
 
 
-def dt1(addr: int, data: bytes) -> list[bytes]:
+def dt1(addr: int, data: bytes, start: int = 0) -> list[bytes]:
+    """DT1 messages for data at grouped-address addr + byte offset start.
+
+    Assembly-sized note: addr MUST be 7-bit clean (every byte < 0x80) and
+    offsets travel through addr_add, which carries across the 7-bit
+    boundaries. Do NOT pre-add a byte offset to addr with plain integer
+    arithmetic (0x050000 + 1008 = 0x0503F0 has a byte >= 0x80, and the
+    masking then drops the carry — that exact bug once sent a patch
+    rewrite to record 62 instead of 126). Pass the offset as start.
+    """
     msgs = []
     for off in range(0, len(data), CHUNK):
         chunk = data[off:off + CHUNK]
-        a = addr_add(addr, off)
+        a = addr_add(addr, start + off)
         payload = bytes(a) + chunk
         csum = (128 - sum(payload) % 128) % 128
         msgs.append(bytes((0xF0, MFR_ROLAND, DEV_ID, MDL_MT32, CMD_DT1))
@@ -119,7 +128,20 @@ def dt1(addr: int, data: bytes) -> list[bytes]:
     return msgs
 
 
-def build_messages(defs: dict) -> list[bytes]:
+def build_messages(defs: dict, system: bool = True) -> list[bytes]:
+    """Assemble the DT1 upload blob.
+
+    system=True (default) emits the full blob: LCD + system area + timbres
+    + patch rewrites + rhythm. That is what ships in assets/mt32_sysex.inc
+    and what the real unit gets at init (verified correct in-game — the
+    channel table in particular must stay byte-identical).
+    system=False omits ONLY the system-area message (reverb/reserves/
+    channel table/master vol) and is for the host audition --setup path:
+    MUNT mishandles that message as a live write (user-observed
+    2026-09-11: parts misroute until MUNT is restarted, which wipes the
+    upload) while its default routing already matches what the songs
+    need. Timbre + patch + rhythm uploads are unaffected either way.
+    """
     msgs: list[bytes] = []
 
     lcd = defs.get("lcd", "POKEMON YELLOW DOS")[:20].ljust(20)
@@ -127,26 +149,27 @@ def build_messages(defs: dict) -> list[bytes]:
         raise ValueError("lcd: ASCII 32-127 only")
     msgs += dt1(0x200000, lcd.encode())
 
-    sysd = defs.get("system", {})
-    reserves = sysd.get("partial_reserves", [10, 10, 4, 1, 1, 1, 1, 1, 3])
-    if len(reserves) != 9 or sum(reserves) > 32:
-        raise ValueError("partial_reserves: 9 values summing to <= 32")
-    # midi_channels: part<-channel routing, 9 values (parts 1-8 + rhythm).
-    # The in-game-verified table is [2,3,4,5,6,7,8,9,9] (see timbres.yaml's
-    # note). Do NOT assume the Roland "0 = MIDI ch 1" spec and "correct" this
-    # to [1,2,3,...] — that shifts every voice down a part in-game. This
-    # default only applies if timbres.yaml omits the key; keep it correct.
-    channels = sysd.get("midi_channels", [2, 3, 4, 5, 6, 7, 8, 9, 9])
-    if len(channels) != 9:
-        raise ValueError("midi_channels: need 9 values (parts 1-8 + rhythm)")
-    system = bytes((
-        sysd.get("reverb_mode", 1),      # hall
-        sysd.get("reverb_time", 5),
-        sysd.get("reverb_level", 4),
-        *reserves, *channels,
-        sysd.get("master_volume", 100),
-    ))
-    msgs += dt1(0x100001, system)        # 10 00 01 .. 10 00 16 contiguous
+    if system:
+        sysd = defs.get("system", {})
+        reserves = sysd.get("partial_reserves", [10, 10, 4, 1, 1, 1, 1, 1, 3])
+        if len(reserves) != 9 or sum(reserves) > 32:
+            raise ValueError("partial_reserves: 9 values summing to <= 32")
+        # midi_channels: part<-channel routing, 9 values (parts 1-8 + rhythm).
+        # The in-game-verified table is [2,3,4,5,6,7,8,9,9] (see timbres.yaml's
+        # note). Do NOT assume the Roland "0 = MIDI ch 1" spec and "correct" this
+        # to [1,2,...] — that shifts every voice down a part in-game. This
+        # default only applies if timbres.yaml omits the key; keep it correct.
+        channels = sysd.get("midi_channels", [2, 3, 4, 5, 6, 7, 8, 9, 9])
+        if len(channels) != 9:
+            raise ValueError("midi_channels: need 9 values (parts 1-8 + rhythm)")
+        system_blob = bytes((
+            sysd.get("reverb_mode", 1),      # hall
+            sysd.get("reverb_time", 5),
+            sysd.get("reverb_level", 4),
+            *reserves, *channels,
+            sysd.get("master_volume", 100),
+        ))
+        msgs += dt1(0x100001, system_blob)   # 10 00 01 .. 10 00 16 contiguous
 
     for i, tim in enumerate(defs.get("timbres", []) or []):
         name = tim.get("name", f"Custom {i+1}")
@@ -165,15 +188,15 @@ def build_messages(defs: dict) -> list[bytes]:
             data += build_block(PARTIAL_PARAMS, src,
                                 f"timbre {name!r} partial {pi+1}")
         assert len(data) == 246, len(data)
-        msgs += dt1(0x080000 + ((i * 2) << 8), data)   # Timbre Memory #i+1
+        msgs += dt1(0x080000, data, start=(i * 2) << 8)   # Timbre Memory #i+1
 
     for pat in defs.get("patches", []) or []:
         num = pat["number"]                  # 1-128, what a program change selects
         if not 1 <= num <= 128:
             raise ValueError(f"patch number {num} out of 1-128")
         rec = {k: v for k, v in pat.items() if k != "number"}
-        msgs += dt1(0x050000 + (num - 1) * 8,
-                    build_block(PATCH_PARAMS, rec, f"patch #{num}"))
+        msgs += dt1(0x050000, build_block(PATCH_PARAMS, rec, f"patch #{num}"),
+                    start=(num - 1) * 8)
 
     for rd in defs.get("rhythm", []) or []:
         key = rd["key"]                      # MIDI note on the rhythm part
@@ -181,7 +204,7 @@ def build_messages(defs: dict) -> list[bytes]:
             raise ValueError(f"rhythm key {key} out of 24-87")
         data = bytes((rd.get("timbre", 0), rd.get("level", 100),
                       rd.get("pan", 7), rd.get("reverb", 1)))
-        msgs += dt1(0x030110 + (key - 24) * 4, data)
+        msgs += dt1(0x030110, data, start=(key - 24) * 4)
 
     return msgs
 

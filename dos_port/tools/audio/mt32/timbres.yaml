@@ -35,10 +35,77 @@ system:
 # Custom timbres upload to Timbre Memory #1.. in list order. To play one,
 # rewrite a Patch Memory slot below (timbre_group: 2, timbre_number: index)
 # and point the song override's mt32_program at that slot - 1.
-# Starting set: none — the first hand-tuned timbres come out of the MUNT
-# audition (Phase B task 4); presets via overrides until then.
-timbres: []
+#
+# Slot discipline: NEVER rewrite a factory slot another song uses — check
+# program usage across overrides/*.yaml + enhancements/*.yaml first
+# (2026-09-11 survey: 40 of 128 slots in use). Patch #127 (factory
+# "Water Bells", unused anywhere) is the custom staging slot.
+#
+# 1. "JigglyVox" (2026-09-11, for Music_JigglypuffSong): byte-exact clone
+#    of factory Funny Vox (patch #40), read out of MT32_CONTROL.ROM
+#    (timbre table base 0x8080, 246-byte records in factory order —
+#    verified: idx 0 "AcouPiano1", 47 "SquareWave", 48 "Str Sect 1",
+#    39 "Funny Vox"). Purpose: pipeline self-test AND keyshift
+#    experiment — if the clone nulls against factory Vox, the timbre
+#    record is the whole recipe (patch key_shift neutral); if it lands
+#    an octave off, the patch record transposes and the clone takes a
+#    coarse correction. Either way the ear decides the next tweak.
+#    The Vox vocal recipe, decoded: ONE partial (mute 0x01 — bit set =
+#    sounding), octave-up SAW (coarse 48) with a slow pitch SCOOP into
+#    the note (penv depth 7, times 20/22/39), an OPENING filter
+#    (cutoff 69 + reso 28, env depth 29 swelling 15→90 — the vowel
+#    forming), strong vibrato (rate 62, depth 21), fast attack
+#    (tva t1=0) swelling 80→100. 1 partial — fits any reserve.
+timbres:
+  - name: "JigglyVox"
+    partial_mute: 1
+    partials:
+      - wg_waveform: 1
+        wg_pitch_coarse: 48
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 16
+        penv_depth: 7
+        penv_time1: 20
+        penv_time2: 22
+        penv_time3: 39
+        penv_time4: 1
+        penv_level0: 2
+        penv_level1: 29
+        penv_level2: 44
+        penv_sus_level: 50
+        penv_end_level: 50
+        plfo_rate: 62
+        plfo_depth: 21
+        plfo_mod_sens: 89
+        tvf_cutoff: 69
+        tvf_resonance: 28
+        tvf_keyfollow: 6
+        tvf_env_depth: 29
+        tvf_env_time1: 6
+        tvf_env_time2: 20
+        tvf_env_time3: 11
+        tvf_env_time4: 21
+        tvf_env_time5: 100
+        tvf_env_level1: 15
+        tvf_env_level2: 62
+        tvf_env_level3: 90
+        tvf_env_sus_level: 100
+        tva_level: 80
+        tva_velo_sens: 70
+        tva_env_time_keyf: 1
+        tva_env_time1: 0
+        tva_env_time2: 2
+        tva_env_time3: 6
+        tva_env_time4: 8
+        tva_env_time5: 10
+        tva_env_level1: 80
+        tva_env_level2: 93
+        tva_env_level3: 99
+        tva_env_sus_level: 100
 
-patches: []
+patches:
+  - number: 127               # PC byte 126 → "JigglyVox" (Timbre Memory #1)
+    timbre_group: 2           # memory timbre (0/1 = preset A/B, 3 = rhythm)
+    timbre_number: 0          # first timbre in the list above
 
 rhythm: []

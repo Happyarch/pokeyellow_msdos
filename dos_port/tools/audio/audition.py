@@ -185,7 +185,8 @@ def run_interactive_audition(
         port = port_override or pick_port(target)
         setup_msgs = None
         if target == "mt32" and setup:
-            setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {})
+            setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {},
+                                        system=False)
         sess = midi_renderer.MidiSession(song_label, target, port, sysex_setup=setup_msgs)
         rate = 48000
         if out_wav:

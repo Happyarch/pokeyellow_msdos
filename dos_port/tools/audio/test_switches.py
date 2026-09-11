@@ -757,9 +757,9 @@ class SwitchTest(unittest.TestCase):
         labels = {lbl for n, lbl in consts.items() if n.startswith("MUSIC_")}
         files = sorted((HERE / "overrides").glob("*.yaml"))
         canonical = [p for p in files if p.stem in labels]
-        # 17 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
+        # 18 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
         # matches no song label and is never read by load_overrides).
-        self.assertEqual(len(canonical), 17)
+        self.assertEqual(len(canonical), 18)
         switched = {"Music_Cities2": {2: 2}, "Music_Celadon": {1: 2, 2: 2}}
         bad = []
         for path in canonical:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -155,10 +156,18 @@ class MidiSession:
         self.gb_events: dict[int, list[tuple]] = {}
         self.active_gb_notes: dict[int, tuple] = {}
 
-        # Send SysEx setup if provided
+        # Send SysEx setup if provided, PACED: the live path used to blast
+        # all messages back-to-back, and MUNT's emulated MIDI input drops
+        # long uploads under burst — the small Patch Memory rewrite lands
+        # while the 246-byte timbre upload vanishes, leaving a patch that
+        # points at empty timbre memory (silent voice). Gaps mirror the
+        # SMF path's SYSEX_GAP_TICKS (66 ms) + 1 s settle in audition.py,
+        # and the in-game uploader sends paced for the same reason.
         if sysex_setup:
             for msg in sysex_setup:
                 self.midi.send(msg)
+                time.sleep(0.066)
+            time.sleep(1.0)
 
         self._compile_base()
         self.send_init()

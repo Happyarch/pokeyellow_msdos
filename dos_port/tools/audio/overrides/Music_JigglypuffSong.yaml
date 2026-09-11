@@ -1,0 +1,29 @@
+# Music_JigglypuffSong — per-song MIDI overrides (see README.md for schema).
+#
+# Jigglypuff's song (Yellow-only; no Red/Blue score transcription exists).
+# Two pulse channels, NO loop (sound_ret — plays once, ~6.6 s, end frame
+# 396), no noise. Both channels sing the same 10-note E-major lullaby
+# (E–B–G#–F#–G#–A–G#–F#–G#–E, arch E5..B5); ch1 differs only in intro
+# envelope, vibrato depth, and duty pattern. Analysis K-S E major 0.702.
+# Structurally a jingle/SFX in a song bank — the whole piece is one sung
+# phrase (I–ii–I), so there are no enhancements, no switches, no drums:
+# a pad under 6 seconds would be furniture in a closet.
+#
+# Voice pairing (audition 2026-09-11): ch2 (melody) sings factory Funny
+# Vox while ch1 sings "JigglyVox" — the byte-exact factory recipe read
+# out of MT32_CONTROL.ROM (Patch Memory #127 rewritten, PC byte 126 —
+# a slot no other song uses). Same unison line on both, so the audition
+# IS the experiment: clone nulls against factory = recipe complete;
+# octave/brightness mismatch = patch-record transposition to correct.
+# GM has no upload path, so both channels stay Voice Oohs there.
+channels:
+  1:
+    mt32_program: 126           # custom "JigglyVox" (Patch #127 rewrite)
+    gm_program: "Voice Oohs"    # no GM upload path — vox vowel instead
+    volume: 88                  # halo under the Vox lead
+    pan: 56                     # near-center duet, ch1 a hair left
+  2:
+    mt32_program: "Funny Vox"   # same voice — unison ensemble by composition
+    gm_program: "Voice Oohs"
+    volume: 96
+    pan: 72                     # ch2 a hair right
