@@ -1,0 +1,233 @@
+# Music_MeetEvilTrainer — Team Rocket / evil-trainer encounter leitmotif.
+# Tier 1 + tier 2 + tier 3 enhancement (Phase E).
+#
+# Authored against analysis/Music_MeetEvilTrainer.yaml (frame-exact) and
+# the game-specific score-analysis description
+# (docs/references/pokemon_score_transcriptions/descriptions/encounter_bad_guy_trainer.md),
+# per the audio-enhance-opl3 / audio-enhance-mt32 / music-theory skills.
+#
+# The track: B minor (analysis K-S 0.759, unambiguous), 9 measures 4/4:
+# intro m1–m5b3, loop body m5 b4 (frame 441) through m9 end (frame 813).
+# Sim registers (MIDI naming, C4 = 60): ch1 is a relentless D4
+# quarter-note pedal (C#4–D4 pickup only) — a ticking clock, never a
+# bass; ch2 is the villain melody (B4/A#4 pickup, chromatic descent
+# D#5–D5–C#5–C5 into a B4 pedal, A# rubs, G–G#–A–A# climb); ch3 is
+# F#4 offbeat stabs plus long A#4s held against the B pedal — the
+# deliberate semitone rub the description calls the point of the piece.
+# Chord map is all Bm-family (i / III7 / III+ / i7); no noise channel.
+#
+# Skill table: encounter/battle music takes bass reinforcement plus
+# rhythmic weight. The wave channel never plays bass here, so everything
+# below C#4 (ch1's floor) is empty: that is where all three added voices
+# live, and unison with any GB pitch is impossible by construction.
+# The chromaticism above is matched, never "fixed": added voices use
+# roots and the tonic pedal only — no diatonic thirds imposed on a line
+# whose D# is the whole idea.
+#
+#   Tier 1 (OPL3 + MT-32/GM) — the missing bass:
+#     rocket_bass — roots per the chord map (G2 once at the m1b1 pickup,
+#                   then B2/D3 alternating with the i/III bars), octave 2:
+#                   an octave under ch1's D4 pedal, never unison with
+#                   anything. Octave doublings and oblique motion against
+#                   the chromatic melody throughout.
+#
+#   Tier 2 (MT-32/GM only):
+#     dread_pad — low B1 tonic pedal, sustained whole bars at phrase
+#                 starts (m1, m4, m6, m8). B over the D7 bar is a 13th
+#                 color — tense, not wrong — and everything else is root.
+#                 An octave under the bass: no unison anywhere.
+#     heart_pound — slow heartbeat on the rhythm part (MIDI ch 10): kick
+#                 lub + tom dub on b1/b1.5 of every bar, then silence —
+#                 the anxious pounding YELLOW feels facing an evil trainer
+#                 (user direction 2026-09-10). Drum notes are exempt from
+#                 the pitched-voice rules; lub hits harder (v110) than
+#                 dub (v90). Answers the b3 sting across the bar.
+#
+#   Tier 3 (MT-32/GM only):
+#     sting — A#3 stabs (d0.5) on every long-A# rub bar (m2/m3/m4/m5b3
+#             intro literals, m6–m9 body pattern), an octave under ch3's
+#             A#4: reinforces the accented dissonance instead of adding a
+#             new one. B2-vs-A#3 is a low major 7th — the piece's own
+#             rub mirrored an octave down, short and quiet enough to stay
+#             menace rather than mud. Orchestra Hit: almost too on-the-nose
+#             for Team Rocket, which is why it is tier 3 (dropped first).
+#
+# Loop seam: nothing crosses frame 441 (loop start). The intro's last
+# bass note (m5b3 D3, d1) ends exactly at 441 — safe by strict
+# inequality, same as a shaved ending. The m9b3 events use d0.9/d0.5
+# against the end-exclusive frame 813 (the PkmnHealed trap).
+#
+# Unroll (loop ramp-and-hold, `unroll: 2`): intro once, body 1 once
+# (statement + 4x panic ramp), body 2 loops forever — the
+# heartbeat never slows back down, and the pitched base is identical in
+# every body so looping only the hold changes nothing musically. This
+# mirrors the OG engine, whose .mainloop runs the intro once.
+# Non-evolving channels (bass/pad/sting) author intro + body 1 and the
+# compiler repeats the body; heart_pound (evolving) authors both
+# iterations explicitly, below, evaluated from gap(t) = 4*3^-t beats
+# with v(t) = 90 + 37t^2 over body 1 (T = 279 frames: the original
+# 3-body 1116-frame ramp at 4x, so max BPM/volume land at ~12 s, inside
+# the first loop) and a fixed 1.33-beat hold grid in body 2.
+
+schema: 1
+song: Music_MeetEvilTrainer
+unroll: 2   # loop ramp-and-hold: intro once, body 1 (statement + ramp)
+            # once, body 2 loops forever. Non-evolving channels
+            # auto-duplicate across bodies; heart_pound (evolving) authors
+            # every iteration explicitly. Merged loop region = body 2.
+
+channels:
+  - name: rocket_bass
+    tier: 1
+    opl_patch: sub_bass        # sine carrier — foundation, not a pulse
+    mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
+    gm_program: 39             # GM Synth Bass 1
+    pan: center
+    volume: 60
+    velocity: 80
+    events:
+      - {m: 1, b: 1, d: 2, n: G2}    # intro: m1b1 pickup (VI)
+      - {m: 1, b: 3, d: 2, n: B2}    # m1b3 (i)
+      - {m: 2, b: 1, d: 2, n: D3}    # m2b1 (III7)
+      - {m: 2, b: 3, d: 4, n: B2}    # m2b3–m3b1 (i)
+      - {m: 3, b: 3, d: 2, n: D3}    # m3b3 (III+)
+      - {m: 4, b: 1, d: 6, n: B2}    # m4b1–m5b1 (i7/i)
+      - {m: 5, b: 3, d: 1, n: D3}    # m5b3 (III+, ends exactly at loop start)
+      - {at: 5, pattern: bass_body}
+
+  # --- Tier 2 (MT-32 / GM only; never OPL) --------------------------------
+  - name: dread_pad
+    tier: 2                   # premium body — dropped before tier 1, after tier 3
+    mt32_patch: 50            # MT-32 Str Sect 2
+    gm_program: 49            # GM String Ensemble 1
+    pan: center
+    volume: 52                # felt, not heard
+    velocity: 64
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}    # intro: under the pickup + descent
+      - {m: 4, b: 1, d: 4, n: B1}    # intro: under the i7 bar + climb
+      - {at: 6, pattern: pad_body}
+
+  - name: heart_pound
+    tier: 2                   # the anxiety itself — MT-32/GM rhythm part
+    rhythm: true              # routes to MIDI ch 10; no patches, notes are drums
+    evolving: true            # authors every iteration: intro + ramp + hold
+    pan: center
+    volume: 85                # felt in the chest, under the melody
+    events:
+      - {m: 1, b: 1, d: 0.5, n: 36, v: 110}   # intro: lub (kick)
+      - {m: 1, b: 1.5, d: 0.5, n: 43, v: 90}  # intro: dub (high floor tom)
+      - {m: 2, b: 1, d: 0.5, n: 36, v: 110}
+      - {m: 2, b: 1.5, d: 0.5, n: 43, v: 90}
+      - {m: 3, b: 1, d: 0.5, n: 36, v: 110}
+      - {m: 3, b: 1.5, d: 0.5, n: 43, v: 90}
+      - {m: 4, b: 1, d: 0.5, n: 36, v: 110}
+      - {m: 4, b: 1.5, d: 0.5, n: 43, v: 90}
+      - {m: 5, b: 1, d: 0.5, n: 36, v: 110}
+      - {m: 5, b: 1.5, d: 0.5, n: 43, v: 90}
+      - {at: 5, pattern: heart_ramp}
+      - {at: 10, pattern: heart_hold}
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: sting
+    tier: 3                   # color — dropped first under polyphony
+    mt32_patch: 123           # MT-32 Orche Hit (factory idx 122, 1-based 123)
+    gm_program: 56            # GM Orchestra Hit
+    pan: center
+    volume: 70
+    velocity: 90
+    events:
+      - {m: 2, b: 3, d: 0.5, n: A#3}   # intro rub bars
+      - {m: 3, b: 3, d: 0.5, n: A#3}
+      - {m: 4, b: 3, d: 0.5, n: A#3}
+      - {m: 5, b: 3, d: 0.5, n: A#3}
+      - {at: 6, pattern: sting_body}
+
+patterns:
+  # Loop-body bass: m5b4 tail of Daug, then roots through m9.
+  bass_body:
+    measures: 5
+    events:
+      - {m: 1, b: 4, d: 3,   n: D3}   # m5b4 (Daug tail into D7)
+      - {m: 2, b: 3, d: 4,   n: B2}   # m6b3–m7b1 (i)
+      - {m: 3, b: 3, d: 2,   n: D3}   # m7b3 (III+)
+      - {m: 4, b: 1, d: 6,   n: B2}   # m8b1–m9b1 (i7/i)
+      - {m: 5, b: 3, d: 0.9, n: D3}   # m9b3 (III+, shaved for end 813)
+
+  # Loop-body pad: whole bars under the D7 and i7 bars.
+  pad_body:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}     # m6 (D7 bar — 13th color)
+      - {m: 3, b: 1, d: 4, n: B1}     # m8 (i7 bar — root)
+
+  # Ramp body 1 + hold body 2: evaluated from the panic curve in
+  # FRAME space (the loop body's final beat is zero-width in the beat map
+  # — frame 813 IS the body end — so beat-space integration over-counts
+  # the span; integrating over true frames [441, 813] keeps every onset
+  # resolvable). gap(tau) = 92*3^(-tau/279) frames (exponential: 92f ->
+  # 32.7f, i.e. ~39 -> ~110 pairs/min — the original 3-body ramp at 4x,
+  # max slope slamming into the hold), v(tau) = 90 + 37*(tau/279)^2,
+  # dub +0.5 beat at v-12 throughout. Onsets by closed-form phase
+  # integration: tau_k = 279*ln(1 + k*92*ln3/279)/ln3 (6 pairs; pair 0
+  # lands on the body-1 downbeat after the intro's 2-beat tail silence,
+  # then two hold-level lead-in pairs and a ~1.8-beat pickup breath into
+  # the looping hold at max BPM/volume, ~12 s in). Positions below are
+  # the evaluation (frame-inverted to m/b, err < 0.15f each); retune by
+  # editing the two formulas and re-evaluating.
+  heart_ramp:
+    measures: 5
+    events:
+      - {m: 1, b: 4.00, d: 0.5, n: 36, v: 90}
+      - {m: 1, b: 4.50, d: 0.5, n: 43, v: 78}
+      - {m: 2, b: 3.37, d: 0.5, n: 36, v: 93}
+      - {m: 2, b: 3.87, d: 0.5, n: 43, v: 81}
+      - {m: 3, b: 1.93, d: 0.5, n: 36, v: 99}
+      - {m: 3, b: 2.43, d: 0.5, n: 43, v: 87}
+      - {m: 3, b: 4.03, d: 0.5, n: 36, v: 107}
+      - {m: 3, b: 4.53, d: 0.5, n: 43, v: 95}
+      - {m: 4, b: 1.76, d: 0.5, n: 36, v: 115}
+      - {m: 4, b: 2.26, d: 0.5, n: 43, v: 103}
+      - {m: 4, b: 3.28, d: 0.5, n: 36, v: 123}
+      - {m: 4, b: 3.78, d: 0.5, n: 43, v: 111}
+      - {m: 4, b: 4.75, d: 0.5, n: 36, v: 127}   # lead-in at hold level
+      - {m: 5, b: 1.25, d: 0.5, n: 43, v: 115}
+      - {m: 5, b: 2.17, d: 0.5, n: 36, v: 127}
+      - {m: 5, b: 2.67, d: 0.5, n: 43, v: 115}
+
+  heart_hold:
+    measures: 4
+    events:
+      - {m: 1, b: 1.00, d: 0.5, n: 36, v: 127}
+      - {m: 1, b: 1.50, d: 0.5, n: 43, v: 115}
+      - {m: 1, b: 2.33, d: 0.5, n: 36, v: 127}
+      - {m: 1, b: 2.83, d: 0.5, n: 43, v: 115}
+      - {m: 1, b: 3.66, d: 0.5, n: 36, v: 127}
+      - {m: 1, b: 4.16, d: 0.5, n: 43, v: 115}
+      - {m: 1, b: 4.99, d: 0.5, n: 36, v: 127}
+      - {m: 2, b: 1.49, d: 0.5, n: 43, v: 115}
+      - {m: 2, b: 2.32, d: 0.5, n: 36, v: 127}
+      - {m: 2, b: 2.82, d: 0.5, n: 43, v: 115}
+      - {m: 2, b: 3.65, d: 0.5, n: 36, v: 127}
+      - {m: 2, b: 4.15, d: 0.5, n: 43, v: 115}
+      - {m: 2, b: 4.98, d: 0.5, n: 36, v: 127}
+      - {m: 3, b: 1.48, d: 0.5, n: 43, v: 115}
+      - {m: 3, b: 2.31, d: 0.5, n: 36, v: 127}
+      - {m: 3, b: 2.81, d: 0.5, n: 43, v: 115}
+      - {m: 3, b: 3.64, d: 0.5, n: 36, v: 127}
+      - {m: 3, b: 4.14, d: 0.5, n: 43, v: 115}
+      - {m: 3, b: 4.97, d: 0.5, n: 36, v: 127}
+      - {m: 4, b: 1.47, d: 0.5, n: 43, v: 115}
+      - {m: 4, b: 2.30, d: 0.5, n: 36, v: 127}
+      - {m: 4, b: 2.80, d: 0.5, n: 43, v: 115}
+      - {m: 4, b: 3.63, d: 0.5, n: 36, v: 127}
+      - {m: 4, b: 4.13, d: 0.5, n: 43, v: 115}
+
+  # Loop-body stings on the rub bars.
+  sting_body:
+    measures: 4
+    events:
+      - {m: 1, b: 3, d: 0.5, n: A#3}  # m6b3
+      - {m: 2, b: 3, d: 0.5, n: A#3}  # m7b3
+      - {m: 3, b: 3, d: 0.5, n: A#3}  # m8b3
+      - {m: 4, b: 3, d: 0.5, n: A#3}  # m9b3
