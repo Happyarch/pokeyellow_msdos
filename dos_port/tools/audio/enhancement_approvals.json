@@ -1,4 +1,8 @@
 {
+  "MUSIC_CINNABAR": {
+    "approved": true,
+    "date": "2026-09-11"
+  },
   "MUSIC_CINNABAR_MANSION": {
     "approved": true,
     "date": "2026-08-13"
@@ -6,6 +10,10 @@
   "MUSIC_CITIES1": {
     "approved": true,
     "date": "2026-09-10"
+  },
+  "MUSIC_CITIES2": {
+    "approved": true,
+    "date": "2026-09-11"
   },
   "MUSIC_GYM_LEADER_BATTLE": {
     "approved": true,
@@ -26,6 +34,10 @@
   "MUSIC_PKMN_HEALED": {
     "approved": true,
     "date": "2026-09-10"
+  },
+  "MUSIC_SS_ANNE": {
+    "approved": true,
+    "date": "2026-09-11"
   },
   "MUSIC_VERMILION": {
     "approved": true,
