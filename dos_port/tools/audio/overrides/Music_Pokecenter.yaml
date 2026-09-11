@@ -1,0 +1,38 @@
+# Music_Pokecenter — per-song MIDI overrides (see README.md for schema).
+#
+# The Pokémon Center theme (plays in every Center). D major, 4/4, tempo 144,
+# 16 measures, loop at m1 (whole piece, no intro), 3 channels (no noise).
+# Binary A A' B B' (two 8-bar periods, antecedent/consequent phrase pairs).
+# Melody is ch2 (D4–B5, the singing line); ch1 is the inner walking line
+# (C#4–E5); ch3 is a high wave ostinato (D4–B4). Another Masuda
+# high-register town cue — the GB speaker omitting the low end, which the
+# committed tier-1 warm pad (A3/E3 pedal, octave 3) supplies.
+#
+# This file exists because there was NO override: the base rendered on the
+# 80/80/38 defaults — MT-32 factory "Sax 3" + "Sax 3" (IDENTICAL timbres
+# collapsing wherever ch1/ch2 move together) plus "Warm Bell" on ch3,
+# whose long decay + hall reverb washed the ostinato over both lines (and
+# read far too loud). The bell stays gone (see below). But audition
+# (2026-09-11) showed the sax pairing itself was liked — so the duet is
+# back as DISTINGUISHED sisters (Sax 2 under Sax 3: same reed family that
+# blends, different presets that don't collapse), and ch3 gets the proven
+# dry glue instead of the harp (which read too plucky/bright for the
+# healing-calm mood).
+channels:
+  1:
+    mt32_program: "Sax 2"       # lower sister voice under the lead; same reed
+    gm_program: "Tenor Sax"     # family, distinct preset — blends, not collapses
+    volume: 92                  # under the lead
+    pan: 48                     # inner line left, melody right
+  2:
+    mt32_program: "Sax 3"       # the liked lead voice, kept as-was
+    gm_program: "Alto Sax"
+    volume: 100                 # foreground over sax 2 + pizz
+    pan: 80
+  3:
+    mt32_program: "Pizzicato"   # dry bowed glue for the ostinato 8ths (the
+    gm_program: "Pizzicato Strings"  # Cities1/Vermilion cure for bell wash);
+                                # softer attack than the harp, kin to the pad
+                                # strings + choir halo
+    volume: 76                  # motor audible but under both saxes
+    pan: 64
