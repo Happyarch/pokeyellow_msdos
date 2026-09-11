@@ -1,0 +1,171 @@
+# Music_Cities2 — Tier 1 (foundation: sub_bass + low_pad).
+#
+# Authored against music_analysis.py output (frame-exact: E major, K-S 0.882,
+# runner-up G# minor 0.68 = the mediant, not ambiguous; 4/4; 18 measures =
+# 2-bar intro (mm1-2) + 16-bar loop body (mm3-18), loop_start m3 b1 frame 222,
+# frames.end 1998) and audio/music/cities2.asm, per audio-enhance-opl3 /
+# music-theory skills. Overrides (committed): ch1 Cello 1, ch2 Trumpet 1 ->
+# Violin 1 at m14b1 -> Trumpet 1 at m3b1, ch3 Harp 1.
+#
+# The track: ch2 is the global melody (123 notes, B3..B5, 99 in octave 5,
+# density 1.71, sharp/stabby attacks); ch1 is the octave-4 inner line
+# (58 notes, B3..F#5) that sings the lyrical whole-note tune mm16-18;
+# ch3 is the 8th-note wave glue (122 notes, C#4..B4, all octave 4,
+# density 1.69). No chromatic tricks to preserve: diatonic E major with
+# applied dominants (B7, F#7-shape C#7 as VI7 = V/ii); the one chromatic
+# visitor is the m1 intro Cmaj7 (bVI7) passing sonority, whose root the
+# bass states and whose 3rd (E3) the pad holds — no enhancement voice
+# doubles the chromatic C natural anywhere but the bass root.
+#
+# Register audit (simulate_song): octave 2 is EMPTY; octave 3 holds ONLY
+# B3 (one hit each on ch1/ch2) — C3..A#3 and A3 never sound once. Octave 4
+# is packed by ch1+ch3; octave 5 carries the melody. Consequences:
+#   * sub_bass in octave 2 (C2..B2 roots) has nothing to collide with.
+#   * low_pad capped at G#3 (56) is unison-proof BY CONSTRUCTION — no GB
+#     voice ever sounds C3..G#3 (A3/B3 are simply never used by the pad).
+#
+# Rest discipline (the score note's dynamics-by-rests, cerulean_city.md):
+# Masuda thins the texture deliberately — wave alone at the m6 downbeat
+# pickup and the m13b3-m14b1 hole under the half-cadence ring-out. The pad
+# rests both spots (m6b1; m13b3 through the m14b1 pickup it would otherwise
+# cover); the bass sustains through m6b1 (foundation an octave below the
+# wave, supportive not filling) but the pad's absence is the audible thin.
+# The m13b1 B(V) arrival itself is voiced (D#3, the 3rd) — the cadence is
+# set up, not hollowed.
+#
+# Harmony follows the analysis template verbatim (vi7/bVI7/I/I7/iii7/ii/
+# ii7/VI7/V7/IV7/V — E major). Two chromatic-adjacent spots needed a
+# sounding-pitch cross-check: m5b3 C#7 (VI7) takes G#3 (5th), never the
+# chromatic 3rd E#; m1b3 Cmaj7 (bVI7) takes E3 (3rd), never the root C3
+# (a doubled chromatic arrival nobody asked for). The missing chord 3rds
+# the analysis implies but no GB voice states are left missing — the pad
+# only doubles what the progression already says.
+#
+# Voice leading (bass vs pad, half-measure slots — every transition
+# walked): no parallel P5/P8 anywhere. Devices: oblique holds under static
+# harmony (mm2/4/6/8 E-roots, m7 F#m, m9 G#m7, m14 E, m16 E); contrary
+# motion out of nearly every root change (m3 P5->m3, m9 P5->M3, m10 P5->M3,
+# m13b3 P5 hold, m14 P5->M3, m15/m17 m3->P4); similar motion only into
+# imperfect intervals (M3->m3, m3->M3 throughout). One accepted inner-voice
+# hidden 5th: m5b1->m5b3 (F#2->C#2 bass P4 leap under A3->G#3) — stepwise
+# pad preferred over leaping to dodge it, per the skill's ranking of
+# stepwise inner motion above hidden-perfect avoidance for non-outer
+# voices (the true outer pair bass/ch2-melody never moves in parallel).
+#
+# Loop seam: events cover intro (mm1-2) + one loop body (mm3-18); loop
+# return is m3 (G#m7), so no note may cross frame 1998. Last events use
+# d 1.95 (release a hair early for a clean re-key; f1 == end is legal,
+# f1 > end is not). All timing is musical position (measure/beat/duration),
+# never frames.
+#
+# Patches match the approved town set (Pallet/Vermilion/Cities1): sub_bass
+# -> MT-32 SynBass1 / GM Synth Bass 1; low_pad -> MT-32 Str Sect 1 /
+# GM Pad 2 (warm). Both cascade to MT-32/GM from the same tier-1 voices
+# the OPL3 shim plays as FM (sub_bass sine, soft_pad organ-like).
+
+schema: 1
+song: Music_Cities2
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 62                   # town level; no ch4 motor in this track
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 2, n: C#2}     # C#m7   (vi7) — intro
+      - {m: 1,  b: 3, d: 2, n: C2}      # Cmaj7  (bVI7) — chromatic root, bass only
+      - {m: 2,  b: 1, d: 4, n: E2}      # E / Emaj7 (I/I7) — root hold
+      - {m: 3,  b: 1, d: 2, n: G#2}     # G#m7   (iii7) — loop body opens
+      - {m: 3,  b: 3, d: 2, n: F#2}     # F#m    (ii)
+      - {m: 4,  b: 1, d: 4, n: E2}      # E / Emaj7 — root hold
+      - {m: 5,  b: 1, d: 2, n: F#2}     # F#m7   (ii7)
+      - {m: 5,  b: 3, d: 2, n: C#2}     # C#7    (VI7 = V/ii)
+      - {m: 6,  b: 3, d: 2, n: E2}      # E / Emaj7 — b1 rests (wave-alone pickup)
+      - {m: 7,  b: 1, d: 4, n: F#2}     # F#m    (ii) — root hold
+      - {m: 8,  b: 1, d: 4, n: E2}      # E / Emaj7 — root hold
+      - {m: 9,  b: 1, d: 4, n: G#2}     # G#m7   (iii7) — root hold
+      - {m: 10, b: 1, d: 4, n: E2}      # Emaj7 / E — root hold
+      - {m: 11, b: 1, d: 2, n: F#2}     # F#m7   (ii7)
+      - {m: 11, b: 3, d: 2, n: B2}      # B7     (V7) — transition drive
+      - {m: 12, b: 1, d: 2, n: C#2}     # C#m7   (vi7)
+      - {m: 12, b: 3, d: 2, n: A2}      # Amaj7  (IV7)
+      - {m: 13, b: 1, d: 2, n: B2}      # B      (V) — half cadence arrival
+      - {m: 13, b: 3, d: 2, n: G#2}     # G#m7   (iii7) — cadence answered
+      - {m: 14, b: 1, d: 4, n: E2}      # E      (I) — lyrical pickup, root hold
+      - {m: 15, b: 1, d: 2, n: F#2}     # F#m    (ii)
+      - {m: 15, b: 3, d: 2, n: G#2}     # G#m7   (iii7)
+      - {m: 16, b: 1, d: 4, n: E2}      # E / Emaj7 — tune entry, root hold
+      - {m: 17, b: 1, d: 2, n: F#2}     # F#m    (ii)
+      - {m: 17, b: 3, d: 2, n: G#2}     # G#m7   (iii7)
+      - {m: 18, b: 1, d: 2, n: E2}      # E      (I)
+      - {m: 18, b: 3, d: 1.95, n: E2}   # Emaj7  (I7) — seam release
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under cello + trumpet, over the bass
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 4, n: E3}      # C#m7 3rd / Cmaj7 3rd — common-tone hold
+      - {m: 2,  b: 1, d: 4, n: G#3}     # E / Emaj7  3rd — hold
+      - {m: 3,  b: 1, d: 2, n: D#3}     # G#m7   5th (not B — B3 is touched)
+      - {m: 3,  b: 3, d: 2, n: A3}      # F#m    3rd (A3 never sounds in base)
+      - {m: 4,  b: 1, d: 4, n: G#3}     # E / Emaj7  3rd — hold
+      - {m: 5,  b: 1, d: 2, n: A3}      # F#m7   3rd
+      - {m: 5,  b: 3, d: 2, n: G#3}     # C#7    5th (not E# — the chromatic 3rd)
+      - {m: 6,  b: 3, d: 2, n: G#3}     # E / Emaj7  3rd — b1 rests (wave alone)
+      - {m: 7,  b: 1, d: 4, n: A3}      # F#m    3rd — hold
+      - {m: 8,  b: 1, d: 4, n: G#3}     # E / Emaj7  3rd — hold
+      - {m: 9,  b: 1, d: 4, n: D#3}     # G#m7   5th — hold
+      - {m: 10, b: 1, d: 4, n: G#3}     # Emaj7 / E  3rd — hold
+      - {m: 11, b: 1, d: 2, n: A3}      # F#m7   3rd
+      - {m: 11, b: 3, d: 2, n: D#3}     # B7     3rd
+      - {m: 12, b: 1, d: 2, n: E3}      # C#m7   3rd
+      - {m: 12, b: 3, d: 2, n: C#3}     # Amaj7  3rd
+      - {m: 13, b: 1, d: 2, n: D#3}     # B      3rd — cadence voiced, then rest
+      - {m: 14, b: 1, d: 4, n: G#3}     # E      3rd — lyrical pickup resumes
+      - {m: 15, b: 1, d: 2, n: A3}      # F#m    3rd
+      - {m: 15, b: 3, d: 2, n: D#3}     # G#m7   5th
+      - {m: 16, b: 1, d: 4, n: G#3}     # E / Emaj7  3rd — tune entry, hold
+      - {m: 17, b: 1, d: 2, n: A3}      # F#m    3rd
+      - {m: 17, b: 3, d: 2, n: D#3}     # G#m7   5th
+      - {m: 18, b: 1, d: 2, n: G#3}     # E      3rd — hold
+      - {m: 18, b: 3, d: 1.95, n: G#3}  # Emaj7  3rd — seam release
+
+  # Tier 2 (MT-32/GM only — no opl_patch): violin-section harmonics veil.
+  # MT-32 Violin 2 — the sister section voice to the override's Violin 1,
+  # which is what the pair is for: Violin 1 carries the lyrical under-voice
+  # (override switch at m14b1) while Violin 2 floats the harmonics above it.
+  # Written an octave above everything and played soft — the glassy harmonic
+  # illusion FM synthesis cannot produce (no bowed attack, no airy top).
+  # Sounds ONLY mm14-18, entering with the override violin on the m14
+  # pickup downbeat and ending with the tune at m18b2; the lively bars
+  # (mm1-13) stay trumpet and dry. Root/5th chord tones, whole- and
+  # half-measure holds — it floats, never competes with the tune (ch1
+  # cello, octave 4) or the violin under-voice (ch2, octaves 2-4 here).
+  # Unison-proof by register: every note is octave 6 (C#6=85 and up) and
+  # the base never exceeds B5 (83) anywhere in 18 measures.
+  - name: harmonic_veil
+    tier: 2                      # MT-32/GM only — no opl_patch allowed
+    mt32_patch: 54               # MT-32 Violin 2, 1-based (sister voice to the
+                                 # override's Violin 1 — harmonizes with it)
+    gm_program: 41               # GM Violin, 1-based (GM has no second violin;
+                                 # same top voice, blends by register instead)
+    pan: right                   # with the violin (override ch2 sits right)
+    volume: 50                   # veil, not a third lead
+    velocity: 64                 # delicate — harmonics speak softly
+    events:
+      - {m: 14, b: 1, d: 4, n: E6}      # E      (I) root — enters with violin
+      - {m: 15, b: 1, d: 2, n: F#6}     # F#m    (ii) root
+      - {m: 15, b: 3, d: 2, n: D#6}     # G#m7   (iii7) 5th
+      - {m: 16, b: 1, d: 4, n: E6}      # E      (I) root — tune entry, hold
+      - {m: 17, b: 1, d: 2, n: C#6}     # F#m    (ii) 5th
+      - {m: 17, b: 3, d: 2, n: D#6}     # G#m7   (iii7) 5th
+      - {m: 18, b: 1, d: 1.95, n: E6}   # E      (I) root — ends with the tune
