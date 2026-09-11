@@ -24,4 +24,5 @@ channels:
   3:
     mt32_program: "Harp 1"      # plucked water-sparkle for the wave ostinato
     gm_program: "Orchestral Harp"
-    volume: 104
+    volume: 108                 # up a touch (was 104) — the fast-decaying pluck
+                                # needs level to stay audible under flute+strings
