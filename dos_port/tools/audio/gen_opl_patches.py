@@ -98,6 +98,23 @@ PATCHES = {
     # Instant-attack/full-sustain like every patch here; the held note length
     # comes from the YAML, the volume from the player. Warm, never buzzy.
     "soft_pad": [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+    # --- Clearer tier-1 variants (demo, 2026-09-11: Cities2's low end read
+    # as muffled on OPL3 audition) --------------------------------------
+    # Same voices, a touch more upper-harmonic definition. New names (not
+    # retunes) so the ~14 songs on sub_bass/soft_pad are untouched; a song
+    # opts in per-channel in its enhancement YAML. If these win everywhere,
+    # promote them (rename back) in a separate pass with wide audition.
+    #
+    # Sub-bass with pitch definition: carrier sine, modulator at MULT 2
+    # (octave-up sideband) at low level (TL 0x26 ≈ 28 dB down) — the
+    # fundamental still dominates, but the octave harmonic gives the ear
+    # something to track pitch by on small speakers. No feedback (feedback
+    # self-brightens harshly; the MULT-2 sideband stays round).
+    "sub_bass_clear": [SUS | 0x02, 0x26,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
+    # Clear pad: soft_pad with the 1:1 modulator opened 0x18 -> 0x12
+    # (~4.5 dB more upper sideband) — presence without buzz. Still no
+    # feedback, still KSL-free like its sibling.
+    "soft_pad_clear": [SUS | 0x01, 0x12,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
     # Clean base-channel voice for songs where two duty-cycle pulse channels
     # form a chord and the FM buzz (feedback + modulator sidebands) reads as
     # a mistuned clash rather than a blend — Mt. Moon Cave's augmented-triad
@@ -143,7 +160,8 @@ PATCHES = {
 PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
                "sub_bass", "soft_pad", "duty_clean",
                "noise_soft_whoosh", "noise_heavy_thud", "noise_crunch",
-               "noise_click", "noise_poof", "pulse_soft", "square_sfx"]
+               "noise_click", "noise_poof", "pulse_soft", "square_sfx",
+               "sub_bass_clear", "soft_pad_clear"]
 
 # Per-song OPL patch overrides for the BASE channels (tier 0). Normally a
 # base channel's FM patch is picked purely from the GB duty-cycle value
