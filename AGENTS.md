@@ -214,7 +214,8 @@ to track now live in `docs/current_plan_backlog.md` (memory
 early July → 2026-08-02 and bought the correctness tooling this file keeps
 pointing at: the `translation.db` label database and its `aux_labels` /
 `script_labels` provenance tables, `static_gate` + `fidelity_gate`, and the
-37-scenario golden suite (`dos_port/tools/scenario_manifest.json`). That goal is
+golden test suite (`dos_port/tools/scenario_manifest.json`, query count via
+`validate_scenarios.py`). That goal is
 met; the current objective is **completing the port**. Open work is not listed
 here — run `dos_port/tools/project_state --plans`.
 
@@ -348,6 +349,23 @@ The map-editing tools (`dos_port/tools/map_editor/`) are kept regardless — not
 because the clamps need retiring, but because they are genuinely useful to
 modders authoring new maps.
 
+**ONE SANCTIONED MAP EXPANSION EXISTS, and it does not reopen the above.**
+`dos_port/tools/generators/map_expansion.py` widens `VERMILION_DOCK` from 14 to
+22 block columns at generation time (maintainer decision, 2026-08-20). It is not
+a step toward retiring the clamps — the clamps stay, and the scene's own
+re-decode reproduces the out-of-map answer rather than assuming the widening
+makes it unreachable. It exists because the S.S. Anne departure walks the map
+view 8 blocks east (the port's ship starts 8 blocks from the left screen edge
+where the GB's is flush with it), and an out-of-map read returns
+`wMapBackgroundTile` = `$0F`, the BORDER block — not sea. Constraints, which any
+future expansion must also meet: pret's `maps/*.blk` and
+`constants/map_constants.asm` are NEVER written, so the golden harness still runs
+the real ROM; the widening is DERIVED by a generator, never hand-authored; and
+every dimension flows through the single chokepoint
+`gen_map_headers.parse_map_constants()` so the blob, the header and
+`<MAP>_WIDTH` cannot disagree. Adding a second entry to that table is a
+maintainer decision, not an agent's.
+
 ---
 
 ## Hard Rules (always in force)
@@ -390,11 +408,11 @@ file. Full detail → skill **`build-and-debug`**.
 
 **`make -C dos_port fidelity` (core) and `fidelity-full` both run in parallel via
 `tools/pgate.sh`, as of 2026-08-12 (`8742e04c8`).** Measured on the 96-thread
-host: **core 16 scenarios ≈ 30 s; full 66 scenarios 378 s** (the full tier was
-~1750 s serial — a ~4.6× cut). Do not quote the old "core ~2m50s / full ~4m45s"
-or "fidelity-full is ~15 min" figures: they date from a 17-scenario battery, the
-registry is 66, and repeating them causes agents to skip the full tier or idle
-waiting for it. Re-measure rather than trusting this line.
+host: parallel wall clock is roughly ~30 s for core and a few minutes for full
+(serial was ~1750 s — a ~4.6× cut). Query the scenario count dynamically with
+`python3 dos_port/tools/validate_scenarios.py` rather than hardcoding or assuming
+stale numbers. Do not quote old serial numbers ("fidelity-full is ~15 min") or
+budget serial time for gates.
 
 - `fidelity-serial` / `fidelity-full-serial` keep the old one-at-a-time loops.
   **DO NOT USE THEM UNLESS THE MAINTAINER EXPLICITLY ASKS** (maintainer
