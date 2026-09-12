@@ -1,44 +1,71 @@
-# Current Plan: IBM Speech Adapter support (talking dialog)
+# Current Plan: Talking dialog (DECtalk first, IBM Speech Adapter maybe)
 
-Status: **DRAFT FOR REVIEW — toy feature, non-timebound.** Written 2026-09-12
-as a for-fun exploration: speech synthesis for NPC dialog and signs through the
-IBM PCjr Speech Attachment / PS/2 Speech Adapter (TI TMS5220). Not serious
-code; intended home is a branch (see "Placement" below). Re-verify file:line
-claims against HEAD at build time.
+Status: **DRAFT FOR REVIEW — toy feature, non-timebound.** Written 2026-09-12,
+revised same day to DECtalk-first ordering (may end up the only backend; no
+hardware owned — write against emulators). Not serious code; intended home is a
+branch (see "Placement" below). Re-verify file:line claims against HEAD at
+build time.
 
 ## Placement: branch, but make-gated inside it
 
 - Develop on a **branch** so `master` and the fidelity gates stay pristine; the
   whole thing deletes in one `git branch -D` if the joke stops being funny.
 - Write it in the `DEBUG_AUDIO` shape anyway: `make SPEECH=1` compiles the
-  driver in and builds the LPC assets; `/SPEECH` at runtime activates it;
-  default build has hooks `%ifdef`'d out and zero footprint. A merge is then
-  just "prove `GBSTATE.BIN` is identical with the flag off," which the suite
-  does for free.
+  driver(s) in; `/DTALK` (DECtalk) or `/SPEECH` (TMS5220 path, if ever built)
+  at runtime activates; default build has hooks `%ifdef`'d out and zero
+  footprint. A merge is then just "prove `GBSTATE.BIN` is identical with the
+  flag off," which the suite does for free.
 
-## Hardware facts (hound, 2026-09-12)
+## Backend A (primary): DECtalk over serial
 
-- **IBM PCjr Speech Attachment** (1984, sidecar): TMS5220(C), 32 KB ROM with
-  BIOS speech routines + 196-word vocabulary, Intel 8255 PPI gating LPC + CVSD
-  sections, disk/cartridge-loaded voice data supported (Bouncy Bee precedent:
-  same voice talent for ROM + disk samples).
-- **IBM PS/2 Speech Adapter** (1987, ISA): same TMS5220C architecture, shifted
-  addresses (the 8-Bit Guy finding — PCjr games hacked onto the ISA card by
-  shifting ports); needs its breakout box to hear anything; runs PCjr software
-  modulo speed quirks. **The ISA card is the target.**
-- **MAME has the chip core**: `mame/src/devices/sound/tms5220.cpp` (full
-  TMS5220 emulation; an FPGA reimplementation was built on it). Whether MAME's
-  PCjr driver wires the whole attachment needs verifying at build time — the
-  chip core is the load-bearing piece. No DOSBox support (either fork) is
-  known; assume a custom test rig (stage 3).
-- The TMS5220 speaks **LPC frames, not text** (no phoneme mode — that is the GI
-  SP0256 family). The 196-word ROM vocab cannot cover game dialog, so this is a
-  **Speak-from-RAM design**: every speakable line is offline-synthesized to
-  TMS5220-compatible LPC frames, baked as Tier-1 generated data, streamed by a
-  new driver. Sizing: LPC ~150-225 bytes/sec, a few hundred lines ≈ a couple
-  hundred KB against an 8 MB EXE.
+DECtalk speaks **ASCII text over RS-232** — the entire TTS/LPC asset pipeline
+collapses to sending strings down a wire. No per-line blobs, no sidecars.
 
-## Scope: what talks, what does not
+- **Targets:** DTC-01 (1984 serial box, 9600 baud default; MAME emulates it
+  maturely, `dectalk.zip`) for emulation; DECtalk Express (1994 serial box,
+  9600 8N1 XON/XOFF, built-in speaker) for real iron. Avoid the DECtalk PC ISA
+  card: MAME's ISA emulation is rough (microcode won't load — mamedev #12501).
+- **Protocol:** ASCII lines + punctuation; inline `[:name]` voices (Oak = Paul,
+  rival = Frank, NPCs rotating — per-character voices free), `[:rate]` to tune
+  to typing speed, `[:phoneme]` for the Jigglypuff scenario. DTC-01 escape
+  sequences per EK-DTC01-RM-003 (mirrored to `docs/sound/` in stage 0).
+- **Sync is device-clocked and documented:** `DT_INDEX_REPLY` (manual pp. 50-54)
+  makes the unit send an escape-sequence reply as each index mark is spoken;
+  `DT_INDEX_QUERY` polls the last-spoken mark; `DT_SYNC` gates host commands
+  behind speech completion; `DT_STOP` kills speech instantly + reinitializes
+  buffers (the mash-through path, specified). Inject index marks at word
+  boundaries; drive the reveal off incoming replies. No estimation anywhere.
+- **Transcript upgrade over the TMS5220 design:** scrape rendered dialog rows
+  from the tilemap at box-open, inverse-charmap-decode to ASCII — names and
+  numbers resolve at render, so **even dynamic lines speak**. Marks injected at
+  scrape time; word↔glyph mapping known at runtime. Zero transcript assets.
+- **Serial coexistence:** `com_uart.asm` is single-instance and link-owned, so
+  speech gets a dedicated **poll-only shim on the non-link COM** — TX via
+  bounded-polled THRE (existing `TX_POLL_BOUND` pattern), RX tick-polled in
+  `audio_tick` for index replies. No ISR, no vector conflicts (cross-IRQ
+  COM1+COM2 pairing is clean), link code untouched. DOSBox-X side follows the
+  `linkcheck.sh` pattern (`serial1=nullmodem` + `serial2=` at the DECtalk
+  backend); tracked conf stays clean.
+- **Test rigs (no audio emulation needed — it's serial):** host-side DECtalk
+  speak-window WAV export or the standalone MAME-core emulator (dectalk.nu) for
+  second-scale ear-checks; in-DOS DOSBox-X serial passthrough → MAME DTC-01, or
+  `directserial` → a real Express. `run-dtalk` script mirrors `run-mt32`'s
+  conf-append shape.
+
+## Backend B (deferred, maybe never): IBM Speech Adapter (TMS5220)
+
+- **IBM PCjr Speech Attachment** (1984, sidecar): TMS5220(C), 32 KB ROM (BIOS
+  routines + 196-word vocab), 8255 PPI, disk-loaded voice data (Bouncy Bee).
+- **IBM PS/2 Speech Adapter** (1987, ISA): same chip, shifted addresses (the
+  8-Bit Guy finding); needs its breakout box. Would-be target if revived.
+- MAME chip core `mame/src/devices/sound/tms5220.cpp` is real; MAME PCjr
+  attachment coverage unverified; no DOSBox support known — would need a Scali
+  style DOSBox-X patch. Design if revived: Speak-from-RAM LPC blobs as Tier-1
+  data, offline TTS→LPC chain with word timestamps, frame-estimator reveal.
+  Static-only streams (dynamic lines silent). All superseded by Backend A until
+  someone wants the ISA card specifically.
+
+## Scope: what talks, what does not (both backends)
 
 Speakable (all mapped 2026-09-12 against the text engine):
 `ShowTextStream` (`src/engine/overworld/map_sprites.asm:799` — NPC plain dialog
@@ -53,56 +80,49 @@ callers) excludes all battle spam while keeping the win line — no heuristics.
 
 ## Sync: v2 speech-clocked typing from day one
 
-No v1 milestone — single build, sidecar chain included from the start. The
-speech is the master clock; the reveal follows it. The chip reports no position
-back, so everything is baked offline and estimated at runtime.
+No v1 milestone — single build. The speech is the master clock; the reveal
+follows it. On DECtalk the clock signal is real (index replies); the estimator
+below applies only if Backend B is ever revived.
 
-- **Asset chain** (deterministic, re-runnable): pret dialog label → transcript →
-  TTS (**must emit word timestamps**, a hard engine requirement) → LPC frames +
-  per-line timing sidecar `[{word, glyph_start, glyph_end, lpc_frame}, ...]`.
-  Glyph indices count rendered glyphs only (post-command-strip — exactly the
-  `.glyph` sequence at `src/home/text.asm:863-867`). Static-only streams speak;
-  dynamic lines (runtime names/numbers) stay silent — documented, not a bug.
-- **Runtime** (pending-utterance struct): `lpc_ptr`, `sidecar_ptr`, `word_idx`,
-  `glyphs_typed`, `speech_start_tick`. Frame position estimated:
-  `current_frame = (now - start) × frames_per_tick` (chip consumes at a fixed
-  clock; FIFO top-up paces off chip status). `PrintLetterDelay`
-  (`src/home/print_text.asm:38`) patch: speech active with sidecar → reveal
-  through `glyph_end` of elapsed words; otherwise existing fixed-delay path.
-- **Edge cases (decided):** early box close / mash-through → TMS5220 stop/reset,
-  speech never outlives its box; instant-text option → schedule collapses,
-  reveal-all with async speech (graceful v1 degradation); glyph counter persists
-  across `dialog_window_scroll`; ▼-wait falls out free (typing completes with
-  the utterance, then the box waits).
+- **Runtime** (pending-utterance struct): scraped ASCII + word↔glyph map,
+  `word_idx`, `glyphs_typed`. `PrintLetterDelay`
+  (`src/home/print_text.asm:38`) patch: marks elapsed → reveal through the
+  word's `glyph_end`; otherwise existing fixed-delay path. RX polled per tick;
+  reply timeout → reveal-all fallback (backend without mark support).
+- **Edge cases (decided):** early box close / mash-through → `DT_STOP`, speech
+  never outlives its box; instant-text option → reveal-all with async speech;
+  glyph counter persists across `dialog_window_scroll`; ▼-wait falls out free
+  (typing completes with the utterance, then the box waits).
 - **Verify at build:** skip/fast-forward semantics during reveal;
-  `TEXT_DELAY_MASK` values in `wOptions`.
+  `TEXT_DELAY_MASK` values in `wOptions`; mark-echo latency through the
+  DOSBox-X serial path (passthrough buffering could delay replies — measure
+  with a stopwatch utterance before trusting tight sync).
 
 ## Stages
 
-- [ ] **0. Groundwork.** Mirror TMS5220 datasheet + PCjr Speech Tech Ref into
-  `docs/sound/`; confirm MAME PCjr speech-attachment coverage; select LPC
-  encoder (test phrase → MAME-core decode → ear-check) and TTS engine
-  (word-timestamp requirement).
-- [ ] **1. Asset pipeline.** Transcript extractor over pret dialog/sign sources
-  (reuse `gb_text` parsing) → TTS → LPC blobs `assets/speech_*.inc` +
-  sidecars + label→blob index. Silent-on-dynamic documented.
-- [ ] **2. Driver `src/audio/speech_drv.asm`** (port-only HAL,
-  `DEVIATION{class=HAL}` header): ISA-card port map (PCjr-shifted); FIFO top-up
-  from `audio_tick`, non-blocking (game runs under speech); frame estimator;
-  v2 `PrintLetterDelay` patch; stop/reset path; `/SPEECH` flag; hooks at the 5
-  speakable sites consumed at `TX_START`.
-- [ ] **3. Test rig.** Host-side: LPC→MAME-core→WAV ear-check, no emulator.
-  In-DOS: DOSBox-X patched with MAME's `tms5220` core behind the ISA ports
-  (Scali IMFC precedent — custom build, documented, not upstreamed).
-  `run-speech` script; `DEBUG_AUDIO TRACK=... /LOOP` shape reused.
+- [ ] **0. Groundwork.** Mirror EK-DTC01-RM-003 (at minimum the Ch.1/3 sync +
+  escape-sequence pages) into `docs/sound/`; stand up one backend (MAME DTC-01
+  or speak-window) and speak a test line; measure serial reply latency.
+- [ ] **1. Driver `src/audio/dtalk_drv.asm`** (port-only HAL,
+  `DEVIATION{class=HAL}` header): poll-only UART shim (non-link COM, 9600 8N1
+  XON/XOFF); line sender with `[:name]`/`[:rate]` prefixes + word-boundary
+  index marks; RX mark parser feeding the pending-utterance struct; `DT_STOP`
+  path; `/DTALK` flag; hooks at the 5 speakable sites.
+- [ ] **2. Transcript + reveal.** Tilemap-row scraper + inverse-charmap decode
+  (dynamic lines included); v2 `PrintLetterDelay` patch with timeout fallback;
+  per-character voice assignment table.
+- [ ] **3. Runners + rig.** `run-dtalk` (serial1 nullmodem-compatible,
+  serial2 → backend); host-side WAV reference flow documented.
 - [ ] **4. Gates.** `lint_pret_labels` 0, `static_gate` clean, fidelity green
   with byte-identical `GBSTATE.BIN` (speech is output-only — assert it);
-  ear-checks: dialog line, sign, silent battle, talking trainer win.
+  ear-checks: dialog line, sign, silent battle, talking trainer win, one
+  per-character voice swap.
+- [ ] **5. (Deferred, maybe never) Backend B.** TMS5220 ISA path per the design
+  above, `make SPEECH=1` + `/SPEECH`, behind the same 5 hooks.
 
 ## Risks
 
-Encoder output incompatible with 'final' chirp/LPC tables (round-trip test in
-stage 0 exists for this); steal of `PrintLetterDelay` timing breaking
-non-speech text (guard: sidecar-present gate + instant-text collapse);
-copyrighted attachment ROM routines — clean-room the FIFO protocol from the
-datasheet + MAME source, never redistribute the ROM; no real-hardware reference.
+DOSBox-X serial passthrough latency vs mark timing (measured in stage 0);
+`[:name]` voice availability varying across DECtalk versions (pin per-backend
+voice table); MAME DTC-01 ROM (`dectalk.zip`) redistributability — document,
+never vendor; no real-hardware reference unless an Express turns up.
