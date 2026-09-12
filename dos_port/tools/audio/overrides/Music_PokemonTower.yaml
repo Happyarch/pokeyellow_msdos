@@ -1,0 +1,40 @@
+# Music_PokemonTower — per-song MIDI overrides (see README.md for schema).
+#
+# Demo vehicle for the custom "Theremin" timbre (Timbre Memory #3, staged at
+# Patch #12 rewrite — 0-based MIDI PC byte 11).
+#
+# Score Analysis & Musical Character (pokemon_tower.md):
+#   - Pokémon Tower is the resting place of deceased Pokémon and wandering
+#     ghost spirits. In 20th-century film music (Miklós Rózsa, Bernard
+#     Herrmann), the theremin is the iconic voice of the spectral, eerie,
+#     and supernatural.
+#   - Channel 2 carries the primary soaring, haunted cantabile melody
+#     (E minor / VIM7 / whole-tone climbs) with long sustained notes
+#     (note C 16, note E 12, note D 16). On Game Boy it used software vibrato
+#     (vibrato 20, 3, 4); here, the custom Theremin patch provides rich 25%
+#     duty-cycle tube pulse harmonics, vocal formant cavity resonance, and
+#     smooth ~6.0 Hz aerial vibrato without mechanical clicks.
+#   - Channel 1 plays staccato arpeggiated chord pulses; MT-32 "Warm Bell"
+#     turns them into delicate, mysterious crystal raindrop chimes.
+#   - Channel 3 plays the pedal bass and high harmonic accents; MT-32 "Echo Pan"
+#     adds an ethereal, floating stereo delay texture that handles both the low
+#     pulses and the piercing octave-6 harmonic blips seamlessly.
+#   - Channel 4 (drums) is completely silent in the composition, giving the
+#     Theremin an intimate, reverbed soundstage to sing unobstructed.
+
+channels:
+  1:
+    mt32_program: "Warm Bell"
+    gm_program: "Celesta"
+    volume: 82
+    pan: 36                      # staccato crystal chimes left...
+  2:
+    mt32_program: 11            # custom "Theremin" (Patch #12 rewrite)
+    gm_program: "Lead 6 (voice)"
+    volume: 104
+    pan: 64                      # ...soaring theremin center lead
+  3:
+    mt32_program: "Echo Pan"
+    gm_program: "FX 7 (echoes)"
+    volume: 92
+    pan: 72                      # ...ethereal echo pan texture

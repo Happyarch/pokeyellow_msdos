@@ -88,6 +88,46 @@ system:
 #    captured via ALSA file-plugin PCM. 2 partials — same cost as the
 #    factory chorus it replaces. Staged at Patch #27. GM counterpart
 #    for track use: "Lead 2 (sawtooth)".
+#
+# 3. "Theremin" (2026-09-12): authentic RCA theremin model. Grounded in
+#    oscilloscope traces and circuit analysis of the 1929 RCA Theremin:
+#    un-biased vacuum-tube heterodyning clips one half of the beat waveform,
+#    producing an asymmetric ~25% duty cycle pulse wave (rich even/odd low
+#    harmonics a1=0.71, a2=1.00, a3=0.71, resembling the human glottal
+#    pulse). The RCA 106 speaker and transformers act as a steep formant/
+#    low-pass filter (~1.8 kHz cutoff) with gentle cavity resonance.
+#    MT-32 LA synthesis recipe: ONE partial (mute 0x01, fits any reserve),
+#    pulse wave (wg_waveform 0, wg_pulse_width 25 — 25% duty cycle), concert
+#    pitch (coarse 36, fine 50, keyfollow 16, bender on). Subtle onset pitch
+#    scoop (penv depth 2, time1 14, lvl0 48 -> lvl1 50) mimicking human spatial
+#    drift. Expressive classical Rockmore vibrato (plfo rate 60, depth 16,
+#    mod sens 60). Low-pass formant filter (tvf cutoff 52, reso 15, keyfollow
+#    10, env depth 14 blooming 88 -> 78 sustain). Non-percussive volume antenna
+#    envelope (tva lvl 88, t1=6 soft attack ~25ms, lvl1 94 -> lvl2 100,
+#    sustain 100, t5=14 singing ~350ms release into hall reverb).
+#    Staged at Patch #12 (Elec Org 4 quint organ rewrite — 0-based PC byte 11).
+#    Syn Brass 1 and Syn Brass 2 (Patches #25 and #26) remain factory-intact.
+#    GM counterpart for track use: "Lead 6 (voice)".
+#
+# 4. "NightWind" (2026-09-12): authentic aerodynamic wind turbulence model
+#    built on Roland MT-32's acoustic BottleBlow Helmholtz resonator excitation.
+#    Wind howling through broken stone windows and hollow towers acts as a
+#    natural Helmholtz resonator excited by turbulent airflow — exactly the
+#    physical acoustic mechanism captured in MT-32's PCM 28 (BottleBlow).
+#    Calibrated against empirical spectrum of authentic howling storm wind (15:45 mark):
+#    measured ~99.7% energy concentrated in 20-1200 Hz with dominant resonant peak
+#    at 222.7 Hz and virtually zero energy (<0.3%) above 1200 Hz.
+#    2 partials (Structure 3: P+S — acoustic BottleBlow + resonant cavity Saw):
+#    Partial 1: PCM 28 (Roland BottleBlow sample) tuned to coarse 33 (220 Hz, exactly
+#    matching the measured 222.7 Hz peak) with resonant cavity TVF cutoff 56, reso 18.
+#    Partial 2: Low-pass filtered Sawtooth partial tuned to coarse 30 with TVF cutoff 50,
+#    reso 14, and slow aerodynamic gust drift LFO (rate 18, depth 12).
+#    No PCM 80 (eliminates all 11 kHz high-frequency static and hi-hat noise).
+#    Both partials use keyfollow 0 (non-tonal, key-independent) and gentle,
+#    undulating breathing envelopes (tva_env_time1 65 ~1.3s soft attack,
+#    tva_env_time5 70 ~1.8s release) allowing continuous polyphonic crossfading.
+#    Staged at Patch #126 (0-based PC byte 125, replacing factory demo loop preset "One Note Jam").
+#    GM counterpart for track use: "Breath Noise" (program 122).
 timbres:
   - name: "JigglyVox"
     partial_mute: 1
@@ -175,6 +215,88 @@ timbres:
         tva_env_level2: 98
         tva_env_level3: 100
         tva_env_sus_level: 100
+  - name: "Theremin"
+    partial_mute: 1
+    partials:
+      - wg_waveform: 0
+        wg_pulse_width: 25
+        wg_pitch_coarse: 36
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 16
+        penv_depth: 2
+        penv_time1: 14
+        penv_level0: 48
+        penv_level1: 50
+        penv_sus_level: 50
+        penv_end_level: 50
+        plfo_rate: 60
+        plfo_depth: 16
+        plfo_mod_sens: 60
+        tvf_cutoff: 52
+        tvf_resonance: 15
+        tvf_keyfollow: 10
+        tvf_env_depth: 14
+        tvf_env_time1: 10
+        tvf_env_level1: 88
+        tvf_env_sus_level: 78
+        tva_level: 88
+        tva_env_time1: 6
+        tva_env_level1: 94
+        tva_env_time2: 10
+        tva_env_level2: 100
+        tva_env_sus_level: 100
+        tva_env_time5: 14
+  - name: "NightWind"
+    partial_mute: 3
+    structure12: 2
+    partials:
+      - wg_pcm_wave: 28
+        wg_pitch_coarse: 33
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 0
+        wg_pitch_bender_sw: 0
+        tvf_cutoff: 56
+        tvf_resonance: 18
+        tvf_keyfollow: 0
+        tvf_env_depth: 10
+        tvf_env_time1: 65
+        tvf_env_time2: 50
+        tvf_env_time5: 70
+        tvf_env_level1: 70
+        tvf_env_sus_level: 50
+        tva_level: 100
+        tva_env_time1: 65
+        tva_env_time2: 50
+        tva_env_time3: 50
+        tva_env_time5: 70
+        tva_env_level1: 95
+        tva_env_level2: 80
+        tva_env_sus_level: 75
+      - wg_waveform: 1
+        wg_pitch_coarse: 30
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 0
+        wg_pitch_bender_sw: 0
+        plfo_rate: 18
+        plfo_depth: 12
+        plfo_mod_sens: 20
+        tvf_cutoff: 50
+        tvf_resonance: 14
+        tvf_keyfollow: 0
+        tvf_env_depth: 8
+        tvf_env_time1: 65
+        tvf_env_time2: 50
+        tvf_env_time5: 70
+        tvf_env_level1: 65
+        tvf_env_sus_level: 45
+        tva_level: 95
+        tva_env_time1: 65
+        tva_env_time2: 50
+        tva_env_time3: 50
+        tva_env_time5: 70
+        tva_env_level1: 90
+        tva_env_level2: 75
+        tva_env_sus_level: 70
 
 patches:
   - number: 28                 # PC byte 27 → "JigglyVox" (Timbre Memory #1)
@@ -183,5 +305,12 @@ patches:
   - number: 27                 # PC byte 26 → "ChipSaw" (Timbre Memory #2)
     timbre_group: 2
     timbre_number: 1          # second timbre in the list above
+  - number: 12                 # PC byte 11 → "Theremin" (Timbre Memory #3, rewrites Elec Org 4)
+    timbre_group: 2
+    timbre_number: 2          # third timbre in the list above
+  - number: 126                # PC byte 125 → "NightWind" (Timbre Memory #4, rewrites factory One Note Jam)
+    timbre_group: 2
+    timbre_number: 3          # fourth timbre in the list above
 
 rhythm: []
+

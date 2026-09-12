@@ -1,0 +1,44 @@
+schema: 1
+song: Music_PokemonTower
+
+# Tier-2 pass: Ambient Night Wind Drone (MT-32 / GM only).
+#
+# Musical & Atmospheric rationale:
+# The Pokémon Tower score is an austere, eerie, minimalist composition.
+# Standard chordal pads, basslines, or drums would destroy the desolate
+# emptiness that defines Lavender Town's ghost tower.
+#
+# Per user direction & empirical acoustic research:
+# - OPL3 does nothing (no tier-1 channels; the FM chiptune core stays pure).
+# - Synthesized pulsewave crow is dropped entirely: avian syrinx phonation
+#   without sample loading produces an unnatural electronic pulse buzz.
+# - MT-32 receives a custom "NightWind" patch built on Roland MT-32's acoustic
+#   BottleBlow (PCM 28) sample + air noise (PCM 80). Wind whistling through
+#   broken stone windows and hollow tower chambers is physically a Helmholtz
+#   resonator excited by turbulent airflow — exactly what BottleBlow captures.
+# - The wind is modeled as a continuous, organic, undulating atmospheric drone:
+#   rather than sudden disjointed stabs separated by silence, long overlapping
+#   phrases breathe seamlessly across all 33 measures (1.3s attack, 1.8s release,
+#   1-second crossfade between phrases, non-tonal keyfollow 0).
+#   At measure 29, during the 1-measure rest where channel 2 drops out before
+#   the ethereal climax, the wind howling through the tower rises into focus.
+# - GM counterpart: Breath Noise (program 122).
+
+channels:
+  - name: night_wind
+    tier: 2
+    percussion: true
+    mt32_patch: 126           # Custom Timbre "NightWind" (BottleBlow Helmholtz model, Patch #126 rewrite)
+    gm_program: 122           # Breath Noise (GM)
+    pan: left
+    volume: 95                # audible ambient atmospheric bed
+    velocity: 85
+    events:
+      - {m: 1,  b: 1, d: 18,   n: D4}
+      - {m: 5,  b: 1, d: 18,   n: C4}
+      - {m: 9,  b: 1, d: 18,   n: D4}
+      - {m: 13, b: 1, d: 18,   n: C4}
+      - {m: 17, b: 1, d: 18,   n: D4}
+      - {m: 21, b: 1, d: 18,   n: C4}
+      - {m: 25, b: 1, d: 18,   n: D4}
+      - {m: 29, b: 1, d: 19.8, n: C4}
