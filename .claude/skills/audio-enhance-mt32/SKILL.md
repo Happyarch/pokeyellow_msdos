@@ -59,6 +59,12 @@ never play on OPL3):
 mt32_patch: <MT-32 patch number or custom timbre name>
 gm_program: <GM program number>
 ```
+Custom timbre names defined in `tools/audio/mt32/timbres.yaml` can be used as strings
+(e.g. `mt32_patch: "NightWind"` or `mt32_program: "Theremin"`). The build pipeline
+compiles on-the-fly setup SysEx (pointing the patch slot to the custom timbre) and
+cleanup SysEx (eagerly restoring the patch slot to factory parameters on track
+stop/unload, keeping all 128 factory presets intact).
+
 `yaml_lint.py` enforces: tier 2–3 entries must NOT have `opl_patch`,
 and must have both `mt32_patch` and `gm_program`. It also runs the same
 range, polyphony, and unison-doubling checks as tier 1. **Percussion
@@ -277,8 +283,9 @@ character does not imply a channel boundary.
 
 The listen loop is documented in the **`audio-enhance-opl3`** skill ("Auditioning music").
 Short form: `mt32emu-qt &` then `tools/audio/audition.py --target mt32 <Song>` (or fuzzy match
-like `tools/audio/audition.py --target mt32 celadon`; pass `--setup` to prepend the timbres.yaml
-setup SysEx; `--target opl3` is default).
+like `tools/audio/audition.py --target mt32 celadon`; pass `--setup` to upload custom timbres from
+`timbres.yaml` to MUNT; `--target opl3` is default). Audition automatically sends the song's patch
+setup SysEx before playback and restores factory parameters on exit.
 
 Auditioning features the full interactive TUI:
 - **`[Tab]`**: Instant position-locked A/B toggle between your current working YAML and previous revision/checkpoint.

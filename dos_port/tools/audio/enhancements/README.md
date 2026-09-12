@@ -118,7 +118,7 @@ patterns:
 | `channels[].name` | slug | Unique within the file; used in lint/audition reports. |
 | `channels[].tier` | 1, 2, 3 | Tier 1 = OPL3+MT-32/GM; 2–3 = MT-32/GM only (3 dropped before 2 under polyphony pressure). |
 | `channels[].opl_patch` | string | Required iff tier 1. A `PATCHES` key in `gen_opl_patches.py`. |
-| `channels[].mt32_patch` | int or string | Required. Int = **1-based** preset number (Program Change byte is value − 1); string = custom timbre name defined in `mt32/timbres.yaml`. |
+| `channels[].mt32_patch` | int or string | Required. Int = **1-based** preset number (Program Change byte is value − 1); string = custom timbre name defined in `mt32/timbres.yaml`. Custom timbres are dynamically mapped on track load and eagerly restored to factory presets on track unload. |
 | `channels[].gm_program` | int | Required. **1-based** GM program. GM and MT-32 numbering do **not** align — pick independently. |
 | `channels[].pan` | enum | `left`/`center`/`right`. MIDI CC10 (0/64/127); OPL3 register C0h bits 4–5. |
 | `channels[].volume` | int 0–127 | CC7 once at song start; OPL player maps to carrier total-level. Default 96. |

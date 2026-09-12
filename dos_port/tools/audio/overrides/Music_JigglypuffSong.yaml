@@ -19,7 +19,7 @@
 # stay Voice Oohs there.
 channels:
   1:
-    mt32_program: 27            # custom "JigglyVox" (Patch #28 rewrite)
+    mt32_program: "JigglyVox"
     gm_program: "Voice Oohs"    # no GM upload path — vox vowel instead
     volume: 88                  # halo under the Vox lead
     pan: 56                     # near-center duet, ch1 a hair left

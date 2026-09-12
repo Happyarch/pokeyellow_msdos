@@ -28,7 +28,7 @@ channels:
   - name: night_wind
     tier: 2
     percussion: true
-    mt32_patch: 126           # Custom Timbre "NightWind" (BottleBlow Helmholtz model, Patch #126 rewrite)
+    mt32_patch: "NightWind"
     gm_program: 122           # Breath Noise (GM)
     pan: left
     volume: 95                # audible ambient atmospheric bed

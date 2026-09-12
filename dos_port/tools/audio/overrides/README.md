@@ -98,7 +98,9 @@ Notes:
   factory patch "Sax 3". This is exactly why names are preferred: the YAML
   then says what it sounds like. (Verified by ear 2026-07-07 — the default
   80/80/38 played Celadon as two saxes + a bell.)
-- Once `timbres.yaml` uploads custom timbres, its Patch Memory rewrites
-  redefine slots and the factory names for those slots stop being true —
-  point `mt32_program` at the rewritten slot number per the timbres.yaml
-  header comment.
+- Custom timbres defined in `mt32/timbres.yaml` can be specified directly by
+  name as a string: e.g., `mt32_program: "Theremin"` or `mt32_program: "JigglyVox"`.
+  The build pipeline generates per-song SysEx messages that remap the patch pointer
+  on the fly when the track starts, and eagerly restore it back to factory
+  parameters when the track finishes or stops. Factory presets are never
+  permanently overwritten at boot.

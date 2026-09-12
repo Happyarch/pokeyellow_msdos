@@ -29,7 +29,7 @@ channels:
     volume: 82
     pan: 36                      # staccato crystal chimes left...
   2:
-    mt32_program: 11            # custom "Theremin" (Patch #12 rewrite)
+    mt32_program: "Theremin"
     gm_program: "Lead 6 (voice)"
     volume: 104
     pan: 64                      # ...soaring theremin center lead

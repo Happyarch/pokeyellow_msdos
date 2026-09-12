@@ -87,12 +87,29 @@ The MT-32 and GM patch maps are **different** — always give both fields:
 | Bell/chime | 23 Celesta 1, 103 Tube Bell, 39 Warm Bell | 9 Celesta, 15 Tubular Bells | Accent use |
 
 ### Using custom timbres
-`timbres.yaml` can define custom timbres uploaded via SysEx at init.
-Custom timbres are stored in MT-32's timbre memory (64 slots: 2 banks
-of 32). Use custom timbres when:
-- You need a specific partial configuration
+`tools/audio/mt32/timbres.yaml` defines custom synthesis timbres uploaded
+into MT-32 User Timbre RAM (`08 00 00`..`08 7E 00`) via SysEx at game init.
+Up to 64 custom timbres can reside in Timbre RAM. Use custom timbres when:
+- You need a specific partial configuration (e.g. analog saw, authentic vocal vowel)
 - Preset patches don't match the desired sound
 - You want to reduce partial usage (a 1-partial custom patch is cheaper)
+
+**On-the-fly dynamic patch pointer remapping & eager restore**:
+Rather than permanently overwriting factory patch memory at boot (which would
+destroy factory presets like #12 `Elec Org 4` or #27 `Syn Brass 1` for all other
+tracks), custom timbres are assigned a target patch slot in `timbres.yaml`
+(`patch: <1-128>`) and remapped on the fly:
+1. **Declare by name**: In track YAMLs (`overrides/*.yaml` or
+   `enhancements/*.yaml`), specify the timbre by name as a string:
+   `mt32_program: "Theremin"` or `mt32_patch: "NightWind"`.
+2. **Setup SysEx on track start**: When the track begins, the sound driver
+   transmits a tiny length-prefixed DT1 SysEx message (18 bytes per custom
+   patch, ~5.4 ms over UART) that points that patch slot to the custom timbre.
+3. **Eager Cleanup SysEx on track stop/unload**: When the track ends or another
+   track loads, the driver transmits a companion cleanup SysEx (18 bytes) that
+   immediately restores the modified patch slot back to factory parameters.
+4. **Clean factory state**: All 128 factory presets remain 100% available and
+   undistorted for any subsequent track.
 
 ### GM equivalents
 For `gm_program`, use the closest GM equivalent. **GM and MT-32 patch

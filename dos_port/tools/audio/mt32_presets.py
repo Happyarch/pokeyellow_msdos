@@ -22,6 +22,9 @@ Name lookup is case- and punctuation-insensitive ("doctor solo",
 
 from __future__ import annotations
 
+from pathlib import Path
+import yaml
+
 MT32_FACTORY = [
     # 0-7: pianos
     "Acou Piano 1", "Acou Piano 2", "Acou Piano 3",
@@ -119,8 +122,24 @@ def _norm(name: str) -> str:
     return "".join(c for c in name.lower() if c.isalnum())
 
 
+def _load_custom_lookup() -> dict[str, int]:
+    custom = {}
+    p = Path(__file__).resolve().parent / "mt32" / "timbres.yaml"
+    if p.exists():
+        try:
+            data = yaml.safe_load(p.read_text()) or {}
+            for t in data.get("timbres", []) or []:
+                name = t.get("name")
+                patch = t.get("patch")
+                if name and patch:
+                    custom[_norm(name)] = int(patch) - 1
+        except Exception:
+            pass
+    return custom
+
+
 _LOOKUP = {
-    "mt32": {_norm(n): i for i, n in enumerate(MT32_FACTORY)},
+    "mt32": {**{_norm(n): i for i, n in enumerate(MT32_FACTORY)}, **_load_custom_lookup()},
     "gm": {_norm(n): i for i, n in enumerate(GM_PROGRAMS)},
 }
 

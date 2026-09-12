@@ -196,6 +196,35 @@ mt32_upload:
     ret
 
 ; ---------------------------------------------------------------------------
+; mt32_send_sysex_list — send a list of length-prefixed SysEx messages to
+; the MT-32 without pacing delays. Each message starts with dw length, followed
+; by length bytes. A length of 0 terminates the list.
+; Input: ESI = pointer to list (if 0, returns immediately)
+; Preserves all registers.
+; ---------------------------------------------------------------------------
+mt32_send_sysex_list:
+    test esi, esi
+    jz .off
+    pushad
+.msg:
+    movzx edi, word [esi]         ; message length
+    test edi, edi
+    jz .done
+    add esi, 2
+.byte:
+    mov al, [esi]
+    call mpu_write_data
+    jc .done                      ; interface wedged: give up quietly
+    inc esi
+    dec edi
+    jnz .byte
+    jmp .msg
+.done:
+    popad
+.off:
+    ret
+
+; ---------------------------------------------------------------------------
 ; midi_seq_start — start the stream for music sound id AL (bank from
 ; wAudioROMBank, exactly the (id, bank) addressing the engine dispatch
 ; uses). Called from AudioCommon_PlaySound's music path on every music
@@ -206,23 +235,50 @@ midi_seq_start:
     cmp byte [g_midi_music], 0
     jz .off
     pushad
-    movzx eax, al
+    movzx eax, al                 ; sound id
     mov cl, [ebp + wAudioROMBank]
-    mov esi, MidiStreamTable_Bank1
+    xor ebx, ebx
     cmp cl, AUDIO_BANK_1
-    je .table
-    mov esi, MidiStreamTable_Bank2
+    je .bank_ok
+    inc ebx
     cmp cl, AUDIO_BANK_2
-    je .table
-    mov esi, MidiStreamTable_Bank3
+    je .bank_ok
+    inc ebx
     cmp cl, AUDIO_BANK_3
-    je .table
-    mov esi, MidiStreamTable_Bank4
-.table:
-    mov esi, [esi + eax*4]
+    je .bank_ok
+    inc ebx
+.bank_ok:
+    mov edx, [bank_stream_tables + ebx*4]
+    mov esi, [edx + eax*4]
     test esi, esi
-    jz .done                      ; no stream for this id
+    jz .no_stream
+
     call midi_all_notes_off       ; clean handover from the previous song
+
+    ; MT-32 on-the-fly custom patch pointer remapping:
+    ; 1) If previous track modified patches, restore them to factory state
+    ; 2) If new track uses custom patches, send setup SysEx and arm cleanup
+    cmp byte [g_cfg_midi], 1
+    jne .skip_mt32_patches
+    push esi
+    mov esi, [g_mt32_active_cleanup]
+    test esi, esi
+    jz .no_prev_cleanup
+    call mt32_send_sysex_list
+    mov dword [g_mt32_active_cleanup], 0
+.no_prev_cleanup:
+    mov edx, [bank_setup_tables + ebx*4]
+    mov esi, [edx + eax*4]
+    test esi, esi
+    jz .no_new_setup
+    call mt32_send_sysex_list
+    mov edx, [bank_cleanup_tables + ebx*4]
+    mov edx, [edx + eax*4]
+    mov [g_mt32_active_cleanup], edx
+.no_new_setup:
+    pop esi
+.skip_mt32_patches:
+
     movzx eax, word [esi]         ; loop_off
     lea ecx, [esi + 2]            ; first op byte
     mov [midi_base], ecx
@@ -249,16 +305,31 @@ midi_seq_start:
 .off:
     ret
 
+.no_stream:
+    call midi_seq_stop
+    jmp .done
+
 ; ---------------------------------------------------------------------------
 ; midi_seq_stop — silence and stop the sequencer (stop-all-audio path,
 ; audio_shutdown). Preserves all registers.
 ; ---------------------------------------------------------------------------
 midi_seq_stop:
-    cmp byte [midi_on], 0
+    cmp byte [g_mpu_present], 0
     jz .off
     pushad
+    cmp byte [midi_on], 0
+    jz .chk_cleanup
     mov byte [midi_on], 0
     call midi_all_notes_off
+.chk_cleanup:
+    cmp byte [g_cfg_midi], 1
+    jne .done
+    mov esi, [g_mt32_active_cleanup]
+    test esi, esi
+    jz .done
+    call mt32_send_sysex_list
+    mov dword [g_mt32_active_cleanup], 0
+.done:
     popad
 .off:
     ret
@@ -453,11 +524,19 @@ midi_used_channels: db 1, 2, 3, 9, 0xFF
 ; generated music streams + per-bank id → stream tables
 %include "assets/music_streams.inc"
 
+bank_stream_tables:
+    dd MidiStreamTable_Bank1, MidiStreamTable_Bank2, MidiStreamTable_Bank3, MidiStreamTable_Bank4
+bank_setup_tables:
+    dd Mt32SongSetupTable_Bank1, Mt32SongSetupTable_Bank2, Mt32SongSetupTable_Bank3, Mt32SongSetupTable_Bank4
+bank_cleanup_tables:
+    dd Mt32SongCleanupTable_Bank1, Mt32SongCleanupTable_Bank2, Mt32SongCleanupTable_Bank3, Mt32SongCleanupTable_Bank4
+
 ; generated MT-32 setup SysEx (length-prefixed DT1s, dw 0 terminated)
 %include "assets/mt32_sysex.inc"
 
 section .bss
 
+g_mt32_active_cleanup: resd 1     ; pointer to active cleanup SysEx list (0 = none)
 midi_base:      resd 1            ; first op byte of the current stream
 midi_ptr:       resd 1            ; current op position
 midi_loop:      resd 1            ; resolved loop target (0 = play once)

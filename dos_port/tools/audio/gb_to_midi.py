@@ -777,10 +777,13 @@ def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
         if target == "mt32" and not c.is_rhythm:
             if isinstance(c.mt32_patch, int):
                 prog = c.mt32_patch - 1
-            else:
-                print(f"    ENHANCE warn: {c.name!r} custom timbre "
-                      f"{c.mt32_patch!r} not wired into the merge yet — "
-                      "falling back to gm_program")
+            elif isinstance(c.mt32_patch, str):
+                try:
+                    prog = resolve_program(c.mt32_patch, "mt32", f"enh {c.name}")
+                except ValueError:
+                    print(f"    ENHANCE warn: {c.name!r} custom timbre "
+                          f"{c.mt32_patch!r} not wired into the merge yet — "
+                          "falling back to gm_program")
         evs: list[tuple[int, int, bytes]] = [
             (0, 1, meta(0x03, f"enh {c.name} tier{c.tier}".encode())),
         ]

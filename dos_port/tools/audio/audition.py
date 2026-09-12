@@ -159,6 +159,7 @@ def run_interactive_audition(
 ):
     wav_file = None
     aplay_proc = None
+    mt32_cleanup_msgs = None
 
     if target == "opl3":
         import opl_renderer
@@ -188,6 +189,16 @@ def run_interactive_audition(
             setup_msgs = build_messages(yaml.safe_load(TIMBRES.read_text()) or {},
                                         system=False)
         sess = midi_renderer.MidiSession(song_label, target, port, sysex_setup=setup_msgs)
+        if target == "mt32":
+            from gen_mt32_patches import load_custom_timbres
+            from midi_to_stream import find_song_custom_patches, build_song_sysex
+            custom_timbres = load_custom_timbres()
+            song_patches = find_song_custom_patches(sess.song_label, None, None, custom_timbres)
+            song_setup, song_cleanup = build_song_sysex(song_patches)
+            if song_setup:
+                for msg in song_setup:
+                    sess.midi.send(msg)
+            mt32_cleanup_msgs = song_cleanup
         rate = 48000
         if out_wav:
             import wave
@@ -539,6 +550,9 @@ def run_interactive_audition(
             aplay_proc.wait()
         if hasattr(sess, "silence_all"):
             sess.silence_all()
+        if mt32_cleanup_msgs and hasattr(sess, "midi"):
+            for msg in mt32_cleanup_msgs:
+                sess.midi.send(msg)
 
 
 # ---------------------------------------------------------------------------

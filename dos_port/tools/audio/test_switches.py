@@ -743,7 +743,7 @@ class SwitchTest(unittest.TestCase):
     # -- compatibility ------------------------------------------------------
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
-        self.assertEqual(len(files), 20)
+        self.assertEqual(len(files), 21)
         bad = []
         for path in files:
             rep, _, _ = lint(path)
@@ -757,9 +757,9 @@ class SwitchTest(unittest.TestCase):
         labels = {lbl for n, lbl in consts.items() if n.startswith("MUSIC_")}
         files = sorted((HERE / "overrides").glob("*.yaml"))
         canonical = [p for p in files if p.stem in labels]
-        # 19 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
+        # 20 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
         # matches no song label and is never read by load_overrides).
-        self.assertEqual(len(canonical), 19)
+        self.assertEqual(len(canonical), 20)
         switched = {
             "Music_Cities2": {2: 2},
             "Music_Celadon": {1: 2, 2: 2},

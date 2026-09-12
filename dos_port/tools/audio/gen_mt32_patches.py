@@ -85,7 +85,7 @@ PATCH_PARAMS = [                  # Patch Memory record (8 bytes)
 
 def build_block(params: list[tuple[str, int]], src: dict, where: str) -> bytes:
     known = {n for n, _ in params}
-    unknown = set(src) - known - {"name", "partials"}
+    unknown = set(src) - known - {"name", "partials", "patch"}
     if unknown:
         raise ValueError(f"{where}: unknown parameter(s) {sorted(unknown)}")
     out = bytearray()
@@ -95,6 +95,38 @@ def build_block(params: list[tuple[str, int]], src: dict, where: str) -> bytes:
             raise ValueError(f"{where}: {name} = {val} out of 0-127")
         out.append(int(val))
     return bytes(out)
+
+
+def custom_patch_record(timbre_idx: int) -> bytes:
+    """8-byte Patch Memory record mapping a patch slot to custom Timbre RAM slot timbre_idx."""
+    return bytes((2, timbre_idx, 24, 50, 12, 0, 1, 0))
+
+
+def factory_patch_record(patch_num: int) -> bytes:
+    """8-byte Patch Memory record restoring patch_num (1-128) to Roland factory preset defaults."""
+    idx = patch_num - 1
+    return bytes((idx // 64, idx % 64, 24, 50, 12, 0, 1, 0))
+
+
+def patch_sysex(patch_num: int, record: bytes) -> bytes:
+    """Single 17-byte Roland DT1 SysEx message writing an 8-byte record to patch_num (1-128)."""
+    return dt1(0x050000, record, start=(patch_num - 1) * 8)[0]
+
+
+def load_custom_timbres(defs_path: Path | None = None) -> dict[str, dict]:
+    """Returns {norm_name: {"name": str, "index": int, "patch": int}} from timbres.yaml."""
+    path = defs_path or DEFS
+    if not path.exists():
+        return {}
+    data = yaml.safe_load(path.read_text()) or {}
+    result = {}
+    for i, t in enumerate(data.get("timbres", []) or []):
+        name = t.get("name")
+        patch = t.get("patch")
+        if name and patch:
+            norm = "".join(c.lower() for c in name if c.isalnum())
+            result[norm] = {"name": name, "index": i, "patch": int(patch)}
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +211,7 @@ def build_messages(defs: dict, system: bool = True) -> list[bytes]:
         if not 1 <= len(partials) <= 4:
             raise ValueError(f"timbre {name!r}: 1-4 partials")
         mute_default = (1 << len(partials)) - 1   # unmute what's defined
-        common = {k: v for k, v in tim.items() if k not in ("name", "partials")}
+        common = {k: v for k, v in tim.items() if k not in ("name", "partials", "patch")}
         common.setdefault("partial_mute", mute_default)
         data = name.ljust(10).encode() \
             + build_block(COMMON_PARAMS, common, f"timbre {name!r}")

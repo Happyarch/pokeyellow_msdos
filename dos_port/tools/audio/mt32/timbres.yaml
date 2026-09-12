@@ -32,20 +32,12 @@ system:
   midi_channels: [2, 3, 4, 5, 6, 7, 8, 9, 9]
   master_volume: 100
 
-# Custom timbres upload to Timbre Memory #1.. in list order. To play one,
-# rewrite a Patch Memory slot below (timbre_group: 2, timbre_number: index)
-# and point the song override's mt32_program at that slot - 1.
-#
-# Slot discipline: NEVER rewrite a factory slot another song uses — check
-# program usage across overrides/*.yaml + enhancements/*.yaml first
-# (2026-09-11 survey: 40 of 128 slots in use). Both custom rewrites sit in
-# the unused Syn Brass twins (#27/#28 — byte-read from MT32_CONTROL.ROM:
-# near-identical detuned SAW pairs differing only in filter/attack, zero
-# track usage; the family keeps Brass 1 (octave lead) and Brass 2
-# (sub-oscillator), its only meaningfully different members). #127 Water
-# Bells is factory again — it is a unique 3-partial PCM#106 bell stack,
-# and #124 Telephone (unique 1-partial PCM#51 blip) was rejected as the
-# refuge for the same reason: one-offs are not override candidates.
+# Custom timbres upload to Timbre Memory #1.. in list order at game boot.
+# To play one, songs declare it by name (e.g. mt32_program: "Theremin").
+# The audio pipeline compiles on-the-fly patch pointer rewrites (using the
+# assigned `patch:` slot) and companion cleanup SysEx messages to restore
+# factory parameters eagerly when the track finishes. Factory presets remain
+# intact for all other tracks.
 #
 # 1. "JigglyVox" (2026-09-11, for Music_JigglypuffSong): byte-exact clone
 #    of factory Funny Vox (patch #40), read out of MT32_CONTROL.ROM
@@ -130,6 +122,7 @@ system:
 #    GM counterpart for track use: "Breath Noise" (program 122).
 timbres:
   - name: "JigglyVox"
+    patch: 28
     partial_mute: 1
     partials:
       - wg_waveform: 1
@@ -175,6 +168,7 @@ timbres:
         tva_env_level3: 99
         tva_env_sus_level: 100
   - name: "ChipSaw"
+    patch: 27
     partial_mute: 3
     partials:
       - wg_waveform: 1
@@ -216,6 +210,7 @@ timbres:
         tva_env_level3: 100
         tva_env_sus_level: 100
   - name: "Theremin"
+    patch: 12
     partial_mute: 1
     partials:
       - wg_waveform: 0
@@ -247,6 +242,7 @@ timbres:
         tva_env_sus_level: 100
         tva_env_time5: 14
   - name: "NightWind"
+    patch: 126
     partial_mute: 3
     structure12: 2
     partials:
@@ -297,20 +293,6 @@ timbres:
         tva_env_level1: 90
         tva_env_level2: 75
         tva_env_sus_level: 70
-
-patches:
-  - number: 28                 # PC byte 27 → "JigglyVox" (Timbre Memory #1)
-    timbre_group: 2           # memory timbre (0/1 = preset A/B, 3 = rhythm)
-    timbre_number: 0          # first timbre in the list above
-  - number: 27                 # PC byte 26 → "ChipSaw" (Timbre Memory #2)
-    timbre_group: 2
-    timbre_number: 1          # second timbre in the list above
-  - number: 12                 # PC byte 11 → "Theremin" (Timbre Memory #3, rewrites Elec Org 4)
-    timbre_group: 2
-    timbre_number: 2          # third timbre in the list above
-  - number: 126                # PC byte 125 → "NightWind" (Timbre Memory #4, rewrites factory One Note Jam)
-    timbre_group: 2
-    timbre_number: 3          # fourth timbre in the list above
 
 rhythm: []
 
