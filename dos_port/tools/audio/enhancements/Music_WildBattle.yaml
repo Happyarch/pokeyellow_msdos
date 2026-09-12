@@ -1,0 +1,555 @@
+# enhancements/Music_WildBattle.yaml — tier-1 foundation (Phase E).
+#
+# The track (C major 0.699 vs C minor 0.558, changing every half-measure
+# across 68 chord segs): ch1 scalar runs + hook, ch2 fifth-ostinatos,
+# ch3 low ostinato, ch4 empty (battle-SFX reservation — no drums on the
+# base track, ever). What is missing: low end (ch3 never drops below
+# C4 territory in effect) and sustained harmonic glue (every GB voice
+# moves). Two conservative tier-1 voices, both clear of the GB parts:
+#
+#   * sub_bass — chord roots in octave 1, one note per analysis chord
+#     seg (half-measure rate through the chromatic runs, long pedals
+#     under the islands: m29 C1 x16 beats). Roots ONLY: thirds flip
+#     E/Eb within a beat here (m3 C->Cm, m7 C->Cm...), so any third
+#     would clash; roots are ambiguity-proof. Follows the analysis
+#     chord map verbatim (mm. 1-34 = intro + one loop body; the
+#     compiler duplicates the body, so mm. 35-58 ride free).
+#   * low_pad — one sustained note per chord seg in octave 2-3, root
+#     or fifth whichever is nearer the previous pick (common tones
+#     held through the ambiguity: G2 across C->Cm7->G7 mm. 16-18, C3
+#     across the m29 pedal). No thirds, same reason. Single-note line
+#     throughout, so the below-C3 spacing rule is trivially satisfied.
+#
+# Tier-2/3 intentionally absent for now: on MT-32 the pad cascades as
+# Str Sect 1 already, and strings/timpani (the planned tier-2) get
+# authored against the auditioned tier-1 balance, not before it.
+# OPL patches sub_bass/soft_pad (gen_opl_patches.py); MT-32 SynBass1/
+# Str Sect 1 cascade; GM Synth Bass 1 / Pad 2 (warm) to match.
+
+schema: 1
+song: Music_WildBattle
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass_clear  # round sine had no attack definition under the
+                              # 16ths (inaudible at 50-54, muddy at 60 — same
+                              # muffled-low-end complaint as Cities2 2026-09-11):
+                              # MULT-2 octave sideband for pitch tracking
+    mt32_patch: 31        # MT-32 Syn Bass 3 (detuned SAW+SQU, reso 15 — saw
+                          # edge cuts through the runs; SynBass1's round
+                          # sustainer vanished here. Fallback if the edge is
+                          # wrong for battle low end: Acou Bass 1 (#65))
+    gm_program: 39        # GM Synth Bass 1
+    pan: center
+    volume: 54                # bracketed 2026-09-12: 60 hot, 50 inaudible (old patch)
+    velocity: 80
+    events:
+      - {m: 1, b: 1, d: 2, n: C1}
+      - {m: 1, b: 3, d: 2, n: C1}
+      - {m: 2, b: 1, d: 2, n: G1}
+      - {m: 2, b: 3, d: 2, n: A1}
+      - {m: 3, b: 1, d: 2, n: C1}
+      - {m: 3, b: 3, d: 4, n: C1}
+      - {m: 4, b: 3, d: 4, n: C#1}
+      - {m: 5, b: 3, d: 2, n: D#1}
+      - {m: 6, b: 1, d: 2, n: D#1}
+      - {m: 6, b: 3, d: 2, n: F#1}
+      - {m: 7, b: 1, d: 2, n: C1}
+      - {m: 7, b: 3, d: 4, n: C1}
+      - {m: 8, b: 3, d: 4, n: C#1}
+      - {m: 9, b: 3, d: 2, n: D#1}
+      - {m: 10, b: 1, d: 2, n: D#1}
+      - {m: 10, b: 3, d: 2, n: C#1}
+      - {m: 11, b: 1, d: 2, n: C1}
+      - {m: 11, b: 3, d: 2, n: C1}
+      - {m: 12, b: 1, d: 2, n: C1}
+      - {m: 12, b: 3, d: 2, n: A1}
+      - {m: 13, b: 1, d: 2, n: C#1}
+      - {m: 13, b: 3, d: 4, n: G#1}
+      - {m: 14, b: 3, d: 2, n: C#1}
+      - {m: 15, b: 1, d: 4, n: C1}
+      - {m: 16, b: 1, d: 2, n: C1}
+      - {m: 16, b: 3, d: 2, n: C1}
+      - {m: 17, b: 1, d: 4, n: C1}
+      - {m: 18, b: 1, d: 2, n: C1}
+      - {m: 18, b: 3, d: 2, n: G1}
+      - {m: 19, b: 1, d: 8, n: C#1}
+      - {m: 21, b: 1, d: 8, n: C1}
+      - {m: 23, b: 1, d: 8, n: A#1}
+      - {m: 25, b: 1, d: 4, n: A1}
+      - {m: 26, b: 1, d: 4, n: C1}
+      - {m: 27, b: 1, d: 2, n: D1}
+      - {m: 27, b: 3, d: 2, n: A#1}
+      - {m: 28, b: 1, d: 2, n: D1}
+      - {m: 28, b: 3, d: 2, n: F1}
+      - {m: 29, b: 1, d: 16, n: C1}
+      - {m: 33, b: 1, d: 4, n: C#1}
+      - {m: 34, b: 1, d: 2, n: G#1}
+      - {m: 34, b: 3, d: 2, n: C#1}
+      # --- loop pass 2 (mm. 35-58): the player wraps to the loop region
+      # (frame 2652), it does not fold — body content must exist here
+      # explicitly (same discipline as PalletTown's double instancing).
+      - {m: 35, b: 1, d: 2, n: C1}
+      - {m: 35, b: 3, d: 2, n: C1}
+      - {m: 36, b: 1, d: 2, n: C1}
+      - {m: 36, b: 3, d: 2, n: A1}
+      - {m: 37, b: 1, d: 2, n: C#1}
+      - {m: 37, b: 3, d: 4, n: G#1}
+      - {m: 38, b: 3, d: 2, n: C#1}
+      - {m: 39, b: 1, d: 4, n: C1}
+      - {m: 40, b: 1, d: 2, n: C1}
+      - {m: 40, b: 3, d: 2, n: C1}
+      - {m: 41, b: 1, d: 4, n: C1}
+      - {m: 42, b: 1, d: 2, n: C1}
+      - {m: 42, b: 3, d: 2, n: G1}
+      - {m: 43, b: 1, d: 8, n: C#1}
+      - {m: 45, b: 1, d: 8, n: C1}
+      - {m: 47, b: 1, d: 8, n: A#1}
+      - {m: 49, b: 1, d: 4, n: A1}
+      - {m: 50, b: 1, d: 4, n: C1}
+      - {m: 51, b: 1, d: 2, n: D1}
+      - {m: 51, b: 3, d: 2, n: A#1}
+      - {m: 52, b: 1, d: 2, n: D1}
+      - {m: 52, b: 3, d: 2, n: F1}
+      - {m: 53, b: 1, d: 16, n: C1}
+      - {m: 57, b: 1, d: 4, n: C#1}
+      - {m: 58, b: 1, d: 2, n: G#1}
+      - {m: 58, b: 3, d: 2, n: C#1}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad
+    mt32_patch: 49        # MT-32 Str Sect 1 (warm string pad on the cascade)
+    gm_program: 90        # GM Pad 2 (warm)
+    pan: center
+    volume: 80                # 68 was inaudible under the runs (audition 2026-09-12)
+    velocity: 84
+    # Gated to hook + lyrical + transitions (mm. 3-10, 23-34, 47-58):
+    # NO sustained tones under the scalar runs (mm. 1-2/11-22/35-46).
+    # Rationale (measured 2026-09-12): the pad is a 4-partial deep-vibrato
+    # sustainer; under 16ths it is pure legato wash where the GB has
+    # decaying blips. Runs keep squares + sub + drums (all rhythmically
+    # active); the pad rejoins where notes are long enough to carry it.
+    events:
+      - {m: 3, b: 1, d: 2, n: G2}
+      - {m: 3, b: 3, d: 4, n: G2}
+      - {m: 4, b: 3, d: 4, n: G#2}
+      - {m: 5, b: 3, d: 2, n: A#2}
+      - {m: 6, b: 1, d: 2, n: A#2}
+      - {m: 6, b: 3, d: 2, n: C#3}
+      - {m: 7, b: 1, d: 2, n: C3}
+      - {m: 7, b: 3, d: 4, n: C3}
+      - {m: 8, b: 3, d: 4, n: C#3}
+      - {m: 9, b: 3, d: 2, n: D#3}
+      - {m: 10, b: 1, d: 2, n: D#3}
+      - {m: 10, b: 3, d: 2, n: C#3}
+      - {m: 23, b: 1, d: 8, n: F2}
+      - {m: 25, b: 1, d: 4, n: E2}
+      - {m: 26, b: 1, d: 4, n: G2}
+      - {m: 27, b: 1, d: 2, n: A2}
+      - {m: 27, b: 3, d: 2, n: A#2}
+      - {m: 28, b: 1, d: 2, n: A2}
+      - {m: 28, b: 3, d: 2, n: C3}
+      - {m: 29, b: 1, d: 16, n: C3}
+      - {m: 33, b: 1, d: 4, n: C#3}
+      - {m: 34, b: 1, d: 2, n: D#3}
+      - {m: 34, b: 3, d: 2, n: C#3}
+      # --- loop pass 2 (mm. 35-58): body content duplicated explicitly —
+      # see sub_bass above for why the player needs it here.
+      - {m: 47, b: 1, d: 8, n: F2}
+      - {m: 49, b: 1, d: 4, n: E2}
+      - {m: 50, b: 1, d: 4, n: G2}
+      - {m: 51, b: 1, d: 2, n: A2}
+      - {m: 51, b: 3, d: 2, n: A#2}
+      - {m: 52, b: 1, d: 2, n: A2}
+      - {m: 52, b: 3, d: 2, n: C3}
+      - {m: 53, b: 1, d: 16, n: C3}
+      - {m: 57, b: 1, d: 4, n: C#3}
+      - {m: 58, b: 1, d: 2, n: D#3}
+      - {m: 58, b: 3, d: 2, n: C#3}
+
+  # --- Tier 2 (MT-32 / GM only; never OPL) --------------------------------
+  # war_drums — timpani heartbeat, not a kit: low tom on every downbeat
+  # plus kick on beat 3 inside the lyrical halves (hook mm. 3-10,
+  # middles mm. 23-30), and a crash pickup into the loop corner. Under
+  # the 16th runs only the downbeat tom sounds — drive without clutter.
+  # Rides the enhancement stream (MIDI ch 10); GB ch4 stays empty so
+  # in-battle SFX keep their channel. Body pattern instanced once at
+  # m. 11; the compiler duplicates it to mm. 35-58, which puts the
+  # m. 24 b. 4 crash pickup ahead of BOTH loop entries (m. 34->35 in
+  # pass 1, m. 58->35 wrap after).
+  - name: war_drums
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 74
+    velocity: 88
+    events:
+      - {at: 1, pattern: intro_drums}
+      - {at: 11, pattern: body_drums}
+      - {at: 35, pattern: body_drums}
+
+  # --- Runs shadow -------------------------------------------------------
+  # runs_drums — follows ONLY the scalar 16th runs (intro mm. 1-2, body
+  # mm. 1-12 = song mm. 11-22, auto-duplicated to loop mm. 35-46): mid
+  # tom on 8ths + kick on quarters, i.e. a half-time reduction of the
+  # runs, not a 16th doubling (which would blur into them). Different
+  # drum (47) from war_drums' downbeat tom (45) so the layers stay
+  # separable; hook/lyrical/transitions get no shadow — war_drums'
+  # heartbeat already covers those.
+  - name: runs_drums
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 76                  # lifted a smidge over war_drums (audition 2026-09-12)
+    velocity: 88
+    events:
+      - {at: 1, pattern: runs_intro}
+      - {at: 11, pattern: runs_body}
+      - {at: 35, pattern: runs_body}
+
+patterns:
+  intro_drums:
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 0.4, n: 45}
+      - {m: 2, b: 1, d: 0.4, n: 45}
+      - {m: 3, b: 1, d: 0.4, n: 45}
+      - {m: 3, b: 3, d: 0.4, n: 36}
+      - {m: 4, b: 1, d: 0.4, n: 45}
+      - {m: 4, b: 3, d: 0.4, n: 36}
+      - {m: 5, b: 1, d: 0.4, n: 45}
+      - {m: 5, b: 3, d: 0.4, n: 36}
+      - {m: 6, b: 1, d: 0.4, n: 45}
+      - {m: 6, b: 3, d: 0.4, n: 36}
+      - {m: 7, b: 1, d: 0.4, n: 45}
+      - {m: 7, b: 3, d: 0.4, n: 36}
+      - {m: 8, b: 1, d: 0.4, n: 45}
+      - {m: 8, b: 3, d: 0.4, n: 36}
+      - {m: 9, b: 1, d: 0.4, n: 45}
+      - {m: 9, b: 3, d: 0.4, n: 36}
+      - {m: 10, b: 1, d: 0.4, n: 45}
+      - {m: 10, b: 3, d: 0.4, n: 36}
+  body_drums:
+    measures: 24
+    events:
+      - {m: 1, b: 1, d: 0.4, n: 45}
+      - {m: 2, b: 1, d: 0.4, n: 45}
+      - {m: 3, b: 1, d: 0.4, n: 45}
+      - {m: 4, b: 1, d: 0.4, n: 45}
+      - {m: 5, b: 1, d: 0.4, n: 45}
+      - {m: 6, b: 1, d: 0.4, n: 45}
+      - {m: 7, b: 1, d: 0.4, n: 45}
+      - {m: 8, b: 1, d: 0.4, n: 45}
+      - {m: 9, b: 1, d: 0.4, n: 45}
+      - {m: 10, b: 1, d: 0.4, n: 45}
+      - {m: 11, b: 1, d: 0.4, n: 45}
+      - {m: 12, b: 1, d: 0.4, n: 45}
+      - {m: 13, b: 1, d: 0.4, n: 45}
+      - {m: 13, b: 3, d: 0.4, n: 36}
+      - {m: 14, b: 1, d: 0.4, n: 45}
+      - {m: 14, b: 3, d: 0.4, n: 36}
+      - {m: 15, b: 1, d: 0.4, n: 45}
+      - {m: 15, b: 3, d: 0.4, n: 36}
+      - {m: 16, b: 1, d: 0.4, n: 45}
+      - {m: 16, b: 3, d: 0.4, n: 36}
+      - {m: 17, b: 1, d: 0.4, n: 45}
+      - {m: 17, b: 3, d: 0.4, n: 36}
+      - {m: 18, b: 1, d: 0.4, n: 45}
+      - {m: 18, b: 3, d: 0.4, n: 36}
+      - {m: 19, b: 1, d: 0.4, n: 45}
+      - {m: 19, b: 3, d: 0.4, n: 36}
+      - {m: 20, b: 1, d: 0.4, n: 45}
+      - {m: 20, b: 3, d: 0.4, n: 36}
+      - {m: 21, b: 1, d: 0.4, n: 45}
+      - {m: 22, b: 1, d: 0.4, n: 45}
+      - {m: 23, b: 1, d: 0.4, n: 45}
+      - {m: 24, b: 1, d: 0.4, n: 45}
+      - {m: 24, b: 4, d: 0.4, n: 49, v: 100}
+  runs_intro:
+    measures: 2
+    events:
+      - {m: 1, b: 1, d: 0.2, n: 47}
+      - {m: 1, b: 1, d: 0.4, n: 36}
+      - {m: 1, b: 1.25, d: 0.2, n: 47}
+      - {m: 1, b: 1.5, d: 0.2, n: 47}
+      - {m: 1, b: 1.75, d: 0.2, n: 47}
+      - {m: 1, b: 2, d: 0.2, n: 47}
+      - {m: 1, b: 2, d: 0.4, n: 36}
+      - {m: 1, b: 2.25, d: 0.2, n: 47}
+      - {m: 1, b: 2.5, d: 0.2, n: 47}
+      - {m: 1, b: 2.75, d: 0.2, n: 47}
+      - {m: 1, b: 3, d: 0.2, n: 47}
+      - {m: 1, b: 3, d: 0.4, n: 36}
+      - {m: 1, b: 3.25, d: 0.2, n: 47}
+      - {m: 1, b: 3.5, d: 0.2, n: 47}
+      - {m: 1, b: 3.75, d: 0.2, n: 47}
+      - {m: 1, b: 4, d: 0.2, n: 47}
+      - {m: 1, b: 4, d: 0.4, n: 36}
+      - {m: 1, b: 4.25, d: 0.2, n: 47}
+      - {m: 1, b: 4.5, d: 0.2, n: 47}
+      - {m: 1, b: 4.75, d: 0.2, n: 47}
+      - {m: 2, b: 1, d: 0.2, n: 47}
+      - {m: 2, b: 1, d: 0.4, n: 36}
+      - {m: 2, b: 1.25, d: 0.2, n: 47}
+      - {m: 2, b: 1.5, d: 0.2, n: 47}
+      - {m: 2, b: 1.75, d: 0.2, n: 47}
+      - {m: 2, b: 2, d: 0.2, n: 47}
+      - {m: 2, b: 2, d: 0.4, n: 36}
+      - {m: 2, b: 2.25, d: 0.2, n: 47}
+      - {m: 2, b: 2.5, d: 0.2, n: 47}
+      - {m: 2, b: 2.75, d: 0.2, n: 47}
+      - {m: 2, b: 3, d: 0.2, n: 47}
+      - {m: 2, b: 3, d: 0.4, n: 36}
+      - {m: 2, b: 3.25, d: 0.2, n: 47}
+      - {m: 2, b: 3.5, d: 0.2, n: 47}
+      - {m: 2, b: 3.75, d: 0.2, n: 47}
+      - {m: 2, b: 4, d: 0.2, n: 47}
+      - {m: 2, b: 4, d: 0.4, n: 36}
+      - {m: 2, b: 4.25, d: 0.2, n: 47}
+      - {m: 2, b: 4.5, d: 0.2, n: 47}
+      - {m: 2, b: 4.75, d: 0.2, n: 47}
+  runs_body:
+    measures: 12
+    events:
+      - {m: 1, b: 1, d: 0.2, n: 47}
+      - {m: 1, b: 1, d: 0.4, n: 36}
+      - {m: 1, b: 1.25, d: 0.2, n: 47}
+      - {m: 1, b: 1.5, d: 0.2, n: 47}
+      - {m: 1, b: 1.75, d: 0.2, n: 47}
+      - {m: 1, b: 2, d: 0.2, n: 47}
+      - {m: 1, b: 2, d: 0.4, n: 36}
+      - {m: 1, b: 2.25, d: 0.2, n: 47}
+      - {m: 1, b: 2.5, d: 0.2, n: 47}
+      - {m: 1, b: 2.75, d: 0.2, n: 47}
+      - {m: 1, b: 3, d: 0.2, n: 47}
+      - {m: 1, b: 3, d: 0.4, n: 36}
+      - {m: 1, b: 3.25, d: 0.2, n: 47}
+      - {m: 1, b: 3.5, d: 0.2, n: 47}
+      - {m: 1, b: 3.75, d: 0.2, n: 47}
+      - {m: 1, b: 4, d: 0.2, n: 47}
+      - {m: 1, b: 4, d: 0.4, n: 36}
+      - {m: 1, b: 4.25, d: 0.2, n: 47}
+      - {m: 1, b: 4.5, d: 0.2, n: 47}
+      - {m: 1, b: 4.75, d: 0.2, n: 47}
+      - {m: 2, b: 1, d: 0.2, n: 47}
+      - {m: 2, b: 1, d: 0.4, n: 36}
+      - {m: 2, b: 1.25, d: 0.2, n: 47}
+      - {m: 2, b: 1.5, d: 0.2, n: 47}
+      - {m: 2, b: 1.75, d: 0.2, n: 47}
+      - {m: 2, b: 2, d: 0.2, n: 47}
+      - {m: 2, b: 2, d: 0.4, n: 36}
+      - {m: 2, b: 2.25, d: 0.2, n: 47}
+      - {m: 2, b: 2.5, d: 0.2, n: 47}
+      - {m: 2, b: 2.75, d: 0.2, n: 47}
+      - {m: 2, b: 3, d: 0.2, n: 47}
+      - {m: 2, b: 3, d: 0.4, n: 36}
+      - {m: 2, b: 3.25, d: 0.2, n: 47}
+      - {m: 2, b: 3.5, d: 0.2, n: 47}
+      - {m: 2, b: 3.75, d: 0.2, n: 47}
+      - {m: 2, b: 4, d: 0.2, n: 47}
+      - {m: 2, b: 4, d: 0.4, n: 36}
+      - {m: 2, b: 4.25, d: 0.2, n: 47}
+      - {m: 2, b: 4.5, d: 0.2, n: 47}
+      - {m: 2, b: 4.75, d: 0.2, n: 47}
+      - {m: 3, b: 1, d: 0.2, n: 47}
+      - {m: 3, b: 1, d: 0.4, n: 36}
+      - {m: 3, b: 1.25, d: 0.2, n: 47}
+      - {m: 3, b: 1.5, d: 0.2, n: 47}
+      - {m: 3, b: 1.75, d: 0.2, n: 47}
+      - {m: 3, b: 2, d: 0.2, n: 47}
+      - {m: 3, b: 2, d: 0.4, n: 36}
+      - {m: 3, b: 2.25, d: 0.2, n: 47}
+      - {m: 3, b: 2.5, d: 0.2, n: 47}
+      - {m: 3, b: 2.75, d: 0.2, n: 47}
+      - {m: 3, b: 3, d: 0.2, n: 47}
+      - {m: 3, b: 3, d: 0.4, n: 36}
+      - {m: 3, b: 3.25, d: 0.2, n: 47}
+      - {m: 3, b: 3.5, d: 0.2, n: 47}
+      - {m: 3, b: 3.75, d: 0.2, n: 47}
+      - {m: 3, b: 4, d: 0.2, n: 47}
+      - {m: 3, b: 4, d: 0.4, n: 36}
+      - {m: 3, b: 4.25, d: 0.2, n: 47}
+      - {m: 3, b: 4.5, d: 0.2, n: 47}
+      - {m: 3, b: 4.75, d: 0.2, n: 47}
+      - {m: 4, b: 1, d: 0.2, n: 47}
+      - {m: 4, b: 1, d: 0.4, n: 36}
+      - {m: 4, b: 1.25, d: 0.2, n: 47}
+      - {m: 4, b: 1.5, d: 0.2, n: 47}
+      - {m: 4, b: 1.75, d: 0.2, n: 47}
+      - {m: 4, b: 2, d: 0.2, n: 47}
+      - {m: 4, b: 2, d: 0.4, n: 36}
+      - {m: 4, b: 2.25, d: 0.2, n: 47}
+      - {m: 4, b: 2.5, d: 0.2, n: 47}
+      - {m: 4, b: 2.75, d: 0.2, n: 47}
+      - {m: 4, b: 3, d: 0.2, n: 47}
+      - {m: 4, b: 3, d: 0.4, n: 36}
+      - {m: 4, b: 3.25, d: 0.2, n: 47}
+      - {m: 4, b: 3.5, d: 0.2, n: 47}
+      - {m: 4, b: 3.75, d: 0.2, n: 47}
+      - {m: 4, b: 4, d: 0.2, n: 47}
+      - {m: 4, b: 4, d: 0.4, n: 36}
+      - {m: 4, b: 4.25, d: 0.2, n: 47}
+      - {m: 4, b: 4.5, d: 0.2, n: 47}
+      - {m: 4, b: 4.75, d: 0.2, n: 47}
+      - {m: 5, b: 1, d: 0.2, n: 47}
+      - {m: 5, b: 1, d: 0.4, n: 36}
+      - {m: 5, b: 1.25, d: 0.2, n: 47}
+      - {m: 5, b: 1.5, d: 0.2, n: 47}
+      - {m: 5, b: 1.75, d: 0.2, n: 47}
+      - {m: 5, b: 2, d: 0.2, n: 47}
+      - {m: 5, b: 2, d: 0.4, n: 36}
+      - {m: 5, b: 2.25, d: 0.2, n: 47}
+      - {m: 5, b: 2.5, d: 0.2, n: 47}
+      - {m: 5, b: 2.75, d: 0.2, n: 47}
+      - {m: 5, b: 3, d: 0.2, n: 47}
+      - {m: 5, b: 3, d: 0.4, n: 36}
+      - {m: 5, b: 3.25, d: 0.2, n: 47}
+      - {m: 5, b: 3.5, d: 0.2, n: 47}
+      - {m: 5, b: 3.75, d: 0.2, n: 47}
+      - {m: 5, b: 4, d: 0.2, n: 47}
+      - {m: 5, b: 4, d: 0.4, n: 36}
+      - {m: 5, b: 4.25, d: 0.2, n: 47}
+      - {m: 5, b: 4.5, d: 0.2, n: 47}
+      - {m: 5, b: 4.75, d: 0.2, n: 47}
+      - {m: 6, b: 1, d: 0.2, n: 47}
+      - {m: 6, b: 1, d: 0.4, n: 36}
+      - {m: 6, b: 1.25, d: 0.2, n: 47}
+      - {m: 6, b: 1.5, d: 0.2, n: 47}
+      - {m: 6, b: 1.75, d: 0.2, n: 47}
+      - {m: 6, b: 2, d: 0.2, n: 47}
+      - {m: 6, b: 2, d: 0.4, n: 36}
+      - {m: 6, b: 2.25, d: 0.2, n: 47}
+      - {m: 6, b: 2.5, d: 0.2, n: 47}
+      - {m: 6, b: 2.75, d: 0.2, n: 47}
+      - {m: 6, b: 3, d: 0.2, n: 47}
+      - {m: 6, b: 3, d: 0.4, n: 36}
+      - {m: 6, b: 3.25, d: 0.2, n: 47}
+      - {m: 6, b: 3.5, d: 0.2, n: 47}
+      - {m: 6, b: 3.75, d: 0.2, n: 47}
+      - {m: 6, b: 4, d: 0.2, n: 47}
+      - {m: 6, b: 4, d: 0.4, n: 36}
+      - {m: 6, b: 4.25, d: 0.2, n: 47}
+      - {m: 6, b: 4.5, d: 0.2, n: 47}
+      - {m: 6, b: 4.75, d: 0.2, n: 47}
+      - {m: 7, b: 1, d: 0.2, n: 47}
+      - {m: 7, b: 1, d: 0.4, n: 36}
+      - {m: 7, b: 1.25, d: 0.2, n: 47}
+      - {m: 7, b: 1.5, d: 0.2, n: 47}
+      - {m: 7, b: 1.75, d: 0.2, n: 47}
+      - {m: 7, b: 2, d: 0.2, n: 47}
+      - {m: 7, b: 2, d: 0.4, n: 36}
+      - {m: 7, b: 2.25, d: 0.2, n: 47}
+      - {m: 7, b: 2.5, d: 0.2, n: 47}
+      - {m: 7, b: 2.75, d: 0.2, n: 47}
+      - {m: 7, b: 3, d: 0.2, n: 47}
+      - {m: 7, b: 3, d: 0.4, n: 36}
+      - {m: 7, b: 3.25, d: 0.2, n: 47}
+      - {m: 7, b: 3.5, d: 0.2, n: 47}
+      - {m: 7, b: 3.75, d: 0.2, n: 47}
+      - {m: 7, b: 4, d: 0.2, n: 47}
+      - {m: 7, b: 4, d: 0.4, n: 36}
+      - {m: 7, b: 4.25, d: 0.2, n: 47}
+      - {m: 7, b: 4.5, d: 0.2, n: 47}
+      - {m: 7, b: 4.75, d: 0.2, n: 47}
+      - {m: 8, b: 1, d: 0.2, n: 47}
+      - {m: 8, b: 1, d: 0.4, n: 36}
+      - {m: 8, b: 1.25, d: 0.2, n: 47}
+      - {m: 8, b: 1.5, d: 0.2, n: 47}
+      - {m: 8, b: 1.75, d: 0.2, n: 47}
+      - {m: 8, b: 2, d: 0.2, n: 47}
+      - {m: 8, b: 2, d: 0.4, n: 36}
+      - {m: 8, b: 2.25, d: 0.2, n: 47}
+      - {m: 8, b: 2.5, d: 0.2, n: 47}
+      - {m: 8, b: 2.75, d: 0.2, n: 47}
+      - {m: 8, b: 3, d: 0.2, n: 47}
+      - {m: 8, b: 3, d: 0.4, n: 36}
+      - {m: 8, b: 3.25, d: 0.2, n: 47}
+      - {m: 8, b: 3.5, d: 0.2, n: 47}
+      - {m: 8, b: 3.75, d: 0.2, n: 47}
+      - {m: 8, b: 4, d: 0.2, n: 47}
+      - {m: 8, b: 4, d: 0.4, n: 36}
+      - {m: 8, b: 4.25, d: 0.2, n: 47}
+      - {m: 8, b: 4.5, d: 0.2, n: 47}
+      - {m: 8, b: 4.75, d: 0.2, n: 47}
+      - {m: 9, b: 1, d: 0.2, n: 47}
+      - {m: 9, b: 1, d: 0.4, n: 36}
+      - {m: 9, b: 1.25, d: 0.2, n: 47}
+      - {m: 9, b: 1.5, d: 0.2, n: 47}
+      - {m: 9, b: 1.75, d: 0.2, n: 47}
+      - {m: 9, b: 2, d: 0.2, n: 47}
+      - {m: 9, b: 2, d: 0.4, n: 36}
+      - {m: 9, b: 2.25, d: 0.2, n: 47}
+      - {m: 9, b: 2.5, d: 0.2, n: 47}
+      - {m: 9, b: 2.75, d: 0.2, n: 47}
+      - {m: 9, b: 3, d: 0.2, n: 47}
+      - {m: 9, b: 3, d: 0.4, n: 36}
+      - {m: 9, b: 3.25, d: 0.2, n: 47}
+      - {m: 9, b: 3.5, d: 0.2, n: 47}
+      - {m: 9, b: 3.75, d: 0.2, n: 47}
+      - {m: 9, b: 4, d: 0.2, n: 47}
+      - {m: 9, b: 4, d: 0.4, n: 36}
+      - {m: 9, b: 4.25, d: 0.2, n: 47}
+      - {m: 9, b: 4.5, d: 0.2, n: 47}
+      - {m: 9, b: 4.75, d: 0.2, n: 47}
+      - {m: 10, b: 1, d: 0.2, n: 47}
+      - {m: 10, b: 1, d: 0.4, n: 36}
+      - {m: 10, b: 1.25, d: 0.2, n: 47}
+      - {m: 10, b: 1.5, d: 0.2, n: 47}
+      - {m: 10, b: 1.75, d: 0.2, n: 47}
+      - {m: 10, b: 2, d: 0.2, n: 47}
+      - {m: 10, b: 2, d: 0.4, n: 36}
+      - {m: 10, b: 2.25, d: 0.2, n: 47}
+      - {m: 10, b: 2.5, d: 0.2, n: 47}
+      - {m: 10, b: 2.75, d: 0.2, n: 47}
+      - {m: 10, b: 3, d: 0.2, n: 47}
+      - {m: 10, b: 3, d: 0.4, n: 36}
+      - {m: 10, b: 3.25, d: 0.2, n: 47}
+      - {m: 10, b: 3.5, d: 0.2, n: 47}
+      - {m: 10, b: 3.75, d: 0.2, n: 47}
+      - {m: 10, b: 4, d: 0.2, n: 47}
+      - {m: 10, b: 4, d: 0.4, n: 36}
+      - {m: 10, b: 4.25, d: 0.2, n: 47}
+      - {m: 10, b: 4.5, d: 0.2, n: 47}
+      - {m: 10, b: 4.75, d: 0.2, n: 47}
+      - {m: 11, b: 1, d: 0.2, n: 47}
+      - {m: 11, b: 1, d: 0.4, n: 36}
+      - {m: 11, b: 1.25, d: 0.2, n: 47}
+      - {m: 11, b: 1.5, d: 0.2, n: 47}
+      - {m: 11, b: 1.75, d: 0.2, n: 47}
+      - {m: 11, b: 2, d: 0.2, n: 47}
+      - {m: 11, b: 2, d: 0.4, n: 36}
+      - {m: 11, b: 2.25, d: 0.2, n: 47}
+      - {m: 11, b: 2.5, d: 0.2, n: 47}
+      - {m: 11, b: 2.75, d: 0.2, n: 47}
+      - {m: 11, b: 3, d: 0.2, n: 47}
+      - {m: 11, b: 3, d: 0.4, n: 36}
+      - {m: 11, b: 3.25, d: 0.2, n: 47}
+      - {m: 11, b: 3.5, d: 0.2, n: 47}
+      - {m: 11, b: 3.75, d: 0.2, n: 47}
+      - {m: 11, b: 4, d: 0.2, n: 47}
+      - {m: 11, b: 4, d: 0.4, n: 36}
+      - {m: 11, b: 4.25, d: 0.2, n: 47}
+      - {m: 11, b: 4.5, d: 0.2, n: 47}
+      - {m: 11, b: 4.75, d: 0.2, n: 47}
+      - {m: 12, b: 1, d: 0.2, n: 47}
+      - {m: 12, b: 1, d: 0.4, n: 36}
+      - {m: 12, b: 1.25, d: 0.2, n: 47}
+      - {m: 12, b: 1.5, d: 0.2, n: 47}
+      - {m: 12, b: 1.75, d: 0.2, n: 47}
+      - {m: 12, b: 2, d: 0.2, n: 47}
+      - {m: 12, b: 2, d: 0.4, n: 36}
+      - {m: 12, b: 2.25, d: 0.2, n: 47}
+      - {m: 12, b: 2.5, d: 0.2, n: 47}
+      - {m: 12, b: 2.75, d: 0.2, n: 47}
+      - {m: 12, b: 3, d: 0.2, n: 47}
+      - {m: 12, b: 3, d: 0.4, n: 36}
+      - {m: 12, b: 3.25, d: 0.2, n: 47}
+      - {m: 12, b: 3.5, d: 0.2, n: 47}
+      - {m: 12, b: 3.75, d: 0.2, n: 47}
+      - {m: 12, b: 4, d: 0.2, n: 47}
+      - {m: 12, b: 4, d: 0.4, n: 36}
+      - {m: 12, b: 4.25, d: 0.2, n: 47}
+      - {m: 12, b: 4.5, d: 0.2, n: 47}
+      - {m: 12, b: 4.75, d: 0.2, n: 47}

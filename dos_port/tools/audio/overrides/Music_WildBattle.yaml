@@ -1,0 +1,71 @@
+# overrides/Music_WildBattle.yaml — base-track MT-32 patch map for the
+# wild battle theme, and the demo vehicle for the custom "ChipSaw" timbre
+# (timbres.yaml: 2-partial detuned SAW pair staged at Patch #27, PC byte 26).
+#
+# The track (C major/minor ambiguity, Neapolitan bII, frantic chromatic
+# 16ths): ch1 (duty 3, octaves 2-4, vibrato) is the chromatic-run lead
+# and E-D# hook; ch2 (duty 3, octaves 3-5, vibrato) answers in 16ths
+# then rides fifth-ostinatos (C-G, C#-G#, A#-F); ch3 (wave, octaves 3-4)
+# doubles the 16ths, then carries the low-end ostinato. There is no
+# noise channel — active-combat music leaves ch4 free for battle SFX
+# (same reservation as FinalBattle: no drums belong in this base track).
+# This override re-voices only; the major/minor ambiguity is the point,
+# so no harmony is added or "fixed".
+#
+# Demo logic: ch1 SPLITS by section (timed switches below) — factory
+# Square Wave on runs + intro, custom ChipSaw on the lyrical halves
+# (mm. 23-30, loop 47-54) — while ch2 (the lead) keeps factory Square
+# Wave throughout. MT-32 only for the splits (GM carries matching
+# Lead pairs on the same switches). (A Trombone 1 intro duet was tried
+# and reverted 2026-09-12: read as out-of-tune dracula-with-brass, not
+# fanfare — see handoff memory wildbattle-lead-voice-handoff.)
+#
+# Loop note for future enhancement work: mm. 35-36 restate mm. 11-12 an
+# octave higher (smooth loop re-entry), so any later added voice must
+# handle both variants. The timed switches below already do.
+channels:
+  # square 1 — runs, hook, stabs, and the lyrical halves.
+  # SPLIT (timed switches below): factory Square Wave on the rapid
+  # chromatic scales (mm. 1-2/11-22, loop 35-46) AND the whole intro
+  # hook + runs (mm. 1-22) — the exposed iconic line keeps its chip
+  # voice; ChipSaw debuts at m. 23 as development. (An earlier pass
+  # tried factory Taiko on the runs — reverted: the runs shadow now
+  # lives on a dedicated enhancement rhythm channel instead, which
+  # keeps the lead melodic and the drums independently balanceable.)
+  #
+  # yaml_lint advisories on this channel, all justified:
+  # - the two intro switches (m. 1/23) draw "intro-fires-once" notes:
+  #   by design (pass 1 needs them; later passes reuse the m. 35/47
+  #   body switches). Same patches both times, so no divergence.
+  # - no no-op warnings: the checker seeds its walk from the loop-wrap
+  #   latch (m. 47, ChipSaw) and every switch below changes state
+  #   against it in walk order. (The m. 1 frame-0 switch reads odd
+  #   against a ChipSaw default, but it fires order-1 before the first
+  #   note-on, so the default never sounds — it exists so the file
+  #   reads as saw-first, square-only-on-runs.)
+  1:
+    mt32_program: 26                # custom "ChipSaw" (Patch #27 rewrite)
+    gm_program: "Lead 2 (sawtooth)"
+    volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
+    switches:
+      - {m: 1, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 3, b: 1, mt32_program: "Clavi 1", gm_program: "Clavinet"}
+      - {m: 11, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 23, b: 1, mt32_program: 26, gm_program: "Lead 2 (sawtooth)"}
+      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 47, b: 1, mt32_program: 26, gm_program: "Lead 2 (sawtooth)"}
+  # square 2 — THE LEAD (higher voice, reaches E6; analysis agrees:
+  # melody_channel 2). Pulse on opening scales, Clavi 2 on intro hook/verse,
+  # transitions to pulse for the loop.
+  2:
+    mt32_program: "Square Wave"
+    gm_program: "Lead 1 (square)"
+    volume: 90                  # lead balance (audition 2026-09-12)
+    switches:
+      - {m: 3, b: 1, mt32_program: "Clavi 2", gm_program: "Clavinet"}
+      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+  # wave — busiest bed (16ths + low ostinato). Atmosphere pads behind
+  # the saws (as on Gym Leader / Final Battle), tucked under the leads.
+  3:
+    mt32_program: "Atmosphere"
+    volume: 85

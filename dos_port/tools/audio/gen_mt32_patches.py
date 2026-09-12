@@ -188,7 +188,13 @@ def build_messages(defs: dict, system: bool = True) -> list[bytes]:
             data += build_block(PARTIAL_PARAMS, src,
                                 f"timbre {name!r} partial {pi+1}")
         assert len(data) == 246, len(data)
-        msgs += dt1(0x080000, data, start=(i * 2) << 8)   # Timbre Memory #i+1
+        # Timbre Memory #i+1. Slots are 0x200 apart in ADDRESS space
+        # (Roland doc: #1 = 08 00 00, #2 = 08 02 00), and one address
+        # unit in the middle byte is 128 linear — so the linear start
+        # is i * 256, NOT (i * 2) << 8 (= i * 512 linear = one slot too
+        # far; that bug parked the 2nd timbre in slot #3 while its patch
+        # read empty slot #2: blank name, silent voice in MUNT).
+        msgs += dt1(0x080000, data, start=i * 256)
 
     for pat in defs.get("patches", []) or []:
         num = pat["number"]                  # 1-128, what a program change selects

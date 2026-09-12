@@ -11,14 +11,15 @@
 #
 # Voice pairing (audition 2026-09-11): ch2 (melody) sings factory Funny
 # Vox while ch1 sings "JigglyVox" — the byte-exact factory recipe read
-# out of MT32_CONTROL.ROM (Patch Memory #127 rewritten, PC byte 126 —
-# a slot no other song uses). Same unison line on both, so the audition
-# IS the experiment: clone nulls against factory = recipe complete;
-# octave/brightness mismatch = patch-record transposition to correct.
-# GM has no upload path, so both channels stay Voice Oohs there.
+# out of MT32_CONTROL.ROM (Patch Memory #28 rewritten, PC byte 27 —
+# a slot no other song uses: the unused Syn Brass 4 twin). Same unison
+# line on both, so the audition IS the experiment: clone nulls against
+# factory = recipe complete; octave/brightness mismatch = patch-record
+# transposition to correct. GM has no upload path, so both channels
+# stay Voice Oohs there.
 channels:
   1:
-    mt32_program: 126           # custom "JigglyVox" (Patch #127 rewrite)
+    mt32_program: 27            # custom "JigglyVox" (Patch #28 rewrite)
     gm_program: "Voice Oohs"    # no GM upload path — vox vowel instead
     volume: 88                  # halo under the Vox lead
     pan: 56                     # near-center duet, ch1 a hair left

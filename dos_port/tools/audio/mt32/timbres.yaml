@@ -38,8 +38,14 @@ system:
 #
 # Slot discipline: NEVER rewrite a factory slot another song uses — check
 # program usage across overrides/*.yaml + enhancements/*.yaml first
-# (2026-09-11 survey: 40 of 128 slots in use). Patch #127 (factory
-# "Water Bells", unused anywhere) is the custom staging slot.
+# (2026-09-11 survey: 40 of 128 slots in use). Both custom rewrites sit in
+# the unused Syn Brass twins (#27/#28 — byte-read from MT32_CONTROL.ROM:
+# near-identical detuned SAW pairs differing only in filter/attack, zero
+# track usage; the family keeps Brass 1 (octave lead) and Brass 2
+# (sub-oscillator), its only meaningfully different members). #127 Water
+# Bells is factory again — it is a unique 3-partial PCM#106 bell stack,
+# and #124 Telephone (unique 1-partial PCM#51 blip) was rejected as the
+# refuge for the same reason: one-offs are not override candidates.
 #
 # 1. "JigglyVox" (2026-09-11, for Music_JigglypuffSong): byte-exact clone
 #    of factory Funny Vox (patch #40), read out of MT32_CONTROL.ROM
@@ -56,6 +62,32 @@ system:
 #    (cutoff 69 + reso 28, env depth 29 swelling 15→90 — the vowel
 #    forming), strong vibrato (rate 62, depth 21), fast attack
 #    (tva t1=0) swelling 80→100. 1 partial — fits any reserve.
+#    Staged at Patch #28 (2026-09-12, was #127 Water Bells) — routing
+#    change only, the timbre bytes are untouched.
+#
+# 2. "ChipSaw" (2026-09-12): neutral concert-pitch SAW reference for
+#    chip-lead doubling (GB pulse leads that want an MT-32-native saw
+#    instead of factory Square Wave's detuned chorus pair). v2: TWO
+#    partials (mute 0x03), mirroring Square Wave's architecture with the
+#    base function swapped — detuned twin (fine 56/44, a touch wider
+#    than factory's 53/47), gentle vibrato both partials (rate 60,
+#    depth 9 — a third of factory's 23), staggered attack (P1 t1=1,
+#    P2 t1=6 swelling 92→98→100, the factory bloom), TVF pinned open
+#    (cutoff 100, reso 0, env depth 0 — no factory edge; the A/B stays
+#    about the oscillator). Output level matched to Square Wave
+#    (tva 70 both partials — at 100 ChipSaw overpowered it; saws read
+#    louder per unit level, so 70 is a starting match, not a verdict).
+#    Unison SAW (coarse 36, kf 16, bender on),
+#    sustain 100, reverb on. Benchmarked against a real ReSID 6581 saw
+#    (NTSC, VICE x64sc: bare SID, AD=0/SR=$F0/VOL=15, filter out,
+#    440 Hz): f0 440.00 Hz, harmonics 1/n within a few % (2nd 0.52,
+#    4th 0.27 — the 6581's slightly hot evens), time-domain MAE 3.6%
+#    vs ideal ramp (residual = 12-bit steps + R-2R MSB notch + finite
+#    flyback). Regen: tokenized BASIC PRG poking $D400-418 (freq word
+#    HALVED — this VICE build sounds 2x the written word, measured),
+#    captured via ALSA file-plugin PCM. 2 partials — same cost as the
+#    factory chorus it replaces. Staged at Patch #27. GM counterpart
+#    for track use: "Lead 2 (sawtooth)".
 timbres:
   - name: "JigglyVox"
     partial_mute: 1
@@ -102,10 +134,54 @@ timbres:
         tva_env_level2: 93
         tva_env_level3: 99
         tva_env_sus_level: 100
+  - name: "ChipSaw"
+    partial_mute: 3
+    partials:
+      - wg_waveform: 1
+        wg_pitch_coarse: 36
+        wg_pitch_fine: 56
+        wg_pitch_keyfollow: 16
+        plfo_rate: 60
+        plfo_depth: 9
+        tvf_cutoff: 100
+        tvf_resonance: 0
+        tvf_env_depth: 0
+        tva_level: 70
+        tva_env_time1: 1
+        tva_env_time2: 10
+        tva_env_time3: 10
+        tva_env_time4: 10
+        tva_env_time5: 10
+        tva_env_level1: 100
+        tva_env_level2: 100
+        tva_env_level3: 100
+        tva_env_sus_level: 100
+      - wg_waveform: 1
+        wg_pitch_coarse: 36
+        wg_pitch_fine: 44
+        wg_pitch_keyfollow: 16
+        plfo_rate: 60
+        plfo_depth: 9
+        tvf_cutoff: 100
+        tvf_resonance: 0
+        tvf_env_depth: 0
+        tva_level: 70
+        tva_env_time1: 6
+        tva_env_time2: 11
+        tva_env_time3: 14
+        tva_env_time4: 15
+        tva_env_time5: 10
+        tva_env_level1: 92
+        tva_env_level2: 98
+        tva_env_level3: 100
+        tva_env_sus_level: 100
 
 patches:
-  - number: 127               # PC byte 126 → "JigglyVox" (Timbre Memory #1)
+  - number: 28                 # PC byte 27 → "JigglyVox" (Timbre Memory #1)
     timbre_group: 2           # memory timbre (0/1 = preset A/B, 3 = rhythm)
     timbre_number: 0          # first timbre in the list above
+  - number: 27                 # PC byte 26 → "ChipSaw" (Timbre Memory #2)
+    timbre_group: 2
+    timbre_number: 1          # second timbre in the list above
 
 rhythm: []
