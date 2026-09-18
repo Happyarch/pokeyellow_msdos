@@ -162,6 +162,26 @@ Quick reference:
   the latch/data byte format, tone divider formula, noise LFSR details, and the
   attenuation table.
 
+### Creative Music System / Game Blaster (dual Philips SAA1099)
+- **Local PDF** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/SAA1099_Philips_1984.pdf` (Philips SAA1099 datasheet, Nov 1986,
+  16pp — http://map.grauw.nl/resources/sound/philips_saa1099.pdf, fetched
+  2026-09-18). Image-only scan; vision-transcribed, `[?]` readings kept inline.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc): `../sound/SAA1099_Philips_1984.md` (register map, bit
+  encodings, envelope system with Fig.5 implement-from table, card-level
+  programming from gameblst.txt, catalogued datasheet-vs-gameblst mismatches);
+  `../sound/saa1099_voice_arch.svg` (Fig.1 simplified) +
+  `../sound/saa1099_envelope_waves.svg` (Fig.5 waveforms) +
+  `../sound/saa1099_regmap.svg` (Table 2 visual), referenced inline from the
+  .md SoundBlaster-style (`![...](*.svg)`).
+- **Card-level text mirror**: [`gameblst.txt`](gameblst.txt) (Mark Feldman
+  PC-GPE "Programming the GameBlaster Sound Card" — 4-port scheme, jumper
+  bases, reset/enable sequences, note table; converted CP437 → UTF-8
+  2026-09-18 for LLM parsing).
+- **Detection authority**: [`cms.4.html`](cms.4.html) (NetBSD `cms(4)` man page
+  — base ports, no-interrupt operation).
+
 ### MOS 6581 SID / Innovation SSI-2001
 - **Local PDFs** (gitignored, ARR, local-only like the other `docs/sound/` specs):
   `../sound/MOS_6581_SID_Nov_1981.pdf` (MOS 6581 datasheet, Nov 1981, 19pp —
