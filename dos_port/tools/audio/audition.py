@@ -193,11 +193,15 @@ def run_interactive_audition(
             from gen_mt32_patches import load_custom_timbres
             from midi_to_stream import find_song_custom_patches, build_song_sysex
             custom_timbres = load_custom_timbres()
-            song_patches = find_song_custom_patches(sess.song_label, None, None, custom_timbres)
+            song_patches = find_song_custom_patches(sess.song_label, custom_timbres)
             song_setup, song_cleanup = build_song_sysex(song_patches)
             if song_setup:
                 for msg in song_setup:
                     sess.midi.send(msg)
+                # Re-latch programs AFTER the remap: the MT-32 consults
+                # Patch Memory at Program Change time, so the PCs
+                # MidiSession init just sent latched the factory occupants.
+                sess.send_init()
             mt32_cleanup_msgs = song_cleanup
         rate = 48000
         if out_wav:

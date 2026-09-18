@@ -57,7 +57,7 @@ system:
 #    Staged at Patch #28 (2026-09-12, was #127 Water Bells) — routing
 #    change only, the timbre bytes are untouched.
 #
-# 2. "ChipSaw" (2026-09-12): neutral concert-pitch SAW reference for
+# 2. "Sawtooth" (2026-09-12): neutral concert-pitch SAW reference for
 #    chip-lead doubling (GB pulse leads that want an MT-32-native saw
 #    instead of factory Square Wave's detuned chorus pair). v2: TWO
 #    partials (mute 0x03), mirroring Square Wave's architecture with the
@@ -67,7 +67,7 @@ system:
 #    P2 t1=6 swelling 92→98→100, the factory bloom), TVF pinned open
 #    (cutoff 100, reso 0, env depth 0 — no factory edge; the A/B stays
 #    about the oscillator). Output level matched to Square Wave
-#    (tva 70 both partials — at 100 ChipSaw overpowered it; saws read
+#    (tva 70 both partials — at 100 Sawtooth overpowered it; saws read
 #    louder per unit level, so 70 is a starting match, not a verdict).
 #    Unison SAW (coarse 36, kf 16, bender on),
 #    sustain 100, reverb on. Benchmarked against a real ReSID 6581 saw
@@ -167,7 +167,7 @@ timbres:
         tva_env_level2: 93
         tva_env_level3: 99
         tva_env_sus_level: 100
-  - name: "ChipSaw"
+  - name: "Sawtooth"
     patch: 27
     partial_mute: 3
     partials:

@@ -271,6 +271,16 @@ class MidiSession:
             if self.target == "mt32" and not c.is_rhythm:
                 if isinstance(c.mt32_patch, int):
                     prog = c.mt32_patch - 1
+                elif isinstance(c.mt32_patch, str):
+                    # Custom timbre by name: select its staged slot, exactly
+                    # like the .mid merge does (gb_to_midi
+                    # enhancement_tracks). Unknown names keep the gm
+                    # fallback; lint gates them first.
+                    try:
+                        prog = resolve_program(c.mt32_patch, "mt32",
+                                               f"enh {c.name}")
+                    except ValueError:
+                        pass
             if not c.is_rhythm:
                 sw_list: list[tuple[int, int]] = []
                 for sw in c.switches:

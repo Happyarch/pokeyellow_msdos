@@ -64,6 +64,43 @@ sys.path.insert(0, str(AUDIO_DIR))
 import gen_audio_data  # noqa: E402
 
 _ASSIGNMENT_RE = re.compile(r"^([^=]+)=([01])$")
+TIMBRES_PATH = AUDIO_DIR / "mt32" / "timbres.yaml"
+
+
+def _norm_name(name) -> str:
+    return "".join(c for c in str(name).lower() if c.isalnum())
+
+
+def load_custom_timbre_names() -> dict[str, str]:
+    """{normalized_name: display_name} for every custom MT-32 timbre.
+
+    Read live from tools/audio/mt32/timbres.yaml each run. Empty when the
+    file is missing or defines no timbres — formatting then falls back to
+    raw values, matching the old behavior.
+    """
+    try:
+        data = yaml.safe_load(TIMBRES_PATH.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    out = {}
+    for t in data.get("timbres", []) or []:
+        if isinstance(t, dict) and t.get("name"):
+            out[_norm_name(t["name"])] = str(t["name"])
+    return out
+
+
+def fmt_mt32(value, custom_names):
+    """Format one MT-32 patch/program value, starring custom timbres.
+
+    Custom timbres are always referenced by name string (raw ints are
+    factory program numbers — the on-the-fly setup only remaps a slot a
+    song declares by name), so only a string matching a timbre in
+    timbres.yaml gets the '*' footnote marker; everything else prints
+    unchanged.
+    """
+    if isinstance(value, str) and _norm_name(value) in custom_names:
+        return f"{custom_names[_norm_name(value)]}*"
+    return value
 
 
 def _load_audition():
@@ -142,13 +179,18 @@ def switches_summary(ovr, enh):
     return ", ".join(parts) if parts else "—"
 
 
-def switch_lines(ch_switches):
-    """['m15 b4 → mt32 Violin 1 / gm Violin', ...] for one channel's list."""
+def switch_lines(ch_switches, custom_names=None):
+    """['m15 b4 → mt32 Violin 1 / gm Violin', ...] for one channel's list.
+
+    Custom MT-32 timbres (by-name refs) carry the '*' footnote marker, via
+    fmt_mt32; the gm side has no custom path and prints raw.
+    """
+    custom_names = custom_names or {}
     lines = []
     for sw in ch_switches or []:
         if not isinstance(sw, dict):
             continue
-        mt32 = sw.get("mt32_program", "—")
+        mt32 = fmt_mt32(sw.get("mt32_program", "—"), custom_names)
         gm = sw.get("gm_program", "—")
         lines.append(f"m{sw.get('m', '?')} b{sw.get('b', '?')} → "
                      f"mt32 {mt32} / gm {gm}")
@@ -240,6 +282,7 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
     enh_files = load_yaml_dir(ENH_DIR)
     ovr_files = load_yaml_dir(OVR_DIR)
     sfx_files = load_yaml_dir(SFX_DIR)
+    custom_names = load_custom_timbre_names()
 
     label_set_m = set(label_to_const_m)
     enh_by_label = {s: d for s, d in enh_files.items() if s in label_set_m}
@@ -341,7 +384,8 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                           ' `mt32_patch`/`gm_program` on every tier:', '']
                 ch_rows = [[
                     c.get('name', '?'), c.get('tier', '?'),
-                    c.get('opl_patch', '—'), c.get('mt32_patch', '—'),
+                    c.get('opl_patch', '—'),
+                    fmt_mt32(c.get('mt32_patch', '—'), custom_names),
                     c.get('gm_program', '—'), c.get('pan', 'center'),
                     c.get('volume', 96),
                 ] for c in enh.get('channels', [])]
@@ -349,7 +393,7 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                     ['Channel', 'Tier', 'OPL Patch', 'MT-32 Patch',
                      'GM Program', 'Pan', 'Volume'], ch_rows), '']
                 for c in enh.get('channels', []):
-                    sl = switch_lines(c.get('switches')) if isinstance(
+                    sl = switch_lines(c.get('switches'), custom_names) if isinstance(
                         c, dict) else []
                     if sl:
                         lines += [f"Switches on `{c.get('name', '?')}` "
@@ -363,8 +407,11 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                 for gb_ch in sorted(ovr.get('channels', {}), key=str):
                     c = ovr['channels'][gb_ch]
                     ch_rows.append([
-                        gb_ch, c.get('mt32_program', '—'), c.get('gm_program', '—'),
-                        c.get('program', '—'), c.get('volume', '—'), c.get('pan', '—'),
+                        gb_ch,
+                        fmt_mt32(c.get('mt32_program', '—'), custom_names),
+                        c.get('gm_program', '—'),
+                        fmt_mt32(c.get('program', '—'), custom_names),
+                        c.get('volume', '—'), c.get('pan', '—'),
                     ])
                 if ch_rows:
                     lines += [md_table(
@@ -372,7 +419,7 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                          'Program (fallback)', 'Volume', 'Pan'], ch_rows), '']
                 for gb_ch in sorted(ovr.get('channels', {}), key=str):
                     c = ovr['channels'][gb_ch]
-                    sl = switch_lines(c.get('switches')) if isinstance(
+                    sl = switch_lines(c.get('switches'), custom_names) if isinstance(
                         c, dict) else []
                     if sl:
                         lines += [f"Switches on GB channel {gb_ch} "
@@ -383,6 +430,11 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                     dmap = drums.get('map', {})
                     lines += [f'Drums: velocity {drums.get("velocity", "—")}, '
                               f'{len(dmap)} noise-id \u2192 GM-drum mapping(s).', '']
+        if custom_names:
+            lines += ['_` * ` marks a custom MT-32 patch/timbre from'
+                      ' `tools/audio/mt32/timbres.yaml` (uploaded to User Timbre'
+                      ' RAM at boot; selected per song via its staged patch slot).'
+                      ' Raw program numbers are factory presets._', '']
 
     # ── Sound Effects (SFX) status ───────────────────────────────────────
     lines += ['## Sound Effects (SFX) status', '',

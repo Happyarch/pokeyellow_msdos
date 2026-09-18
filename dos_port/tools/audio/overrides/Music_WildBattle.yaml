@@ -1,5 +1,5 @@
 # overrides/Music_WildBattle.yaml — base-track MT-32 patch map for the
-# wild battle theme, and the demo vehicle for the custom "ChipSaw" timbre
+# wild battle theme, and the demo vehicle for the custom "Sawtooth" timbre
 # (timbres.yaml: 2-partial detuned SAW pair staged at Patch #27, PC byte 26).
 #
 # The track (C major/minor ambiguity, Neapolitan bII, frantic chromatic
@@ -13,7 +13,7 @@
 # so no harmony is added or "fixed".
 #
 # Demo logic: ch1 SPLITS by section (timed switches below) — factory
-# Square Wave on runs + intro, custom ChipSaw on the lyrical halves
+# Square Wave on runs + intro, custom Sawtooth on the lyrical halves
 # (mm. 23-30, loop 47-54) — while ch2 (the lead) keeps factory Square
 # Wave throughout. MT-32 only for the splits (GM carries matching
 # Lead pairs on the same switches). (A Trombone 1 intro duet was tried
@@ -28,7 +28,7 @@ channels:
   # SPLIT (timed switches below): factory Square Wave on the rapid
   # chromatic scales (mm. 1-2/11-22, loop 35-46) AND the whole intro
   # hook + runs (mm. 1-22) — the exposed iconic line keeps its chip
-  # voice; ChipSaw debuts at m. 23 as development. (An earlier pass
+  # voice; Sawtooth debuts at m. 23 as development. (An earlier pass
   # tried factory Taiko on the runs — reverted: the runs shadow now
   # lives on a dedicated enhancement rhythm channel instead, which
   # keeps the lead melodic and the drums independently balanceable.)
@@ -38,22 +38,22 @@ channels:
   #   by design (pass 1 needs them; later passes reuse the m. 35/47
   #   body switches). Same patches both times, so no divergence.
   # - no no-op warnings: the checker seeds its walk from the loop-wrap
-  #   latch (m. 47, ChipSaw) and every switch below changes state
+  #   latch (m. 47, Sawtooth) and every switch below changes state
   #   against it in walk order. (The m. 1 frame-0 switch reads odd
-  #   against a ChipSaw default, but it fires order-1 before the first
+  #   against a Sawtooth default, but it fires order-1 before the first
   #   note-on, so the default never sounds — it exists so the file
   #   reads as saw-first, square-only-on-runs.)
   1:
-    mt32_program: 26                # custom "ChipSaw" (Patch #27 rewrite)
+    mt32_program: "Sawtooth"          # custom timbre (staged at Patch #27)
     gm_program: "Lead 2 (sawtooth)"
     volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
     switches:
       - {m: 1, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
       - {m: 3, b: 1, mt32_program: "Clavi 1", gm_program: "Clavinet"}
       - {m: 11, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 23, b: 1, mt32_program: 26, gm_program: "Lead 2 (sawtooth)"}
+      - {m: 23, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)"}
       - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 47, b: 1, mt32_program: 26, gm_program: "Lead 2 (sawtooth)"}
+      - {m: 47, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)"}
   # square 2 — THE LEAD (higher voice, reaches E6; analysis agrees:
   # melody_channel 2). Pulse on opening scales, Clavi 2 on intro hook/verse,
   # transitions to pulse for the loop.

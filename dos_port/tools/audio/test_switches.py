@@ -740,6 +740,18 @@ class SwitchTest(unittest.TestCase):
         finally:
             yaml_lint.load_timbre_names = real
 
+    def test_audition_enh_custom_timbre_tick0(self):
+        # Enhancement tick-0 custom timbre by name selects its staged slot
+        # on the mt32 target (like the .mid merge), not the gm fallback.
+        # "Theremin" stages at Patch #12 in mt32/timbres.yaml -> program 11.
+        sess = self._session()
+        ch = self._ch("wind", 2, [], mt32_patch="Theremin", gm_program=122,
+                      events=[{"m": 16, "b": 1, "d": 1, "n": 12}])
+        p = self._enh_path([ch])
+        sess.load_enhancement(p)
+        self.assertEqual(sess.enh_timelines[4], [(0, 11)])
+        self.assertIn(bytes((0xC4, 11)), sess.midi.sent)
+
     # -- compatibility ------------------------------------------------------
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
