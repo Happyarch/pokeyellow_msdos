@@ -93,15 +93,12 @@ PlayPikachuSoundClip:
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]
     mov [pika_dbg_clip], bl
     ; PCM device select from the solved role nibbles (DEV_* map owned by
-    ; src/audio/audio_hal.asm): Covox DAC when its PCM field is set, else SB
-    ; DSP when its PCM field is set, else the speaker PWM. The SB bit is set
-    ; exactly when g_sb_present is, so that arm matches the old branch
-    ; bit-for-bit. The DAC arm is unreachable when the driver compiled out
-    ; (a compiled-out forced bit never builds a nibble, so the field stays
-    ; clear and the stubs absorb the call).
+    ; src/audio/audio_hal.asm): SB DSP when its PCM field is set, else the
+    ; speaker PWM. The SB bit is set exactly when g_sb_present is, so this
+    ; matches the old branch bit-for-bit.
+    ; TODO(Stage 1.4): test the Covox DAC PCM nibble first here (DAC > SB >
+    ; speaker) and route to the stage-1 cry player when set.
     mov edx, [g_audio_devices]
-    test edx, 1 << 23             ; DEV_COVOX PCM field (nibble 5, P bit)
-    jnz .covox
     test edx, 1 << 31             ; DEV_SB PCM field (nibble 7, P bit)
     mov eax, PIKA_STEP_FP         ; mov preserves flags: ZF still from test
     jz .speaker

@@ -79,11 +79,12 @@ extern seg_to_flat                ; boot/entry.asm — selector/segment -> flat
 section .text
 
 ; Device nibble indices into g_audio_devices (one 4-bit role nibble each;
-; nibble 6 reserved for the stage-4 /DISNEY FIFO device, nibble 7 is PCM-only).
+; nibble 6 reserved for the stage-4 /DISNEY FIFO device, nibble 7 is PCM-only)
 DEV_MIDI   equ 0
 DEV_OPL    equ 1
 DEV_TANDY  equ 2
 DEV_SPK    equ 3
+DEV_INNOVA equ 4
 DEV_COVOX  equ 5
 DEV_DISNEY equ 6
 DEV_SB     equ 7
@@ -92,10 +93,11 @@ ROLE_EN    equ 1
 ROLE_MUSIC equ 2
 ROLE_SFX   equ 4
 ROLE_PCM   equ 8
-; g_audio_forced bit positions (bit N = /FLAG demanded device N)
+; g_audio_forced bit positions (bit N = /FLAG demanded device N; low 8 bits)
 FORCE_MIDI   equ (1 << DEV_MIDI)
 FORCE_TANDY  equ (1 << DEV_TANDY)
 FORCE_SPK    equ (1 << DEV_SPK)
+FORCE_INNOVA equ (1 << DEV_INNOVA)
 FORCE_COVOX  equ (1 << DEV_COVOX)
 
 audio_tick:
@@ -104,32 +106,13 @@ audio_tick:
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
-    ; exactly one device shim consumes the virtual APU (each pass is also
-    ; self-guarded, so a wrong selection no-ops instead of touching ports)
-    mov al, [g_shim_device]
-    cmp al, 1
-    je .opl
-    cmp al, 2
-    je .tandy
-    cmp al, 3
-    je .spk
-    cmp al, 4
-    je .innova
-    jmp .midi
-.opl:
-    call opl_pass                 ; virtual APU -> FM
-    call enh_seq_tick             ; tier-1 enhancement layer (Phase E)
-    jmp .midi
-.tandy:
-    call tandy_pass               ; virtual APU -> SN76489
-    jmp .midi
-.spk:
-    call spk_pass                 ; virtual APU -> PC speaker (SFX only)
-    jmp .midi
-.innova:
-    call innova_pass              ; virtual APU -> Innovation SSI-2001
-.midi:
-    call midi_seq_tick            ; MIDI music stream (no-op unless /MT32|/GM)
+    ; Solved dispatch: three init-resolved passes, zero per-tick compares.
+    ; Non-MIDI the winner voices music+SFX in its one pass; under MIDI the
+    ; winner's pass self-mutes to SFX (g_midi_music gate inside each shim)
+    ; and the MIDI slot carries the music. Unused slots are tick_noop.
+    call [g_tick_shim]
+    call [g_tick_enh]
+    call [g_tick_midi]
 .off:
     ret
 
@@ -143,30 +126,33 @@ audio_init:
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
     call opl_init                 ; detect + reset the OPL (388h)
     call enh_init                 ; enhancement-player caches (no port I/O)
-    ; device shim selection (exactly one active): /TANDY, /INNOVA and /SPK force
-    ; theirs (the SN76489 and SID are write-only — no probe is possible, the flag IS
-    ; the detection); the default is OPL when one answered, else the
-    ; speaker SFX shim so a no-card machine still blips.
-    mov al, [g_cfg_shim]
-    cmp al, 2
-    je .tandy
-    cmp al, 4
-    je .innova
-    cmp al, 3
-    je .spk
+    ; device shim selection: solved = forced cap available, then auto-fill.
+    ; parse_cmdline recorded every /FLAG demand in g_audio_forced; forced
+    ; shim bits resolve by fixed priority TANDY > INNOVA > COVOX > SPK (the
+    ; SN76489 and SID are write-only — no probe is possible, the flag IS the
+    ; detection, so a forced TANDY/INNOVA/SPK bit always survives). COVOX has
+    ; no driver this stage, so its demand clears to the auto chain below
+    ; (stage 2 arms device 5 here). With no forced shim standing, the default
+    ; is OPL when one answered, else the always-present speaker SFX shim so
+    ; a no-card machine still blips. MIDI never suppresses the shim fill —
+    ; it adds the stream alongside the winner.
+    mov eax, [g_audio_forced]
+    test eax, FORCE_TANDY
+    jnz .wTandy
+    test eax, FORCE_INNOVA
+    jnz .wInnova
+    test eax, FORCE_COVOX
+    jz .noCovox
+    and dword [g_audio_forced], ~FORCE_COVOX
+    mov eax, [g_audio_forced]
+.noCovox:
+    test eax, FORCE_SPK
+    jnz .wSpk
     cmp byte [g_opl_present], 0
-    jz .spk
-    mov byte [g_shim_device], 1   ; OPL
-    jmp .haveShim
-.tandy:
-    call tandy_init
-    mov byte [g_shim_device], 2
-    jmp .haveShim
-.innova:
-    call innova_init
-    mov byte [g_shim_device], 4
-    jmp .haveShim
-.spk:
+    jnz .wOpl
+.wSpk:
+    mov ebx, 3                    ; PC speaker (forced /SPK or auto fallback)
+    mov esi, spk_pass
     call spk_shim_init
     jmp .haveWinner
 .wTandy:
@@ -174,19 +160,10 @@ audio_init:
     mov esi, tandy_pass
     call tandy_init
     jmp .haveWinner
-.wCovox:
-    mov ebx, 5                    ; Covox DAC (explicit /COVOX only, never auto)
-    mov esi, covox_pass
-    call covox_init
-    ; Reprogram PIT channel 0 to g_covox_rate: divisor = 1193182 / g_covox_rate
-    movzx ecx, word [g_covox_rate]
-    test ecx, ecx
-    jz .pitDone
-    mov eax, 1193182
-    xor edx, edx
-    div ecx                       ; AX = divisor
-    call pit_set_rate
-.pitDone:
+.wInnova:
+    mov ebx, 4                    ; Innovation SSI-2001
+    mov esi, innova_pass
+    call innova_init
     jmp .haveWinner
 .wOpl:
     mov ebx, 1                    ; OPL (opl_init already probed above)
@@ -228,17 +205,18 @@ audio_init:
     or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << (DEV_TANDY * 4)
 .noTandyBit:
     ; speaker: PCM field always (cry fallback), SFX only as the winner —
-    ; Covox/DSS winners take no speaker SFX (the DAC covers SFX + cry)
+    ; Covox/DSS winners take no speaker (DAC covers SFX + cry), a rule with
+    ; no effect this stage since device 5/6 can never win yet
     mov ecx, (ROLE_PCM | ROLE_EN) << (DEV_SPK * 4)
     cmp ebx, 3
     jne .spkBase
     or ecx, (ROLE_SFX) << (DEV_SPK * 4)
 .spkBase:
     or eax, ecx
-    cmp ebx, 5
-    jne .noCovoxBit
-    or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_PCM | ROLE_EN) << (DEV_COVOX * 4)
-.noCovoxBit:
+    cmp ebx, 4
+    jne .noInnovaBit
+    or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << (DEV_INNOVA * 4)
+.noInnovaBit:
     cmp byte [g_sb_present], 0
     jz .noSbBit
     or eax, (ROLE_PCM | ROLE_EN) << (DEV_SB * 4)
@@ -274,10 +252,18 @@ section .data
 blaster_name:   db "BLASTER=", 0
 
 g_cfg_nosound:  db 0              ; /NOSOUND on the command line
-g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3, /INNOVA = 4 (0 = auto)
+g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3, /INNOVA = 4 (0 = auto; /COVOX sets a forced bit only)
 g_cfg_noenh:    db 0              ; /NOENH: disable the tier-1 OPL enhancement layer
 g_cfg_musicloop: db 0            ; /LOOP: DEBUG_AUDIO harness plays music only, forever
-g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova
+g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova (5 covox / 6 disney reserved)
+; Solved device set (stage 0.4 bitmask): one 4-bit P-S-M-E role nibble per
+; DEV_* index (PCM, SFX, MUSIC, ENABLE, high to low bit). Written once by
+; audio_init; the tick slots below are resolved from it.
+g_audio_devices: dd 0             ; role nibbles: MIDI 0, OPL 1, TANDY 2, SPK 3, INNOVA 4, COVOX 5, DISNEY 6, SB 7
+g_audio_forced:  dd 0             ; /FLAG demands, bit N = device N (low 8 bits); unavailable demands clear at solve
+g_tick_shim:    dd tick_noop     ; the single shim pass (winner voices music+SFX)
+g_tick_enh:     dd tick_noop     ; tier-1 enhancement (OPL winner only)
+g_tick_midi:    dd tick_noop     ; MIDI music stream (MIDI nibble music only)
 g_sb_base:      dw 0              ; BLASTER A field (e.g. 0x220); 0 = absent
 g_sb_irq:       db 0              ; BLASTER I field
 g_sb_dma:       db 0              ; BLASTER D field

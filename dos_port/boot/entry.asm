@@ -58,6 +58,7 @@ extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at 
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3, /INNOVA = 4
+extern g_audio_forced    ; src/audio/audio_hal.asm — /FLAG demands, bit N = device N
 extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
 extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
 extern Init              ; src/home/init.asm — power-on init
@@ -99,6 +100,7 @@ arg_mt32:     db '/MT32',    0
 arg_gm:       db '/GM',      0
 arg_tandy:    db '/TANDY',   0
 arg_innova:   db '/INNOVA',  0
+arg_covox:    db '/COVOX',   0
 arg_spk:      db '/SPK',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
@@ -304,7 +306,14 @@ alloc_gb_memory:
 
 ; ---------------------------------------------------------------------------
 ; parse_cmdline — scan the DOS command line for the audio and debug options:
-; /NOSOUND, /MT32, /GM, /TANDY, /INNOVA, /SPK, /NOENH, /LOOP.
+; /NOSOUND, /MT32, /GM, /TANDY, /INNOVA, /COVOX, /SPK, /NOENH, /LOOP.
+; Audio demands land in two places together: the legacy g_cfg_shim/g_cfg_midi
+; bytes (kept for their readers) and the g_audio_forced bitmask audio_init
+; solves (bit N = DEV_* device N; literals mirror the FORCE_* equ in
+; src/audio/audio_hal.asm — an equ value cannot cross an object file).
+; find_token is a plain substring match: /COVOX collides with nothing (shares
+; only the '/CO' prefix with /COM1-4; no shorter token sits inside it), the
+; same tolerance the /IPXSOCK= note below accepts.
 ; ---------------------------------------------------------------------------
 parse_cmdline:
     push eax
@@ -361,7 +370,18 @@ parse_cmdline:
     call find_token
     jnz .no_innova
     mov byte [g_cfg_shim], 4      ; force the Innovation SSI-2001 shim
+    or dword [g_audio_forced], 1 << 4    ; FORCE_INNOVA (DEV_INNOVA = 4)
 .no_innova:
+
+    ; /COVOX: explicit-only DAC demand (no g_cfg_shim value — the legacy byte
+    ; has none for it; audio_init clears the bit to the auto chain until
+    ; stage 2 arms device 5). Priority sits between /INNOVA and /SPK, and the
+    ; solve checks forced bits in that same order.
+    mov edi, arg_covox
+    call find_token
+    jnz .no_covox
+    or dword [g_audio_forced], 1 << 5    ; FORCE_COVOX (DEV_COVOX = 5)
+.no_covox:
 
     cmp byte [g_cfg_shim], 0
     jnz .no_spk
