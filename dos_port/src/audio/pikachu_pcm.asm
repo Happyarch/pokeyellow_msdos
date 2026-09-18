@@ -24,8 +24,8 @@
 ; save/restore and APU register dance have no analog here — the APU shim
 ; never loses its state.
 ;
-; All held notes are CUT before the clip (opl_silence + midi_all_notes_off):
-; the shim's software envelopes freeze with interrupts off, so a held FM
+; All held notes are CUT before the clip (opl_silence + midi_all_notes_off +
+; tandy_silence + spk_silence + covox_silence): the shim's software envelopes freeze with interrupts off, so a held FM
 ; voice would drone through the whole clip — on the GB the *hardware*
 ; envelopes kept decaying through the freeze, so the cry stood alone there
 ; too. Music channels re-key on their next note events after the clip.
@@ -93,12 +93,14 @@ PlayPikachuSoundClip:
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]
     mov [pika_dbg_clip], bl
     ; PCM device select from the solved role nibbles (DEV_* map owned by
-    ; src/audio/audio_hal.asm): SB DSP when its PCM field is set, else the
-    ; speaker PWM. The SB bit is set exactly when g_sb_present is, so this
-    ; matches the old branch bit-for-bit.
-    ; TODO(Stage 1.4): test the Covox DAC PCM nibble first here (DAC > SB >
-    ; speaker) and route to the stage-1 cry player when set.
+    ; src/audio/audio_hal.asm): Covox DAC when its PCM field is set, else SB
+    ; DSP when its PCM field is set, else the speaker PWM. The SB bit is set
+    ; exactly when g_sb_present is, so that arm matches the old branch
+    ; bit-for-bit. The DAC arm is unreachable when the driver compiled out
+    ; (stage 2 clears a compiled-out forced bit, so the nibble stays clear).
     mov edx, [g_audio_devices]
+    test edx, 1 << 23             ; DEV_COVOX PCM field (nibble 5, P bit)
+    jnz .covox
     test edx, 1 << 31             ; DEV_SB PCM field (nibble 7, P bit)
     mov eax, PIKA_STEP_FP         ; mov preserves flags: ZF still from test
     jz .speaker

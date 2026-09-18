@@ -180,11 +180,18 @@ ENABLE, high→low bit). `g_audio_devices: dd 0` is the solved active set:
     guard (tandy shape, for 2.3); squares at GB duty, wave RAM verbatim,
     real 15/7-bit LFSR noise; unsigned out, silence = 128; samples =
     rate/60 Bresenham, zero 7 kHz literals.
-  - [ ] 1.3 Pump loop: per-tick sample count derived from `g_covox_rate`,
+  - [x] 1.3 Pump loop: per-tick sample count derived from `g_covox_rate`,
     tight `OUT` burst (`sb_pcm` `pcm_pace` is the pacing template if even
-    spacing proves necessary).
-  - [ ] 1.4 Cry arm in `PlayPikachuSoundClip` (blob → DAC at `g_covox_rate`)
-    + `g_covox_on` guards + `covox_dbg_snapshot` (mpu401 shape).
+    spacing proves necessary). Done: `covox_pump` drains the ring with
+    rate/60 + Bresenham carry (fill/drain lockstep), empty emits 128,
+    send-while-low with bounded poll of 64 then write-anyway (raw hardware
+    has no status bit; DSS accepts raw writes); no strobe (v2 path).
+  - [x] 1.4 Cry arm in `PlayPikachuSoundClip` (blob → DAC at `g_covox_rate`)
+    + `g_covox_on` guards + `covox_dbg_snapshot` (mpu401 shape). Done:
+    `covox_play_clip` streams per-play (8.8 step, Tier-1 blob untouched);
+    DAC nibble tested first, `pika_dbg_device` 3 = DAC; Makefile listing +
+    `input_cfg` `COVOX_RATE` literal (default 7000, clamp 4000–44500) +
+    window-9 extension landed too.
   - Acceptance: nasm clean, lint 0, silence is silent, tuner-verified pitch
     on all four voices at 7 kHz.
 - [ ] **2. Dispatch + ifdef.**

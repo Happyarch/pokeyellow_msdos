@@ -568,6 +568,7 @@ AUDIO_SRCS := \
     src/audio/tandy_shim.asm \
     src/audio/spk_shim.asm \
     src/audio/innova_shim.asm \
+    src/audio/covox_shim.asm \
     src/audio/mpu401.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \
