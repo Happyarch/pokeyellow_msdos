@@ -131,18 +131,32 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
     stage decides.
   - Acceptance: nasm clean both guard modes, lint 0, silence is silent,
     tuner-verified pitch per voice.
-- [ ] **2. Dispatch + runner.**
-  - [ ] 2.1 Device-8 solve arm (`cms_init` + word-2 role nibble, INNOVA shape).
-  - [ ] 2.2 `/GB` end-to-end (flag → forced bit 8 → survives solve → init →
-    tick slot wired).
-  - [ ] 2.3 MIDI-coexistence verified (1.2 guard against the solved path).
-  - [ ] 2.4 `run-gb` (+`.ps1`, run-tandy pattern: `sbtype=gb` stanza).
-  - Acceptance (static traces): `/GB` alone → CMS music+SFX; `/GB`+`/TANDY`
-    → TANDY wins; `/GB`+`/MT32` → MIDI music + CMS SFX.
-- [ ] **3. Verification + ear-checks (maintainer in-DOS).** Static half:
-  traces re-walked, nasm matrix, runner validated, snapshot map recorded.
-  Ear half: music set, noise-heavy battle, Pikachu cry fallback (SAA has no
-  DAC — SB/speaker path, same as Tandy), catch sequence.
+- [x] **2. Dispatch + runner.**
+  - [x] 2.1 Device-8 solve arm (`cms_init` + word-2 role nibble music+sfx,
+    no PCM; speaker keeps PCM-only). `cms_shutdown` in shutdown path.
+  - [x] 2.2 `/GB` end-to-end verified (flag → bit 8 → arm → init → tick).
+    Config `device 8` lands on the same arm.
+  - [x] 2.3 MIDI-coexistence verified (1.2 guard correct, tandy shape).
+  - [x] 2.4 `run-gb` (+`.ps1`, +x): `/GB`, `sbtype=gb`, `oplmode=none`,
+    speaker on (PCM cry fallback live; no DSP under `sbtype=gb`).
+  - Acceptance (static traces walked): `/GB` alone → CMS music+SFX;
+    `/GB`+`/TANDY` → TANDY wins; `/GB`+`/MT32` → MIDI music + CMS SFX.
+  - Follow-ups landed: `ENABLE_AUDIO_CMS` passthrough, window-9 CMS bytes
+    (+0x89..8C, file 0x23C..0x23F; MIDI +0x49..4C joins undumped head),
+    stale 0.5 comments repaired.
+- [ ] **3. Verification + ear-checks (static DONE, ears maintainer-run).**
+  - [x] 3.0 Static: 5 traces re-walked (stub combo silent-no-hang, default
+    dark; speaker PCM present under GB winner, absent from CMS nibble);
+    37/37 nasm matrix; lint 0, no new tokens; runner diff = swaps only,
+    keys pinned, `bash -n` clean; snapshot map (CMS file `0x23C..0x23F`,
+    neighbors recorded).
+  - [ ] 3.1 Cold boot `run-gb` → CMS music (snapshot `0x23C` tells init
+    from keying failures).
+  - [ ] 3.2 Catch sequence (squares + envelope-triangle bass + preset noise).
+  - [ ] 3.3 Noise-heavy battle (no stuck noise after).
+  - [ ] 3.4 Pikachu cry via speaker PWM (`pika_dbg_device=2`; never 3 here).
+  - [ ] 3.5 Tuner spot-checks (divider-law discrepancy: D3 vs D#3 split,
+    chromatic A→G# curvature) + ceiling check (wave flattens above ~1 kHz).
 - [ ] **4. Gates.** `lint_pret_labels` 0, `static_gate` clean, fidelity green
   with byte-identical `GBSTATE.BIN` (output-only — assert it).
 
