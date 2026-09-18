@@ -46,6 +46,8 @@ global g_innova_on
 
 %if ENABLE_AUDIO_INNOVA != 0
 
+extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+
 section .text
 
 INNOVA_BASE equ 0x280             ; default SSI-2001 base (jumpers: 2A0/2C0/2E0)
@@ -563,6 +565,13 @@ innova_volume:
     jz .mute
     shl al, 4
 .haveSR:
+    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; only voices on the SID while an SFX owns it (wChannelSoundIDs CHAN5-8)
+    cmp byte [g_midi_music], 0
+    jz .voice
+    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
+    jz .mute
+.voice:
     cmp al, [edi + SS_LASTSUS]
     je .gate
     mov [edi + SS_LASTSUS], al
@@ -619,6 +628,14 @@ innova_volume:
 innova_noise_keyon:
     cmp byte [g_innova_on], 0
     jz .off
+    ; MIDI mode: the MT-32/GM stream carries the music, so ch3 noise only
+    ; steals V3 while an SFX owns it (wChannelSoundIDs CHAN8); a music noise
+    ; hit mutes (no steal, like the .off no-op above)
+    cmp byte [g_midi_music], 0
+    jz .midiOk
+    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
+    jz .off
+.midiOk:
     ; re-entrant: a steal already in flight restores first, so a re-trigger
     ; re-saves a clean pitched image (never a noise one)
     cmp byte [s_noise_on], 0
@@ -731,7 +748,8 @@ innova_noise_freq:
 ; $14, follows NR43 rewrites, and on length expiry releases the voice
 ; (restore + TEST pulse). A pitched V3 re-key mid-steal aborts the steal:
 ; its keyon already reprogrammed the voice, so the saved image is stale and
-; the live pitched state owns V3 again. Clobbers EAX ECX EDX EDI.
+; the live pitched state owns V3 again. Clobbers EAX ECX EDX EDI, plus EBX
+; on the MIDI-mode handoff (restored V3 is handed to innova_volume as ch2).
 ; ---------------------------------------------------------------------------
 innova_noise_tick:
     cmp byte [s_noise_on], 0
@@ -741,6 +759,19 @@ innova_noise_tick:
     mov byte [s_noise_on], 0      ; pitched re-keyed: abandon the steal
     ret
 .service:
+    ; MIDI mode: a steal whose SFX owner released ch3 hands V3 back at once;
+    ; the pitched volume guard then owns the restored voice (muted unless an
+    ; SFX owns ch2), so music never resumes on the SID behind the MIDI stream
+    cmp byte [g_midi_music], 0
+    jz .midiOk
+    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
+    jnz .midiOk
+    call innova_noise_restore
+    mov ebx, 2
+    lea edi, [innova_state + 2*SS_SIZE]
+    call innova_volume
+    ret
+.midiOk:
     lea edi, [innova_state + 2*SS_SIZE]
     ; envelope: one step per (period / 64) s, riding the $14 sustain nibble
     ; (gate held, A/D/R 0 — innova_envelope's math on the noise payload)
