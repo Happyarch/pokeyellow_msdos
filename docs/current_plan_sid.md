@@ -61,20 +61,20 @@ from the nerdlypleasures mirror + AmiBay corroboration. Full detail lives in
 
 ## Noise handling (decided: V3-steal default, song-checked)
 
-Maintainer ear: noise is rare; V3 drops when ch4 fires — uniform rule, no
-per-song exceptions (the 0.3 metric exceptions were dropped by maintainer
-decision). Mechanics: save V3 `$0E–$14`, noise control + ADSR, restore on
+Maintainer ear: noise is rare; V3 drops when ch4 fires. Validation in 0.3:
+per-song steal assignment (default V3; documented exceptions where V3 is
+load-bearing). Mechanics: save V3 `$0E–$14`, noise control + ADSR, restore on
 note-off, TEST pulse on release, ear-check transitions at Release 0.
 Speaker-noise rejected (standing downsides).
 
 ## House style + annotation ruling (maintainer decisions)
 
-- `innova_shim.asm` follows the device-shim house style (`tandy_shim.asm:1-60`
+- `sid_shim.asm` follows the device-shim house style (`tandy_shim.asm:1-60`
   template): mapping table + software-emulation list header, `gb_memmap.inc`,
   `section .text`, port/clock `equ`s, per-voice state `equ`s,
-  `innova_init/pass/silence/shutdown/dbg_snapshot` + `g_innova_on`, NRx4-restart
+  `sid_init/pass/silence/shutdown/dbg_snapshot` + `g_sid_on`, NRx4-restart
   consume, virtual APU `[ebp+$FF10..$FF26]`, absent-hardware → silence.
-- **No DEVIATION annotation on any port-only file** (`innova_shim` ships with the
+- **No DEVIATION annotation on any port-only file** (`sid_shim` ships with the
   `audio_hal`-style `Port-only module (no pret counterpart...)` header only).
   The four existing HAL DEVIATION headers (opl/tandy/spk/mpu401) and the
   cms/gus/imfc draft wording are known-inconsistent legacy — left alone, not
@@ -82,47 +82,70 @@ Speaker-noise rejected (standing downsides).
 
 ## Stages
 
-- [x] **0a. References mirrored (2026-09-18, branch `experimental-audio-devices`).**
-  `docs/sound/MOS_6581_SID_Nov_1981.pdf` (6502.org, 19pp, preferred over the
-  archive.org copy) + `docs/sound/C64_PRG_Ch4_Programming_Sound.pdf` (Ch.4, 26pp),
-  both gitignored/ARR local-only; committed mirrors
-  `docs/references/nerdlypleasures/SID_and_DOS_-_Nerdly_Pleasures.html` +
-  `docs/references/c64wiki/SID_-_C64-Wiki.html` + notes
-  `docs/references/amibay/SSI-2001-replica-notes.md`; index rows in
-  `docs/references/README.md`. Patent dropped (not useful); full-book fallback
-  excised to sound-section only; replica schematics excluded (not a programming
-  manual); VOGONS primaries deferred.
-  Derivatives follow the one-.md-per-doc convention: `MOS_6581_SID_Nov_1981.md`
-  (189 lines) + `C64_PRG_Ch4_Programming_Sound.md` (136 lines) +
-  `SID_SSI-2001_Notes.md` (93 lines) + `sid_voice_filter_path.svg` +
-  `sid_isa_port_map.svg`, all in gitignored `docs/sound/`.
-- [ ] **0b. Preconditions.** `/SID` flag name checked against `find_token`
-  substring behavior in `boot/entry.asm`; `docs/sound/` SID register + SSI-2001
-  port reference mirrored; claims in this file re-verified against HEAD.
-- [ ] **1. Driver `src/audio/sid_shim.asm`** (port-only HAL,
-  `DEVIATION{class=HAL}` header): `SID_BASE 0x280` hardcoded (Tandy hardcodes
-  `0xC0` — recommend same, no `/SIDBASE=`); `sid_write`; `sid_setfreq` with
-  card-clock constant; duty→pulse-width map; sustain-riding envelope;
-  length/sweep per the Tandy/OPL software pattern; noise path per whichever
-  option "Noise handling" resolves to; `sid_silence` + hook into
-  `pikachu_pcm.asm:78-81` pre-clip cut; self-guard `g_sid_on`.
-- [ ] **2. Dispatch.** `g_shim_device=4`; `audio_hal.asm` init + one `audio_tick`
-  arm (`.tandy` shape); `entry.asm` `/SID` parse with stated precedence if
-  combined with `/TANDY`; MIDI-coexistence guard mirroring
-  `tandy_shim.asm:504-509` (SFX-only voicing under a MIDI stream — 3 lines,
-  free).
-- [ ] **3. SFX table.** SID waveform/ADSR per SFX id. `tools/audio/sfx/*.yaml` +
-  `gen_sfx_data.py` emit OPL patch indices, meaningless to the SID —
-  shim-owned constants recommended (20-odd entries, no regen machinery). This is
-  driver data, not song enhancements; the "no enhancements or overrides" call
-  stands.
-- [ ] **4. Runners.** `run-sid` (+`.ps1`): `sbtype=none, oplmode=none`,
-  `[innova] innova=true`, speaker left enabled for the PCM cry; `DEBUG_AUDIO
-  TRACK=... /LOOP` unchanged.
-- [ ] **5. Gates.** `lint_pret_labels` 0, `static_gate` clean, fidelity green
-  with byte-identical `GBSTATE.BIN` (engine untouched — assert it); in-DOS ear
-  check: music, a noise-heavy battle (whichever noise option), Pikachu cry
-  fallback with no SB.
+- [x] **0.1. References mirrored.** PDFs, VISION.txt, SVGs, HTML mirrors,
+  index rows. Done.
+- [ ] **0.2. Preconditions (read-only, remote-safe).**
+  - [ ] 0.2.1 `/SID` flag vs `find_token` substring behavior in
+    `boot/entry.asm` (survey `/TANDY`/`/SPK`/`/MT32`/`/GM` block); define
+    `/SID`+`/TANDY` precedence (first-wins vs priority) and record it.
+  - [ ] 0.2.2 Re-verify every cited file:line against HEAD (tandy
+    29-31/151-213/219-476/504-509; mpu401 10-18/97-100/168-196/205-369/415-429;
+    audio_hal 67-95/97-133; vblank 206; entry 331-345; pikachu_pcm
+    78-81/83-94; spk_shim 3-7); update drifted numbers in this file.
+  - [ ] 0.2.3 Confirm `g_shim_device=4` is free (audio_hal device enum at
+    build).
+  - [ ] 0.2.4 Reconcile agy REVIEW.txt into VISION.txt/.mds when it lands
+    (corrections in place, no dated notes — ref-doc convention).
+- [ ] **0.3. Noise song-check (host-side, remote-safe).**
+  - [ ] 0.3.1 `simulate_song` overlap stats over the base song set: noise-on
+    frame fraction + sounding-voice-under-noise distribution.
+  - [ ] 0.3.2 Confirm V3-default; list exception songs with per-song steal
+    choice (V2 or accept gap).
+  - [ ] 0.3.3 Record the table in this file. Acceptance: every base song has
+    a steal assignment.
+- [ ] **1. Driver `src/audio/sid_shim.asm`.**
+  - [ ] 1.1 Skeleton: house-style header, equs (`SID_BASE 0x280`,
+    card-clock const), per-voice state, six globals. No DEVIATION.
+  - [ ] 1.2 `sid_write` (blind OUTs; no pacing needed).
+  - [ ] 1.3 `sid_setfreq` (×18.7478755, hi/lo split, clamp).
+  - [ ] 1.4 Tick pass: virtual-APU read; V1/V2 pulse + duty→PW; V3 triangle
+    + NR32; sustain-riding; NR50→VOL; restart-consume; length/sweep
+    (Tandy/OPL pattern).
+  - [ ] 1.5 V3-steal per 0.3 table: save/restore `$0E–$14`, TEST pulse on
+    release, single-waveform invariant.
+  - [ ] 1.6 `sid_silence` (zero `$00–$18`) + `pikachu_pcm` pre-clip hook +
+    `g_sid_on` guards.
+  - [ ] 1.7 `sid_dbg_snapshot` (mpu401 shape).
+  - Acceptance: nasm clean, lint 0, silence is silent, one note per voice at
+    tuner-verified pitch.
+- [ ] **2. Dispatch.**
+  - [ ] 2.1 `g_shim_device=4`: `audio_hal.asm` init + one `audio_tick` arm
+    (`.tandy` shape).
+  - [ ] 2.2 `/SID` parse + 0.2.1 precedence rule.
+  - [ ] 2.3 MIDI-coexistence guard (tandy 504-509 shape: SFX-only under a
+    MIDI stream).
+  - Acceptance: `/SID` alone → SID music+SFX; `/SID`+`/TANDY` → documented
+    winner; `/SID`+`/MT32` → MIDI music + SID SFX.
+- [ ] **3. SFX table.**
+  - [ ] 3.1 Enumerate SFX ids (from `tools/audio/sfx/*.yaml` at build).
+  - [ ] 3.2 Shim-owned waveform/ADSR consts per id (noise SFX → steal path).
+  - [ ] 3.3 In-DOS ear-check each.
+  - Acceptance: every SFX audible and recognizable; no combined-waveform
+    byte escapes (lock-up rule holds).
+- [ ] **4. Runners.**
+  - [ ] 4.1 `run-sid` (+`.ps1`): `sbtype=none, oplmode=none`, `[innova]
+    innova=true`, speaker on for PCM cry.
+  - [ ] 4.2 `DEBUG_AUDIO TRACK=... /LOOP` smoke.
+  - Acceptance: cold DOSBox-X boot to music with the pinned conf.
+- [ ] **5. Gates + acceptance.**
+  - [ ] 5.1 `lint_pret_labels` 0, `static_gate` clean (gate before master
+    merge; `--no-verify` while remote).
+  - [ ] 5.2 Fidelity green, `GBSTATE.BIN` byte-identical (engine untouched —
+    assert).
+  - [ ] 5.3 Ear checklist: music set, noise-heavy battle, Pikachu cry with
+    no SB, A4 tuner check.
+  - [ ] 5.4 Master-merge needs maintainer sign-off; VOGONS gap stays
+    deferred.
 
 ## Risks
 
