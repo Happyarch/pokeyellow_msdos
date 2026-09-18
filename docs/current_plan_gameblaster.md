@@ -55,6 +55,10 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
 - GB ch3 noise → SAA noise generator (`11` follow mode tracks a freq gen;
   else 31.3/15.6/7.6 kHz presets). No steal contortions — mixer channel
   selects noise-only.
+- Pikachu cry: SAA has no DAC, so the speaker KEEPS its PCM field under a GB
+  winner (decided 2026-09-18) — cry fallback is SB DSP, then speaker PWM,
+  same as Tandy. Unlike Covox (which takes PCM and drops speaker SFX), a GB
+  winner takes music+SFX only; speaker holds PCM-only.
 - 8 spare voices: deliberately unused in v1. Headroom is explicitly NOT a
   defect — and it is the tier-1 enhancement budget (12 voices vs 4 needed).
   Candidate v2 technique (recorded, not designed): noise-channel simulation
@@ -64,28 +68,78 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
   SAA amplitude registers; SFX table (waveform/amplitude per SFX id) as
   shim-owned constants — the `tools/audio/sfx/*.yaml` OPL indices don't
   transfer (same finding as the SID draft).
-- Dispatch: `DEV_CMS` nibble — device 6 in the Covox-plan nibble word
-  (`g_audio_devices`, 0 none / 1 OPL / 2 Tandy / 3 SPK / 4 Innova / 5 Covox /
-  6 CMS); explicit-only like Innova/Covox (never auto-set). Flag `/GB` vs
-  `/CMS` still open — decide at build (check `find_token` substring behavior
-  in `boot/entry.asm` first). One `audio_tick` arm; MIDI-coexistence guard
-  mirroring `tandy_shim.asm:504-509`; runner appends the `sbtype=gb` stanza
-  (`run-gb` + `.ps1`, run-tandy pattern).
+- Dispatch: `DEV_CMS` = device 8, nibble 0 of `g_audio_devices2`
+  (`FORCE_CMS` = bit 8 of `g_audio_forced`); explicit-only, never auto-set.
+  Flag `/GB` (decided 2026-09-18; `find_token` check is stage 0.5's job
+  alongside the config-device work). Solved tick slot, same as every shim;
+  MIDI-coexistence guard mirroring `tandy_shim.asm:504-509`; runner appends
+  the `sbtype=gb` stanza (`run-gb` + `.ps1`, run-tandy pattern).
+
+## Device selection (decided 2026-09-18)
+
+- 64-bit selection across two dwords: `g_audio_devices` (word 1, devices 0–7
+  roles, unchanged) + `g_audio_devices2: dd` (word 2: **DEV_CMS nibble 0 =
+  device 8**, DEV_DISNEY nibble 1 = device 9, rest reserved).
+  `g_audio_forced` is already a full dword with only the low 8 bits used —
+  `FORCE_CMS = bit 8`. No 64-bit ops needed (386 has none); init reads two
+  dwords, the tick path is untouched.
+- The mask costs nothing per tick (measured, not assumed): `audio_tick` is
+  three blind indirect calls (`call [g_tick_shim/enh/midi]`,
+  `audio_hal.asm:115-117`), unused slots point at `tick_noop`; the mask is
+  read once at init (solve `:140-224`). Selection state is config/debug, not
+  hot path.
+- Parameters stay per-device words (`g_covox_rate` pattern: parsed once, zero
+  per-tick cost) — they don't fit nibbles and don't belong in the mask.
+- Explicit-only, never auto-selected; **no CT-1302 probe** (flag IS the
+  detection, Tandy/Innova precedent; probe documented as a future option).
+  Force priority extended: TANDY > INNOVA > COVOX > **GB** > SPK.
+- Device source precedence (new, all devices): `/FLAG` command line >
+  `POKEMON.CFG [audio] device` > auto-fill (OPL probe / speaker). Stage 0.5
+  builds this mechanism once for every device; CMS is its first consumer.
 
 ## Stages
 
-- [ ] **0. Groundwork (references DONE 2026-09-18).** `docs/sound/`
+- [x] **0. Groundwork (references DONE 2026-09-18).** `docs/sound/`
   holds the vision-transcribed `SAA1099_Philips_1984.md` + 3 SVGs (local-only,
   gitignored); `docs/references/` holds `gameblst.txt` (UTF-8) + `cms.4.html`.
-  Remaining: flag name (`/GB` vs `/CMS`), detection probe-vs-flag decision
-  (CT-1302 latch probe documented in `cms.4.html`).
-- [ ] **1. Driver `src/audio/cms_shim.asm`** (port-only HAL,
-  `DEVIATION{class=HAL}` header): init/silence, per-tick 4-channel pass,
-  software envelopes, noise mapping, SFX amplitude table, self-guard.
-- [ ] **2. Dispatch + runner.** Flag parse, `audio_hal.asm` arm, `run-gb`
-  (+`.ps1`).
-- [ ] **3. Ear-checks.** Music set, noise-heavy battle, Pikachu cry fallback
-  (SAA has no DAC — SB/speaker path, same as Tandy).
+  Flag `/GB` decided; detection = flag-only, no probe (decided 2026-09-18).
+- [ ] **0.5. Config device + override (FIRST dispatch — shared mechanism,
+  owns `entry.asm` + `input_cfg.asm` + solve corner of `audio_hal.asm`).**
+  - [ ] 0.5.1 `g_audio_devices2: dd` + `g_audio_forced` bit 8 (`FORCE_CMS`);
+    force priority TANDY > INNOVA > COVOX > GB > SPK.
+  - [ ] 0.5.2 `POKEMON.CFG [audio] device` string (`none|opl|tandy|spk|
+    innova|covox|gb|+midi variants as already expressible) parsed once at
+    boot into a requested-device field (`g_covox_rate` pattern).
+  - [ ] 0.5.3 Precedence `/FLAG` > config > auto-fill, for every device;
+    `/GB` token check (`find_token` substring safety) + `arg_gb` string.
+  - Acceptance: every existing selection behaves identically with no config
+    present; config-only selection works; `/FLAG` overrides config; nasm
+    clean, lint 0.
+- [ ] **1. Driver `src/audio/cms_shim.asm`** (port-only HAL, no DEVIATION —
+  current house rule, not the seedling's `DEVIATION{class=HAL}` line).
+  - [ ] 1.1 Skeleton: house-style header, `CMS_BASE 0x220` + port-pair equs,
+    per-voice state, `cms_init/pass/silence/shutdown/dbg_snapshot` +
+    `g_cms_on`, `ENABLE_AUDIO_CMS` guard + stubs.
+  - [ ] 1.2 Tick pass: GB ch0/ch1 → square voices, ch2 → envelope
+    triangle/sawtooth voice (Fig.5 f/h), ch3 → noise generator; software
+    envelope/sweep/length in GB units (Tandy pattern); restart-consume;
+    NR50/NR51 handling; MIDI SFX-only guard (tandy shape, for 2.3's sake).
+  - [ ] 1.3 `cms_silence` (SE=0 + zero amplitudes) + pre-clip hook +
+    `cms_dbg_snapshot` (mpu401 shape).
+  - Acceptance: nasm clean both guard modes, lint 0, silence is silent,
+    tuner-verified pitch per voice.
+- [ ] **2. Dispatch + runner.**
+  - [ ] 2.1 Device-8 solve arm (`cms_init` + word-2 role nibble, INNOVA shape).
+  - [ ] 2.2 `/GB` end-to-end (flag → forced bit 8 → survives solve → init →
+    tick slot wired).
+  - [ ] 2.3 MIDI-coexistence verified (1.2 guard against the solved path).
+  - [ ] 2.4 `run-gb` (+`.ps1`, run-tandy pattern: `sbtype=gb` stanza).
+  - Acceptance (static traces): `/GB` alone → CMS music+SFX; `/GB`+`/TANDY`
+    → TANDY wins; `/GB`+`/MT32` → MIDI music + CMS SFX.
+- [ ] **3. Verification + ear-checks (maintainer in-DOS).** Static half:
+  traces re-walked, nasm matrix, runner validated, snapshot map recorded.
+  Ear half: music set, noise-heavy battle, Pikachu cry fallback (SAA has no
+  DAC — SB/speaker path, same as Tandy), catch sequence.
 - [ ] **4. Gates.** `lint_pret_labels` 0, `static_gate` clean, fidelity green
   with byte-identical `GBSTATE.BIN` (output-only — assert it).
 
