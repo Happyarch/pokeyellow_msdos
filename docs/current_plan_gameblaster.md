@@ -121,6 +121,14 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
     SFX-only guard (tandy shape); §9.2 bring-up; repeat-write elision via
     `cms_wreg`. Known limit: wave notes above ~1 kHz envelope ceiling
     flatten in HW — 1.3 tuner item.
+  - [x] 1.3 `cms_silence` (SE=0 + FE/NE off + six amps zeroed, caches
+    synced, KEY stays — tandy shape) + `cms_commit_se` SE restore +
+    shutdown tail-jump; pre-clip hook-in recorded (after `covox_silence`,
+    pikachu_pcm:90-91, stage-2 wiring); snapshot +0x89..+0x8C (verified
+    free, byte map in header; window extension is stage 2/3). Tuner
+    cross-check: DISCREPANCY vs gameblst note table (divider law, opposite
+    curvature; octave split at 62 Hz) — recorded, map unchanged, ear
+    stage decides.
   - Acceptance: nasm clean both guard modes, lint 0, silence is silent,
     tuner-verified pitch per voice.
 - [ ] **2. Dispatch + runner.**

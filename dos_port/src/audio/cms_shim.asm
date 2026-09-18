@@ -32,7 +32,8 @@
 ;       $02 directly (mute/full/half/quarter -> 0/15/8/4); the GB wave channel
 ;       carries no envelope selector, so $18 is programmed once at init and
 ;       never touched per tick. Rate ceiling is ~1 kHz at 4-bit steps, so high
-;       wave notes flatten in hardware — a 1.3 tuner-check item.
+;       wave notes flatten in hardware — still open past 1.3 (static check
+;       only; needs the ear stage to judge).
 ;       Clock-assumption note: $18's internal clock is taken to follow voice 3's
 ;       own frequency generator (the Fig.1 FREQ-2-to-ENV-0 pairing, [SAA] §3 —
 ;       a [?]-marked reading), the only wiring under which the triangle tracks
@@ -74,7 +75,14 @@
 ; divider equations, so any Fn law is a guess; the gameblst note table ([SAA]
 ; §9.5) is the cross-check for the 1.3 tuner pass (its shrinking semitone steps
 ; already hint at a divider law, which would replace the linear map — expected,
-; not feared). No octave shift for the wave voice: the SAA 31 Hz floor covers
+; not feared). 1.3 cross-check (static, table A=3..G#=242 at C=55 Hz):
+; DISCREPANCY CONFIRMED, map unchanged (no ears in 1.3). Table steps shrink
+; 28..16 while the linear law predicts growing steps (A..D Fn 125.9/148.6/
+; 172.7/198.2/225.2/253.8, steps ~22.7..~28.6) — opposite curvature, a divider
+; law as foreseen. Placement disagrees too: the table spans A(46.2 Hz)..G#
+; (87.3 Hz) in one octave byte (Fn 3..242 monotonic) while the half-open 31<<k
+; bands split it at 62 Hz (D/D#), wrapping D#..G# to Fn 14..104 above. Retune
+; stays a later ear stage. No octave shift for the wave voice: the SAA 31 Hz floor covers
 ; the GB wave range, unlike the SN divider clamp that forced tandy's shift.
 ;
 ; Bring-up follows [SAA] §9.2 verbatim on the first pair: $1C=$02 (reset),
@@ -96,9 +104,10 @@
 ;
 ; The shim activates only via the /GB command-line flag (stage 2: audio_init
 ; sets the device and calls cms_init); with g_cms_on = 0 every entry point
-; no-ops. Stage 1.3 owns: $1C SE handling in silence, the pre-clip hook, and
-; the recorded snapshot map (the provisional block below follows the covox
-; echo-slack precedent until the harness window is extended).
+; no-ops. Stage 1.3 done: $1C SE handling in silence (SE=0, tick re-arms
+; SE=1), the pre-clip hook-in point recorded (pikachu_pcm.asm:90, wired in
+; stage 2), and the snapshot map below (provisional +0x89..+0x8C on the covox
+; echo-slack precedent; the debug_dump window extension stays stage 2/3).
 
 bits 32
 
@@ -174,8 +183,16 @@ CMS_LASTTONE equ 17   ; word: last Fn written (0xFFFF = force; Fn reaches 0xFF)
 CMS_LASTOCT  equ 19   ; byte: last 3-bit octave (init 0 keeps the compose valid)
 CMS_SIZE     equ 20
 
-; --- provisional debug snapshot block (covox precedent: past the dumped -----
-; --- window, over echo-RAM slack; the 1.3 harness extension records the map)
+; --- CMS debug snapshot block (covox precedent: past the dumped window, -----
+; --- over echo-RAM slack; the harness window extension stays stage 2/3) -----
+; CMS_SNAP = W_PORT_SCRATCH+0x89, 4 bytes +0x89..+0x8C, contiguous past covox's
+; +0x81..+0x88: +0x89 g_cms_on, +0x8A v0|v1 LASTAMP nibbles, +0x8B v2|v3 LASTAMP
+; nibbles, +0x8C last FE (bits 0-1) OR last NE (bit 3 — lossless, no shared
+; bits). Free-verified the covox way: nearest named memmap symbols are
+; W_CHECK_FOR_TURN at +0x80 (1 byte, skipped) and nothing named above it (no
+; 0xF58x symbol past 0xF580 in gb_memmap.inc), and no other shim snapshot
+; reaches +0x89 (enh ends +0x7C, innova ends +0x7F, covox ends +0x88). The port
+; does not emulate the echo mirror, the same basis W_PORT_SCRATCH stands on.
 CMS_SNAP equ (W_PORT_SCRATCH + 0x89)   ; +0x89..+0x8C (covox ends +0x88)
 
 ; ===========================================================================
@@ -222,6 +239,7 @@ cms_init:
     loop .vinit
     mov byte [c_lastfe], 0xFF
     mov byte [c_lastne], 0xFF
+    mov byte [c_lastse], 0xFF
     mov byte [c_lastoct10], 0xFF
     mov byte [c_lastoct11], 0xFF
     mov byte [c_lastncol], 0xFF
@@ -294,17 +312,28 @@ cms_init:
     mov dx, CMS_DATA_HI
     xor al, al
     out dx, al
-    call cms_silence
+    call cms_silence            ; parks SE=0 with everything else
+    mov al, CMS_R_SE            ; ... but init leaves the card enabled-but-quiet
+    mov ah, CMS_SE_ENABLE
+    call cms_wreg
+    mov byte [c_lastse], CMS_SE_ENABLE
     popad
     ret
 
-; cms_silence — leave the first chip silent: FE/NE off, amps $00-$05 zeroed
+; cms_silence — leave the first chip fully quiet: SE=0 via $1C (all channels
+; disabled, the [SAA] §8 power-up state), FE/NE off, amps $00-$05 zeroed
 ; (amp 0 is off even under envelope drive — the programmed level stays the
-; ceiling, [SAA] §7 rule 2 — so the triangle voice dies too). Amp/FE/NE caches
-; sync so the next tick re-arms every live voice; tone/octave caches stay stale
-; (FE=0 gates every voice, and keyon forces their rewrite). An unselected card
-; must not see port traffic, hence the g_cms_on gate. Stage 1.3 adds $1C SE
-; handling and the pre-clip hook. Preserves all registers.
+; ceiling, [SAA] §7 rule 2 — so the triangle voice dies too). Amp/FE/NE/SE
+; caches sync to the silenced values so the next tick re-arms every live voice
+; (KEY flags stay, like tandy_silence: voices resume on their next tick and
+; re-key fully on their next restart — cms_commit_se restores SE=1 on change);
+; tone/octave caches stay stale (FE=0 gates every voice, the silenced
+; tone/octave bytes are still on the chip, and keyon forces their rewrite).
+; An unselected card must not see port traffic, hence the g_cms_on gate.
+; Future pre-clip hook (wired stage 2, this file only records the site):
+; pikachu_pcm.asm PlayPikachuSoundClip calls cms_silence after its
+; covox_silence call (pikachu_pcm.asm:90), with an extern beside line 51.
+; Preserves all registers.
 cms_silence:
     cmp byte [g_cms_on], 0
     jz .off
@@ -312,6 +341,10 @@ cms_silence:
     push ebx
     push edx
     push edi
+    mov al, CMS_R_SE
+    xor ah, ah                    ; SE=0 first: the cut lands immediately
+    call cms_wreg
+    mov byte [c_lastse], 0
     mov al, CMS_R_FE
     xor ah, ah
     call cms_wreg
@@ -342,7 +375,8 @@ cms_silence:
 .off:
     ret
 
-; cms_shutdown — leave the CMS silent on exit. Preserves all registers.
+; cms_shutdown — leave the CMS silent on exit (tandy_shutdown shape: tail-jump
+; to silence, which parks SE=0 with the amps/FE/NE). Preserves all registers.
 cms_shutdown:
     jmp cms_silence
 
@@ -418,6 +452,7 @@ cms_pass:
     jb .chLoop
     call cms_commit_octaves
     call cms_commit_enables
+    call cms_commit_se
 .off:
     ret
 
@@ -829,11 +864,27 @@ cms_commit_enables:
     ret
 
 ; ---------------------------------------------------------------------------
+; cms_commit_se — re-arm $1C SE=1 while the shim is ticking (cms_silence parks
+; SE=0; the first tick after it restores the enable on change vs c_lastse, so
+; a silenced voice resumes without needing a re-key). One write per silence,
+; then quiet. Clobbers EAX EDX.
+; ---------------------------------------------------------------------------
+cms_commit_se:
+    cmp byte [c_lastse], CMS_SE_ENABLE
+    je .done
+    mov byte [c_lastse], CMS_SE_ENABLE
+    mov ah, CMS_SE_ENABLE
+    mov al, CMS_R_SE
+    call cms_wreg
+.done:
+    ret
+
+; ---------------------------------------------------------------------------
 ; cms_dbg_snapshot — provisional 4-byte block at CMS_SNAP (+0x89..+0x8C):
 ;   +0x89 g_cms_on  +0x8A v0|v1 last amps (hi|lo nibble)
 ;   +0x8B v2|v3 last amps  +0x8C last FE | last NE
-; mpu401 shape (mov al/mov [ebp+...] stores, EAX only). The harness window
-; extension that dumps these bytes is stage 1.3's job.
+; mpu401 shape (mov al/mov [ebp+...] stores, EAX only). The debug_dump window
+; extension that dumps these bytes stays stage 2/3 (this file cannot touch it).
 ; In: EBP = GB memory base. Clobbers EAX.
 ; ---------------------------------------------------------------------------
 cms_dbg_snapshot:
@@ -873,6 +924,7 @@ cms_state:    resb 4 * CMS_SIZE  ; ch0-3 voices (SAA channel index = GB channel)
 c_lastaddr:   resb 1            ; last latched SAA address, LO pair (0xFF = unknown)
 c_lastfe:     resb 1            ; last $14 byte (0xFF = force)
 c_lastne:     resb 1            ; last $15 byte (0xFF = force)
+c_lastse:     resb 1            ; last $1C byte (0xFF = force)
 c_lastoct10:  resb 1            ; last $10 byte (0xFF = force)
 c_lastoct11:  resb 1            ; last $11 byte (0xFF = force)
 c_lastncol:   resb 1            ; last noise colour 0-2 (0xFF = force)
