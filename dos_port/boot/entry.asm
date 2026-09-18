@@ -103,6 +103,7 @@ arg_innova:   db '/INNOVA',  0
 arg_covox:    db '/COVOX',   0
 arg_spk:      db '/SPK',     0
 arg_gb:       db '/GB',      0
+arg_pas:      db '/PAS',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
 ; Link-cable transport selection (docs/current_plan_link_cable.md Stage 2).
@@ -307,16 +308,20 @@ alloc_gb_memory:
 
 ; ---------------------------------------------------------------------------
 ; parse_cmdline — scan the DOS command line for the audio and debug options:
-; /NOSOUND, /MT32, /GM, /TANDY, /INNOVA, /COVOX, /GB, /SPK, /NOENH, /LOOP.
+; /NOSOUND, /MT32, /GM, /TANDY, /INNOVA, /COVOX, /GB, /PAS, /SPK, /NOENH, /LOOP.
 ; Audio demands land in two places together: the legacy g_cfg_shim/g_cfg_midi
 ; bytes (kept for their readers) and the g_audio_forced bitmask audio_init
 ; solves (bit N = DEV_* device N; literals mirror the FORCE_* equ in
 ; src/audio/audio_hal.asm — an equ value cannot cross an object file).
 ; find_token is a plain substring match: /COVOX collides with nothing (shares
-; only the '/CO' prefix with /COM1-4; no shorter token sits inside it), and
+; only the '/CO' prefix with /COM1-4; no shorter token sits inside it),
 ; /GB is safe both directions too (no other token contains "/GB" and "/GB"
 ; contains no other token; the only in-tree substring pair is /IPX inside
-; /IPXSOCK=, noted below) — the same tolerance the /IPXSOCK= note accepts.
+; /IPXSOCK=, noted below), and /PAS is safe both directions as well (no other
+; token contains "/PAS" — not /SPK, not /PKTINT=, not /TCPWAIT — and "/PAS"
+; contains no other token), so it needs no ordering guard against the
+; /COM1-4, /BAUD=, /IPX, /TCP=, /PRINT9 or audio sets — the same tolerance
+; the /IPXSOCK= note accepts.
 ; ---------------------------------------------------------------------------
 parse_cmdline:
     push eax
@@ -394,6 +399,16 @@ parse_cmdline:
     jnz .no_gb
     or dword [g_audio_forced], 1 << 8    ; FORCE_CMS (DEV_CMS = 8)
 .no_gb:
+
+    ; /PAS: explicit-only Pro Audio Spectrum 16 demand (no g_cfg_shim value —
+    ; the legacy byte has none for it, same as /COVOX and /GB). Priority sits
+    ; between /GB and /SPK, and the audio_init solve checks forced bits in
+    ; that same full order: TANDY > INNOVA > COVOX > GB > PAS > SPK.
+    mov edi, arg_pas
+    call find_token
+    jnz .no_pas
+    or dword [g_audio_forced], 1 << 10   ; FORCE_PAS (DEV_PAS = 10)
+.no_pas:
 
     cmp byte [g_cfg_shim], 0
     jnz .no_spk

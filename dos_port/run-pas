@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# dos_port/run-pas — like dos_port/run, but as a PC with a Pro Audio Spectrum
+# 16: Sound Blaster and AdLib emulation OFF, and /PAS on the game's command
+# line (the card's mixer is write-only from the driver's chair, so the flag
+# IS the detection — see src/audio/pas_shim.asm). Music + SFX play on the
+# card's OPL3 at 0x388; the Pikachu cry falls through to the PC-speaker PWM
+# player (the G1 tick voices FM only, no PCM path). The PC speaker stays
+# enabled as the PCM fallback path. Make args pass through, e.g.:
+#   dos_port/run-pas DEBUG_AUDIO=1
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make -C "$DOSPORT" image "$@"
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed 's|^PKMN.EXE$|PKMN.EXE /PAS|' "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+pcspeaker = true
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"

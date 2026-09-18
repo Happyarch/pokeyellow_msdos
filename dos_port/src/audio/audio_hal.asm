@@ -64,6 +64,9 @@ extern covox_shutdown             ; src/audio/covox_shim.asm
 extern cms_init                   ; src/audio/cms_shim.asm
 extern cms_pass                   ; src/audio/cms_shim.asm
 extern cms_shutdown               ; src/audio/cms_shim.asm
+extern pas_init                   ; src/audio/pas_shim.asm
+extern pas_pass                   ; src/audio/pas_shim.asm
+extern pas_shutdown               ; src/audio/pas_shim.asm
 extern enh_init                   ; src/audio/opl_enh.asm
 extern enh_seq_tick               ; src/audio/opl_enh.asm
 extern enh_seq_stop               ; src/audio/opl_enh.asm
@@ -89,8 +92,8 @@ section .text
 ; nibble 6 reserved for the stage-4 /DISNEY FIFO device, nibble 7 is PCM-only).
 ; Devices 8+ live in g_audio_devices2 instead: the word-2 nibble index is
 ; (DEV - 8), sitting at bits (DEV - 8) * 4, so DEV_CMS = 8 is nibble 0
-; (bits 0-3) and a future DEV_DISNEY = 9 follows the same convention at
-; nibble 1 (bits 4-7).
+; (bits 0-3), a future DEV_DISNEY = 9 follows the same convention at
+; nibble 1 (bits 4-7), and DEV_PAS = 10 sits at nibble 2 (bits 8-11).
 DEV_MIDI   equ 0
 DEV_OPL    equ 1
 DEV_TANDY  equ 2
@@ -100,20 +103,22 @@ DEV_COVOX  equ 5
 DEV_DISNEY equ 6
 DEV_SB     equ 7
 DEV_CMS    equ 8
+DEV_PAS    equ 10
 ; Role bits within a nibble (P S M E, high to low bit)
 ROLE_EN    equ 1
 ROLE_MUSIC equ 2
 ROLE_SFX   equ 4
 ROLE_PCM   equ 8
 ; g_audio_forced bit positions (bit N = /FLAG demanded device N; bits 8-31
-; held nothing before this change — the tree only ever set bits 0, 2, 3, 4, 5
-; — so bit 8 was free for FORCE_CMS)
+; held nothing before the CMS change — the tree only ever set bits 0, 2, 3,
+; 4, 5 — so bit 8 was free for FORCE_CMS, and bit 10 is free for FORCE_PAS)
 FORCE_MIDI   equ (1 << DEV_MIDI)
 FORCE_TANDY  equ (1 << DEV_TANDY)
 FORCE_SPK    equ (1 << DEV_SPK)
 FORCE_INNOVA equ (1 << DEV_INNOVA)
 FORCE_COVOX  equ (1 << DEV_COVOX)
 FORCE_CMS    equ (1 << DEV_CMS)
+FORCE_PAS    equ (1 << DEV_PAS)
 
 audio_tick:
     cmp byte [g_audio_engine_online], 0
@@ -144,9 +149,9 @@ audio_init:
     ; device shim selection: solved = /FLAG forced, then config requested,
     ; then auto-fill. parse_cmdline recorded every /FLAG demand in
     ; g_audio_forced; forced shim bits resolve by fixed priority
-    ; TANDY > INNOVA > COVOX > GB > SPK (the SN76489, SID, DAC and CMS latch
+    ; TANDY > INNOVA > COVOX > GB > PAS > SPK (the SN76489, SID, DAC, CMS latch
     ; are write-only — no probe is possible, the flag IS the detection, so a
-    ; forced TANDY/INNOVA/COVOX/GB/SPK bit always survives this test chain.
+    ; forced TANDY/INNOVA/COVOX/GB/PAS/SPK bit always survives this test chain.
     ; With no forced shim standing, POKEMON.CFG [audio] device (g_cfg_audio_device, parsed once
     ; at boot; 0xFF = auto) acts as the forced demand in the same order; a
     ; /FLAG above always wins over it. With that at auto too, the default is
@@ -162,6 +167,8 @@ audio_init:
     jnz .wCovox
     test eax, FORCE_CMS
     jnz .wGb
+    test eax, FORCE_PAS
+    jnz .wPas
     test eax, FORCE_SPK
     jnz .wSpk
     mov al, [g_cfg_audio_device]  ; 0xFF = auto (no config): today's fill below
@@ -175,6 +182,8 @@ audio_init:
     je .wCovox
     cmp al, 8                     ; GB (explicit /GB or config device 8)
     je .wGb
+    cmp al, 10                    ; PAS (explicit /PAS or config device pas)
+    je .wPas
     cmp al, 3                     ; SPK
     je .wSpk
     cmp al, 1                     ; OPL (forced even if the probe found none)
@@ -209,6 +218,11 @@ audio_init:
     mov ebx, 8                    ; Game Blaster / CMS (explicit /GB only, never auto)
     mov esi, cms_pass
     call cms_init
+    jmp .haveWinner
+.wPas:
+    mov ebx, 10                   ; Pro Audio Spectrum 16 (explicit /PAS only, never auto)
+    mov esi, pas_pass
+    call pas_init
     jmp .haveWinner
 .wOpl:
     mov ebx, 1                    ; OPL (opl_init already probed above)
@@ -271,12 +285,18 @@ audio_init:
 .noSbBit:
     mov [g_audio_devices], eax
     ; word 2: the CMS nibble (nibble 0 = music+SFX+en, never PCM — the SAA
-    ; has no DAC, so the speaker keeps its PCM field under a GB winner)
+    ; has no DAC, so the speaker keeps its PCM field under a GB winner) and
+    ; the PAS nibble (nibble 2 = music+SFX+en, never PCM — the G1 tick has no
+    ; PCM path, so the speaker keeps its PCM field under a PAS winner too)
     mov dword [g_audio_devices2], 0
     cmp ebx, DEV_CMS
     jne .noCmsBit
     mov dword [g_audio_devices2], (ROLE_MUSIC | ROLE_SFX | ROLE_EN)
 .noCmsBit:
+    cmp ebx, DEV_PAS
+    jne .noPasBit
+    or dword [g_audio_devices2], (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << 8
+.noPasBit:
     mov [g_shim_device], bl       ; legacy byte follows the solved winner
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
@@ -293,6 +313,7 @@ audio_shutdown:
     call innova_shutdown          ; leave the SID silent (no-op if inactive)
     call covox_shutdown           ; park the DAC at mid-level (no-op if inactive)
     call cms_shutdown             ; leave the CMS silent (no-op if inactive)
+    call pas_shutdown             ; leave the PAS OPL3 silent (no-op if inactive)
     ret
 
 ; hal_dbg_snapshot — record the selected shim device at $D246 (DEBUG_AUDIO
@@ -309,16 +330,16 @@ section .data
 blaster_name:   db "BLASTER=", 0
 
 g_cfg_nosound:  db 0              ; /NOSOUND on the command line
-g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3, /INNOVA = 4 (0 = auto; /COVOX and /GB set a forced bit only)
+g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3, /INNOVA = 4 (0 = auto; /COVOX, /GB and /PAS set a forced bit only)
 g_cfg_noenh:    db 0              ; /NOENH: disable the tier-1 OPL enhancement layer
 g_cfg_musicloop: db 0            ; /LOOP: DEBUG_AUDIO harness plays music only, forever
-g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova, 5 covox, 8 CMS (6 disney reserved)
+g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova, 5 covox, 8 CMS, 10 PAS (6 disney reserved)
 ; Solved device set (stage 0.4 bitmask): one 4-bit P-S-M-E role nibble per
 ; DEV_* index (PCM, SFX, MUSIC, ENABLE, high to low bit). Written once by
 ; audio_init; the tick slots below are resolved from it.
 g_audio_devices: dd 0             ; role nibbles: MIDI 0, OPL 1, TANDY 2, SPK 3, INNOVA 4, COVOX 5, DISNEY 6, SB 7
-g_audio_devices2: dd 0            ; word-2 role nibbles: CMS 8 at nibble 0 (bits 0-3); the rest reserved, still 0
-g_audio_forced:  dd 0             ; /FLAG demands, bit N = device N (bits 0-8); unavailable demands clear at solve
+g_audio_devices2: dd 0            ; word-2 role nibbles: CMS 8 at nibble 0 (bits 0-3), PAS 10 at nibble 2 (bits 8-11); the rest reserved, still 0
+g_audio_forced:  dd 0             ; /FLAG demands, bit N = device N (bits 0-10); unavailable demands clear at solve
 g_tick_shim:    dd tick_noop     ; the single shim pass (winner voices music+SFX)
 g_tick_enh:     dd tick_noop     ; tier-1 enhancement (OPL winner only)
 g_tick_midi:    dd tick_noop     ; MIDI music stream (MIDI nibble music only)

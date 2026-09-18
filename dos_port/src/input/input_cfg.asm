@@ -14,7 +14,7 @@
 ;   device = keyboard  ; or gamepad
 ;   [audio]
 ;   covox_rate = 7000   ; Covox DAC rate in Hz, decimal; clamped 4000-44500
-;   device = auto       ; requested device: none|opl|tandy|spk|innova|covox|gb
+;   device = auto       ; requested device: none|opl|tandy|spk|innova|covox|gb|pas
 ;                       ; (default auto: a /FLAG above wins, else the OPL
 ;                       ; probe / speaker auto-fill decides)
 ;
@@ -80,8 +80,8 @@ g_covox_rate: dw 7000
 ; zero per-frame cost). 0xFF = auto (default: /FLAG wins, else the OPL probe
 ; / speaker auto-fill decides); 0 = none (silence like /NOSOUND once no /FLAG
 ; stands); else a DEV_* index (1 = OPL, 2 = TANDY, 3 = SPK, 4 = INNOVA,
-; 5 = COVOX, 8 = CMS). Unknown strings leave the default, so a typo keeps
-; today's behavior.
+; 5 = COVOX, 8 = CMS, 10 = PAS). Unknown strings leave the default, so a
+; typo keeps today's behavior.
 g_cfg_audio_device: db 0xFF
 ; Current [section] while parsing (0 = no header seen yet, 1 = [keyboard],
 ; 2 = [audio]). The parser is otherwise section-blind (headers used to be
@@ -738,9 +738,9 @@ apply_config_key_val:
 .parse_audio_device:
     ; Value [EBP .. ECX) names the requested device (case-insensitive):
     ; NONE = 0 (silence), OPL = 1, TANDY = 2, SPK = 3, INNOVA = 4,
-    ; COVOX = 5, GB = 8 (DEV_* indices; the 0xFF auto default stands on any
-    ; other text, so a typo keeps today's behavior). Length first, then
-    ; letters; every compare feeds its own branch, no flags carry.
+    ; COVOX = 5, GB = 8, PAS = 10 (DEV_* indices; the 0xFF auto default
+    ; stands on any other text, so a typo keeps today's behavior). Length
+    ; first, then letters; every compare feeds its own branch, no flags carry.
     mov esi, ebp
     mov edx, ecx
     sub edx, esi                            ; EDX = value length
@@ -766,13 +766,15 @@ apply_config_key_val:
     jne .apply_exit
     mov byte [edi], 8
     jmp .apply_exit
-.aud_3:                                     ; OPL -> 1, SPK -> 3
+.aud_3:                                     ; OPL -> 1, SPK -> 3, PAS -> 10
     mov al, [esi]
     and al, 0xDF
     cmp al, 'O'
     je .aud_opl
     cmp al, 'S'
     je .aud_spk
+    cmp al, 'P'
+    je .aud_pas
     jmp .apply_exit
 .aud_opl:
     mov al, [esi + 1]
@@ -795,6 +797,17 @@ apply_config_key_val:
     cmp al, 'K'
     jne .apply_exit
     mov byte [edi], 3
+    jmp .apply_exit
+.aud_pas:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'S'
+    jne .apply_exit
+    mov byte [edi], 10
     jmp .apply_exit
 .aud_4:                                     ; NONE -> 0
     mov al, [esi]
