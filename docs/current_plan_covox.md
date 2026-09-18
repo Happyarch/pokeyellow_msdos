@@ -100,8 +100,7 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 ## Stages
 
 - [ ] **0.1. References mirrored.**
-  - [x] 0.1.1 Guide PDF → `docs/sound/` + vision transcription
-    (`DSS_Programmers_Guide_VISION.txt`) + distilled
+  - [x] 0.1.1 Guide PDF → `docs/sound/` + vision-transcribed
     `DSS_Programmers_Guide.md` + `dss_data_path.svg` /
     `dss_power_control.svg`; README index rows. Expect plan updates for
     inaccuracies once further primaries are read.

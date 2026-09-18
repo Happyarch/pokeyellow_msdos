@@ -198,9 +198,8 @@ Quick reference:
   `../sound/DSS_Programmers_Guide.pdf` (*Programmer's Guide to the Disney
   Sound Source*, 5pp —
   https://archive.org/download/dss-programmers-guide/dss-programmers-guide.pdf,
-  fetched 2026-09-18). Classical OCR failed on this scan (smearing); the
-  working text source is the vision transcription at
-  `../sound/DSS_Programmers_Guide_VISION.txt`.
+  fetched 2026-09-18). Classical OCR failed on this scan (smearing); the text
+  was transcribed by vision model, with uncertain readings marked [?] inline.
 - **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
   per source doc after the MT-32/OPL3/SID convention):
   `../sound/DSS_Programmers_Guide.md` (guide distillation: power control,
