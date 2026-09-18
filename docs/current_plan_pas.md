@@ -160,9 +160,13 @@ winner).
 - PCM rhythm tracks are the candidate tier-1+ vehicle: the PCM engine
   inherits the MT-32 rhythm-channel enhancements, voiced with real drum
   samples. Needs a drum-sample asset pipeline (later problem).
-- Drum samples: maintainer may record real drums at school — see
-  `gen_pika_pcm.py` input contract (mono 8-bit 22050 Hz WAV) for the
-  delivery format; record high, convert down.
+- Drum samples: maintainer records real drums at school — capture chain:
+  USB-C digital boom mic into phone, uncompressed WAV 44.1/48 kHz (no
+  AGC/EQ/noise-reduction — processing destroys transients), peaks ≈−12 dB,
+  close-mic 10–30 cm, 5–6 consistent hits per drum + room tone. Convert
+  down to the pipeline contract (mono 8-bit 22050 Hz WAV) at the
+  workstation; keep the high-rate masters. Minimum set: kick, snare,
+  closed hat; stretch: toms, open hat, crash, ride.
 
 ## Risks
 
