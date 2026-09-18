@@ -103,18 +103,13 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
   holds the vision-transcribed `SAA1099_Philips_1984.md` + 3 SVGs (local-only,
   gitignored); `docs/references/` holds `gameblst.txt` (UTF-8) + `cms.4.html`.
   Flag `/GB` decided; detection = flag-only, no probe (decided 2026-09-18).
-- [ ] **0.5. Config device + override (FIRST dispatch — shared mechanism,
-  owns `entry.asm` + `input_cfg.asm` + solve corner of `audio_hal.asm`).**
-  - [ ] 0.5.1 `g_audio_devices2: dd` + `g_audio_forced` bit 8 (`FORCE_CMS`);
-    force priority TANDY > INNOVA > COVOX > GB > SPK.
-  - [ ] 0.5.2 `POKEMON.CFG [audio] device` string (`none|opl|tandy|spk|
-    innova|covox|gb|+midi variants as already expressible) parsed once at
-    boot into a requested-device field (`g_covox_rate` pattern).
-  - [ ] 0.5.3 Precedence `/FLAG` > config > auto-fill, for every device;
-    `/GB` token check (`find_token` substring safety) + `arg_gb` string.
-  - Acceptance: every existing selection behaves identically with no config
-    present; config-only selection works; `/FLAG` overrides config; nasm
-    clean, lint 0.
+- [x] **0.5. Config device + override (FIRST dispatch — shared mechanism).**
+  - [x] 0.5.1 `g_audio_devices2: dd` + `FORCE_CMS` bit 8; GB between COVOX
+    and SPK; `.wGb` stub arm = auto-fallback until stage 2.
+  - [x] 0.5.2 `[audio] device` string parsed once at boot
+    (`g_cfg_audio_device`, 0xFF=auto).
+  - [x] 0.5.3 Precedence `/FLAG` > config > auto-fill, all devices; `arg_gb`
+    substring-safe.
 - [ ] **1. Driver `src/audio/cms_shim.asm`** (port-only HAL, no DEVIATION —
   current house rule, not the seedling's `DEVIATION{class=HAL}` line).
   - [ ] 1.1 Skeleton: house-style header, `CMS_BASE 0x220` + port-pair equs,
