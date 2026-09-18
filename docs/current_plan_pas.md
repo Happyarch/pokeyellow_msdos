@@ -1,10 +1,9 @@
 # Current Plan: Pro Audio Spectrum 16 emulation in the DOSBox-X fork (`pas16` branch)
 
-Status: **IN BUILD (round-robin subagents, serial).** Target is the PAS16
-only — not Plus/16D, not the original 8-bit PAS (decided 2026-09-18).
-Emulator-side work only: a native PAS16 backend in our DOSBox-X fork so a
-future game-side driver has a validation oracle. `--no-verify` on commits
-while remote.
+Status: **IN BUILD (round-robin subagents, serial per track; fork and game
+tracks run in PARALLEL — disjoint files).** Emulator target is the PAS16
+only; Plus + 16D join the FORK later (same 86Box set, game never uses them).
+The game itself uses PAS16 only. `--no-verify` on commits while remote.
 
 Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 
@@ -77,24 +76,24 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
 
 - [x] **0. Branch + references.** `pas16` branch cut off `mcp-debug`
   (clean, in sync); four references in `/tmp/pas_ref/` (verified types).
-- [ ] **1. Skeleton `src/hardware/pas.cpp`.**
-  - [ ] 1.1 `class PAS : public Module_base`, `[pas]` section keys,
-    `PAS_Init` declared/registered in `src/dosbox.cpp` beside
-    `DISNEY_Init`/`INNOVA_Init`, teardown via `AddExitFunction`.
-  - [ ] 1.2 Builds inside the fork tree, defaults off, zero behavior
-    (port handlers registered but inert, or unregistered until stage 2 —
-    agent picks the smaller diff, documents it).
-  - Acceptance: fork builds clean (existing build path), no behavior
-    change with `pas=false` (default).
-- [ ] **2. Registers + mixer.**
-  - [ ] 2.1 Base-relative port decode + register file (blocks above),
-    re-expressed against `inout.h`.
-  - [ ] 2.2 MV508 mixer with attenuation tables + PCM control semantics;
-    mute/filter paths.
-  - [ ] 2.3 Cross-check each block against `/tmp/pas_ref/snd_pas16.c`
-    behavior (oracle, not source).
-  - Acceptance: register reads/writes match oracle semantics (documented
-    walk-through, no behavioral test harness yet).
+- [x] **1. Skeleton `src/hardware/pas.cpp`.**
+  - [x] 1.1 `class PAS : public Module_base`, `[pas]` section keys
+    (`pas`/`pasbase`/`pasirq`/`pasdma`/`pasrate`), `PAS_Init` declared +
+    section registered in `src/dosbox.cpp`, `AddExitFunction` teardown.
+    GPL header + attribution, zero 86Box-isms, no port handlers yet.
+  - [x] 1.2 Build-list entry (`Makefile.am` one token; MSVC `vcxproj`
+    deferred to a later stage).
+  - Acceptance: no behavior change with `pas=false` (default); `PAS_Init`
+    defined-not-yet-called (sdlmain call site is stage 2 entry).
+- [x] **2. Registers + mixer.**
+  - [x] 2.1 Base-relative port decode + register file (`pas_read`/
+    `pas_write`, 15 windows; unmapped → 0xFF/ignore; 1388–8B uninstalled
+    for stage-3 PIT; OPL aliases left live until stage-3 routing).
+  - [x] 2.2 MV508 mixer (re-expressed dB tables, index/data protocol,
+    Linux-driver reset defaults, mute/filter stored; FIR deferred).
+  - [x] 2.3 Oracle cross-check per block (all agree with oracle code;
+    four header-vs-code mismatches resolved toward code and noted).
+  - Zero 86Box-isms; committed `1126a1416`, mirrored to `mcp-debug`.
 - [ ] **3. Plumbing.**
   - [ ] 3.1 DMA + IRQ via fork `DMA_*`/`PIC_*` APIs; PIT rate generation.
   - [ ] 3.2 OPL side wired to existing OPL emulation; MPU-compat routed to
@@ -111,6 +110,39 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
 - [ ] **5. Docs + changelog.** Fork docs section, changelog entry, kept
   PR-shaped throughout. Upstream PR itself is deferred, not this plan's
   acceptance.
+- [ ] **6. Plus + 16D (fork only, after stage 4).** The 86Box-covered set
+  joins the emulator; game never uses them. Scoped when stage 4 lands.
+
+## Game track (PARALLEL — disjoint files, `dos_port/src/audio/`)
+
+The game uses PAS16 only. Selection: word-2 nibble 2 = device 10
+(`DEV_PAS`, after CMS 8 / Disney 9); `FORCE_PAS` = bit 10 of the already
+dword `g_audio_forced`; flag `/PAS` (explicit-only, never auto-set; flag
+IS the detection); `ENABLE_AUDIO_PAS` guard (new-convention shape);
+`run-pas` (+`.ps1`) runner. Cry: PAS16 has no DAC path for the blob —
+SB/speaker fallback, same as Tandy/GB (speaker KEEPS PCM under a PAS
+winner).
+
+- [ ] **G1. Driver `src/audio/pas_shim.asm`** (port-only HAL, no DEVIATION).
+  - [ ] G1.1 Skeleton: house header, `PAS_BASE 0x388` + OPL-alias equs,
+    per-voice state, `pas_init/pass/silence/shutdown/dbg_snapshot` +
+    `g_pas_on`, guard + stubs.
+  - [ ] G1.2 Tick pass: GB ch0/ch1 → OPL3 voices through the PAS card
+    (opl_shim mapping, PAS base), ch2 → OPL3 custom patch voice, ch3 →
+    PAS PCM/noise path per oracle register behavior; GB-unit
+    envelope/sweep/length; restart-consume; NR50/NR51; MIDI SFX-only
+    guard (tandy shape).
+  - Acceptance: nasm clean both guard modes, lint 0, silence is silent.
+- [ ] **G2. Dispatch + runner.** Device-10 solve arm (INNOVA shape, word-2
+  nibble music+sfx, no PCM; speaker keeps PCM-only); `/PAS` end-to-end;
+  MIDI-coexistence verified; `ENABLE_AUDIO_PAS` Makefile passthrough +
+  listing; `run-pas` (+`.ps1`); `device pas` config string joins the
+  0.5 mechanism.
+  - Acceptance (static traces): `/PAS` alone → PAS music+SFX;
+    `/PAS`+`/TANDY` → TANDY wins; `/PAS`+`/MT32` → MIDI music + PAS SFX.
+- [ ] **G3. Verification + ear-checks (maintainer in-DOS, fork build from
+  stage 4 as the oracle).** Static half: traces, nasm matrix, runner,
+  snapshot map. Ear half: music set, battle, cry fallback.
 
 ## Risks
 
