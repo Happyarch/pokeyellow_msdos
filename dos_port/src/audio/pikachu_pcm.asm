@@ -97,7 +97,8 @@ PlayPikachuSoundClip:
     ; DSP when its PCM field is set, else the speaker PWM. The SB bit is set
     ; exactly when g_sb_present is, so that arm matches the old branch
     ; bit-for-bit. The DAC arm is unreachable when the driver compiled out
-    ; (stage 2 clears a compiled-out forced bit, so the nibble stays clear).
+    ; (a compiled-out forced bit never builds a nibble, so the field stays
+    ; clear and the stubs absorb the call).
     mov edx, [g_audio_devices]
     test edx, 1 << 23             ; DEV_COVOX PCM field (nibble 5, P bit)
     jnz .covox

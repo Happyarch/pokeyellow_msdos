@@ -374,8 +374,7 @@ parse_cmdline:
 .no_innova:
 
     ; /COVOX: explicit-only DAC demand (no g_cfg_shim value — the legacy byte
-    ; has none for it; audio_init clears the bit to the auto chain until
-    ; stage 2 arms device 5). Priority sits between /INNOVA and /SPK, and the
+    ; has none for it). Priority sits between /INNOVA and /SPK, and the
     ; solve checks forced bits in that same order.
     mov edi, arg_covox
     call find_token
