@@ -104,7 +104,7 @@ COVOX_STATUS equ 0x379            ; status port: DSS FIFO-full sense is bit 6
                                   ; (low = room; the pump polls it bounded)
 COVOX_CONTROL equ 0x37A           ; documentary: DSS strobe/power control;
                                   ; raw-Covox v1 never writes it
-COVOX_POLLS equ 64                ; per-sample status-poll bound (never a hang)
+COVOX_POLLS equ 64                ; per-burst cadence-poll bound (never a hang)
 
 ; --- per-voice software state (offsets 0-15 mirror innova_shim's SS_*) ----
 CS_FREQ       equ 0    ; word: GB 11-bit freq incl. sweep (ch3: NR43 byte in lo)
@@ -293,6 +293,21 @@ covox_pass:
     inc ebx
     cmp ebx, 4
     jb .chLoop
+    ; --- silence fast path: every voice latched amplitude 0 AND the ring
+    ; empty means this tick would emit ~117 mid-level bytes at the cost of
+    ; ~117*64 status polls + 117 OUTs — pure overhead (measured 2026-09-18:
+    ; it buried the frame budget and stalled boot). Skip render AND pump;
+    ; keys/phases are preserved, so audio resumes cleanly next tick. A
+    ; non-empty ring still drains below (stale samples must flush).
+    xor eax, eax
+    or al, [covox_state + 0*CS_SIZE + CS_AMP]
+    or al, [covox_state + 1*CS_SIZE + CS_AMP]
+    or al, [covox_state + 2*CS_SIZE + CS_AMP]
+    or al, [covox_state + 3*CS_SIZE + CS_AMP]
+    jnz .samp
+    mov ax, [s_wr]
+    sub ax, [s_rd]
+    jz .off
     ; --- sample render loop ---
     movzx ecx, word [s_nsamp]
     test ecx, ecx
@@ -434,15 +449,11 @@ covox_pass:
 ;
 ; Count comes from the live g_covox_rate (rate/60 with its own Bresenham
 ; carry s_pcarry, the same math as the fill side, so fill and drain stay in
-; lockstep and the ring never drifts). Each byte goes out only while status
-; 379h bit 6 reads low (the guide's send-while-low rule, section 4), polled
-; at most COVOX_POLLS times — then written anyway: raw-Covox hardware has no
-; status bit at all (an absent LPT reads back 0xFF = perpetual "full"), and
-; the DSS accepts Covox-raw writes, so the timeout path keeps the cadence
-; instead of hanging the tick. This is the guide's section-5 anti-lockup
-; adapted from interrupt level to tick level: the invariant kept is "no
-; hardware state can stall output", not the 8-blind/8-polled split, which
-; belongs to a 583 Hz ISR and not to a ~117-sample tick burst. No strobe is
+; lockstep and the ring never drifts). Status is polled ONCE per burst for
+; cadence (bounded COVOX_POLLS) — the write below happens regardless, so a
+; full/absent FIFO costs one poll per tick, not 64 per sample (measured
+; 2026-09-18: per-sample polling cost ~7,500 port reads per tick at 7 kHz
+; and stalled the game). Each byte goes out raw on COVOX_DATA; no strobe is
 ; emitted (that clocks the DSS FIFO and is the v2 /DISNEY path); v1 is raw
 ; OUT 378h only, which every Covox/DSS receiver accepts.
 ;
@@ -475,6 +486,16 @@ covox_pump:
     mov ecx, eax                  ; ECX = samples remaining this burst
     test ecx, ecx
     jz .done                      ; sub-60 Hz fractional tick: none due yet
+    ; one cadence poll per burst (see header): bit 6 low = FIFO has room;
+    ; timeout writes anyway, so no hardware state can stall output
+    mov dx, COVOX_STATUS
+    mov ebx, COVOX_POLLS
+.poll:
+    in al, dx                     ; status into AL (no sample live yet)
+    test al, 0x40
+    jz .next
+    dec ebx                       ; bounded: 64 -> 0, never wraps, always exits
+    jnz .poll
 .next:
     movzx eax, word [s_wr]
     sub ax, [s_rd]                ; AX = available (monotonic words, ring < 32K)
@@ -487,19 +508,7 @@ covox_pump:
 .silence:
     mov al, 128                   ; DSS mid level (guide section 3 table)
 .send:
-    push eax                      ; sample (push preserves flags; IN needs AL)
-    mov dx, COVOX_STATUS
-    mov ebx, COVOX_POLLS
-.poll:
-    in al, dx                     ; status into AL, sample safe on the stack
-    test al, 0x40                 ; bit 6 low = FIFO has room
-    jz .out
-    dec ebx                       ; bounded: 64 -> 0, never wraps, always exits
-    jnz .poll
-    ; Timeout: write anyway (see header — absent hardware reads 0xFF).
-.out:
     mov dx, COVOX_DATA
-    pop eax                       ; sample back to AL (pop preserves flags)
     out dx, al
     dec ecx                       ; 32-bit: bursts in the hundreds, never 0-entry
     jnz .next
