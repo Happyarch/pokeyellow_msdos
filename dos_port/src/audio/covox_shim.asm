@@ -12,8 +12,8 @@
 ;
 ; Once per audio tick covox_pass renders the 4 GB channels from the virtual
 ; APU block at [ebp+$FF10..$FF26] as unsigned 8-bit PCM into an internal
-; ring buffer (the fill side advances the write cursor s_wr), and covox_pump
-; drains that tick's samples to COVOX_DATA in a short port-I/O burst:
+; ring buffer (this stage fills the ring and advances the write cursor; the
+; per-tick OUT burst that pumps it to COVOX_DATA is stage 1.3):
 ;
 ;   GB ch0 pulse1  -> square at GB duty (12.5/25/50/75%) and GB pitch
 ;   GB ch1 pulse2  -> square (same duty/pitch rendering)
@@ -54,8 +54,7 @@
 ; audio_init sets the device and calls covox_init); with g_covox_on = 0
 ; every entry point no-ops. Covox is explicit-only, never auto-selected.
 ;
-; Snapshot placement (provisional; stage 1.4 wired the harness call, the
-; tick/init wiring stays stage 2): window 9
+; Snapshot placement (provisional, stage 1.4 owns the final wiring): window 9
 ; of the DEBUG_AUDIO dump is fully allocated (+0x40..+0x7F: opl SB detect,
 ; MIDI driver, pika PCM, hal device, tandy, speaker, OPL enh, innova frag —
 ; every byte spoken for, all snapshots run unconditionally), so there is no
@@ -63,19 +62,15 @@
 ; bytes at W_PORT_SCRATCH+0x81..+0x88, deliberately skipping the named
 ; W_CHECK_FOR_TURN byte at +0x80; the bytes overlay unnamed echo-RAM slack
 ; (the port does not emulate the echo mirror, the same basis W_PORT_SCRATCH
-; itself stands on) on the innova +0x7D..+0x7F precedent. The DEBUG_AUDIO
-; harness calls the snapshot (debug_dump RunAudioTest); the tick/init wiring
-; stays stage 2. Stage 1.4 extended window 9 in debug_dump.asm (a 64-byte
-; window at +0x40 cannot see past +0x7F) and confirms via DUMP.BIN that the
-; bytes arrive undisturbed.
+; itself stands on) on the innova +0x7D..+0x7F precedent. Nothing calls the
+; snapshot until stage 2 wires it, so this is inert today; stage 1.4 must
+; extend window 9 in debug_dump.asm (a 64-byte window cannot see past +0x7F)
+; and confirm via DUMP.BIN that the bytes arrive undisturbed.
 
 %include "gb_memmap.inc"
 
 global covox_init
 global covox_pass
-global covox_pump
-global covox_isr_tick
-global covox_play_clip
 global covox_silence
 global covox_shutdown
 global covox_dbg_snapshot
@@ -87,29 +82,17 @@ global g_covox_on
 
 %if ENABLE_AUDIO_COVOX != 0
 
-; Rate equ only (the blob stays in pikachu_pcm.o): the cry player resamples
-; the PIKA_PCM_RATE blob to g_covox_rate, so it needs the source rate.
-%define PIKA_PCM_EQUATES_ONLY
-%include "assets/pika_pcm.inc"
-
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
 extern g_covox_rate               ; word: PCM rate in Hz, owned by input_cfg
                                   ; (parsed once at boot; tick path only)
-extern pcm_pace_init              ; src/audio/sb_pcm.asm — PIT pacer
-extern pcm_pace                   ; (both stub-safe when PIKA is disabled)
-extern pit_set_rate               ; boot/timing.asm — reprogram PIT channel 0 divisor
 
 section .text
 
 COVOX_DATA equ 0x378              ; LPT data lines = the DAC (raw writes)
-COVOX_STATUS equ 0x379            ; status port: DSS FIFO-full sense is bit 6
-                                  ; (low = room; the pump polls it bounded)
-COVOX_CONTROL equ 0x37A           ; DSS strobe/power control (pin 17 SELECT);
-                                ; raw-Covox v1 never writes it
-PR_STROBE     equ 0x0C            ; guide §6: control byte whose pin-17 LOW
-PR_POWER_UP   equ 0x04            ; ...then HIGH clocks one byte into the FIFO
-                                ; (rising edge; power stays on)
-COVOX_POLLS   equ 64              ; max status polls before timeout
+COVOX_STATUS equ 0x379            ; documentary: DSS FIFO-full sense lives here
+                                  ; on real hardware; raw-Covox v1 never reads it
+COVOX_CONTROL equ 0x37A           ; documentary: DSS strobe/power control;
+                                  ; raw-Covox v1 never writes it
 
 ; --- per-voice software state (offsets 0-15 mirror innova_shim's SS_*) ----
 CS_FREQ       equ 0    ; word: GB 11-bit freq incl. sweep (ch3: NR43 byte in lo)
@@ -132,10 +115,9 @@ CS_AMP        equ 30   ; byte: latched signed amplitude (0 = silent this tick)
 CS_LVL        equ 31   ; byte: ch2 NR32 level code 0-2 (full/half/quarter)
 CS_SIZE       equ 32
 
-; --- internal sample ring (filled here, pumped to COVOX_DATA by covox_pump)
+; --- internal sample ring (filled here, pumped to COVOX_DATA in stage 1.3)
 COVOX_RING_SIZE equ 2048          ; ~2.7 ticks at the fastest configured rate;
-                                  ; fill and pump stay in lockstep, so the ring
-                                  ; never overruns in steady state
+                                  ; overwrite-oldest while the pump is unwired
 COVOX_RING_MASK equ 2047         ; power-of-two mask for the write cursor
 
 ; --- debug snapshot block (provisional placement, see header) --------------
@@ -160,30 +142,6 @@ covox_init:
     mov word [s_rd], 0
     mov word [s_carry], 0
     call covox_silence
-    ; Power up control port and prime the DSS FIFO with initial mid-level silence (128)
-    ; so DOSBox-X immediately locks to 7 kHz (interface_det_ext > 5) with a buffer cushion
-    mov dx, COVOX_CONTROL
-    mov al, PR_POWER_UP
-    out dx, al
-    mov ecx, 32
-.prime:
-    mov dx, COVOX_DATA
-    mov al, 128
-    out dx, al
-    mov dx, COVOX_CONTROL
-    mov al, PR_STROBE
-    out dx, al
-    mov al, PR_POWER_UP
-    out dx, al
-    loop .prime
-    ; Pre-roll cushion: fill 234 samples (~2 frames at 7 kHz) of mid-level silence (128)
-    ; so the PIT ISR never starves while frame rendering is active
-    mov edi, covox_ring
-    mov ecx, 234
-    mov al, 128
-    rep stosb
-    mov word [s_wr], 234
-    mov word [s_rd], 0
     popad
     ret
 
@@ -223,7 +181,6 @@ covox_silence:
 ; covox_shutdown — leave the DAC silent on exit. Tail-jump (tandy_shutdown
 ; shape); silence's own save/restore keeps every register. Preserves all.
 covox_shutdown:
-    mov byte [g_covox_on], 0
     jmp covox_silence
 
 ; ===========================================================================
@@ -254,44 +211,28 @@ covox_pass:
     mov [s_master], al
     mov al, [ebp + rAUDTERM]
     mov [s_nr51], al
-    ; per-tick step numerators from the configured rate:
-    ; Square: GB Fout = 131072 / (2048 - f). Phase wraps at 2^32.
-    ;   step = (131072 * 2^32 / rate) / (2048 - f) = (2^49 / rate) / (2048 - f).
-    ;   2^49 = 0x20000:00000000. 64-bit div by rate gives 64-bit quotient [s_k_hi]:[s_k_lo].
-    mov eax, 0x20000
-    xor edx, edx
-    div ecx                       ; EAX = upper 32 bits, EDX = remainder
-    mov [s_k_hi], eax
+    ; per-tick step numerators from the configured rate (64-bit dividends so
+    ; no GB clock literal appears: 2^33 = EDX:EAX with EDX=2, 2^34 with EDX=4)
     xor eax, eax
-    div ecx                       ; EAX = lower 32 bits
-    mov [s_k_lo], eax
-    ; Wave: GB Fout = 65536 / (2048 - f) = half of square rate
-    mov eax, [s_k_lo]
-    mov edx, [s_k_hi]
-    shr edx, 1
-    rcr eax, 1
-    mov [s_kw_lo], eax
-    mov [s_kw_hi], edx
-    ; Noise: 16.16 clocks-per-sample = (2^19 * 2^16 / rate) / divisor = (2^35 / rate) / divisor
-    ;   2^35 = 0x8:00000000. Div by rate gives 32-bit quotient.
+    mov edx, 2
+    div ecx                       ; EAX = 2^33/rate (square/wave numerator)
+    mov [s_k16], eax
     xor eax, eax
-    mov edx, 8
-    div ecx
+    mov edx, 4
+    div ecx                       ; EAX = 2^34/rate (noise numerator)
     mov [s_kn], eax
-    ; Dynamic refill: match the ISR consumption exactly so the ring buffer never
-    ; drifts, overruns, or starves regardless of frame rate (SGB 61.17 Hz vs DMG 59.73 Hz).
-    ; Target buffer depth: 234 samples (~2 frames cushion at 7 kHz).
-    movzx eax, word [s_rd]
-    add eax, 234
-    movzx edx, word [s_wr]
-    sub eax, edx                  ; EAX = (s_rd + 234) - s_wr
-    jns .haveNeeded
-    xor eax, eax                  ; ahead of target: render 0
-.haveNeeded:
-    cmp eax, 512
-    jbe .clamped
-    mov eax, 512                  ; clamp max burst per frame
-.clamped:
+    ; samples this tick: quot = rate/60 plus Bresenham carry on the remainder
+    mov eax, ecx
+    xor edx, edx
+    mov ebx, 60
+    div ebx
+    add dx, [s_carry]
+    cmp dx, 60
+    jb .noCarry
+    sub dx, 60
+    inc eax
+.noCarry:
+    mov [s_carry], dx
     mov [s_nsamp], ax
     xor ebx, ebx                  ; voice index 0-3
 .chLoop:
@@ -339,9 +280,6 @@ covox_pass:
     inc ebx
     cmp ebx, 4
     jb .chLoop
-    ; All ticks render their full parcel of samples (silence renders as mid-level 128)
-    ; so the DAC stream runs continuously at 7 kHz without buffer starvation or dropouts.
-.render:
     ; --- sample render loop ---
     movzx ecx, word [s_nsamp]
     test ecx, ecx
@@ -351,12 +289,8 @@ covox_pass:
     xor edx, edx                  ; mix sum, signed (EDX survives the voices)
     xor ebx, ebx                  ; voice index
 .v:
-    imul eax, ebx, CS_SIZE       ; voice state stride is CS_SIZE (32), NOT the
-                                ; NR-register stride 5 used at .chLoop — the
-                                ; ×5 form here read voices 1-3 from the ring
-                                ; (regression 2026-09-18: noise clocks came
-                                ; from ring bytes ≈ 33k/sample ≈ 31M
-                                ; cycles/tick, plus garbled mixing)
+    lea eax, [ebx + ebx*4]
+    imul eax, eax, CS_SIZE
     lea edi, [covox_state + eax]
     mov al, [edi + CS_AMP]
     test al, al
@@ -365,65 +299,23 @@ covox_pass:
     je .vwave
     cmp ebx, 3
     je .vnoise
-    ; square ch0/1: sub-sample interpolated edge transitions to eliminate
-    ; edge quantization jitter and inharmonic foldback aliasing at ~7 kHz.
+    ; square ch0/1: high while phase < duty threshold (phase resets to 0 at
+    ; key-on, so the wave starts high like the GB)
     movsx esi, byte [edi + CS_AMP]
     mov eax, [edi + CS_PHASE]
     add eax, [edi + CS_STEP]
     mov [edi + CS_PHASE], eax
-    jc .sqWrap                    ; phase wrapped past 2^32 (rising edge)
-
-    ; No wrap: fetch duty threshold T into ECX
     lea ecx, [ebx*4 + ebx]
-    mov cl, [ebp + ecx + 0xFF11]  ; NRx1 duty bits
+    mov cl, [ebp + ecx + 0xFF11]  ; NRx1 duty bits (last use of ECX as index)
     shr cl, 6
     movzx ecx, cl
     mov ecx, [CovoxDutyThresh + ecx*4]
     cmp eax, ecx
-    jae .sqFalling
-    ; Steady high: phase < threshold (and no wrap)
+    jae .sqLo
     add edx, esi
     jmp .vnext
-
-.sqFalling:
-    ; Falling edge candidate: EAX = new_phase >= threshold (ECX = threshold)
-    sub eax, ecx                  ; EAX = delta = new_phase - threshold
-    cmp eax, [edi + CS_STEP]
-    jae .sqSteadyLo               ; delta >= step: old_phase was also >= threshold
-    ; Sub-sample falling edge: drop = (2 * A * delta) / step
-    push edx                      ; preserve mix sum
-    lea ecx, [esi + esi]          ; ECX = 2 * A
-    mul ecx                       ; EDX:EAX = delta * (2 * A)
-    div dword [edi + CS_STEP]     ; EAX = drop
-    pop edx                       ; restore mix sum
-    sub esi, eax                  ; ESI = A - drop
-    add edx, esi
-    jmp .vnext
-
-.sqSteadyLo:
+.sqLo:
     sub edx, esi
-    jmp .vnext
-
-.sqWrap:
-    ; Phase wrapped past 2^32 (rising edge): EAX = new_phase = delta (< step)
-    ; Fetch duty threshold to check if new_phase stayed below it
-    lea ecx, [ebx*4 + ebx]
-    mov cl, [ebp + ecx + 0xFF11]
-    shr cl, 6
-    movzx ecx, cl
-    mov ecx, [CovoxDutyThresh + ecx*4]
-    cmp eax, ecx
-    jb .sqWrapRise
-    mov eax, ecx                  ; pulse narrower than 1 sample: clamp delta to threshold
-.sqWrapRise:
-    ; Sub-sample rising edge: rise = (2 * A * new_phase) / step
-    push edx                      ; preserve mix sum
-    lea ecx, [esi + esi]          ; ECX = 2 * A
-    mul ecx                       ; EDX:EAX = new_phase * (2 * A)
-    div dword [edi + CS_STEP]     ; EAX = rise
-    pop edx                       ; restore mix sum
-    sub eax, esi                  ; EAX = -A + rise
-    add edx, eax
     jmp .vnext
 .vwave:
     ; wave ch2: top 5 phase bits index the 32-nibble table verbatim
@@ -503,215 +395,21 @@ covox_pass:
     inc ebx
     cmp ebx, 4
     jb .v
-    ; master scale and center: out = 128 + sum*master/4 (+6 dB boost over /8, max peak 233/23, 0% clipping)
+    ; master scale and center: out = 128 + sum*master/8 (an all-muted tick
+    ; mixes exactly 0 and emits exactly 128)
     mov eax, edx
     movzx ecx, byte [s_master]
     imul eax, ecx
-    sar eax, 2
+    sar eax, 3
     add eax, 128
-    test eax, eax
-    jns .noMin
-    xor eax, eax
-.noMin:
-    cmp eax, 255
-    jbe .noMax
-    mov eax, 255
-.noMax:
     movzx ecx, word [s_wr]
     and ecx, COVOX_RING_MASK
     mov [covox_ring + ecx], al
     inc word [s_wr]               ; inc preserves CF; no live flags here
     pop ecx
     dec ecx                       ; samples left (32-bit: max parcels in the
-    jnz .samp
-.pump:
-    ; Retired: frame burst pumping removed.
-    ; covox_isr_tick streams samples out sample-by-sample via IRQ 0 at g_covox_rate.
+    jnz .samp                     ; hundreds, zero-guarded at entry — no wrap)
 .off:
-    ret
-
-; ---------------------------------------------------------------------------
-; covox_isr_tick — output one sample from covox_ring to the parallel port DAC.
-; Called from IRQ 0 tick_isr at g_covox_rate (~7000 Hz or user rate).
-; Preserves all registers.
-; ---------------------------------------------------------------------------
-covox_isr_tick:
-    push eax
-    push edx
-    push ecx
-    cmp byte [g_covox_on], 0
-    jz .done
-    movzx ecx, word [s_wr]
-    cmp cx, [s_rd]
-    je .underrun
-    movzx eax, word [s_rd]
-    and eax, COVOX_RING_MASK
-    mov al, [covox_ring + eax]
-    inc word [s_rd]
-    jmp .out
-.underrun:
-    mov al, 128
-.out:
-    mov dx, COVOX_DATA
-    out dx, al                    ; data byte to 0x378
-    mov dx, COVOX_CONTROL
-    mov al, PR_STROBE
-    out dx, al                    ; pin 17 low...
-    mov al, PR_POWER_UP
-    out dx, al                    ; ...rising edge clocks it into the FIFO
-.done:
-    pop ecx
-    pop edx
-    pop eax
-    ret
-
-; ---------------------------------------------------------------------------
-; covox_pump — drain one tick's samples from the ring to COVOX_DATA.
-; Called at the end of covox_pass (DelayFrame is pushad-wrapped, registers
-; may be clobbered freely); exported so stage 2 can call it directly if the
-; tick wiring ever splits fill from drain.
-;
-; Drains all samples currently buffered in covox_ring (s_wr - s_rd).
-; For each sample, outputs the byte to COVOX_DATA (0x378) and pulses pin 17
-; on COVOX_CONTROL (PR_STROBE 0x0C, then PR_POWER_UP 0x04). In DOSBox-X with
-; disney=true, this clocks the sample into the 128-byte buffer, locking DSS to
-; 7 kHz and playing the frame smoothly across 16.6 ms with zero clicks and no
-; busy-wait spinning.
-; Preserves all registers.
-; ---------------------------------------------------------------------------
-covox_pump:
-    pushad
-    cmp byte [g_covox_on], 0
-    jz .done
-    movzx ecx, word [s_wr]
-    sub cx, [s_rd]
-    jz .done                      ; nothing in ring to drain
-.next:
-    movzx eax, word [s_rd]
-    and eax, COVOX_RING_MASK
-    mov al, [covox_ring + eax]
-    inc word [s_rd]
-    mov dx, COVOX_DATA
-    out dx, al                    ; data byte
-    mov dx, COVOX_CONTROL
-    mov al, PR_STROBE
-    out dx, al                    ; pin 17 low...
-    mov al, PR_POWER_UP
-    out dx, al                    ; ...rising edge clocks it into the FIFO
-    dec ecx
-    jnz .next
-.done:
-    popad
-    ret
-
-; ---------------------------------------------------------------------------
-; covox_play_clip — play an 8-bit unsigned mono clip on the DAC, blocking,
-; interrupts off (sb_pcm_play/spk_pcm_play shape: the GB also monopolized the
-; CPU with IME off for the whole cry). The PIKA_PCM_RATE blob is resampled to
-; g_covox_rate inline, per play: one divide arms an 8.8 fixed-point input
-; step, then each output advances it (a boot-time table was rejected — the
-; rate is a boot-parsed config value, and streaming costs one div plus an add
-; per sample, trivial next to the port I/O, while the Tier-1 blob stays
-; untouched and no byte is ever hand-encoded here).
-;
-; Pacing reuses sb_pcm's PIT pacer at one output sample per step, so a raw
-; dongle (which plays whatever rate the CPU sustains) hears the true rate
-; while the DSS re-clocks the burst through its FIFO either way. Status polls
-; are bounded exactly like the pump's: a wedged port shortens the clip, never
-; hangs the game.
-; In:  ESI = flat ptr to blob samples at PIKA_PCM_RATE
-;      ECX = sample count (>0)
-;      EBP = GB memory base (preserved, unused — no GB state is read)
-; Out: EAX = samples actually played (== output count, or 0 when inactive)
-; Clobbers: EAX/EBX/ECX/EDX/EDI; ESI stays on the blob base. Preserves EBP.
-; ---------------------------------------------------------------------------
-covox_play_clip:
-    cmp byte [g_covox_on], 0
-    jz .off                       ; selected-but-uninitialized: play nothing
-    movzx ebx, word [g_covox_rate]
-    test ebx, ebx
-    jz .off
-    cmp ebx, 16
-    jb .off
-    ; 8.8 input step = (PIKA_PCM_RATE << 8) / rate (one div per play)
-    mov eax, (PIKA_PCM_RATE << 8)
-    xor edx, edx
-    div ebx
-    mov [c_step], eax
-    mov [c_len], ecx              ; input samples at PIKA_PCM_RATE
-    ; output count = len * rate / PIKA_PCM_RATE (64-bit dividend: a long cry
-    ; at the fastest rate exceeds 32 bits before the divide)
-    mov eax, ecx
-    mul ebx                       ; EDX:EAX = len * rate
-    mov ecx, PIKA_PCM_RATE
-    div ecx
-    test eax, eax
-    jz .off                       ; degenerate: no output (EAX = 0 already)
-    mov edi, eax                  ; EDI = outputs remaining
-    mov [c_count], eax
-    pushfd
-    cli                           ; tick stands still, like the GB's freeze
-    ; Temporarily restore PIT channel 0 to default frame divisor (19506)
-    ; so pcm_pace's counter has a wide 16.3ms countdown and doesn't wrap every 170 clocks
-    xor ax, ax
-    call pit_set_rate
-
-    ; PIT-clocks-per-output step, 24.8 fixed point, rounded (sb_pcm shape)
-    mov eax, (1193182 * 256)      ; PIT input clock: hardware, not a rate
-    mov ecx, ebx
-    shr ecx, 1                    ; rate/2 rounding (mov/shr: flags dead here)
-    xor edx, edx
-    add eax, ecx
-    adc edx, 0
-    div ebx                       ; EAX = 43636 for 7 kHz (step)
-    call pcm_pace_init            ; EAX = step; clobbers AX/DX/flags only
-    mov dword [c_pos], 0          ; 24.8 input position (integer part = index)
-.play:
-    call pcm_pace                 ; clobbers EAX/EDX: position lives in memory
-    mov ecx, [c_pos]
-    mov eax, ecx
-    shr eax, 8                    ; input index for this output
-    cmp eax, [c_len]
-    jae .finished                 ; rounding tail ran past the blob: stop
-    mov al, [esi + eax]           ; the resampled byte
-    add ecx, [c_step]
-    mov [c_pos], ecx
-    push eax                      ; sample (push preserves flags; IN needs AL)
-    mov dx, COVOX_STATUS
-    mov ebx, COVOX_POLLS
-.poll:
-    in al, dx
-    test al, 0x40
-    jz .out
-    dec ebx
-    jnz .poll
-.out:
-    mov dx, COVOX_DATA
-    pop eax                       ; sample back to AL (pop preserves flags)
-    out dx, al                    ; data byte
-    mov dx, COVOX_CONTROL
-    mov al, PR_STROBE
-    out dx, al                    ; pin 17 low...
-    mov al, PR_POWER_UP
-    out dx, al                    ; ...rising edge clocks it into the FIFO
-    dec edi
-    jnz .play
-.finished:
-    ; Restore PIT channel 0 to g_covox_rate: divisor = 1193182 / g_covox_rate
-    movzx ecx, word [g_covox_rate]
-    test ecx, ecx
-    jz .restored
-    mov eax, 1193182
-    xor edx, edx
-    div ecx                       ; AX = divisor
-    call pit_set_rate
-.restored:
-    popfd
-    mov eax, [c_count]
-    sub eax, edi                  ; samples played
-    ret
-.off:
-    xor eax, eax
     ret
 
 ; ---------------------------------------------------------------------------
@@ -913,20 +611,14 @@ covox_setup:
     je .wave
     cmp ebx, 3
     je .noise
-    ; square ch0/1: step = s_k / (2048 - f), amplitude = envelope level
+    ; square ch0/1: step = s_k16 / (2048 - f), amplitude = envelope level
     movzx eax, word [edi + CS_FREQ]
     and eax, 0x7FF                ; divisor in 1..2048, never 0
     mov ecx, 2048
-    sub ecx, eax                  ; ECX = 2048 - f
-    mov eax, [s_k_lo]
-    mov edx, [s_k_hi]
-    cmp edx, ecx
-    jae .sqMax
+    sub ecx, eax
+    mov eax, [s_k16]
+    xor edx, edx
     div ecx
-    jmp .sqStore
-.sqMax:
-    mov eax, 0x7FFFFFFF
-.sqStore:
     mov [edi + CS_STEP], eax
     mov al, [edi + CS_ENVVOL]
     mov [edi + CS_AMP], al
@@ -945,15 +637,9 @@ covox_setup:
     and eax, 0x7FF
     mov ecx, 2048
     sub ecx, eax
-    mov eax, [s_kw_lo]
-    mov edx, [s_kw_hi]
-    cmp edx, ecx
-    jae .wMax
+    mov eax, [s_k16]
+    xor edx, edx
     div ecx
-    jmp .wStore
-.wMax:
-    mov eax, 0x7FFFFFFF
-.wStore:
     mov [edi + CS_STEP], eax
     mov byte [edi + CS_AMP], 1    ; audible marker (level rides CS_LVL)
     jmp .midi
@@ -994,7 +680,7 @@ covox_setup:
 ; ---------------------------------------------------------------------------
 ; covox_dbg_snapshot — copy shim state into GB scratch (mpu401's
 ; midi_dbg_snapshot shape: mov al/mov [ebp+...] stores, EAX only).
-; Provisional 8-byte block at COVOX_SNAP (+0x81..+0x88; see header):
+; Provisional 6-byte block at COVOX_SNAP (+0x81..+0x86; see header):
 ;   +0x81 g_covox_on  +0x82/83 s_wr (monotonic: proves the render advanced)
 ;   +0x84 s_master    +0x85/86 packed ch0/1 amps +0x87/88 packed ch2/3 amps
 ; Packed voice byte: hi nibble = latched amplitude 0-15, bit 0 = KEY flag.
@@ -1038,32 +724,21 @@ CovoxDutyThresh: dd 0x20000000, 0x40000000, 0x80000000, 0xC0000000
 section .bss
 
 covox_state:    resb 4 * CS_SIZE   ; ch0-3 voices (ch3 LFSR/nacc live in-slot)
-covox_ring:     resb COVOX_RING_SIZE ; rendered PCM (covox_pump drains it)
+covox_ring:     resb COVOX_RING_SIZE ; rendered PCM (stage 1.3 pumps it)
 s_master:       resb 1              ; latched NR50 louder side 0-7
 s_nr51:         resb 1              ; NR51 snapshot for this tick
-s_k_lo:         resd 1              ; 2^49/rate lo dword (square step numerator)
-s_k_hi:         resd 1              ; 2^49/rate hi dword
-s_kw_lo:        resd 1              ; 2^48/rate lo dword (wave step numerator)
-s_kw_hi:        resd 1              ; 2^48/rate hi dword
-s_kn:           resd 1              ; 2^35/rate: noise clocks numerator
+s_k16:          resd 1              ; 2^33/rate: square/wave step numerator
+s_kn:           resd 1              ; 2^34/rate: noise clocks numerator
 s_nsamp:        resw 1              ; samples to render this tick
 s_carry:        resw 1              ; samples-per-tick fractional carry
 s_wr:           resw 1              ; ring write cursor (monotonic)
-s_rd:           resw 1              ; ring read cursor (the pump drains toward s_wr)
-c_step:         resd 1              ; cry resample step, 8.8 input samples/output
-c_len:          resd 1              ; cry input length (blob samples)
-c_count:        resd 1              ; cry outputs requested (for the played tally)
-c_pos:          resd 1              ; cry resample position, 24.8 fixed point
+s_rd:           resw 1              ; ring read cursor (reserved: stage 1.3 pump)
 
 %else
 
 section .text
-covox_play_clip:
-    xor eax, eax                  ; played tally reads 0 (sb_pcm/spk_pcm shape)
-    ret
 covox_init:
 covox_pass:
-covox_pump:
 covox_silence:
 covox_shutdown:
 covox_dbg_snapshot:

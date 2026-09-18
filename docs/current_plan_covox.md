@@ -143,34 +143,43 @@ ENABLE, high→low bit). `g_audio_devices: dd 0` is the solved active set:
   `dss_power_control.svg`; README index rows. 0.1.2 (Mark Phillips) and
   0.1.3 (VOGONS) dropped 2026-09-18 — the programming manual already carries
   the register-level interface. Reopen only if a build question needs them.
-- [ ] **0.2. Preconditions (read-only, remote-safe).**
-  - [ ] 0.2.1 `378h` `OUT` from protected mode under CWSDPMI (port-permission
-    risk — verify with a 1-byte probe harness before building the pump).
-  - [ ] 0.2.2 `/COVOX` flag: substring-safe vs existing tokens
-    (`/COM1` precedent: check `find_token` collisions); explicit-only force
-    bit; new `arg_covox` string.
-  - [ ] 0.2.3 `DEV_COVOX` nibble 5 in `g_audio_devices`/`g_audio_forced`;
-    `disney=true` runner config; `[audio]` section design for
-    `input_cfg.asm` (`covox_rate`, default 7000, clamp 4000–44500 —
-    maintainer-confirmed 2026-09-18).
-- [ ] **0.4. Chain simplification + bitmask (FIRST dispatch — owns
+- [x] **0.2. Preconditions (read-only, remote-safe).**
+  - [x] 0.2.1 Port I/O proven by tree precedent (PIT/VGA/OPL `OUT`s run every
+    boot — CWSDPMI grants port permission); residual risk narrowed to LPT
+    specifically (nothing has ever touched `378h`); 1-byte probe plan
+    recorded for real HW (write `AAh`, park at 0, no strobe/IRQ/DMA).
+    DOSBox-X: `disney=true` accepts raw `OUT 378h` (Covox-compat path).
+  - [x] 0.2.2 `/COVOX` collision-free both directions (`find_token` is plain
+    substring match; `/CO` vs `/COM1-4` differs at char 3); `arg_covox` +
+    `FORCE_COVOX` parse arm already in-tree from 0.4.
+  - [x] 0.2.3 `DEV_COVOX` nibble 5 + mask words in-tree; `audio_init` clears
+    the bit until stage 2; runner injects `[speaker] disney=true`
+    (`run-tandy` pattern — pinned `dosbox-x.conf` has no `[speaker]`
+    section); `[audio] COVOX_RATE` draft ready for `input_cfg.asm`
+    (word literal, default 7000, clamp 4000–44500, parse-once).
+- [x] **0.4. Chain simplification + bitmask (FIRST dispatch — owns
   `audio_hal.asm` + `entry.asm`, lands before stage 2).**
-  - [ ] 0.4.1 Mask words + `DEV_*` nibbles; `parse_cmdline` sets forced bits;
+  - [x] 0.4.1 Mask words + `DEV_*` nibbles; `parse_cmdline` sets forced bits;
     fixed force priority TANDY > INNOVA > COVOX > SPK.
-  - [ ] 0.4.2 `audio_init` solve (`forced ∩ available`, OPL-probe / SPK-only
+  - [x] 0.4.2 `audio_init` solve (`forced ∩ available`, OPL-probe / SPK-only
     auto-fill, compiled-out/absent clearing); INNOVA never auto-set
     (explicit `/INNOVA` keeps working — see `current_plan_sid.md` stage 2).
-  - [ ] 0.4.3 Solved tick pointers (zero per-tick compares); music/sfx/pcm
+  - [x] 0.4.3 Solved tick pointers (zero per-tick compares); music/sfx/pcm
     role fields; MIDI music + OPL3-SFX split; Covox/DSS speakerless;
     `PlayPikachuSoundClip` branches on PCM fields; `g_shim_device` compat.
   - Acceptance: nasm clean all `ENABLE_*` combos, lint 0, every existing
     selection (`/TANDY`, `/SPK`, `/MT32`, `/GM`, default, `/NOSOUND`)
     behaves identically; `/INNOVA` still forces device 4.
 - [ ] **1. Mixer + pump (`src/audio/covox_shim.asm`).**
-  - [ ] 1.1 Skeleton: house-style header, `COVOX_DATA 0x378` equ,
+  - [x] 1.1 Skeleton: house-style header, `COVOX_DATA 0x378` equ,
     rate-agnostic fixed-point voice state, six globals. No DEVIATION.
-  - [ ] 1.2 Per-tick render (see Channel mapping): duty squares, verbatim
-    wave table, software LFSR noise, GB-unit envelope/sweep/length.
+    `extern g_covox_rate` (input_cfg owns it later); `ENABLE_AUDIO_COVOX`
+    guard + stubs.
+  - [x] 1.2 Per-tick render to 2048 B ring (pump deferred): restart-consume,
+    GB-unit envelope/sweep/length, NR50 master, NR51 mute, MIDI SFX-only
+    guard (tandy shape, for 2.3); squares at GB duty, wave RAM verbatim,
+    real 15/7-bit LFSR noise; unsigned out, silence = 128; samples =
+    rate/60 Bresenham, zero 7 kHz literals.
   - [ ] 1.3 Pump loop: per-tick sample count derived from `g_covox_rate`,
     tight `OUT` burst (`sb_pcm` `pcm_pace` is the pacing template if even
     spacing proves necessary).
