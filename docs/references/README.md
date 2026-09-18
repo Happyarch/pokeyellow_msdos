@@ -173,6 +173,13 @@ Quick reference:
   fetched 2026-09-18). C64 memory addresses (54272/$D400) do NOT apply to the ISA
   card — chip offsets/bits/formulas only. Full-book fallback excised to the sound
   section only (Ch.4 + Appendix O) to save model context; patent dropped as not useful.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md per
+  source doc after the MT-32/OPL3 convention): `../sound/MOS_6581_SID_Nov_1981.md`
+  (datasheet distillation, 189 lines), `../sound/C64_PRG_Ch4_Programming_Sound.md`
+  (Ch.4 walkthrough as-printed, 136 lines), `../sound/SID_SSI-2001_Notes.md`
+  (card-level remap + clock constant + disagreements, 93 lines);
+  `../sound/sid_voice_filter_path.svg` (voice→filter signal path) +
+  `../sound/sid_isa_port_map.svg` (ISA decode map, $1C/$1D bound marked UNRESOLVED).
 - **SSI-2001 card-level source**, mirrored at
   [`nerdlypleasures/SID_and_DOS_-_Nerdly_Pleasures.html`](nerdlypleasures/)
   (https://nerdlypleasures.blogspot.com/2014/01/sid-and-dos-unlikely-but-true-bedfellows.html,

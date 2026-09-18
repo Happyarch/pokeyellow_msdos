@@ -92,6 +92,10 @@ Speaker-noise rejected (standing downsides).
   `docs/references/README.md`. Patent dropped (not useful); full-book fallback
   excised to sound-section only; replica schematics excluded (not a programming
   manual); VOGONS primaries deferred.
+  Derivatives follow the one-.md-per-doc convention: `MOS_6581_SID_Nov_1981.md`
+  (189 lines) + `C64_PRG_Ch4_Programming_Sound.md` (136 lines) +
+  `SID_SSI-2001_Notes.md` (93 lines) + `sid_voice_filter_path.svg` +
+  `sid_isa_port_map.svg`, all in gitignored `docs/sound/`.
 - [ ] **0b. Preconditions.** `/SID` flag name checked against `find_token`
   substring behavior in `boot/entry.asm`; `docs/sound/` SID register + SSI-2001
   port reference mirrored; claims in this file re-verified against HEAD.
