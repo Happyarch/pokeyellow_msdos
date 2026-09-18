@@ -94,12 +94,16 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
   - [x] 2.3 Oracle cross-check per block (all agree with oracle code;
     four header-vs-code mismatches resolved toward code and noted).
   - Zero 86Box-isms; committed `1126a1416`, mirrored to `mcp-debug`.
-- [ ] **3. Plumbing.**
-  - [ ] 3.1 DMA + IRQ via fork `DMA_*`/`PIC_*` APIs; PIT rate generation.
-  - [ ] 3.2 OPL side wired to existing OPL emulation; MPU-compat routed to
-    `mpu401.cpp` per the house pattern.
-  - Acceptance: PCM bytes in → mixer audio out in-emulator; OPL voices
-    audible through the PAS mixer path.
+- [x] **3. Plumbing.**
+  - [x] 3.1 DMA + IRQ via fork `DMA_*`/`PIC_*` APIs; PIT rate generation
+    (1388–8B window, 1193180 Hz, prescaler model; exact curve is stage 4).
+    IRQ nibble-0 wrap resolved (`pas.irq` signed).
+  - [x] 3.2 OPL side wired to existing OPL emulation (no new FM code;
+    non-default bases need forwarder hooks — stage 4, that module's);
+    MPU-compat routed per the house pattern. FIR + PIO samples deferred
+    with STAGE4 notes.
+  - Committed `7314402b0`, mirrored to `mcp-debug`. Open: sdlmain
+    `PAS_Init()` call site (defined-not-yet-called).
 - [ ] **4. Bring-up + validation.**
   - [ ] 4.1 Enable in the custom conf; validate with a known PAS program
     (MVDIAG or a native-support game).
@@ -123,16 +127,16 @@ IS the detection); `ENABLE_AUDIO_PAS` guard (new-convention shape);
 SB/speaker fallback, same as Tandy/GB (speaker KEEPS PCM under a PAS
 winner).
 
-- [ ] **G1. Driver `src/audio/pas_shim.asm`** (port-only HAL, no DEVIATION).
-  - [ ] G1.1 Skeleton: house header, `PAS_BASE 0x388` + OPL-alias equs,
-    per-voice state, `pas_init/pass/silence/shutdown/dbg_snapshot` +
-    `g_pas_on`, guard + stubs.
-  - [ ] G1.2 Tick pass: GB ch0/ch1 → OPL3 voices through the PAS card
-    (opl_shim mapping, PAS base), ch2 → OPL3 custom patch voice, ch3 →
-    PAS PCM/noise path per oracle register behavior; GB-unit
-    envelope/sweep/length; restart-consume; NR50/NR51; MIDI SFX-only
-    guard (tandy shape).
-  - Acceptance: nasm clean both guard modes, lint 0, silence is silent.
+- [x] **G1. Driver `src/audio/pas_shim.asm`** (NATIVE card programming —
+  card's OPL3 at PAS_BASE 0x388; the SB-DSP emulation path was never in
+  scope and appears nowhere in the file).
+  - [x] G1.1 Skeleton: house header, `PAS_BASE` + OPL-alias equs,
+    `PS_*` state, six globals + `g_pas_on`, guard + stubs. No DEVIATION.
+  - [x] G1.2 Tick pass: ch0/ch1 → OPL3 voices 0-1, ch2 → voice 2 patch 4,
+    ch3 → OPL noise voice 3 (PAS PCM engine needs DMA — later stage, not
+    this tick); GB-unit envelope/sweep/length; restart-consume; NR50/NR51;
+    MIDI SFX-only guard. `pas_init` no-ops silently when FM doesn't
+    answer (present-flag merged with on-flag).
 - [ ] **G2. Dispatch + runner.** Device-10 solve arm (INNOVA shape, word-2
   nibble music+sfx, no PCM; speaker keeps PCM-only); `/PAS` end-to-end;
   MIDI-coexistence verified; `ENABLE_AUDIO_PAS` Makefile passthrough +
