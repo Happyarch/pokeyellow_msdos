@@ -235,6 +235,29 @@ Quick reference:
   (https://dosbox-x.com/wiki/Guide:Sound-card-support-in-DOSBox%E2%80%90X,
   `disney=true` in `[speaker]`, Covox/MDO compatible).
 
+### IBM Music Feature Card / Yamaha FB-01
+
+- **Local PDFs** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/Yamaha_FB-01_Service_Manual.pdf` (FB-01 service manual, image-only
+  scan — SysEx taxonomy, Format 1/2 byte layouts, bulk framing, event list,
+  parameter lists, transmit format) + `../sound/Yamaha_FB-01_Owners_Manual.pdf`
+  (72pp EN owner's manual).
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc): `../sound/Yamaha_FB-01_Service_Manual.md` +
+  `../sound/fb01_voice_nibble_packing.svg` (nibble packing + bulk frame) and
+  `../sound/Yamaha_FB-01_Owners_Manual.md` +
+  `../sound/fb01_config_assign.svg` (config → instruments → note pool).
+  Uncertain readings kept `[?]` inline; research findings (R2–R6) folded into
+  `docs/current_plan_imfc.md`.
+- **Card-level articles**, mirrored at
+  [`nerdlypleasures/IMFC_Exclusive_Commands_-_Nerdly_Pleasures.html`](nerdlypleasures/IMFC_Exclusive_Commands_-_Nerdly_Pleasures.html)
+  (IMFC-exclusive SysEx, Parameter List Transfer vs Parameter Change, LSL3
+  drum-robbery lesson),
+  [`nerdlypleasures/MT32_FB01_MIDI_Files_and_Patches_-_Nerdly_Pleasures.html`](nerdlypleasures/MT32_FB01_MIDI_Files_and_Patches_-_Nerdly_Pleasures.html)
+  (bank/config dump commands + sizes, Sierra custom-bank precedent), and
+  [`scalibq/IMFC_and_FB-01_-_Scali_OpenBlog.html`](scalibq/IMFC_and_FB-01_-_Scali_OpenBlog.html)
+  (variable-length SysEx, list→individual translation, YM2151-core lineage).
+
 ---
 
 ## Pokémon Yellow Glitch Reference
