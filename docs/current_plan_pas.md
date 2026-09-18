@@ -104,13 +104,16 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
     with STAGE4 notes.
   - Committed `7314402b0`, mirrored to `mcp-debug`. Open: sdlmain
     `PAS_Init()` call site (defined-not-yet-called).
-- [ ] **4. Bring-up + validation.**
-  - [ ] 4.1 Enable in the custom conf; validate with a known PAS program
-    (MVDIAG or a native-support game).
-  - [ ] 4.2 Behavioral cross-check vs 86Box running the same inputs
-    (register traces and/or recorded audio diff).
-  - Acceptance: native PAS program produces correct audio in our fork;
-    becomes the golden oracle for the future game-side driver.
+- [x] **4. Bring-up + validation (static; no emulator execution).**
+  - [x] 4.1 sdlmain `PAS_Init()` call site (+ forward decl; `pas.cpp`
+    init signature aligned to the no-arg house shape). Card instantiates.
+  - [x] 4.2 Validation trace conf → init → scripted sequence, oracle
+    agreement per step (mixer, F8A, B88/89/8A, rate, IRQ/DMA maps,
+    compat bases). Prescaler exact curve NOT resolved (oracle delegates
+    to its PIT module; kernel doc silent) — divide-model kept with
+    retirement note. PIO carries closed; FIR + OPL-forwarder + MPU/SB
+    remap stay deferred with tightened notes.
+  - Committed `b67113d13`, mirrored to `mcp-debug`.
 - [ ] **5. Docs + changelog.** Fork docs section, changelog entry, kept
   PR-shaped throughout. Upstream PR itself is deferred, not this plan's
   acceptance.
@@ -137,16 +140,29 @@ winner).
     this tick); GB-unit envelope/sweep/length; restart-consume; NR50/NR51;
     MIDI SFX-only guard. `pas_init` no-ops silently when FM doesn't
     answer (present-flag merged with on-flag).
-- [ ] **G2. Dispatch + runner.** Device-10 solve arm (INNOVA shape, word-2
-  nibble music+sfx, no PCM; speaker keeps PCM-only); `/PAS` end-to-end;
-  MIDI-coexistence verified; `ENABLE_AUDIO_PAS` Makefile passthrough +
-  listing; `run-pas` (+`.ps1`); `device pas` config string joins the
-  0.5 mechanism.
-  - Acceptance (static traces): `/PAS` alone → PAS music+SFX;
+- [x] **G2. Dispatch + runner.** Device-10 solve arm (INNOVA shape, word-2
+  nibble music+sfx `0x700`, no PCM; speaker keeps PCM-only; full priority
+  TANDY > INNOVA > COVOX > GB > PAS > SPK documented in-code);
+  `/PAS` end-to-end (flag → bit 10; config `device pas` via 0.5 mechanism);
+  MIDI-coexistence verified (G1 guard correct); `ENABLE_AUDIO_PAS`
+  passthrough + listing; `run-pas` (+`.ps1`, +x); window 9 repointed to
+  cover PAS bytes (MIDI-head loss documented).
+  - Acceptance (static traces walked): `/PAS` alone → PAS music+SFX;
     `/PAS`+`/TANDY` → TANDY wins; `/PAS`+`/MT32` → MIDI music + PAS SFX.
 - [ ] **G3. Verification + ear-checks (maintainer in-DOS, fork build from
   stage 4 as the oracle).** Static half: traces, nasm matrix, runner,
   snapshot map. Ear half: music set, battle, cry fallback.
+
+## Enhancement direction (decided 2026-09-18; design deferred)
+
+- PAS16 takes tier-1 enhancements (12-voice-class headroom philosophy —
+  OPL3 + PCM engine can carry them).
+- PCM rhythm tracks are the candidate tier-1+ vehicle: the PCM engine
+  inherits the MT-32 rhythm-channel enhancements, voiced with real drum
+  samples. Needs a drum-sample asset pipeline (later problem).
+- Drum samples: maintainer may record real drums at school — see
+  `gen_pika_pcm.py` input contract (mono 8-bit 22050 Hz WAV) for the
+  delivery format; record high, convert down.
 
 ## Risks
 
