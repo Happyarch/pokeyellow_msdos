@@ -114,9 +114,12 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
     retirement note. PIO carries closed; FIR + OPL-forwarder + MPU/SB
     remap stay deferred with tightened notes.
   - Committed `b67113d13`, mirrored to `mcp-debug`.
-- [ ] **5. Docs + changelog.** Fork docs section, changelog entry, kept
-  PR-shaped throughout. Upstream PR itself is deferred, not this plan's
-  acceptance.
+- [x] **5. Docs + changelog.** `[pas]` section documented in both
+  reference confs (generator-exact shape, `[innova]` mirror) + CHANGELOG
+  entry under Next version. Committed `ff19e711e`, mirrored to
+  `mcp-debug`. Follow-up (not this stage): MSVC `vs/dosbox-x.vcxproj`
+  + `.filters` need `pas.cpp` entries; `setup.conf` installer variant
+  needs the `[pas]` block.
 - [ ] **6. Plus + 16D (fork only, after stage 4).** The 86Box-covered set
   joins the emulator; game never uses them. Scoped when stage 4 lands.
 
@@ -149,9 +152,20 @@ winner).
   cover PAS bytes (MIDI-head loss documented).
   - Acceptance (static traces walked): `/PAS` alone → PAS music+SFX;
     `/PAS`+`/TANDY` → TANDY wins; `/PAS`+`/MT32` → MIDI music + PAS SFX.
-- [ ] **G3. Verification + ear-checks (maintainer in-DOS, fork build from
-  stage 4 as the oracle).** Static half: traces, nasm matrix, runner,
-  snapshot map. Ear half: music set, battle, cry fallback.
+- [ ] **G3. Verification + ear-checks (static DONE, ears maintainer-run).**
+  - [x] G3.0 Static: 5 traces re-walked (stub combo silent-no-hang,
+    default dark; speaker PCM present under PAS, absent from PAS nibble);
+    39/39 nasm matrix; lint 0, no new tokens; runner diff = swaps only,
+    keys match precedent, `bash -n` clean; snapshot map (PAS file
+    `0x23C..0x23F`, neighbors recorded).
+  - [ ] G3.1 Cold boot `run-pas` → card-OPL3 music (snapshot `0x23C`
+    tells probe failure from keying failure).
+  - [ ] G3.2 Catch sequence (FM squares + patch-4 voice + OPL noise).
+  - [ ] G3.3 Noise-heavy battle (no drone through rests).
+  - [ ] G3.4 Pikachu cry via SB/speaker (`pika_dbg_device` 1 or 2, never
+    a PAS value — no PAS arm exists by design).
+  - [ ] G3.5 Tuner spot-checks (opl-derived mapping — A/B vs SB OPL run;
+    report per-voice loudness deltas for the linear-v1 volume path).
 
 ## Enhancement direction (decided 2026-09-18; design deferred)
 
@@ -160,13 +174,11 @@ winner).
 - PCM rhythm tracks are the candidate tier-1+ vehicle: the PCM engine
   inherits the MT-32 rhythm-channel enhancements, voiced with real drum
   samples. Needs a drum-sample asset pipeline (later problem).
-- Drum samples: maintainer records real drums at school — capture chain:
-  USB-C digital boom mic into phone, uncompressed WAV 44.1/48 kHz (no
-  AGC/EQ/noise-reduction — processing destroys transients), peaks ≈−12 dB,
-  close-mic 10–30 cm, 5–6 consistent hits per drum + room tone. Convert
-  down to the pipeline contract (mono 8-bit 22050 Hz WAV) at the
-  workstation; keep the high-rate masters. Minimum set: kick, snare,
-  closed hat; stretch: toms, open hat, crash, ride.
+- Drum capture needed: real single-hit drums (kick, snare, closed hat
+  minimum; toms/open hat/crash/ride stretch) — capture chain is USB-C
+  digital boom mic into phone, uncompressed WAV 44.1/48 kHz, no
+  processing, peaks ≈−12 dB. Convert down to the pipeline contract (mono
+  8-bit 22050 Hz WAV) at the workstation; keep the high-rate masters.
 
 ## Risks
 
