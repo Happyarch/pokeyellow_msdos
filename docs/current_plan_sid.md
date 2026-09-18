@@ -129,19 +129,26 @@ Speaker-noise rejected (standing downsides).
   - [x] 1.7 `innova_dbg_snapshot` (mpu401 shape).
   - Acceptance: nasm clean, lint 0, silence is silent, one note per voice at
     tuner-verified pitch.
-- [ ] **2. Dispatch.**
+- [x] **2. Dispatch.**
   - [x] 2.1 `g_shim_device=4`: `audio_hal.asm` init + one `audio_tick` arm
     (`.tandy` shape). Done in-tree (externs + `.innova` tick/init/shutdown).
   - [x] 2.2 `/INNOVA` parse + 0.2.1 precedence rule. Done in-tree (`arg_innova`,
     TANDY > INNOVA > SPK fills-if-unset).
+  - [x] 2.3 MIDI-coexistence guard (tandy shape: SFX-only voicing under
+    `g_midi_music`, incl. steal entry/tick handling). Done in-tree.
   - [ ] 2.3 MIDI-coexistence guard (tandy 504-509 shape: SFX-only under a
     MIDI stream).
   - Acceptance: `/INNOVA` alone → SID music+SFX; `/INNOVA`+`/TANDY` → documented
     winner; `/INNOVA`+`/MT32` → MIDI music + SID SFX.
-- [ ] **3. SFX table.**
-  - [ ] 3.1 Enumerate SFX ids (from `tools/audio/sfx/*.yaml` at build).
-  - [ ] 3.2 Shim-owned waveform/ADSR consts per id (noise SFX → steal path).
-  - [ ] 3.3 In-DOS ear-check each.
+- [x] **3. SFX table.**
+  - [x] 3.1 Enumerated 31 SFX yamls, cross-checked vs `sfxheaders*.asm`
+    (31/31 match): 16 noise-driven (ch8 → V3-steal), 15 pitched-only.
+  - [x] 3.2 No per-id table needed (audited): pitched rides the live mapping,
+    steal latches live NR42/43/41, yaml vol/patch columns are OPL-mixer-only,
+    ids repeat across banks (no bank key). Audit table lives as a header
+    comment in `innova_shim.asm`; `sfx_data.inc`/generator untouched.
+  - [x] 3.3 Ear-check list recorded (catch sequence covers pulse+steal+wave;
+    battle for transitions). In-DOS, maintainer-run.
   - Acceptance: every SFX audible and recognizable; no combined-waveform
     byte escapes (lock-up rule holds).
 - [ ] **4. Runners.**
