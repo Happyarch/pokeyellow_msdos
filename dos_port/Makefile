@@ -139,14 +139,14 @@ ENABLE_AUDIO_OPL     ?= 1
 ENABLE_AUDIO_OPL_ENH ?= 1
 ENABLE_AUDIO_TANDY   ?= 1
 ENABLE_AUDIO_SPK     ?= 1
-ENABLE_AUDIO_COVOX   ?= 1
+ENABLE_AUDIO_INNOVA  ?= 1
 NASMFLAGS += -D ENABLE_PIKA_PCM=$(ENABLE_PIKA_PCM)
 NASMFLAGS += -D ENABLE_AUDIO_MIDI=$(ENABLE_AUDIO_MIDI)
 NASMFLAGS += -D ENABLE_AUDIO_OPL=$(ENABLE_AUDIO_OPL)
 NASMFLAGS += -D ENABLE_AUDIO_OPL_ENH=$(ENABLE_AUDIO_OPL_ENH)
 NASMFLAGS += -D ENABLE_AUDIO_TANDY=$(ENABLE_AUDIO_TANDY)
 NASMFLAGS += -D ENABLE_AUDIO_SPK=$(ENABLE_AUDIO_SPK)
-NASMFLAGS += -D ENABLE_AUDIO_COVOX=$(ENABLE_AUDIO_COVOX)
+NASMFLAGS += -D ENABLE_AUDIO_INNOVA=$(ENABLE_AUDIO_INNOVA)
 
 # ---------------------------------------------------------------------------
 # Frame-timing mode — picks the PIT channel-0 divisor (the IRQ 0 / emulated
@@ -567,7 +567,7 @@ AUDIO_SRCS := \
     src/audio/opl_enh.asm \
     src/audio/tandy_shim.asm \
     src/audio/spk_shim.asm \
-    src/audio/covox_shim.asm \
+    src/audio/innova_shim.asm \
     src/audio/mpu401.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \

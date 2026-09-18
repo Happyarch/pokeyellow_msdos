@@ -69,12 +69,12 @@ Speaker-noise rejected (standing downsides).
 
 ## House style + annotation ruling (maintainer decisions)
 
-- `sid_shim.asm` follows the device-shim house style (`tandy_shim.asm:1-60`
+- `innova_shim.asm` follows the device-shim house style (`tandy_shim.asm:1-60`
   template): mapping table + software-emulation list header, `gb_memmap.inc`,
   `section .text`, port/clock `equ`s, per-voice state `equ`s,
-  `sid_init/pass/silence/shutdown/dbg_snapshot` + `g_sid_on`, NRx4-restart
+  `innova_init/pass/silence/shutdown/dbg_snapshot` + `g_innova_on`, NRx4-restart
   consume, virtual APU `[ebp+$FF10..$FF26]`, absent-hardware → silence.
-- **No DEVIATION annotation on any port-only file** (`sid_shim` ships with the
+- **No DEVIATION annotation on any port-only file** (`innova_shim` ships with the
   `audio_hal`-style `Port-only module (no pret counterpart...)` header only).
   The four existing HAL DEVIATION headers (opl/tandy/spk/mpu401) and the
   cms/gus/imfc draft wording are known-inconsistent legacy — left alone, not
@@ -85,10 +85,10 @@ Speaker-noise rejected (standing downsides).
 - [x] **0.1. References mirrored.** PDFs, VISION.txt, SVGs, HTML mirrors,
   index rows. Done.
 - [x] **0.2. Preconditions (read-only, remote-safe).**
-  - [x] 0.2.1 `/SID` flag: `find_token` is plain substring search
-    (entry.asm:596-639); `/SID` collides with no existing token. Precedence
-    decided: TANDY > SID > SPK — `/SID` fills-if-unset between the `/TANDY`
-    force (347-351) and the `/SPK` fill (353-360); needs a new `arg_sid`
+  - [x] 0.2.1 `/INNOVA` flag: `find_token` is plain substring search
+    (entry.asm); `/INNOVA` collides with no existing token. Precedence
+    decided: TANDY > INNOVA > SPK — `/INNOVA` fills-if-unset between the `/TANDY`
+    force and the `/SPK` fill; needs a new `arg_innova`
     string.
   - [x] 0.2.2 Cited file:lines re-verified; drift corrected: mpu401 seq
     entries are 234/339/370 (not 205-369), snapshot at 486+ (not 415-429);
@@ -114,29 +114,30 @@ Speaker-noise rejected (standing downsides).
     rule — no per-song steal table in the driver.
   - [x] 0.3.3 Table recorded here. Acceptance met: every base song steals
     V3 (49 × V3, uniform).
-- [ ] **1. Driver `src/audio/sid_shim.asm`.**
-  - [ ] 1.1 Skeleton: house-style header, equs (`SID_BASE 0x280`,
+- [x] **1. Driver `src/audio/innova_shim.asm`.**
+  - [x] 1.1 Skeleton: house-style header, equs (`INNOVA_BASE 0x280`,
     card-clock const), per-voice state, six globals. No DEVIATION.
-  - [ ] 1.2 `sid_write` (blind OUTs; no pacing needed).
-  - [ ] 1.3 `sid_setfreq` (×18.7478755, hi/lo split, clamp).
-  - [ ] 1.4 Tick pass: virtual-APU read; V1/V2 pulse + duty→PW; V3 triangle
+  - [x] 1.2 `innova_write` (blind OUTs; no pacing needed).
+  - [x] 1.3 `innova_setfreq` (×18.7478755, hi/lo split, clamp).
+  - [x] 1.4 Tick pass: virtual-APU read; V1/V2 pulse + duty→PW; V3 triangle
     + NR32; sustain-riding; NR50→VOL; restart-consume; length/sweep
     (Tandy/OPL pattern).
-  - [ ] 1.5 V3-steal per 0.3 table: save/restore `$0E–$14`, TEST pulse on
+  - [x] 1.5 V3-steal per 0.3 table: save/restore `$0E–$14`, TEST pulse on
     release, single-waveform invariant.
-  - [ ] 1.6 `sid_silence` (zero `$00–$18`) + `pikachu_pcm` pre-clip hook +
-    `g_sid_on` guards.
-  - [ ] 1.7 `sid_dbg_snapshot` (mpu401 shape).
+  - [x] 1.6 `innova_silence` (zero `$00–$18`) + `pikachu_pcm` pre-clip hook +
+    `g_innova_on` guards.
+  - [x] 1.7 `innova_dbg_snapshot` (mpu401 shape).
   - Acceptance: nasm clean, lint 0, silence is silent, one note per voice at
     tuner-verified pitch.
 - [ ] **2. Dispatch.**
-  - [ ] 2.1 `g_shim_device=4`: `audio_hal.asm` init + one `audio_tick` arm
-    (`.tandy` shape).
-  - [ ] 2.2 `/SID` parse + 0.2.1 precedence rule.
+  - [x] 2.1 `g_shim_device=4`: `audio_hal.asm` init + one `audio_tick` arm
+    (`.tandy` shape). Done in-tree (externs + `.innova` tick/init/shutdown).
+  - [x] 2.2 `/INNOVA` parse + 0.2.1 precedence rule. Done in-tree (`arg_innova`,
+    TANDY > INNOVA > SPK fills-if-unset).
   - [ ] 2.3 MIDI-coexistence guard (tandy 504-509 shape: SFX-only under a
     MIDI stream).
-  - Acceptance: `/SID` alone → SID music+SFX; `/SID`+`/TANDY` → documented
-    winner; `/SID`+`/MT32` → MIDI music + SID SFX.
+  - Acceptance: `/INNOVA` alone → SID music+SFX; `/INNOVA`+`/TANDY` → documented
+    winner; `/INNOVA`+`/MT32` → MIDI music + SID SFX.
 - [ ] **3. SFX table.**
   - [ ] 3.1 Enumerate SFX ids (from `tools/audio/sfx/*.yaml` at build).
   - [ ] 3.2 Shim-owned waveform/ADSR consts per id (noise SFX → steal path).
@@ -144,7 +145,7 @@ Speaker-noise rejected (standing downsides).
   - Acceptance: every SFX audible and recognizable; no combined-waveform
     byte escapes (lock-up rule holds).
 - [ ] **4. Runners.**
-  - [ ] 4.1 `run-sid` (+`.ps1`): `sbtype=none, oplmode=none`, `[innova]
+  - [ ] 4.1 `run-innova` (+`.ps1`): `sbtype=none, oplmode=none`, `[innova]
     innova=true`, speaker on for PCM cry.
   - [ ] 4.2 `DEBUG_AUDIO TRACK=... /LOOP` smoke.
   - Acceptance: cold DOSBox-X boot to music with the pinned conf.
@@ -157,6 +158,22 @@ Speaker-noise rejected (standing downsides).
     no SB, A4 tuner check.
   - [ ] 5.4 Master-merge needs maintainer sign-off; VOGONS gap stays
     deferred.
+
+## Build-flag convention (matches the other-shim ifdef pass)
+
+- Makefile `Audio device / data inclusion flags` block: `ENABLE_AUDIO_INNOVA`,
+  `ENABLE_AUDIO_OPL`, `ENABLE_AUDIO_SPK` added alongside the existing
+  `ENABLE_PIKA_PCM` / `ENABLE_AUDIO_MIDI` / `ENABLE_AUDIO_OPL_ENH` /
+  `ENABLE_AUDIO_TANDY`, each `?= 1` with a matching
+  `NASMFLAGS += -D ENABLE_...=$(ENABLE_...)` line. `0` builds the stub.
+- Shim guard shape (tandy/mpu401 pattern): `%ifndef ENABLE_AUDIO_X` /
+  `%define ENABLE_AUDIO_X 1` / `%if ENABLE_AUDIO_X != 0` wrapping the full
+  driver, `%else` providing `ret`-only entry points plus a zeroed
+  `g_*_on`/`g_*_present` byte so `audio_hal` links unchanged. Applies to
+  `innova_shim.asm` (`ENABLE_AUDIO_INNOVA`), `opl_shim.asm`
+  (`ENABLE_AUDIO_OPL`), `spk_shim.asm` (`ENABLE_AUDIO_SPK`).
+- `AUDIO_SRCS` lists `src/audio/innova_shim.asm` with the other shims; no
+  asset dep (duty/sustain tables are inline consts, not generated blobs).
 
 ## Risks
 

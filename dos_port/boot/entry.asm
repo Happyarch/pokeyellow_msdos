@@ -57,8 +57,7 @@ extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
-extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3
-extern g_audio_forced    ; src/audio/audio_hal.asm — /FLAG demands, bit N = device N
+extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3, /INNOVA = 4
 extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
 extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
 extern Init              ; src/home/init.asm — power-on init
@@ -99,7 +98,7 @@ arg_nosound:  db '/NOSOUND', 0
 arg_mt32:     db '/MT32',    0
 arg_gm:       db '/GM',      0
 arg_tandy:    db '/TANDY',   0
-arg_covox:    db '/COVOX',   0
+arg_innova:   db '/INNOVA',  0
 arg_spk:      db '/SPK',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
@@ -305,7 +304,7 @@ alloc_gb_memory:
 
 ; ---------------------------------------------------------------------------
 ; parse_cmdline — scan the DOS command line for the audio and debug options:
-; /NOSOUND, /MT32, /GM, /TANDY, /SPK, /NOENH, /LOOP.
+; /NOSOUND, /MT32, /GM, /TANDY, /INNOVA, /SPK, /NOENH, /LOOP.
 ; ---------------------------------------------------------------------------
 parse_cmdline:
     push eax
@@ -355,14 +354,14 @@ parse_cmdline:
     or dword [g_audio_forced], 1 << 2    ; FORCE_TANDY (DEV_TANDY = 2)
 .no_tandy:
 
-    ; /COVOX: explicit-only DAC demand (no g_cfg_shim value — the legacy byte
-    ; has none for it). Priority sits between /TANDY and /SPK, and the
-    ; solve checks forced bits in that same order.
-    mov edi, arg_covox
+    ; /TANDY wins if given (checked first, /INNOVA then /SPK only fill unset)
+    cmp byte [g_cfg_shim], 0
+    jnz .no_innova
+    mov edi, arg_innova
     call find_token
-    jnz .no_covox
-    or dword [g_audio_forced], 1 << 5    ; FORCE_COVOX (DEV_COVOX = 5)
-.no_covox:
+    jnz .no_innova
+    mov byte [g_cfg_shim], 4      ; force the Innovation SSI-2001 shim
+.no_innova:
 
     cmp byte [g_cfg_shim], 0
     jnz .no_spk

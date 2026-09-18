@@ -934,3 +934,32 @@ OplRegGroups:
 
 %include "assets/opl_patches.inc"
 
+section .bss
+
+voice_state:    resb 4 * VS_SIZE
+master_att:     resb 1
+nr51_snap:      resb 1
+g_opl_ch_override: resb 4   ; per-channel patch-index override (0xFF = none)
+
+%else
+
+section .text
+opl_init:
+opl_shutdown:
+opl_silence:
+opl_pass:
+opl_dbg_snapshot:
+opl_song_patch_select:
+opl_write:
+opl_write_hi:
+    ret
+
+section .data
+g_opl_present:  db 0
+g_opl3:         db 0
+OplPatches:     db 0
+OplSlotMod:     db 0
+OplRegGroups:   db 0
+OplMasterAttTable: db 0
+
+%endif
