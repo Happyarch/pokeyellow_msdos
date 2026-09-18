@@ -112,15 +112,15 @@ Emulator support confirmed in-tree: `sbtype=gb` forces CMS
     substring-safe.
 - [ ] **1. Driver `src/audio/cms_shim.asm`** (port-only HAL, no DEVIATION —
   current house rule, not the seedling's `DEVIATION{class=HAL}` line).
-  - [ ] 1.1 Skeleton: house-style header, `CMS_BASE 0x220` + port-pair equs,
-    per-voice state, `cms_init/pass/silence/shutdown/dbg_snapshot` +
-    `g_cms_on`, `ENABLE_AUDIO_CMS` guard + stubs.
-  - [ ] 1.2 Tick pass: GB ch0/ch1 → square voices, ch2 → envelope
-    triangle/sawtooth voice (Fig.5 f/h), ch3 → noise generator; software
-    envelope/sweep/length in GB units (Tandy pattern); restart-consume;
-    NR50/NR51 handling; MIDI SFX-only guard (tandy shape, for 2.3's sake).
-  - [ ] 1.3 `cms_silence` (SE=0 + zero amplitudes) + pre-clip hook +
-    `cms_dbg_snapshot` (mpu401 shape).
+  - [x] 1.1 Skeleton: house-style header, `CMS_BASE 0x220` + port-pair equs,
+    per-voice state, six globals. No DEVIATION. `ENABLE_AUDIO_CMS` guard.
+  - [x] 1.2 Tick pass: ch0/ch1 → square v1/v2 (duty collapses); ch2 → v3
+    envelope triangle (Fig.5 row f, $18 fixed at init); ch3 → v4 noise
+    presets (normative Table 3 over `11`-follow `[?]`); GB-unit
+    envelope/sweep/length; restart-consume; NR50 master; NR51 mute; MIDI
+    SFX-only guard (tandy shape); §9.2 bring-up; repeat-write elision via
+    `cms_wreg`. Known limit: wave notes above ~1 kHz envelope ceiling
+    flatten in HW — 1.3 tuner item.
   - Acceptance: nasm clean both guard modes, lint 0, silence is silent,
     tuner-verified pitch per voice.
 - [ ] **2. Dispatch + runner.**
