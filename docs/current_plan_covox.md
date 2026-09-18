@@ -1,11 +1,10 @@
 # Current Plan: Covox / Disney Sound Source support (`/COVOX`, device 5)
 
-Status: **IN BUILD (round-robin subagents, serial).** Last-resort laptop device
-(parallel-port DAC for machines with no sound card). Covox is explicit-only —
-never auto-selected; INNOVA likewise dropped from the auto chain (explicit
-`/INNOVA` only). Stage 0.4 (chain simplification + bitmask) lands first — it
-owns `audio_hal.asm`/`entry.asm`, which stage 2 hooks into.
-`--no-verify` on commits while remote.
+Status: **RESEARCH COMPLETE, PLAN DRAFT — no build commitment.** Low-priority,
+last-resort laptop device (parallel-port DAC for machines with no sound card).
+This file is the parking spot so the 2026-09-18 research intel doesn't evaporate;
+flesh out stages when reference docs land. Speaker remains the auto-fallback;
+Covox fills-if-unset after `/SPK`. `--no-verify` on commits while remote.
 
 Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 
@@ -98,133 +97,46 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 - PCM blob resampling (if any) is Tier-1 generated data or boot-time
   computation — never hand-encoded bytes in the `.asm`.
 
-## Device selection (decided 2026-09-18)
-
-Per-tick `cmp`/`je` ladders are gone. All current + planned devices fit in
-**one 4-byte word**: 8 devices × 4-bit nibbles (`P S M E` = PCM, SFX, MUSIC,
-ENABLE, high→low bit). `g_audio_devices: dd 0` is the solved active set:
-
-| Nibble | Device | Notes |
-|---|---|---|
-| 0 | MIDI stream (GM/MT-32) | music-only row; never SFX/PCM |
-| 1 | OPL FM | auto via probe; SFX voice under MIDI |
-| 2 | Tandy PSG | forced-only (write-only chip, no probe — flag IS the detection) |
-| 3 | PC speaker | always present; SFX blips + PCM PWM |
-| 4 | Innova SID | explicit-only, never auto-set |
-| 5 | Covox DAC | explicit-only, never auto-set |
-| 6 | Disney FIFO | v2 `/DISNEY` flag (reserved) |
-| 7 | SB DSP | PCM-only row (`g_sb_present`) |
-
-- `g_audio_forced: dd 0` records the `/FLAG`-demanded subset (low 8 bits) —
-  EN means "in the solved set"; forced-vs-auto lives here because the
-  nibbles are full. `parse_cmdline` sets forced bits (`/MT32|/GM`→MIDI,
-  `/TANDY`, `/INNOVA`, `/COVOX`, `/DISNEY`, `/SPK`). Multiple forced shim
-  bits resolve by fixed priority TANDY > INNOVA > COVOX > SPK.
-- `audio_init`: `solved = forced ∩ available`, then auto-fill touches ONLY
-  OPL (probe) or speaker (always present). A forced bit whose driver
-  compiled out (`ENABLE_*=0`) or whose probe fails (MPU, OPL) is cleared.
-  Compiled-out drivers gate on their `g_*_present` flags so a cleared bit is
-  the only outcome.
-- Solved path (pointers resolved at init from the role fields, called blindly
-  per tick — zero compares): MIDI nibble music → music = MIDI stream,
-  sfx = OPL pass if its SFX field set else speaker pass; otherwise the single
-  shim pass voices music+SFX together (never double-pumped — one pass, one
-  call), speaker fallback when nothing else selected. Covox/DSS have no
-  speaker in the chain (DAC covers SFX + cry; speaker bit-bang moot). PCM
-  selection is per-cry, not per-tick: `PlayPikachuSoundClip` branches on the
-  PCM fields (DAC > SB DSP > speaker PWM).
-- `g_shim_device` byte stays updated from the solved set (debug-snapshot
-  compat); the tick loop reads pointers, never the byte.
-
 ## Stages
 
-- [x] **0.1. References sufficient.** Guide PDF → `docs/sound/` + distilled
-  `DSS_Programmers_Guide.md` + `dss_data_path.svg` /
-  `dss_power_control.svg`; README index rows. 0.1.2 (Mark Phillips) and
-  0.1.3 (VOGONS) dropped 2026-09-18 — the programming manual already carries
-  the register-level interface. Reopen only if a build question needs them.
-- [x] **0.2. Preconditions (read-only, remote-safe).**
-  - [x] 0.2.1 Port I/O proven by tree precedent (PIT/VGA/OPL `OUT`s run every
-    boot — CWSDPMI grants port permission); residual risk narrowed to LPT
-    specifically (nothing has ever touched `378h`); 1-byte probe plan
-    recorded for real HW (write `AAh`, park at 0, no strobe/IRQ/DMA).
-    DOSBox-X: `disney=true` accepts raw `OUT 378h` (Covox-compat path).
-  - [x] 0.2.2 `/COVOX` collision-free both directions (`find_token` is plain
-    substring match; `/CO` vs `/COM1-4` differs at char 3); `arg_covox` +
-    `FORCE_COVOX` parse arm already in-tree from 0.4.
-  - [x] 0.2.3 `DEV_COVOX` nibble 5 + mask words in-tree; `audio_init` clears
-    the bit until stage 2; runner injects `[speaker] disney=true`
-    (`run-tandy` pattern — pinned `dosbox-x.conf` has no `[speaker]`
-    section); `[audio] COVOX_RATE` draft ready for `input_cfg.asm`
-    (word literal, default 7000, clamp 4000–44500, parse-once).
-- [x] **0.4. Chain simplification + bitmask (FIRST dispatch — owns
-  `audio_hal.asm` + `entry.asm`, lands before stage 2).**
-  - [x] 0.4.1 Mask words + `DEV_*` nibbles; `parse_cmdline` sets forced bits;
-    fixed force priority TANDY > INNOVA > COVOX > SPK.
-  - [x] 0.4.2 `audio_init` solve (`forced ∩ available`, OPL-probe / SPK-only
-    auto-fill, compiled-out/absent clearing); INNOVA never auto-set
-    (explicit `/INNOVA` keeps working — see `current_plan_sid.md` stage 2).
-  - [x] 0.4.3 Solved tick pointers (zero per-tick compares); music/sfx/pcm
-    role fields; MIDI music + OPL3-SFX split; Covox/DSS speakerless;
-    `PlayPikachuSoundClip` branches on PCM fields; `g_shim_device` compat.
-  - Acceptance: nasm clean all `ENABLE_*` combos, lint 0, every existing
-    selection (`/TANDY`, `/SPK`, `/MT32`, `/GM`, default, `/NOSOUND`)
-    behaves identically; `/INNOVA` still forces device 4.
+- [ ] **0.1. References mirrored.** Guide PDF → `docs/sound/` + vision
+  transcription; Mark Phillips DSS programming notes; VOGONS pinout thread;
+  README index rows under a new Covox/DSS heading. Expect plan updates for
+  inaccuracies and overturned assumptions once primary sources are read.
+- [ ] **0.2. Preconditions (read-only, remote-safe).**
+  - [ ] 0.2.1 `378h` `OUT` from protected mode under CWSDPMI (port-permission
+    risk — verify with a 1-byte probe harness before building the pump).
+  - [ ] 0.2.2 `/COVOX` flag: substring-safe vs existing tokens
+    (`/COM1` precedent: check `find_token` collisions); precedence fills-if-
+    unset after `/SPK`; new `arg_covox` string.
+  - [ ] 0.2.3 `g_shim_device=5` free (0 none, 1 OPL, 2 SN76489, 3 speaker,
+    4 innova); `disney=true` runner config; `[audio]` section design for
+    `input_cfg.asm` (`covox_rate`, default 7000, clamp 4000–44500).
 - [ ] **1. Mixer + pump (`src/audio/covox_shim.asm`).**
-  - [x] 1.1 Skeleton: house-style header, `COVOX_DATA 0x378` equ,
+  - [ ] 1.1 Skeleton: house-style header, `COVOX_DATA 0x378` equ,
     rate-agnostic fixed-point voice state, six globals. No DEVIATION.
-    `extern g_covox_rate` (input_cfg owns it later); `ENABLE_AUDIO_COVOX`
-    guard + stubs.
-  - [x] 1.2 Per-tick render to 2048 B ring (pump deferred): restart-consume,
-    GB-unit envelope/sweep/length, NR50 master, NR51 mute, MIDI SFX-only
-    guard (tandy shape, for 2.3); squares at GB duty, wave RAM verbatim,
-    real 15/7-bit LFSR noise; unsigned out, silence = 128; samples =
-    rate/60 Bresenham, zero 7 kHz literals.
-  - [x] 1.3 Pump loop: per-tick sample count derived from `g_covox_rate`,
+  - [ ] 1.2 Per-tick render (see Channel mapping): duty squares, verbatim
+    wave table, software LFSR noise, GB-unit envelope/sweep/length.
+  - [ ] 1.3 Pump loop: per-tick sample count derived from `g_covox_rate`,
     tight `OUT` burst (`sb_pcm` `pcm_pace` is the pacing template if even
-    spacing proves necessary). Done: `covox_pump` drains the ring with
-    rate/60 + Bresenham carry (fill/drain lockstep), empty emits 128,
-    send-while-low with bounded poll of 64 then write-anyway (raw hardware
-    has no status bit; DSS accepts raw writes); no strobe (v2 path).
-  - [x] 1.4 Cry arm in `PlayPikachuSoundClip` (blob → DAC at `g_covox_rate`)
-    + `g_covox_on` guards + `covox_dbg_snapshot` (mpu401 shape). Done:
-    `covox_play_clip` streams per-play (8.8 step, Tier-1 blob untouched);
-    DAC nibble tested first, `pika_dbg_device` 3 = DAC; Makefile listing +
-    `input_cfg` `COVOX_RATE` literal (default 7000, clamp 4000–44500) +
-    window-9 extension landed too.
+    spacing proves necessary).
+  - [ ] 1.4 Cry arm in `PlayPikachuSoundClip` (blob → DAC at `g_covox_rate`)
+    + `g_covox_on` guards + `covox_dbg_snapshot` (mpu401 shape).
   - Acceptance: nasm clean, lint 0, silence is silent, tuner-verified pitch
     on all four voices at 7 kHz.
-- [x] **2. Dispatch + ifdef.**
-  - [x] 2.1 `ENABLE_AUDIO_COVOX` guard (new-convention `%if/%else` stub shape)
-    + Makefile `?= 1` passthrough (was missing — landed as stage-2 fix).
-  - [x] 2.2 `/COVOX` parse + 0.2.2 precedence; device-5 solve arm
-    (`covox_init` + role nibble, INNOVA priority shape); stale 0.4 comments
-    repaired.
-  - [x] 2.3 MIDI-coexistence guard verified (tandy shape in `covox_setup`,
-    correct against the solved MIDI path — no change needed).
-  - [x] Runner: `run-covox` (+`.ps1` twin, +x) — `/COVOX`, `disney=true`,
-    `sbtype=none`, `oplmode=none`, speaker on for PCM cry.
-  - Acceptance (static traces walked): `/COVOX` alone → DAC music+SFX;
-    `/COVOX`+`/TANDY` → TANDY wins; `/COVOX`+`/MT32` → MIDI music + DAC SFX.
-- [ ] **3. Ear-checks + rate sweep (maintainer in-DOS; static half done).**
-  - [x] 3.0 Static verification: 5 acceptance traces re-walked post-stage-2
-    (incl. COVOX=0 stub combo silent-no-hang, default boot fully dark);
-    33/33 nasm matrix (11 files × default/all-off/COVOX=0); lint 0, no new
-    tokens; runner diff-vs-tandy = documented swaps only, conf keys pinned,
-    `bash -n` clean; window-9 snapshot map recorded (Covox block file
-    `0x238..0x23F`, `g_shim_device` at `0x21D`, `pika_dbg_device` at `0x218`).
-  - [ ] 3.1 Cold boot `run-covox` → DAC music (silence = conf issue;
-    garbage = mixer scaling — inspect window 9).
-  - [ ] 3.2 Catch sequence (pulse squares + true wave triangle + LFSR noise
-    in one flow).
-  - [ ] 3.3 Noise-heavy battle (harsh static, not pitched whine, not silent).
-  - [ ] 3.4 Pikachu cry via DAC (`pika_dbg_device=3` at dump `0x218`).
-  - [ ] 3.5 Rate sweep 7/11/22 kHz via `COVOX_RATE` (pitch must stay
-    identical; hiss rises). Quick combos: `/COVOX /TANDY`, `/COVOX /MT32`.
+- [ ] **2. Dispatch + ifdef.**
+  - [ ] 2.1 `ENABLE_AUDIO_COVOX` guard (new-convention `%if/%else` stub shape).
+  - [ ] 2.2 `/COVOX` parse + 0.2.2 precedence; `audio_hal.asm` device-5 arms.
+  - [ ] 2.3 MIDI-coexistence guard (innova 2.3 shape: SFX-only under
+    `g_midi_music`) — mixer mutes music voices unless an SFX owns the channel.
+  - Acceptance: `/COVOX` alone → DAC music+SFX; `/COVOX`+`/TANDY` →
+    documented winner; `/COVOX`+`/MT32` → MIDI music + DAC SFX.
+- [ ] **3. Ear-checks + rate sweep.** Pitched/noise/battle coverage; catch
+  sequence (pulse + wave + noise in one flow); cry via DAC; rate sweep
+  7/11/22 kHz in DOSBox-X (emulation fidelity ceiling) + maintainer real-
+  hardware spot-check if a dongle surfaces.
 - [ ] **4. Deferred v2 (explicit non-goals).** DSS FIFO/flow-control mode
-  under its own `/DISNEY` flag (decided 2026-09-18; nibble 6 reserved) — the
-  FIFO section is already in `DSS_Programmers_Guide.md` §§3–6, no further
-  references needed. Dithering, stereo-on-1, per-song voice tables.
+  (needs 0.1 transcription), dithering, stereo-on-1, per-song voice tables.
   Recorded, not forgotten.
 
 ## Risks
@@ -235,12 +147,8 @@ pass-through); no real-hardware reference (`disney=true` is truth); engine
 audio defects stay engine-side — mixer reads post-tick state only (note OPEN
 regression `regression-audio-title-screen-corruption`, unrelated to this work).
 
-## Decision log (2026-09-18)
+## Open items (maintainer calls, needed at flesh-out)
 
-- Fallback: Covox explicit-only, never auto-selected; INNOVA likewise
-  explicit-only. Auto-fill sets OPL or speaker only.
-- Dispatch: one 4-byte nibble word (`g_audio_devices`) + `g_audio_forced`,
-  music/sfx/pcm role fields, pointers solved once at init.
-- v2 FIFO gets its own `/DISNEY` flag (nibble 6 reserved).
-- Rate design confirmed: 7000 default, clamp 4000–44500.
-- 0.1.2/0.1.3 reference fetches dropped — the manual suffices.
+- Auto-fallback order: Covox below SPK (current draft), or above it (DAC >
+  1-bit beeper on merit)?
+- DSS FIFO mode: flagless inside the one driver, or its own `/DISNEY` flag?
