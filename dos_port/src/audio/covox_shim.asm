@@ -866,7 +866,7 @@ covox_setup:
 ; ---------------------------------------------------------------------------
 ; covox_dbg_snapshot — copy shim state into GB scratch (mpu401's
 ; midi_dbg_snapshot shape: mov al/mov [ebp+...] stores, EAX only).
-; Provisional 8-byte block at COVOX_SNAP (+0x81..+0x86; see header):
+; Provisional 8-byte block at COVOX_SNAP (+0x81..+0x88; see header):
 ;   +0x81 g_covox_on  +0x82/83 s_wr (monotonic: proves the render advanced)
 ;   +0x84 s_master    +0x85/86 packed ch0/1 amps +0x87/88 packed ch2/3 amps
 ; Packed voice byte: hi nibble = latched amplitude 0-15, bit 0 = KEY flag.

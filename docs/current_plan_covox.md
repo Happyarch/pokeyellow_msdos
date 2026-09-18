@@ -194,17 +194,33 @@ ENABLE, high→low bit). `g_audio_devices: dd 0` is the solved active set:
     window-9 extension landed too.
   - Acceptance: nasm clean, lint 0, silence is silent, tuner-verified pitch
     on all four voices at 7 kHz.
-- [ ] **2. Dispatch + ifdef.**
-  - [ ] 2.1 `ENABLE_AUDIO_COVOX` guard (new-convention `%if/%else` stub shape).
-  - [ ] 2.2 `/COVOX` parse + 0.2.2 precedence; `audio_hal.asm` device-5 arms.
-  - [ ] 2.3 MIDI-coexistence guard (innova 2.3 shape: SFX-only under
-    `g_midi_music`) — mixer mutes music voices unless an SFX owns the channel.
-  - Acceptance: `/COVOX` alone → DAC music+SFX; `/COVOX`+`/TANDY` →
-    documented winner; `/COVOX`+`/MT32` → MIDI music + DAC SFX.
-- [ ] **3. Ear-checks + rate sweep.** Pitched/noise/battle coverage; catch
-  sequence (pulse + wave + noise in one flow); cry via DAC; rate sweep
-  7/11/22 kHz in DOSBox-X (emulation fidelity ceiling) + maintainer real-
-  hardware spot-check if a dongle surfaces.
+- [x] **2. Dispatch + ifdef.**
+  - [x] 2.1 `ENABLE_AUDIO_COVOX` guard (new-convention `%if/%else` stub shape)
+    + Makefile `?= 1` passthrough (was missing — landed as stage-2 fix).
+  - [x] 2.2 `/COVOX` parse + 0.2.2 precedence; device-5 solve arm
+    (`covox_init` + role nibble, INNOVA priority shape); stale 0.4 comments
+    repaired.
+  - [x] 2.3 MIDI-coexistence guard verified (tandy shape in `covox_setup`,
+    correct against the solved MIDI path — no change needed).
+  - [x] Runner: `run-covox` (+`.ps1` twin, +x) — `/COVOX`, `disney=true`,
+    `sbtype=none`, `oplmode=none`, speaker on for PCM cry.
+  - Acceptance (static traces walked): `/COVOX` alone → DAC music+SFX;
+    `/COVOX`+`/TANDY` → TANDY wins; `/COVOX`+`/MT32` → MIDI music + DAC SFX.
+- [ ] **3. Ear-checks + rate sweep (maintainer in-DOS; static half done).**
+  - [x] 3.0 Static verification: 5 acceptance traces re-walked post-stage-2
+    (incl. COVOX=0 stub combo silent-no-hang, default boot fully dark);
+    33/33 nasm matrix (11 files × default/all-off/COVOX=0); lint 0, no new
+    tokens; runner diff-vs-tandy = documented swaps only, conf keys pinned,
+    `bash -n` clean; window-9 snapshot map recorded (Covox block file
+    `0x238..0x23F`, `g_shim_device` at `0x21D`, `pika_dbg_device` at `0x218`).
+  - [ ] 3.1 Cold boot `run-covox` → DAC music (silence = conf issue;
+    garbage = mixer scaling — inspect window 9).
+  - [ ] 3.2 Catch sequence (pulse squares + true wave triangle + LFSR noise
+    in one flow).
+  - [ ] 3.3 Noise-heavy battle (harsh static, not pitched whine, not silent).
+  - [ ] 3.4 Pikachu cry via DAC (`pika_dbg_device=3` at dump `0x218`).
+  - [ ] 3.5 Rate sweep 7/11/22 kHz via `COVOX_RATE` (pitch must stay
+    identical; hiss rises). Quick combos: `/COVOX /TANDY`, `/COVOX /MT32`.
 - [ ] **4. Deferred v2 (explicit non-goals).** DSS FIFO/flow-control mode
   under its own `/DISNEY` flag (decided 2026-09-18; nibble 6 reserved) — the
   FIFO section is already in `DSS_Programmers_Guide.md` §§3–6, no further
