@@ -61,9 +61,9 @@ from the nerdlypleasures mirror + AmiBay corroboration. Full detail lives in
 
 ## Noise handling (decided: V3-steal default, song-checked)
 
-Maintainer ear: noise is rare; V3 drops when ch4 fires. Validation in 0.3:
-per-song steal assignment (default V3; documented exceptions where V3 is
-load-bearing). Mechanics: save V3 `$0E–$14`, noise control + ADSR, restore on
+Maintainer ear: noise is rare; V3 drops when ch4 fires — uniform rule, no
+per-song exceptions (the 0.3 metric exceptions were dropped by maintainer
+decision). Mechanics: save V3 `$0E–$14`, noise control + ADSR, restore on
 note-off, TEST pulse on release, ear-check transitions at Release 0.
 Speaker-noise rejected (standing downsides).
 
@@ -107,14 +107,13 @@ Speaker-noise rejected (standing downsides).
   - [x] 0.3.1 `simulate_song` overlap stats over all 49 base songs (script
     at `/tmp/opencode/noise_overlap.py`; victim = min-overlap pitched
     channel, tie-break V3>V2>V1).
-  - [x] 0.3.2 V3-default CONFIRMED: 33 songs use no noise at all; 13 of the
-    16 noise songs minimize dropout on V3. Exceptions: Dungeon1 → V2 (thin
-    margin: 1510 vs 1606 overlapped frames); Lavender → V1 by the metric
-    (17784 vs 21888) with a salience caveat — ch1 is the lead, so stealing
-    V3's bass under constant noise may still sound better; decide by ear at
-    build. YellowUnusedSong → V1 (unused song, low stakes).
-  - [x] 0.3.3 Table recorded here. Acceptance met: every base song has a
-    steal assignment (46 × V3 including no-noise songs, 1 × V2, 2 × V1).
+  - [x] 0.3.2 V3 across the board (maintainer decision): 33 songs use no
+    noise at all and 13 of 16 noise songs minimize dropout on V3; the three
+    metric exceptions (Dungeon1→V2 thin margin, Lavender→V1 with
+    lead-salience caveat, YellowUnusedSong→V1) are dropped for one uniform
+    rule — no per-song steal table in the driver.
+  - [x] 0.3.3 Table recorded here. Acceptance met: every base song steals
+    V3 (49 × V3, uniform).
 - [ ] **1. Driver `src/audio/sid_shim.asm`.**
   - [ ] 1.1 Skeleton: house-style header, equs (`SID_BASE 0x280`,
     card-clock const), per-voice state, six globals. No DEVIATION.
