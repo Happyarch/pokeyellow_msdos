@@ -105,7 +105,7 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
     `dss_power_control.svg`; README index rows. Expect plan updates for
     inaccuracies once further primaries are read.
   - [ ] 0.1.2 Mark Phillips DSS programming notes (fetch + mirror).
-  - [ ] 0.1.3 VOGONS DSS pinout + 2015 reverse-engineering thread.
+  - [ ] 0.1.3 VOGONS 2015 reverse-engineering thread.
 - [ ] **0.2. Preconditions (read-only, remote-safe).**
   - [ ] 0.2.1 `378h` `OUT` from protected mode under CWSDPMI (port-permission
     risk — verify with a 1-byte probe harness before building the pump).
