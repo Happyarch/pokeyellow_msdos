@@ -1,10 +1,11 @@
 # Current Plan: Covox / Disney Sound Source support (`/COVOX`, device 5)
 
-Status: **RESEARCH COMPLETE, PLAN DRAFT — no build commitment.** Low-priority,
-last-resort laptop device (parallel-port DAC for machines with no sound card).
-This file is the parking spot so the 2026-09-18 research intel doesn't evaporate;
-flesh out stages when reference docs land. Speaker remains the auto-fallback;
-Covox fills-if-unset after `/SPK`. `--no-verify` on commits while remote.
+Status: **IN BUILD (round-robin subagents, serial).** Last-resort laptop device
+(parallel-port DAC for machines with no sound card). Covox is explicit-only —
+never auto-selected; INNOVA likewise dropped from the auto chain (explicit
+`/INNOVA` only). Stage 0.4 (chain simplification + bitmask) lands first — it
+owns `audio_hal.asm`/`entry.asm`, which stage 2 hooks into.
+`--no-verify` on commits while remote.
 
 Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 
@@ -97,25 +98,74 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 - PCM blob resampling (if any) is Tier-1 generated data or boot-time
   computation — never hand-encoded bytes in the `.asm`.
 
+## Device selection (decided 2026-09-18)
+
+Per-tick `cmp`/`je` ladders are gone. All current + planned devices fit in
+**one 4-byte word**: 8 devices × 4-bit nibbles (`P S M E` = PCM, SFX, MUSIC,
+ENABLE, high→low bit). `g_audio_devices: dd 0` is the solved active set:
+
+| Nibble | Device | Notes |
+|---|---|---|
+| 0 | MIDI stream (GM/MT-32) | music-only row; never SFX/PCM |
+| 1 | OPL FM | auto via probe; SFX voice under MIDI |
+| 2 | Tandy PSG | forced-only (write-only chip, no probe — flag IS the detection) |
+| 3 | PC speaker | always present; SFX blips + PCM PWM |
+| 4 | Innova SID | explicit-only, never auto-set |
+| 5 | Covox DAC | explicit-only, never auto-set |
+| 6 | Disney FIFO | v2 `/DISNEY` flag (reserved) |
+| 7 | SB DSP | PCM-only row (`g_sb_present`) |
+
+- `g_audio_forced: dd 0` records the `/FLAG`-demanded subset (low 8 bits) —
+  EN means "in the solved set"; forced-vs-auto lives here because the
+  nibbles are full. `parse_cmdline` sets forced bits (`/MT32|/GM`→MIDI,
+  `/TANDY`, `/INNOVA`, `/COVOX`, `/DISNEY`, `/SPK`). Multiple forced shim
+  bits resolve by fixed priority TANDY > INNOVA > COVOX > SPK.
+- `audio_init`: `solved = forced ∩ available`, then auto-fill touches ONLY
+  OPL (probe) or speaker (always present). A forced bit whose driver
+  compiled out (`ENABLE_*=0`) or whose probe fails (MPU, OPL) is cleared.
+  Compiled-out drivers gate on their `g_*_present` flags so a cleared bit is
+  the only outcome.
+- Solved path (pointers resolved at init from the role fields, called blindly
+  per tick — zero compares): MIDI nibble music → music = MIDI stream,
+  sfx = OPL pass if its SFX field set else speaker pass; otherwise the single
+  shim pass voices music+SFX together (never double-pumped — one pass, one
+  call), speaker fallback when nothing else selected. Covox/DSS have no
+  speaker in the chain (DAC covers SFX + cry; speaker bit-bang moot). PCM
+  selection is per-cry, not per-tick: `PlayPikachuSoundClip` branches on the
+  PCM fields (DAC > SB DSP > speaker PWM).
+- `g_shim_device` byte stays updated from the solved set (debug-snapshot
+  compat); the tick loop reads pointers, never the byte.
+
 ## Stages
 
-- [ ] **0.1. References mirrored.**
-  - [x] 0.1.1 Guide PDF → `docs/sound/` + vision-transcribed
-    `DSS_Programmers_Guide.md` + `dss_data_path.svg` /
-    `dss_power_control.svg`; README index rows. Expect plan updates for
-    inaccuracies once further primaries are read.
-  - [ ] 0.1.2 Mark Phillips DSS programming notes (fetch + mirror).
-  - [ ] 0.1.3 VOGONS 2015 reverse-engineering thread, protocol-relevant
-    posts.
+- [x] **0.1. References sufficient.** Guide PDF → `docs/sound/` + distilled
+  `DSS_Programmers_Guide.md` + `dss_data_path.svg` /
+  `dss_power_control.svg`; README index rows. 0.1.2 (Mark Phillips) and
+  0.1.3 (VOGONS) dropped 2026-09-18 — the programming manual already carries
+  the register-level interface. Reopen only if a build question needs them.
 - [ ] **0.2. Preconditions (read-only, remote-safe).**
   - [ ] 0.2.1 `378h` `OUT` from protected mode under CWSDPMI (port-permission
     risk — verify with a 1-byte probe harness before building the pump).
   - [ ] 0.2.2 `/COVOX` flag: substring-safe vs existing tokens
-    (`/COM1` precedent: check `find_token` collisions); precedence fills-if-
-    unset after `/SPK`; new `arg_covox` string.
-  - [ ] 0.2.3 `g_shim_device=5` free (0 none, 1 OPL, 2 SN76489, 3 speaker,
-    4 innova); `disney=true` runner config; `[audio]` section design for
-    `input_cfg.asm` (`covox_rate`, default 7000, clamp 4000–44500).
+    (`/COM1` precedent: check `find_token` collisions); explicit-only force
+    bit; new `arg_covox` string.
+  - [ ] 0.2.3 `DEV_COVOX` nibble 5 in `g_audio_devices`/`g_audio_forced`;
+    `disney=true` runner config; `[audio]` section design for
+    `input_cfg.asm` (`covox_rate`, default 7000, clamp 4000–44500 —
+    maintainer-confirmed 2026-09-18).
+- [ ] **0.4. Chain simplification + bitmask (FIRST dispatch — owns
+  `audio_hal.asm` + `entry.asm`, lands before stage 2).**
+  - [ ] 0.4.1 Mask words + `DEV_*` nibbles; `parse_cmdline` sets forced bits;
+    fixed force priority TANDY > INNOVA > COVOX > SPK.
+  - [ ] 0.4.2 `audio_init` solve (`forced ∩ available`, OPL-probe / SPK-only
+    auto-fill, compiled-out/absent clearing); INNOVA never auto-set
+    (explicit `/INNOVA` keeps working — see `current_plan_sid.md` stage 2).
+  - [ ] 0.4.3 Solved tick pointers (zero per-tick compares); music/sfx/pcm
+    role fields; MIDI music + OPL3-SFX split; Covox/DSS speakerless;
+    `PlayPikachuSoundClip` branches on PCM fields; `g_shim_device` compat.
+  - Acceptance: nasm clean all `ENABLE_*` combos, lint 0, every existing
+    selection (`/TANDY`, `/SPK`, `/MT32`, `/GM`, default, `/NOSOUND`)
+    behaves identically; `/INNOVA` still forces device 4.
 - [ ] **1. Mixer + pump (`src/audio/covox_shim.asm`).**
   - [ ] 1.1 Skeleton: house-style header, `COVOX_DATA 0x378` equ,
     rate-agnostic fixed-point voice state, six globals. No DEVIATION.
@@ -140,7 +190,9 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
   7/11/22 kHz in DOSBox-X (emulation fidelity ceiling) + maintainer real-
   hardware spot-check if a dongle surfaces.
 - [ ] **4. Deferred v2 (explicit non-goals).** DSS FIFO/flow-control mode
-  (needs 0.1 transcription), dithering, stereo-on-1, per-song voice tables.
+  under its own `/DISNEY` flag (decided 2026-09-18; nibble 6 reserved) — the
+  FIFO section is already in `DSS_Programmers_Guide.md` §§3–6, no further
+  references needed. Dithering, stereo-on-1, per-song voice tables.
   Recorded, not forgotten.
 
 ## Risks
@@ -151,8 +203,12 @@ pass-through); no real-hardware reference (`disney=true` is truth); engine
 audio defects stay engine-side — mixer reads post-tick state only (note OPEN
 regression `regression-audio-title-screen-corruption`, unrelated to this work).
 
-## Open items (maintainer calls, needed at flesh-out)
+## Decision log (2026-09-18)
 
-- Auto-fallback order: Covox below SPK (current draft), or above it (DAC >
-  1-bit beeper on merit)?
-- DSS FIFO mode: flagless inside the one driver, or its own `/DISNEY` flag?
+- Fallback: Covox explicit-only, never auto-selected; INNOVA likewise
+  explicit-only. Auto-fill sets OPL or speaker only.
+- Dispatch: one 4-byte nibble word (`g_audio_devices`) + `g_audio_forced`,
+  music/sfx/pcm role fields, pointers solved once at init.
+- v2 FIFO gets its own `/DISNEY` flag (nibble 6 reserved).
+- Rate design confirmed: 7000 default, clamp 4000–44500.
+- 0.1.2/0.1.3 reference fetches dropped — the manual suffices.

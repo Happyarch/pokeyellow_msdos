@@ -133,7 +133,8 @@ Speaker-noise rejected (standing downsides).
   - [x] 2.1 `g_shim_device=4`: `audio_hal.asm` init + one `audio_tick` arm
     (`.tandy` shape). Done in-tree (externs + `.innova` tick/init/shutdown).
   - [x] 2.2 `/INNOVA` parse + 0.2.1 precedence rule. Done in-tree (`arg_innova`,
-    TANDY > INNOVA > SPK fills-if-unset).
+    TANDY > INNOVA > SPK force priority). Explicit-only since 2026-09-18
+    (never auto-selected — see `current_plan_covox.md` Device selection).
   - [x] 2.3 MIDI-coexistence guard (tandy shape: SFX-only voicing under
     `g_midi_music`, incl. steal entry/tick handling). Done in-tree.
   - [ ] 2.3 MIDI-coexistence guard (tandy 504-509 shape: SFX-only under a
