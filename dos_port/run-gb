@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# dos_port/run-gb — like dos_port/run, but as a PC with a Creative CMS / Game
+# Blaster: Sound Blaster and AdLib emulation OFF, the CMS pair ON, and /GB on
+# the game's command line (the CMS latch is write-only, so the flag IS the
+# detection — see src/audio/cms_shim.asm). Music + SFX play on the SAA1099
+# pair; the Pikachu cry falls through to the PC-speaker PWM player (the SAA
+# has no DAC). The PC speaker stays enabled as the PCM fallback path. Make
+# args pass through, e.g.:
+#   dos_port/run-gb DEBUG_AUDIO=1
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make -C "$DOSPORT" image "$@"
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed 's|^PKMN.EXE$|PKMN.EXE /GB|' "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = gb
+oplmode = none
+
+[speaker]
+pcspeaker = true
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"

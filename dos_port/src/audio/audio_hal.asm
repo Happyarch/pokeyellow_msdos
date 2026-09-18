@@ -61,6 +61,9 @@ extern innova_shutdown            ; src/audio/innova_shim.asm
 extern covox_init                 ; src/audio/covox_shim.asm
 extern covox_pass                 ; src/audio/covox_shim.asm
 extern covox_shutdown             ; src/audio/covox_shim.asm
+extern cms_init                   ; src/audio/cms_shim.asm
+extern cms_pass                   ; src/audio/cms_shim.asm
+extern cms_shutdown               ; src/audio/cms_shim.asm
 extern enh_init                   ; src/audio/opl_enh.asm
 extern enh_seq_tick               ; src/audio/opl_enh.asm
 extern enh_seq_stop               ; src/audio/opl_enh.asm
@@ -143,9 +146,8 @@ audio_init:
     ; g_audio_forced; forced shim bits resolve by fixed priority
     ; TANDY > INNOVA > COVOX > GB > SPK (the SN76489, SID, DAC and CMS latch
     ; are write-only — no probe is possible, the flag IS the detection, so a
-    ; forced TANDY/INNOVA/COVOX/GB/SPK bit always survives this test chain;
-    ; the GB arm itself then falls back, see .wGb). With no forced shim
-    ; standing, POKEMON.CFG [audio] device (g_cfg_audio_device, parsed once
+    ; forced TANDY/INNOVA/COVOX/GB/SPK bit always survives this test chain.
+    ; With no forced shim standing, POKEMON.CFG [audio] device (g_cfg_audio_device, parsed once
     ; at boot; 0xFF = auto) acts as the forced demand in the same order; a
     ; /FLAG above always wins over it. With that at auto too, the default is
     ; OPL when one answered, else the always-present speaker SFX shim so a
@@ -171,7 +173,7 @@ audio_init:
     je .wInnova
     cmp al, 5                     ; COVOX
     je .wCovox
-    cmp al, 8                     ; GB (stage 0.5: .wGb falls back; stage 2 wins)
+    cmp al, 8                     ; GB (explicit /GB or config device 8)
     je .wGb
     cmp al, 3                     ; SPK
     je .wSpk
@@ -204,15 +206,10 @@ audio_init:
     call covox_init
     jmp .haveWinner
 .wGb:
-    ; Stage 0.5 stand-in: no CMS driver exists yet, so there is nothing to
-    ; init and no tick pass to arm (naming one would fail the link in every
-    ; ENABLE_*=0 combo). Clear the demand and take today's auto-fill, exactly
-    ; as an unknown flag behaves; stage 2 replaces this arm with the
-    ; INNOVA-shaped cms_init + EBX=8 winner and the word-2 role nibble below.
-    and dword [g_audio_forced], ~FORCE_CMS
-    cmp byte [g_opl_present], 0
-    jnz .wOpl
-    jmp .wSpk
+    mov ebx, 8                    ; Game Blaster / CMS (explicit /GB only, never auto)
+    mov esi, cms_pass
+    call cms_init
+    jmp .haveWinner
 .wOpl:
     mov ebx, 1                    ; OPL (opl_init already probed above)
     mov esi, opl_pass
@@ -273,8 +270,13 @@ audio_init:
     or eax, (ROLE_PCM | ROLE_EN) << (DEV_SB * 4)
 .noSbBit:
     mov [g_audio_devices], eax
-    mov dword [g_audio_devices2], 0   ; word 2: the CMS nibble lives here from
-                                      ; stage 2 on; no CMS winner exists yet
+    ; word 2: the CMS nibble (nibble 0 = music+SFX+en, never PCM — the SAA
+    ; has no DAC, so the speaker keeps its PCM field under a GB winner)
+    mov dword [g_audio_devices2], 0
+    cmp ebx, DEV_CMS
+    jne .noCmsBit
+    mov dword [g_audio_devices2], (ROLE_MUSIC | ROLE_SFX | ROLE_EN)
+.noCmsBit:
     mov [g_shim_device], bl       ; legacy byte follows the solved winner
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
@@ -290,6 +292,7 @@ audio_shutdown:
     call spk_shim_shutdown        ; speaker gate off (safe always)
     call innova_shutdown          ; leave the SID silent (no-op if inactive)
     call covox_shutdown           ; park the DAC at mid-level (no-op if inactive)
+    call cms_shutdown             ; leave the CMS silent (no-op if inactive)
     ret
 
 ; hal_dbg_snapshot — record the selected shim device at $D246 (DEBUG_AUDIO
@@ -309,7 +312,7 @@ g_cfg_nosound:  db 0              ; /NOSOUND on the command line
 g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3, /INNOVA = 4 (0 = auto; /COVOX and /GB set a forced bit only)
 g_cfg_noenh:    db 0              ; /NOENH: disable the tier-1 OPL enhancement layer
 g_cfg_musicloop: db 0            ; /LOOP: DEBUG_AUDIO harness plays music only, forever
-g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova, 5 covox (6 disney reserved, 8 CMS reserved for stage 2)
+g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 4 innova, 5 covox, 8 CMS (6 disney reserved)
 ; Solved device set (stage 0.4 bitmask): one 4-bit P-S-M-E role nibble per
 ; DEV_* index (PCM, SFX, MUSIC, ENABLE, high to low bit). Written once by
 ; audio_init; the tick slots below are resolved from it.

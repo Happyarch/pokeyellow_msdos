@@ -387,10 +387,8 @@ parse_cmdline:
 
     ; /GB: explicit-only Game Blaster demand (no g_cfg_shim value — the legacy
     ; byte has none for it, same as /COVOX). Priority sits between /COVOX and
-    ; /SPK, and the solve checks forced bits in that same order. Stage 0.5:
-    ; the solve .wGb arm clears this bit and auto-falls-back (stage 2 wires
-    ; cms_init and the word-2 role nibble), so /GB today behaves like an
-    ; unknown flag.
+    ; /SPK, and the solve checks forced bits in that same order (stage 2 arms
+    ; device 8: cms_init + word-2 role nibble).
     mov edi, arg_gb
     call find_token
     jnz .no_gb

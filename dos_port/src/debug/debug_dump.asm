@@ -432,6 +432,7 @@ extern tandy_dbg_snapshot
 extern spk_dbg_snapshot
 extern enh_dbg_snapshot
 extern covox_dbg_snapshot
+extern cms_dbg_snapshot
 extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
@@ -1844,16 +1845,17 @@ windows:
     dd 0xDD8E    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9) [WRAM-expansion shifted]
     dd 0xDFAE    ; opl_dbg_snapshot: present, opl3, voice_state[0..61] [WRAM-expansion shifted]
     ; Window 9 (file 0x200..0x23F): the audio-snapshot tail, repointed at
-    ; (W_PORT_SCRATCH + 0x49) so the Covox block is visible. Post-expansion
+    ; (W_PORT_SCRATCH + 0x4D) so the CMS block is visible. Post-expansion
     ; the snapshots live at 0xF500+ (this row's old wPartyMon5Type2 target
     ; and its $D2xx comment describe the pre-expansion layout and never saw
-    ; them). Covers GB 0xF549..0xF588: MIDI tail (+0x49..5D), innova V1
+    ; them). Covers GB 0xF54D..0xF58C: MIDI scale+CC7 (+0x4D..5D), innova V1
     ; (+0x5E..5F), pika PCM (+0x60..65), hal device (+0x66..67), tandy
     ; (+0x68..6F), speaker (+0x70..77), OPL enh (+0x78..7C), innova V2/V3 +
     ; lastmode (+0x7D..7F), W_CHECK_FOR_TURN (+0x80), Covox DAC (+0x81..88,
-    ; file 0x238..0x23F). The opl SB-detect/MIDI head (+0x40..48) stay
-    ; undumped — one 64-byte window cannot span +0x40..+0x88.
-    dd (W_PORT_SCRATCH + 0x49)
+    ; file 0x234..0x23B), CMS (+0x89..8C, file 0x23C..0x23F). The opl
+    ; SB-detect/MIDI head (+0x40..4C) stays undumped — one 64-byte window
+    ; cannot span +0x40..+0x8C.
+    dd (W_PORT_SCRATCH + 0x4D)
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20) [WRAM-expansion shifted]
@@ -2000,6 +2002,7 @@ RunAudioTest:
     call spk_dbg_snapshot                   ; speaker shim state -> $D250+
     call enh_dbg_snapshot                   ; OPL enh player state -> $D258+
     call covox_dbg_snapshot                 ; Covox DAC state -> W_PORT_SCRATCH+0x81+
+    call cms_dbg_snapshot                   ; CMS state -> W_PORT_SCRATCH+0x89+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi
