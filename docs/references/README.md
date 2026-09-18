@@ -192,6 +192,30 @@ Quick reference:
   [`c64wiki/SID_-_C64-Wiki.html`](c64wiki/) (https://www.c64-wiki.com/wiki/SID,
   fetched 2026-09-18). Same C64-address caveat as above.
 
+### Disney Sound Source / Covox
+
+- **Local PDF** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/DSS_Programmers_Guide.pdf` (*Programmer's Guide to the Disney
+  Sound Source*, 5pp —
+  https://archive.org/download/dss-programmers-guide/dss-programmers-guide.pdf,
+  fetched 2026-09-18). Classical OCR failed on this scan (smearing); the
+  working text source is the vision transcription at
+  `../sound/DSS_Programmers_Guide_VISION.txt`.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc after the MT-32/OPL3/SID convention):
+  `../sound/DSS_Programmers_Guide.md` (guide distillation: power control,
+  FIFO data path/status, interrupt recipe, verbatim example routine, Tandy
+  variant, schematic structural description);
+  `../sound/dss_data_path.svg` (printer port → FIFO → DAC → speaker box) +
+  `../sound/dss_power_control.svg` (SELECT/pin-17 power circuit).
+  Diagram 1 schematic fine print is unrecoverable from this scan — the SVGs
+  depict text-supported paths only.
+- **Background** (2026-09-18, no local mirrors yet — next fetches):
+  Mark Phillips' DSS programming notes, VOGONS DSS pinout + 2015
+  reverse-engineering thread, DOSBox-X sound-card guide
+  (https://dosbox-x.com/wiki/Guide:Sound-card-support-in-DOSBox%E2%80%90X,
+  `disney=true` in `[speaker]`, Covox/MDO compatible).
+
 ---
 
 ## Pokémon Yellow Glitch Reference
