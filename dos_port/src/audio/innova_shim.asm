@@ -12,6 +12,31 @@
 ;   GB ch2 wave    -> V3 triangle  at pitch, NR32 level as sustain
 ;   GB ch3 noise   -> V3-steal     (stage 1b: save $0E-$14, noise, restore)
 ;
+; Stage 3 SFX audit (31 profiles in tools/audio/sfx/*.yaml vs the engine
+; headers audio/headers/sfxheaders*.asm: every yaml channel set equals every
+; bank variant's set, so the yaml ch8 flag IS the engine answer):
+;   noise-driven (16, ch8 present, V3-steal path on live NR42/NR43, no id key):
+;     Ball_Poof 5+8, Damage 8, Doubleslap 8, Faint_Thud 5+8, Go_Inside 8,
+;     Go_Outside 8, Horn_Drill 8, Not_Very_Effective 8, Peck 8, Pound 8,
+;     Psybeam 5+6+8, Psychic_M 5+6+8, Run 8, Start_Menu 8, Super_Effective 8,
+;     Vine_Whip 8
+;   pitched-only (15, default pulse/triangle mapping, no id key):
+;     Ball_Toss 5+6, Caught_Mon 5+6+7 (sole ch7 wave voice), Collision 5,
+;     Denied 5+6, Enter_PC 5, Faint_Fall 5, Ledge 5, Press_AB 5,
+;     Purchase 5+6, Save 5+6, Swap 5+6, Tink 5, Turn_Off_PC 5, Turn_On_PC 5,
+;     Withdraw_Deposit 5
+; No per-id table ships: pitched voices read duty/NR32/envelope live and the
+; steal path latches the live NR42/NR43 payload, so per-SFX differences already
+; in the engine data (e.g. Pound's noise_note args) arrive with no lookup. The
+; yaml volume/patch columns (85-110, whoosh/thud/crunch/click/poof) tune the
+; OPL mixer only. SFX ids repeat across audio banks (0xB6 is Save and
+; Horn_Drill, 0xAB Withdraw_Deposit and Vine_Whip), so an id-keyed table with
+; no bank key would misroute. Zero rows needs no generator (the InnovaDutyPW
+; inline precedent applies twice over). Ear-check cover (stage 3.3, in-DOS):
+; Press_AB (pulse, already in RunAudioTest), Caught_Mon (wave), Pound,
+; Go_Outside, Start_Menu (steal: thud/whoosh/click), Faint_Thud, Psybeam
+; (mixed), Super_Effective, Psychic_M (battle noise-heavy).
+;
 ; Like tandy_shim, the engine's NRx4 restart bit is CONSUMED here, and what
 ; the SID lacks is emulated in software per tick, in GB units: envelope
 ; (NRx2, ridden as the sustain level with gate held on and A/D/R 0), sweep
@@ -616,7 +641,8 @@ innova_volume:
 ; innova_noise_keyon — ch3 trigger hook: uniform V3-steal (plan 0.3.2, every song
 ; steals V3, no per-song table). Saves the V3 $0E-$14 image, programs noise
 ; control + ADSR from the live GB noise payload (NR42/NR43, sustain-riding
-; like the pitched voices — stage 3 owns per-SFX consts, 1b voices the pass),
+; like the pitched voices — stage 3 audited per-SFX consts and found none
+; needed, so the pass voices everything live),
 ; and drops the pitched voice so the tick loop cannot stomp the noise
 ; mid-hit. Note-off (length expiry, or silence) restores the image with a
 ; TEST pulse. Single-waveform invariant throughout: CONTROL is ever only
