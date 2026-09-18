@@ -5,12 +5,37 @@
 # DAC is write-only, so the flag IS the detection — see
 # src/audio/covox_shim.asm). Music + SFX render as PCM on the DAC; the Pikachu
 # cry resamples its blob to the DAC too (g_covox_rate, default 7 kHz). The PC
-# speaker stays enabled as the PCM fallback path. Make args pass through, e.g.:
-#   dos_port/run-covox DEBUG_AUDIO=1
+# speaker stays enabled as the PCM fallback path.
+#
+# Args split like dos_port/run-mt32: '/...' tokens become extra PKMN.EXE
+# flags (on top of /COVOX), the rest go to make, e.g.:
+#   dos_port/run-covox DEBUG_AUDIO=1 /LOOP
 set -e
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-make -C "$DOSPORT" image "$@"
+make_args=()
+exe_args=()
+for a in "$@"; do
+    case "$a" in
+        /*) exe_args+=("$a") ;;
+        *)  make_args+=("$a") ;;
+    esac
+done
+
+# Same guard as dos_port/run: a live session holds PKMN.IMG mounted rw —
+# rebuilding/double-mounting under it corrupts the run (verified 2026-07-07,
+# and re-verified 2026-09-18 when a stray session page-faulted a runner).
+if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+    echo "run-covox: PKMN.IMG is held open by a running DOSBox-X session —" >&2
+    echo "           close it before launching another run." >&2
+    exit 1
+fi
+
+make -C "$DOSPORT" image "${make_args[@]}"
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed "s|^PKMN.EXE\$|PKMN.EXE /COVOX ${exe_args[*]}|" "$DOSPORT/dosbox-x.conf" > "$CONF"
 
 CONF="$(mktemp --suffix=.conf)"
 trap 'rm -f "$CONF"' EXIT

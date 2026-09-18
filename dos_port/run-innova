@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# dos_port/run-innova — like dos_port/run, but as a machine with an
+# Innovation SSI-2001 (SID) on port 0x280: Sound Blaster and AdLib
+# emulation OFF, the SID ON, and /INNOVA on the game's command line (the
+# SID is write-only, so the flag IS the detection — see
+# src/audio/innova_shim.asm). Music + SFX render as SID voices; the PC
+# speaker stays enabled as the PCM fallback path.
+#
+# Args split like dos_port/run-mt32: '/...' tokens become extra PKMN.EXE
+# flags (on top of /INNOVA), the rest go to make, e.g.:
+#   dos_port/run-innova DEBUG_AUDIO=1 /LOOP
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make_args=()
+exe_args=()
+for a in "$@"; do
+    case "$a" in
+        /*) exe_args+=("$a") ;;
+        *)  make_args+=("$a") ;;
+    esac
+done
+
+# Same guard as dos_port/run: a live session holds PKMN.IMG mounted rw —
+# rebuilding/double-mounting under it corrupts the run (verified 2026-07-07,
+# and re-verified 2026-09-18 when a stray run-innova session page-faulted a
+# concurrent run-mt32).
+if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+    echo "run-innova: PKMN.IMG is held open by a running DOSBox-X session —" >&2
+    echo "            close it before launching another run." >&2
+    exit 1
+fi
+
+make -C "$DOSPORT" image "${make_args[@]}"
+
+# Base conf with /INNOVA added to the game invocation, plus the SID section.
+# (No ROMDIR check — the SID needs no ROMs, unlike run-mt32's MUNT pair.)
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed "s|^PKMN.EXE\$|PKMN.EXE /INNOVA ${exe_args[*]}|" "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+pcspeaker = true
+
+[innova]
+innova     = true
+sidbase    = 280
+samplerate = 22050
+quality    = 0
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"
