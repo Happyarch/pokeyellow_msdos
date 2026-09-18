@@ -84,25 +84,37 @@ Speaker-noise rejected (standing downsides).
 
 - [x] **0.1. References mirrored.** PDFs, VISION.txt, SVGs, HTML mirrors,
   index rows. Done.
-- [ ] **0.2. Preconditions (read-only, remote-safe).**
-  - [ ] 0.2.1 `/SID` flag vs `find_token` substring behavior in
-    `boot/entry.asm` (survey `/TANDY`/`/SPK`/`/MT32`/`/GM` block); define
-    `/SID`+`/TANDY` precedence (first-wins vs priority) and record it.
-  - [ ] 0.2.2 Re-verify every cited file:line against HEAD (tandy
-    29-31/151-213/219-476/504-509; mpu401 10-18/97-100/168-196/205-369/415-429;
-    audio_hal 67-95/97-133; vblank 206; entry 331-345; pikachu_pcm
-    78-81/83-94; spk_shim 3-7); update drifted numbers in this file.
-  - [ ] 0.2.3 Confirm `g_shim_device=4` is free (audio_hal device enum at
-    build).
-  - [ ] 0.2.4 Reconcile agy REVIEW.txt into VISION.txt/.mds when it lands
-    (corrections in place, no dated notes — ref-doc convention).
-- [ ] **0.3. Noise song-check (host-side, remote-safe).**
-  - [ ] 0.3.1 `simulate_song` overlap stats over the base song set: noise-on
-    frame fraction + sounding-voice-under-noise distribution.
-  - [ ] 0.3.2 Confirm V3-default; list exception songs with per-song steal
-    choice (V2 or accept gap).
-  - [ ] 0.3.3 Record the table in this file. Acceptance: every base song has
-    a steal assignment.
+- [x] **0.2. Preconditions (read-only, remote-safe).**
+  - [x] 0.2.1 `/SID` flag: `find_token` is plain substring search
+    (entry.asm:596-639); `/SID` collides with no existing token. Precedence
+    decided: TANDY > SID > SPK — `/SID` fills-if-unset between the `/TANDY`
+    force (347-351) and the `/SPK` fill (353-360); needs a new `arg_sid`
+    string.
+  - [x] 0.2.2 Cited file:lines re-verified; drift corrected: mpu401 seq
+    entries are 234/339/370 (not 205-369), snapshot at 486+ (not 415-429);
+    vblank audio block is 203-206; spk_shim 1-bit case is 6-12. Rest confirm:
+    tandy 29-31, pass at 151, guard cmp at 506 (inside cited 504-509);
+    mpu401 detect 72 + absent-fallback 97-100 + upload 168; audio_hal
+    67-95/97-133; entry 331-345; pikachu_pcm 78-81.
+  - [x] 0.2.3 `g_shim_device=4` is free (0 none, 1 OPL, 2 SN76489, 3
+    speaker; audio_hal.asm:75-82,161); stage 2 adds the 4th tick arm plus
+    init/shutdown calls.
+  - [x] 0.2.4 agy REVIEW.txt reconciled (22 items into VISION.txt): row 93
+    59056/E6B0, row 18 776/0308, B7 asterisk 17-bit values, Tc typical 500,
+    A4 decoder bypass, stacked FILT labels, print typos restored as printed.
+    No .md impact (distillations already correct).
+- [x] **0.3. Noise song-check (host-side, remote-safe).**
+  - [x] 0.3.1 `simulate_song` overlap stats over all 49 base songs (script
+    at `/tmp/opencode/noise_overlap.py`; victim = min-overlap pitched
+    channel, tie-break V3>V2>V1).
+  - [x] 0.3.2 V3-default CONFIRMED: 33 songs use no noise at all; 13 of the
+    16 noise songs minimize dropout on V3. Exceptions: Dungeon1 → V2 (thin
+    margin: 1510 vs 1606 overlapped frames); Lavender → V1 by the metric
+    (17784 vs 21888) with a salience caveat — ch1 is the lead, so stealing
+    V3's bass under constant noise may still sound better; decide by ear at
+    build. YellowUnusedSong → V1 (unused song, low stakes).
+  - [x] 0.3.3 Table recorded here. Acceptance met: every base song has a
+    steal assignment (46 × V3 including no-noise songs, 1 × V2, 2 × V1).
 - [ ] **1. Driver `src/audio/sid_shim.asm`.**
   - [ ] 1.1 Skeleton: house-style header, equs (`SID_BASE 0x280`,
     card-clock const), per-voice state, six globals. No DEVIATION.
