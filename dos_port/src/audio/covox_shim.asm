@@ -317,8 +317,12 @@ covox_pass:
     xor edx, edx                  ; mix sum, signed (EDX survives the voices)
     xor ebx, ebx                  ; voice index
 .v:
-    lea eax, [ebx + ebx*4]
-    imul eax, eax, CS_SIZE
+    imul eax, ebx, CS_SIZE       ; voice state stride is CS_SIZE (32), NOT the
+                                ; NR-register stride 5 used at .chLoop — the
+                                ; ×5 form here read voices 1-3 from the ring
+                                ; (regression 2026-09-18: noise clocks came
+                                ; from ring bytes ≈ 33k/sample ≈ 31M
+                                ; cycles/tick, plus garbled mixing)
     lea edi, [covox_state + eax]
     mov al, [edi + CS_AMP]
     test al, al
