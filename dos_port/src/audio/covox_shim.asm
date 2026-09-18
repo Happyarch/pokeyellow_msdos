@@ -928,10 +928,12 @@ c_pos:          resd 1              ; cry resample position, 24.8 fixed point
 %else
 
 section .text
+covox_play_clip:
+    xor eax, eax                  ; played tally reads 0 (sb_pcm/spk_pcm shape)
+    ret
 covox_init:
 covox_pass:
 covox_pump:
-covox_play_clip:
 covox_silence:
 covox_shutdown:
 covox_dbg_snapshot:
