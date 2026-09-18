@@ -14,6 +14,9 @@
 ;   device = keyboard  ; or gamepad
 ;   [audio]
 ;   covox_rate = 7000   ; Covox DAC rate in Hz, decimal; clamped 4000-44500
+;   device = auto       ; requested device: none|opl|tandy|spk|innova|covox|gb
+;                       ; (default auto: a /FLAG above wins, else the OPL
+;                       ; probe / speaker auto-fill decides)
 ;
 ; Loaded ONCE at boot in boot/entry.asm before any pret-translated code runs.
 ; Populates static byte literals (cfg_key_*) in memory with fallback to current
@@ -39,6 +42,7 @@ global cfg_key_start
 global cfg_key_select
 global g_input_device
 global g_covox_rate
+global g_cfg_audio_device
 
 ; Input device constants
 INPUT_DEVICE_KBD     equ 0
@@ -72,6 +76,18 @@ g_input_device: db INPUT_DEVICE_KBD
 ; Covox DAC render/playback rate in Hz (POKEMON.CFG [audio] covox_rate,
 ; decimal; clamped at parse to 4000-44500). Default is the DSS fixed rate.
 g_covox_rate: dw 7000
+; Requested audio device (POKEMON.CFG [audio] device, parsed once at boot;
+; zero per-frame cost). 0xFF = auto (default: /FLAG wins, else the OPL probe
+; / speaker auto-fill decides); 0 = none (silence like /NOSOUND once no /FLAG
+; stands); else a DEV_* index (1 = OPL, 2 = TANDY, 3 = SPK, 4 = INNOVA,
+; 5 = COVOX, 8 = CMS). Unknown strings leave the default, so a typo keeps
+; today's behavior.
+g_cfg_audio_device: db 0xFF
+; Current [section] while parsing (0 = no header seen yet, 1 = [keyboard],
+; 2 = [audio]). The parser is otherwise section-blind (headers used to be
+; skipped); only the two DEVICE rows below consult this, so every other key
+; behaves exactly as before.
+cfg_section: db 0
 
 cfg_filename:   db "POKEMON.CFG", 0
 
@@ -79,6 +95,7 @@ cfg_filename:   db "POKEMON.CFG", 0
 PARSE_TYPE_SCANCODE equ 1
 PARSE_TYPE_DEVICE   equ 2
 PARSE_TYPE_COVOX_RATE equ 3
+PARSE_TYPE_AUDIO_DEVICE equ 4
 
 align 4
 opt_table:
@@ -92,6 +109,11 @@ opt_table:
     dd .str_select, cfg_key_select, PARSE_TYPE_SCANCODE
     dd .str_device, g_input_device, PARSE_TYPE_DEVICE
     dd .str_covox_rate, g_covox_rate, PARSE_TYPE_COVOX_RATE
+    ; The audio DEVICE row shares its key text with the input row above; the
+    ; [section] decides which one a line means (see cfg_section + the guards
+    ; in apply_config_key_val). Header-less files keep the legacy input
+    ; meaning, so nothing already in the field changes hands.
+    dd .str_audio_device, g_cfg_audio_device, PARSE_TYPE_AUDIO_DEVICE
     dd 0 ; terminator
 
 .str_up:     db "UP", 0
@@ -104,6 +126,7 @@ opt_table:
 .str_select: db "SELECT", 0
 .str_device: db "DEVICE", 0
 .str_covox_rate: db "COVOX_RATE", 0
+.str_audio_device: db "DEVICE", 0
 
 ; --- Key name to scancode lookup table ---
 align 4
@@ -570,6 +593,8 @@ apply_config_key_val:
     je .parse_device
     cmp eax, PARSE_TYPE_COVOX_RATE
     je .parse_covox_rate
+    cmp eax, PARSE_TYPE_AUDIO_DEVICE
+    je .parse_audio_device
     jmp .apply_exit
 
 .section_mismatch:
@@ -708,6 +733,160 @@ apply_config_key_val:
     mov eax, 44500
 .dec_store:
     mov [edi], ax
+    jmp .apply_exit
+
+.parse_audio_device:
+    ; Value [EBP .. ECX) names the requested device (case-insensitive):
+    ; NONE = 0 (silence), OPL = 1, TANDY = 2, SPK = 3, INNOVA = 4,
+    ; COVOX = 5, GB = 8 (DEV_* indices; the 0xFF auto default stands on any
+    ; other text, so a typo keeps today's behavior). Length first, then
+    ; letters; every compare feeds its own branch, no flags carry.
+    mov esi, ebp
+    mov edx, ecx
+    sub edx, esi                            ; EDX = value length
+    cmp edx, 2
+    je .aud_2
+    cmp edx, 3
+    je .aud_3
+    cmp edx, 4
+    je .aud_4
+    cmp edx, 5
+    je .aud_5
+    cmp edx, 6
+    je .aud_6
+    jmp .apply_exit
+.aud_2:                                     ; GB -> 8
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'G'
+    jne .apply_exit
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'B'
+    jne .apply_exit
+    mov byte [edi], 8
+    jmp .apply_exit
+.aud_3:                                     ; OPL -> 1, SPK -> 3
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'O'
+    je .aud_opl
+    cmp al, 'S'
+    je .aud_spk
+    jmp .apply_exit
+.aud_opl:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'P'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'L'
+    jne .apply_exit
+    mov byte [edi], 1
+    jmp .apply_exit
+.aud_spk:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'P'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'K'
+    jne .apply_exit
+    mov byte [edi], 3
+    jmp .apply_exit
+.aud_4:                                     ; NONE -> 0
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'E'
+    jne .apply_exit
+    mov byte [edi], 0
+    jmp .apply_exit
+.aud_5:                                     ; TANDY -> 2, COVOX -> 5
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'T'
+    je .aud_tandy
+    cmp al, 'C'
+    je .aud_covox
+    jmp .apply_exit
+.aud_tandy:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'D'
+    jne .apply_exit
+    mov al, [esi + 4]
+    and al, 0xDF
+    cmp al, 'Y'
+    jne .apply_exit
+    mov byte [edi], 2
+    jmp .apply_exit
+.aud_covox:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'V'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 4]
+    and al, 0xDF
+    cmp al, 'X'
+    jne .apply_exit
+    mov byte [edi], 5
+    jmp .apply_exit
+.aud_6:                                     ; INNOVA -> 4
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'I'
+    jne .apply_exit
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 4]
+    and al, 0xDF
+    cmp al, 'V'
+    jne .apply_exit
+    mov al, [esi + 5]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .apply_exit
+    mov byte [edi], 4
     jmp .apply_exit
 
 .apply_exit:
