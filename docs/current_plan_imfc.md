@@ -1,11 +1,10 @@
 # Current Plan: IBM Music Feature Card (IMFC) support
 
-Status: **DEFERRED DRAFT** — revisit after all track enhancements are approved
-(currently the audio work is in the MT-32/OPL enhancement + approval loop;
-`enhancement_approvals.json` is the gate). Written 2026-09-12 as a rough spec
-to be revised at build time (a few weeks to a month out). The hardware research
-and pipeline analysis behind it are in the 2026-09-12 session; re-verify the
-"measured" claims below before building since the tree will have moved.
+Status: **RESEARCH PHASE COMPLETE (2026-09-18)** — implementation stays
+deferred until track remasters are done (the remaster gate supersedes the old
+"enhancement approvals freeze" gate below). R1–R6 ran as serial research stages;
+their outputs are folded into this file. Do not re-litigate banked decisions
+without new evidence; re-verify file:line anchors at build time (they drift).
 
 ## Why this is cheap (the thesis this plan rests on)
 
@@ -22,6 +21,56 @@ and pipeline analysis behind it are in the 2026-09-12 session; re-verify the
 - Per-target musical differences are baked data, not branches: `gb_to_midi.py`
   emits per-target streams at asset-gen time. MT-32 vs GM already proves the
   shape (one sequencer, two blobs, zero extra tick conditionals).
+
+## Research findings (R1–R6, 2026-09-18 — build inputs, not speculation)
+
+- **R1 doc mirrors.** `docs/sound/` (gitignored, local-only): `Yamaha_FB-01_Service_Manual.pdf`
+  (4.4 MB image-only scan) + `.md` distillation (SysEx taxonomy, Format 1/2 byte
+  layouts, bulk framing, event list, parameter lists 5–6, transmit format) +
+  `fb01_voice_nibble_packing.svg` + `fb01_config_assign.svg`;
+  `Yamaha_FB-01_Owners_Manual.pdf` (72pp EN, 3.8 MB) + `.md` (architecture, banks,
+  configs, protect, PC limits). `docs/references/` (tracked):
+  `nerdlypleasures/IMFC_Exclusive_Commands_*` + `MT32_FB01_MIDI_Files_and_Patches_*`
+  + `scalibq/IMFC_and_FB-01_*`. Open `[?]`s live inline in both `.md` files.
+- **R2 verdict: custom uploads WORK.** Bank-bulk → `m_voiceDefinitionBankCustom[0..1]`,
+  1-voice bulk → live instrument buffer, config → live/slot/all-16, all
+  protect-gated correctly (IMFC boots writable, no battery); instrument
+  assignment re-copies into YM registers → `chan_calc`, no ROM-only shortcut.
+  Parameter List (`F0 43 75 71`) applies entries on the fly by INSTRUMENT number —
+  setup blob MAY use list form; walker is byte-at-a-time (VOGONS buffering gotcha
+  N/A); no pacing enforcement. Banks are owners-numbering 0–6 (RAM 0–1, ROM 2–6).
+  Setup order: protect-OFF → config image → RAM bank images (nibble) → list tweaks.
+- **R3 voice library.** 240 ROM names harvested from `imfc_rom.c` (ROM1 mixed,
+  ROM2 piano/EP farm, ROM3 orchestral, ROM4 synth/bass/drums, ROM5
+  organs/guitars/SFX). Gaps needing customs: choir/chorale, synth leads,
+  atmosphere pads, sustainers. Custom seed: Sierra-bank extraction beats DXconvert
+  (FB-01-native idioms; TX81Z waveforms are one-way-incompatible — FB-01 is
+  sine-only).
+- **R4 rhythm convention.** Rhythm claims INST #8 top-down on MIDI ch 8 with
+  key-code splits, ONLY when the track uses `rhythm:true`; else all 8 go melodic.
+  Overflow: `imfc_overflow: drop_rhythm | drop:<channel>` (default `drop_rhythm`,
+  ERROR if overflowed-and-absent, WARN if stale). Drums: `imfc_drums.map:`
+  GM-note → `imfc_voice` (ROM drums default, custom RAM on demand). LSL3 guard:
+  SysEx by instrument number, one channel per instrument except the ch-8 rhythm
+  family, park unused on ch 9–16 with `notes=0`.
+- **R5 schema design.** Fields: enhancement `imfc_voice` (name or
+  `{bank,program}`), override `imfc_program`, switches carry the
+  mt32+gm+imfc triple; IMFC ints 1-based 1–48 with explicit bank in BOTH files
+  (breaks overrides 0-based — linted); tier-1 gets the 4th field (open decision 1
+  resolved YES). Tier table `OPL3:1, MT-32:3, GM:3, IMFC:3`, inherit downward;
+  five compiler joints named (`resolve_switch_program`, `enhancement_tracks`
+  program select, `midi_to_stream` custom gating, tier-drop sorter, tick-0
+  fallback). Custom analog: `tools/audio/imfc/voices.yaml` + `gen_imfc_patches.py`
+  → `ImfcSetup_/`ImfcCleanup_` tables, RAM-bank-0 slots, per-song overwrite +
+  restore. Migration: all IMFC legs additive, MT-32/GM byte-identical; `imfc_*`
+  optional with drop+WARN until batch, then missing = ERROR.
+- **R6 audition.** Renderer: pinned DOSBox-X's own IMFC mixer (no MUNT — wrong
+  chip; no MAME — ROMs + no Parameter List; no ymfm — interpreter from scratch;
+  no Staging — split truth). `MidiSession` stays event source, backend is PCM
+  sink; TUI keys survive; setup retransmit full-blob on song switch only, list
+  head on note edits. `run-imfc` mirrors `run-mt32` with `[imfc] imfc=true`
+  (no ROMDIR check — ROM embedded). Portamento excluded (broken in oracle);
+  handshake ACK is a DOS-driver concern, not TUI.
 
 ## Hardware facts (measured 2026-09-12, re-verify at build time)
 
@@ -46,29 +95,42 @@ and pipeline analysis behind it are in the 2026-09-12 session; re-verify the
 ## Banked decisions (do not re-litigate without new evidence)
 
 - Launch flag `/IMFC`, not make-time, not a setup menu.
-- Sequence AFTER enhancement approvals freeze the tiers (this plan's cost basis).
+- Sequence AFTER track remasters are done (remaster gate; supersedes the old
+  approvals-freeze wording).
 - `docs/sound/` gets mirrored IBM/FB-01 references like the other devices carry.
+- **R1–R6 banked (2026-09-18):** tiers shared, devices gated to max tier
+  (IMFC → tier 3, inherit down); arrangements/enhancements shared, only
+  overrides + patch routing differ per device; rhythm = conditional INST#8/ch-8
+  mapping with `imfc_overflow` + `imfc_drums.map`; custom voices YES via SysEx
+  setup/cleanup (Parameter-List form); audition via pinned DOSBox-X IMFC mixer;
+  IMFC numbering 1-based with explicit bank in both YAML families.
 
 ## Open decisions (resolve at revision time)
 
-1. Tier-1 on IMFC: 4th patch field (`imfc_voice`) per tier-1 channel vs IMFC plays
-   base + tiers 2-3 only. Lean: 4th field.
-2. Drums convention: reserve MIDI ch8 for mapped percussion vs melodic-percussion
-   voices.
+1. Tier-1 on IMFC: RESOLVED (R5) — 4th patch field (`imfc_voice`) on every
+   tier-1 channel. A silent/missing foundation tier cannot be bank-selected
+   around.
+2. Drums convention: RESOLVED (R4) — conditional mapping (rhythm claims INST #8
+   top-down on MIDI ch 8 with key splits, only when the track uses it);
+   overflow via `imfc_overflow: drop_rhythm | drop:<channel>` (default
+   `drop_rhythm`); per-piece voices via `imfc_drums.map`.
 3. Stream file: separate `assets/imfc_streams.inc` (recommended) vs rebuilding
    shared `music_streams.inc` per target (check how `--target gm` coexists with
    mt32 — `Makefile:4450-4460` only wires `stamp-mt32`).
-4. Audition backend: MAME `fb01` (needs copyrighted `fb01.zip` + `hd44780` ROMs)
-   vs `ymfm` YM2164 core + own MIDI interpreter (BSD, no ROMs, more work) vs
-   DOSBox-Staging `imfc=true`.
+4. Audition backend: RESOLVED (R6) — pinned DOSBox-X's own IMFC mixer behind
+   `audition.py --target imfc` (`MidiSession` stays event source, backend is PCM
+   sink); `run-imfc` mirrors `run-mt32` with `[imfc] imfc=true`. MAME (copyrighted
+   ROMs + no Parameter List), ymfm (interpreter from scratch), and Staging (split
+   truth) all rejected with reasons. Real-hardware FB-01 path (MIDI-OUT +
+   list→individual translator) sketched only, deferred.
 5. `/IMFC` vs `/MT32`/`/GM` coexistence: priority (MT32 > IMFC > GM?) or
    first-wins like `entry.asm:337-345`.
 
 ## Stages
 
-- [ ] **0. Preconditions.** All `enhancement_approvals.json` entries approved;
-  `docs/sound/` IBM/FB-01 references mirrored; re-verify the "measured" claims
-  in this file against HEAD (file paths + line numbers drift).
+- [x] **0. Preconditions + research.** Remaster gate replaces the old approvals
+  wording; `docs/sound/` IBM/FB-01 references mirrored (R1); R2–R6 findings above
+  are the build inputs — re-verify file:line anchors at build time.
 - [ ] **1. Toolchain target `imfc`.** `gb_to_midi.py --target imfc` (channels
   1-8, PC 0-47 + SysEx bank-select, note-count polyphony replacing the 32-partial
   model in `yaml_lint.py:53-57`); `gen_imfc_patches.py` + `tools/audio/imfc/`

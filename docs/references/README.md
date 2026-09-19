@@ -162,6 +162,102 @@ Quick reference:
   the latch/data byte format, tone divider formula, noise LFSR details, and the
   attenuation table.
 
+### Creative Music System / Game Blaster (dual Philips SAA1099)
+- **Local PDF** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/SAA1099_Philips_1984.pdf` (Philips SAA1099 datasheet, Nov 1986,
+  16pp — http://map.grauw.nl/resources/sound/philips_saa1099.pdf, fetched
+  2026-09-18). Image-only scan; vision-transcribed, `[?]` readings kept inline.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc): `../sound/SAA1099_Philips_1984.md` (register map, bit
+  encodings, envelope system with Fig.5 implement-from table, card-level
+  programming from gameblst.txt, catalogued datasheet-vs-gameblst mismatches);
+  `../sound/saa1099_voice_arch.svg` (Fig.1 simplified) +
+  `../sound/saa1099_envelope_waves.svg` (Fig.5 waveforms) +
+  `../sound/saa1099_regmap.svg` (Table 2 visual), referenced inline from the
+  .md SoundBlaster-style (`![...](*.svg)`).
+- **Card-level text mirror**: [`gameblst.txt`](gameblst.txt) (Mark Feldman
+  PC-GPE "Programming the GameBlaster Sound Card" — 4-port scheme, jumper
+  bases, reset/enable sequences, note table; converted CP437 → UTF-8
+  2026-09-18 for LLM parsing).
+- **Detection authority**: [`cms.4.html`](cms.4.html) (NetBSD `cms(4)` man page
+  — base ports, no-interrupt operation).
+
+### MOS 6581 SID / Innovation SSI-2001
+- **Local PDFs** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/MOS_6581_SID_Nov_1981.pdf` (MOS 6581 datasheet, Nov 1981, 19pp —
+  https://6502.org/documents/datasheets/mos/mos_6581_sid_nov_1981.pdf, fetched
+  2026-09-18; archive.org copy at https://archive.org/details/mos-6581-sid-data-sheet
+  ranked inferior);
+  `../sound/C64_PRG_Ch4_Programming_Sound.pdf` (C64 Programmer's Reference Guide
+  Ch.4, 26pp — https://www.commodore.ca/manuals/c64_programmers_reference/c64-programmers_reference_guide-04-programming_sound.pdf,
+  fetched 2026-09-18). C64 memory addresses (54272/$D400) do NOT apply to the ISA
+  card — chip offsets/bits/formulas only. Full-book fallback excised to the sound
+  section only (Ch.4 + Appendix O) to save model context; patent dropped as not useful.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md per
+  source doc after the MT-32/OPL3 convention): `../sound/MOS_6581_SID_Nov_1981.md`
+  (datasheet distillation, 189 lines), `../sound/C64_PRG_Ch4_Programming_Sound.md`
+  (Ch.4 walkthrough as-printed, 136 lines), `../sound/SID_SSI-2001_Notes.md`
+  (card-level remap + clock constant + disagreements, 93 lines);
+  `../sound/sid_voice_filter_path.svg` (voice→filter signal path) +
+  `../sound/sid_isa_port_map.svg` (ISA decode map, $1C/$1D bound marked UNRESOLVED).
+- **SSI-2001 card-level source**, mirrored at
+  [`nerdlypleasures/SID_and_DOS_-_Nerdly_Pleasures.html`](nerdlypleasures/)
+  (https://nerdlypleasures.blogspot.com/2014/01/sid-and-dos-unlikely-but-true-bedfellows.html,
+  fetched 2026-09-18): port map (280/2A0/2C0/2E0), card clock 14.31818/16 MHz,
+  game port, Entertainer autodetect. No original Innovation manual survives (gap
+  confirmed 2026-09-18). Replica schematics deliberately NOT mirrored — a schematic
+  is not a programming manual. Corroborating notes at
+  [`amibay/SSI-2001-replica-notes.md`](amibay/) (VOGONS primaries not mirrored).
+- **SID register quick reference**: C64-Wiki page, mirrored at
+  [`c64wiki/SID_-_C64-Wiki.html`](c64wiki/) (https://www.c64-wiki.com/wiki/SID,
+  fetched 2026-09-18). Same C64-address caveat as above.
+
+### Disney Sound Source / Covox
+
+- **Local PDF** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/DSS_Programmers_Guide.pdf` (*Programmer's Guide to the Disney
+  Sound Source*, 5pp —
+  https://archive.org/download/dss-programmers-guide/dss-programmers-guide.pdf,
+  fetched 2026-09-18). Classical OCR failed on this scan (smearing); the text
+  was transcribed by vision model, with uncertain readings marked [?] inline.
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc after the MT-32/OPL3/SID convention):
+  `../sound/DSS_Programmers_Guide.md` (guide distillation: power control,
+  FIFO data path/status, interrupt recipe, verbatim example routine, Tandy
+  variant, schematic structural description);
+  `../sound/dss_data_path.svg` (printer port → FIFO → DAC → speaker box) +
+  `../sound/dss_power_control.svg` (SELECT/pin-17 power circuit).
+  Diagram 1 schematic fine print is unrecoverable from this scan — the SVGs
+  depict text-supported paths only.
+- **Background** (2026-09-18, no local mirrors yet — next fetches):
+  Mark Phillips' DSS programming notes, VOGONS DSS pinout + 2015
+  reverse-engineering thread, DOSBox-X sound-card guide
+  (https://dosbox-x.com/wiki/Guide:Sound-card-support-in-DOSBox%E2%80%90X,
+  `disney=true` in `[speaker]`, Covox/MDO compatible).
+
+### IBM Music Feature Card / Yamaha FB-01
+
+- **Local PDFs** (gitignored, ARR, local-only like the other `docs/sound/` specs):
+  `../sound/Yamaha_FB-01_Service_Manual.pdf` (FB-01 service manual, image-only
+  scan — SysEx taxonomy, Format 1/2 byte layouts, bulk framing, event list,
+  parameter lists, transmit format) + `../sound/Yamaha_FB-01_Owners_Manual.pdf`
+  (72pp EN owner's manual).
+- **Derived LLM-friendly files** (same local-only `docs/sound/` home, one .md
+  per source doc): `../sound/Yamaha_FB-01_Service_Manual.md` +
+  `../sound/fb01_voice_nibble_packing.svg` (nibble packing + bulk frame) and
+  `../sound/Yamaha_FB-01_Owners_Manual.md` +
+  `../sound/fb01_config_assign.svg` (config → instruments → note pool).
+  Uncertain readings kept `[?]` inline; research findings (R2–R6) folded into
+  `docs/current_plan_imfc.md`.
+- **Card-level articles**, mirrored at
+  [`nerdlypleasures/IMFC_Exclusive_Commands_-_Nerdly_Pleasures.html`](nerdlypleasures/IMFC_Exclusive_Commands_-_Nerdly_Pleasures.html)
+  (IMFC-exclusive SysEx, Parameter List Transfer vs Parameter Change, LSL3
+  drum-robbery lesson),
+  [`nerdlypleasures/MT32_FB01_MIDI_Files_and_Patches_-_Nerdly_Pleasures.html`](nerdlypleasures/MT32_FB01_MIDI_Files_and_Patches_-_Nerdly_Pleasures.html)
+  (bank/config dump commands + sizes, Sierra custom-bank precedent), and
+  [`scalibq/IMFC_and_FB-01_-_Scali_OpenBlog.html`](scalibq/IMFC_and_FB-01_-_Scali_OpenBlog.html)
+  (variable-length SysEx, list→individual translation, YM2151-core lineage).
+
 ---
 
 ## Pokémon Yellow Glitch Reference
