@@ -311,6 +311,15 @@ covox_pass:
     mov ax, [s_wr]
     sub ax, [s_rd]
     jz .off
+    ; --- backlog guard (render-on-demand): the pump leaves undrained
+    ; samples in the ring when the FIFO stays full (wedged/absent port);
+    ; never render on top of a nearly-full ring — the write cursor would
+    ; lap the read cursor and replay stale PCM as stutter. Voice timing
+    ; above already advanced, so state stays coherent; the pump below
+    ; drains whatever the FIFO accepts. 742 = biggest legal fill
+    ; (max clamp 44500/60 + carry).
+    cmp ax, COVOX_RING_SIZE - 742
+    ja .pump
     ; --- sample render loop ---
     movzx ecx, word [s_nsamp]
     test ecx, ecx
@@ -444,6 +453,7 @@ covox_pass:
     pop ecx
     dec ecx                       ; samples left (32-bit: max parcels in the
     jnz .samp                     ; hundreds, zero-guarded at entry — no wrap)
+.pump:
     call covox_pump               ; drain this tick's render to the DAC
 .off:
     ret
@@ -456,13 +466,16 @@ covox_pass:
 ;
 ; Count comes from the live g_covox_rate (rate/60 with its own Bresenham
 ; carry s_pcarry, the same math as the fill side, so fill and drain stay in
-; lockstep and the ring never drifts). Status is polled per sample
-; (send-while-low, guide §4/§6 — a 117-sample strobed burst overflows the
-; 16-level FIFO otherwise), bounded COVOX_POLLS, then written anyway:
-; raw-Covox hardware has no status bit (absent LPT reads 0xFF = perpetual
-; "full") and the DSS drops overflow bytes, so the timeout path keeps the
-; cadence instead of hanging the tick (guide §5 anti-lockup, interrupt
-; level adapted to tick level). Every byte is strobed (guide §3/§6):
+; lockstep and the ring never drifts in steady state). The pump sends in
+; guide-shaped flow: poll first; while the FIFO reports room, consume one
+; sample and strobe it out; on the FIRST full/timeout reading, stop for the
+; tick (sticky) — remaining samples stay ring-buffered for a later tick
+; instead of spinning 64 polls per sample (measured 2026-09-18: the old
+; spin-then-write-anyway cost ~7,500 port accesses per tick and wrote into
+; a full FIFO whose bytes the hardware drops — paid for and unheard).
+; Worst case per tick is now one 64-poll timeout plus ~4 accesses per
+; delivered sample (~470 DSS / ~120 raw at 7 kHz); a wedged/absent port
+; costs exactly one timeout per tick. Every byte is strobed (guide §3/§6):
 ; DATA, then CONTROL=PR_STROBE, then CONTROL=PR_POWER_UP — the pin-17
 ; rising edge clocks it into the FIFO. Raw Covox ignores the control port
 ; (data latches on the DATA OUT), so the strobe pair is harmless there
@@ -499,31 +512,28 @@ covox_pump:
     test ecx, ecx
     jz .done                      ; sub-60 Hz fractional tick: none due yet
 .next:
+    ; poll FIRST: on timeout stop for the tick (sticky) — the sample stays
+    ; ring-buffered, s_rd untouched, so nothing is lost or reordered
+    mov dx, COVOX_STATUS
+    mov ebx, COVOX_POLLS
+.poll:
+    in al, dx
+    test al, 0x40                 ; bit 6 low = FIFO has room
+    jz .haveRoom
+    dec ebx                       ; bounded: 64 -> 0, never wraps, always exits
+    jnz .poll
+    jmp .done                     ; full/wedged: stop, retry next tick
+.haveRoom:
     movzx eax, word [s_wr]
     sub ax, [s_rd]                ; AX = available (monotonic words, ring < 32K)
     jz .silence                   ; empty: hold mid-level, leave s_rd alone
     movzx eax, word [s_rd]
     and eax, COVOX_RING_MASK
     mov al, [covox_ring + eax]
-    inc word [s_rd]               ; inc preserves CF; no live flags here
-    jmp .send
+    inc word [s_rd]               ; consume only what the FIFO accepted
 .silence:
-    mov al, 128                   ; DSS mid level (guide section 3 table)
-.send:
-    push eax                      ; sample (push preserves flags; IN needs AL)
-    mov dx, COVOX_STATUS
-    mov ebx, COVOX_POLLS
-.poll:
-    in al, dx                     ; status into AL, sample safe on the stack
-    test al, 0x40                 ; bit 6 low = FIFO has room
-    jz .strobe
-    dec ebx                       ; bounded: 64 -> 0, never wraps, always exits
-    jnz .poll
-    ; Timeout: write anyway (see header — absent hardware reads 0xFF,
-    ; DSS drops the overflow byte).
-.strobe:
+    ; AL = sample (or 128 mid-level on underrun — silence, not stuck DC)
     mov dx, COVOX_DATA
-    pop eax                       ; sample back to AL (pop preserves flags)
     out dx, al                    ; data byte
     mov dx, COVOX_CONTROL
     mov al, PR_STROBE
