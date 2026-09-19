@@ -36,10 +36,6 @@ make -C "$DOSPORT" image "${make_args[@]}"
 CONF="$(mktemp --suffix=.conf)"
 trap 'rm -f "$CONF"' EXIT
 sed "s|^PKMN.EXE\$|PKMN.EXE /COVOX ${exe_args[*]}|" "$DOSPORT/dosbox-x.conf" > "$CONF"
-
-CONF="$(mktemp --suffix=.conf)"
-trap 'rm -f "$CONF"' EXIT
-sed 's|^PKMN.EXE$|PKMN.EXE /COVOX|' "$DOSPORT/dosbox-x.conf" > "$CONF"
 cat >> "$CONF" <<EOF
 
 [sblaster]

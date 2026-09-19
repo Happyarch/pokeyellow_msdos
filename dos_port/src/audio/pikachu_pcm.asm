@@ -25,7 +25,7 @@
 ; never loses its state.
 ;
 ; All held notes are CUT before the clip (opl_silence + midi_all_notes_off +
-; tandy_silence + spk_silence + covox_silence + cms_silence): the shim's software envelopes freeze with interrupts off, so a held FM
+; tandy_silence + spk_silence + covox_silence + cms_silence + innova_silence): the shim's software envelopes freeze with interrupts off, so a held FM
 ; voice would drone through the whole clip — on the GB the *hardware*
 ; envelopes kept decaying through the freeze, so the cry stood alone there
 ; too. Music channels re-key on their next note events after the clip.
@@ -50,6 +50,7 @@ extern spk_silence                ; src/audio/spk_shim.asm (also frees PIT ch2
                                   ;  for spk_pcm's mode-0 use; safe always)
 extern covox_silence              ; src/audio/covox_shim.asm (guarded, DAC-safe)
 extern cms_silence                ; src/audio/cms_shim.asm (guarded, SAA-safe)
+extern innova_silence             ; src/audio/innova_shim.asm (guarded, SID-safe)
 extern covox_play_clip            ; src/audio/covox_shim.asm (DAC cry player)
 
 %ifndef ENABLE_PIKA_PCM
@@ -90,6 +91,7 @@ PlayPikachuSoundClip:
     call midi_all_notes_off       ; cut held MT-32/GM notes in MIDI mode
     call covox_silence            ; cut held DAC voices (no-op when off)
     call cms_silence              ; cut held CMS voices (no-op when off)
+    call innova_silence           ; cut held SID voices (no-op when off)
     pop ebx
     mov esi, [PikachuCriesPointerTable + ebx*8]
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]

@@ -61,6 +61,8 @@ extern innova_shutdown            ; src/audio/innova_shim.asm
 extern covox_init                 ; src/audio/covox_shim.asm
 extern covox_pass                 ; src/audio/covox_shim.asm
 extern covox_shutdown             ; src/audio/covox_shim.asm
+extern g_covox_rate               ; src/input/input_cfg.asm
+extern pit_set_rate               ; boot/timing.asm
 extern cms_init                   ; src/audio/cms_shim.asm
 extern cms_pass                   ; src/audio/cms_shim.asm
 extern cms_shutdown               ; src/audio/cms_shim.asm
@@ -213,6 +215,15 @@ audio_init:
     mov ebx, 5                    ; Covox DAC (explicit /COVOX only, never auto)
     mov esi, covox_pass
     call covox_init
+    ; Reprogram PIT channel 0 to g_covox_rate: divisor = 1193182 / g_covox_rate
+    movzx ecx, word [g_covox_rate]
+    test ecx, ecx
+    jz .pitDone
+    mov eax, 1193182
+    xor edx, edx
+    div ecx                       ; AX = divisor
+    call pit_set_rate
+.pitDone:
     jmp .haveWinner
 .wGb:
     mov ebx, 8                    ; Game Blaster / CMS (explicit /GB only, never auto)
@@ -314,6 +325,9 @@ audio_shutdown:
     call covox_shutdown           ; park the DAC at mid-level (no-op if inactive)
     call cms_shutdown             ; leave the CMS silent (no-op if inactive)
     call pas_shutdown             ; leave the PAS OPL3 silent (no-op if inactive)
+    ; Restore PIT channel 0 rate to standard 60 Hz frame divisor
+    xor ax, ax
+    call pit_set_rate
     ret
 
 ; hal_dbg_snapshot — record the selected shim device at $D246 (DEBUG_AUDIO

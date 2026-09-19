@@ -83,6 +83,10 @@ INNOVA_CLOCK equ 894886           ; ISA card O2 in Hz (documentary; math uses th
 INNOVA_GBFN_NUM equ 2457322      ; round(131072 x 18.7478755), see innova_setfreq
 
 INNOVA_VSTRIDE equ 7              ; voice register stride ($00/V1, $07/V2, $0E/V3)
+
+; Temporary debug toggles for isolating channels and Voice 3 switching:
+%define DEBUG_DISABLE_NOISE 0     ; 1 = disable GB Ch3 (noise) & Voice 3 switching
+%define DEBUG_DISABLE_WAVE  0     ; 1 = disable GB Ch2 (wave)
 INNOVA_R_FREQLO equ 0
 INNOVA_R_FREQHI equ 1
 INNOVA_R_PWLO equ 2
@@ -90,7 +94,14 @@ INNOVA_R_PWHI equ 3
 INNOVA_R_CTL equ 4
 INNOVA_R_AD equ 5                 ; attack/decay: stays at its silenced 0
 INNOVA_R_SR equ 6                 ; sustain/release: sustain rides GB envvol, R = 0
-INNOVA_R_MODEVOL equ 0x18         ; filter mode (OFF v1) + master volume nibble
+INNOVA_R_FCLO equ 0x15            ; filter cutoff low (bits 2-0)
+INNOVA_R_FCHI equ 0x16            ; filter cutoff high (bits 7-0)
+INNOVA_R_RESVOI equ 0x17          ; resonance (bits 7-4) + voice filter enable (bits 3-0)
+INNOVA_R_MODEVOL equ 0x18         ; filter mode (bit 4: LP) + master volume nibble
+
+INNOVA_FILTER_LP equ 0x10         ; low-pass filter enable bit in $18
+INNOVA_FILTER_VOICES equ 0x07     ; voices 1, 2, 3 routed through filter
+INNOVA_FILTER_CUTOFF equ 0xC8     ; cutoff high byte (~3.5-5 kHz, Planet X3 reference)
 
 INNOVA_CTL_PULSE equ 0x40         ; single waveform bits (never combined, never noise)
 INNOVA_CTL_TRI equ 0x10
@@ -131,6 +142,26 @@ innova_write:
     ret
 
 ; ===========================================================================
+; innova_filter_init — configure the MOS 6581 analog low-pass filter across
+; all three voices (matching Planet X3 reference setup: Cutoff $C8, voices
+; 1-3 enabled in $17, mode low-pass). Clobbers nothing (innova_write preserves
+; all registers and flags).
+; ===========================================================================
+innova_filter_init:
+    push eax
+    mov ah, INNOVA_R_FCLO
+    xor al, al
+    call innova_write
+    mov ah, INNOVA_R_FCHI
+    mov al, INNOVA_FILTER_CUTOFF
+    call innova_write
+    mov ah, INNOVA_R_RESVOI
+    mov al, INNOVA_FILTER_VOICES
+    call innova_write
+    pop eax
+    ret
+
+; ===========================================================================
 ; innova_init — reset software state, silence the card, mark the shim active.
 ; Stage-2 audio_init calls this only when /INNOVA selected the device.
 ; Preserves all registers.
@@ -155,6 +186,7 @@ innova_init:
     loop .vinit
     mov byte [s_lastmode], 0xFF
     call innova_silence
+    call innova_filter_init
     popad
     ret
 
@@ -185,6 +217,16 @@ innova_silence:
     call innova_write
     inc ah                        ; next register
     loop .reg
+    ; set fast AD on all 3 voices (0x00: Attack 2ms, Decay 6ms)
+    mov ah, 0x05
+    xor al, al
+    call innova_write
+    mov ah, 0x0C
+    xor al, al
+    call innova_write
+    mov ah, 0x13
+    xor al, al
+    call innova_write
     ; caches read back as the silenced values, so the next tick re-emits only
     ; on change (KEY flags stay, like tandy_silence: voices resume on their
     ; next tick and re-key fully on their next restart)
@@ -198,6 +240,8 @@ innova_silence:
     add edi, SS_SIZE
     loop .cache
     mov byte [s_lastmode], 0
+    mov byte [s_noise_is_sfx], 0
+    call innova_filter_init
     pop edi
     pop ecx
     pop eax
@@ -221,8 +265,9 @@ innova_pass:
     jz .off
     ; master volume from NR50 (the louder terminal, like tandy_shim, so
     ; FadeOutAudio's simultaneous L/R ramp maps to a single volume ramp):
-    ; 3-bit side 0-7 << 1 -> even nibble 0-14 ($18 upper nibble stays 0:
-    ; filter OFF v1). GB 0 stays silent; SID 15 is simply unused headroom.
+    ; 3-bit side 0-7 << 1 -> even nibble 0-14.
+    ; Bit 4 = INNOVA_FILTER_LP: analog Low-Pass filter kept enabled across all
+    ; volume levels (Planet X3 reference).
     mov al, [ebp + rAUDVOL]
     mov ah, al
     shr ah, 4
@@ -236,6 +281,7 @@ innova_pass:
     cmp al, [s_lastmode]
     je .m2
     mov [s_lastmode], al
+    or al, INNOVA_FILTER_LP
     mov ch, al
     mov ah, INNOVA_R_MODEVOL
     mov al, ch
@@ -246,12 +292,60 @@ innova_pass:
 
     xor ebx, ebx
 .chLoop:
+%if DEBUG_DISABLE_WAVE
+    cmp ebx, 2
+    je .next
+%endif
     lea esi, [ebx*4 + ebx]
     add esi, 0xFF10             ; channel register base
-    lea eax, [ebx + ebx*4]
-    imul eax, eax, SS_SIZE      ; ch * SS_SIZE
+    imul eax, ebx, SS_SIZE      ; ch * SS_SIZE
     lea edi, [innova_state + eax]
 
+    cmp ebx, 2
+    jne .normalCh
+    cmp byte [s_noise_on], 0
+    jnz .waveStolen
+    cmp byte [ebp + wChannelSoundIDs + CHAN8], 0
+    jnz .waveStolen
+    test byte [ebp + rAUD4GO], 0x80
+    jnz .waveStolen
+    jmp .normalCh
+
+.waveStolen:
+    ; Voice 3 stolen by noise (or about to be stolen on this frame):
+    ; update Wave software state only, no HW writes
+    mov al, [ebp + esi + 4]     ; NR34
+    test al, 0x80
+    jz .waveNoRestart
+    and al, 0x7F                ; consume restart bit
+    mov [ebp + esi + 4], al
+    mov al, [ebp + esi + 1]     ; NR31 length
+    movzx eax, al
+    neg eax
+    add eax, 256
+    mov [edi + SS_LEN], ax
+    mov word [edi + SS_LENACC], 0
+    mov al, [ebp + esi + 4]
+    and al, 0x40
+    mov [edi + SS_LENEN], al
+    mov cl, [ebp + esi + 3]
+    mov ch, [ebp + esi + 4]
+    and ch, 7
+    mov [edi + SS_FREQ], cx
+    mov byte [edi + SS_KEY], 1
+    jmp .waveRunning
+.waveNoRestart:
+    cmp byte [edi + SS_KEY], 0
+    jz .next
+    mov cl, [ebp + esi + 3]
+    mov ch, [ebp + esi + 4]
+    and ch, 7
+    mov [edi + SS_FREQ], cx
+.waveRunning:
+    call innova_length_sw
+    jmp .next
+
+.normalCh:
     mov al, [ebp + esi + 4]     ; NRx4
     test al, 0x80
     jz .noRestart
@@ -290,10 +384,14 @@ innova_pass:
     jz .noiseTick
     and al, 0x7F
     mov [ebp + rAUD4GO], al
+%if DEBUG_DISABLE_NOISE == 0
     call innova_noise_keyon
     jmp .off
 .noiseTick:
     call innova_noise_tick
+%else
+.noiseTick:
+%endif
 .off:
     ret
 
@@ -358,6 +456,11 @@ innova_keyon:
     call innova_gateoff
     call innova_setfreq
     call innova_pulsew
+    imul ecx, ebx, INNOVA_VSTRIDE
+    add ecx, INNOVA_R_AD
+    mov ah, cl
+    xor al, al                    ; Attack 2ms, Decay 6ms (fast tracking ADSR)
+    call innova_write
     jmp innova_volume
 
 ; innova_keyoff — length/sweep expiry: drop KEY and cut the gate. The sustain
@@ -412,12 +515,12 @@ innova_setfreq:
     mov [edi + SS_LASTFN], ax
     mov edx, eax                  ; DX = Fn
     imul ecx, ebx, INNOVA_VSTRIDE    ; voice base offset
-    mov ah, cl                    ; FREQ LO
-    mov al, dl
-    call innova_write
     mov ah, cl
-    inc ah                        ; FREQ HI (no live flags here)
+    inc ah                        ; FREQ HI first (C64 PRG Ch. 4 order)
     mov al, dh
+    call innova_write
+    mov ah, cl                    ; FREQ LO second
+    mov al, dl
     call innova_write
 .done:
     ret
@@ -559,6 +662,31 @@ innova_length:
 .done:
     ret
 
+; innova_length_sw — software-only length countdown for Wave during noise steal.
+; Drops SS_KEY at zero without touching hardware registers.
+innova_length_sw:
+    cmp byte [edi + SS_LENEN], 0
+    jz .done
+    movzx eax, word [edi + SS_LENACC]
+    add eax, 256
+    movzx ecx, word [edi + SS_LEN]
+.step:
+    cmp eax, 60
+    jb .save
+    sub eax, 60
+    dec ecx
+    jnz .step
+    mov word [edi + SS_LEN], 0
+    mov byte [edi + SS_LENEN], 0
+    mov [edi + SS_LENACC], ax
+    mov byte [edi + SS_KEY], 0
+    ret
+.save:
+    mov [edi + SS_LEN], cx
+    mov [edi + SS_LENACC], ax
+.done:
+    ret
+
 ; ---------------------------------------------------------------------------
 ; innova_volume — sustain-riding plus gate: S nibble follows GB envvol
 ; (ch0/ch1) or the NR32 level (ch2); CONTROL carries the single waveform
@@ -576,6 +704,8 @@ innova_volume:
     cmp ebx, 2
     je .wave
     mov al, [edi + SS_ENVVOL]
+    test al, al                   ; volume 0 -> silent (cut gate)
+    jz .mute
     shl al, 4                     ; $06 byte: S = envvol, R = 0
     jmp .haveSR
 .wave:
@@ -638,37 +768,36 @@ innova_volume:
     ret
 
 ; ---------------------------------------------------------------------------
-; innova_noise_keyon — ch3 trigger hook: uniform V3-steal (plan 0.3.2, every song
-; steals V3, no per-song table). Saves the V3 $0E-$14 image, programs noise
-; control + ADSR from the live GB noise payload (NR42/NR43, sustain-riding
-; like the pitched voices — stage 3 audited per-SFX consts and found none
-; needed, so the pass voices everything live),
-; and drops the pitched voice so the tick loop cannot stomp the noise
-; mid-hit. Note-off (length expiry, or silence) restores the image with a
-; TEST pulse. Single-waveform invariant throughout: CONTROL is ever only
-; pulse/triangle (+GATE) or NOISE+GATE, never combined.
-; In: EBX = 3 from the wired call site (unused: V3 is absolute, state is the
-; ch2 slot + s_noise_*), EBP = GB memory base, restart already consumed.
+; innova_noise_keyon — ch3 trigger hook: uniform V3-steal (plan 0.3.2).
+; Steals Voice 3 for Noise, sets AD to 0x00, programs live NR42 envelope
+; and NR43 frequency, gating NOISE. Active SFX on CHAN8 retains exclusive
+; ownership until finished; music Wave cannot preempt it.
+; In: EBX = 3 from the wired call site, EBP = GB memory base, restart already consumed.
 ; Clobbers EAX ECX EDX EDI. No-op with the shim inactive.
 ; ---------------------------------------------------------------------------
 innova_noise_keyon:
     cmp byte [g_innova_on], 0
     jz .off
-    ; MIDI mode: the MT-32/GM stream carries the music, so ch3 noise only
-    ; steals V3 while an SFX owns it (wChannelSoundIDs CHAN8); a music noise
-    ; hit mutes (no steal, like the .off no-op above)
+    ; SFX voice stealing lockout:
+    ; If this noise event is a music drum (wChannelSoundIDs + CHAN8 == 0),
+    ; it is strictly prohibited from stealing Voice 3 if ANY SFX is active
+    ; on CHAN5..CHAN7.
+    cmp byte [ebp + wChannelSoundIDs + CHAN8], 0
+    jnz .isNoiseSfx
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    or al, [ebp + wChannelSoundIDs + CHAN6]
+    or al, [ebp + wChannelSoundIDs + CHAN7]
+    jnz .off                    ; SFX in flight: suppress music drum steal
+    ; MIDI mode: the MT-32/GM stream carries the music, so music drums never steal V3
     cmp byte [g_midi_music], 0
-    jz .midiOk
-    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
-    jz .off
-.midiOk:
-    ; re-entrant: a steal already in flight restores first, so a re-trigger
-    ; re-saves a clean pitched image (never a noise one)
-    cmp byte [s_noise_on], 0
-    jz .steal
-    call innova_noise_restore
-.steal:
-    ; latch the GB noise payload (same sequence as innova_keyon's, NR42/NR41)
+    jnz .off
+    mov byte [s_noise_is_sfx], 0
+    jmp .latchPayload
+.isNoiseSfx:
+    mov byte [s_noise_is_sfx], 1
+
+.latchPayload:
+    ; latch the GB noise payload (NR42/NR41)
     mov al, [ebp + rAUD4ENV]
     mov ah, al
     shr ah, 4
@@ -691,24 +820,10 @@ innova_noise_keyon:
     mov [s_noise_lenen], al
     mov al, [ebp + rAUD4POLY]
     mov [s_noise_nr43], al
-    ; save the V3 $0E-$14 image. The card is write-only, so the image IS the
-    ; ch2 LAST* caches (FREQ LO/HI, PW LO/HI, CONTROL, SR) plus the
-    ; never-written AD = 0
+
+    ; program the noise, params before gate (bring-up order)
     lea edi, [innova_state + 2*SS_SIZE]
-    mov ax, [edi + SS_LASTFN]
-    mov [s_v3save + 0], ax        ; $0E/$0F Fn lo/hi
-    mov ax, [edi + SS_LASTPW]
-    mov [s_v3save + 2], ax        ; $10/$11 PW lo/hi
-    mov al, [edi + SS_LASTCTL]
-    mov [s_v3save + 4], al        ; $12 CONTROL
-    mov byte [s_v3save + 5], 0    ; $13 AD (silenced 0, never written)
-    mov al, [edi + SS_LASTSUS]
-    mov [s_v3save + 6], al        ; $14 SR
-    ; drop the pitched voice: V3 is gone until the noise releases it
-    mov byte [edi + SS_KEY], 0
-    ; program the noise, params before gate (bring-up order). PW is the
-    ; pitched voice's and stays: noise ignores it
-    mov ah, 0x13                  ; AD = 0 (attack/decay 0, like pitched)
+    mov ah, 0x13                  ; AD = 0x00 (Attack 2ms, Decay 6ms)
     xor al, al
     call innova_write
     mov al, [s_noise_vol]
@@ -716,7 +831,7 @@ innova_noise_keyon:
     mov [edi + SS_LASTSUS], al
     mov ah, 0x14
     call innova_write
-    call innova_noise_freq           ; $0E/$0F from NR43
+    call innova_noise_freq        ; $0E/$0F from NR43
     mov al, INNOVA_CTL_NOISE | INNOVA_GATE
     mov [edi + SS_LASTCTL], al
     mov ah, 0x12                  ; CONTROL = NOISE+GATE last
@@ -769,38 +884,34 @@ innova_noise_freq:
     ret
 
 ; ---------------------------------------------------------------------------
-; innova_noise_tick — per-tick service for a stolen V3 (called from innova_pass's
-; ch3 tail, which already gated on g_innova_on). Rides the noise envelope onto
-; $14, follows NR43 rewrites, and on length expiry releases the voice
-; (restore + TEST pulse). A pitched V3 re-key mid-steal aborts the steal:
-; its keyon already reprogrammed the voice, so the saved image is stale and
-; the live pitched state owns V3 again. Clobbers EAX ECX EDX EDI, plus EBX
-; on the MIDI-mode handoff (restored V3 is handed to innova_volume as ch2).
+; innova_noise_tick — per-tick service for a stolen V3.
+; Rides the noise envelope onto $14, follows NR43 rewrites, and handles note-off.
+; Multi-note SFX remain active until wChannelSoundIDs CHAN8 is 0.
+; Releases Voice 3 back to the live Wave state cleanly when finished.
+; Clobbers EAX ECX EDX EDI, plus EBX on restore.
 ; ---------------------------------------------------------------------------
 innova_noise_tick:
     cmp byte [s_noise_on], 0
     jz .done
-    cmp byte [innova_state + 2*SS_SIZE + SS_KEY], 0
-    jz .service
-    mov byte [s_noise_on], 0      ; pitched re-keyed: abandon the steal
-    ret
-.service:
-    ; MIDI mode: a steal whose SFX owner released ch3 hands V3 back at once;
-    ; the pitched volume guard then owns the restored voice (muted unless an
-    ; SFX owns ch2), so music never resumes on the SID behind the MIDI stream
-    cmp byte [g_midi_music], 0
-    jz .midiOk
-    cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
-    jnz .midiOk
+
+    ; If an SFX owned Voice 3 and the SFX has finished, release Voice 3 back at once
+    cmp byte [s_noise_is_sfx], 0
+    jz .checkMidi
+    cmp byte [ebp + wChannelSoundIDs + CHAN8], 0
+    jnz .tickVoice
     call innova_noise_restore
-    mov ebx, 2
-    lea edi, [innova_state + 2*SS_SIZE]
-    call innova_volume
     ret
-.midiOk:
+
+.checkMidi:
+    ; MIDI mode: music drums never stay on SID
+    cmp byte [g_midi_music], 0
+    jz .tickVoice
+    call innova_noise_restore
+    ret
+
+.tickVoice:
     lea edi, [innova_state + 2*SS_SIZE]
     ; envelope: one step per (period / 64) s, riding the $14 sustain nibble
-    ; (gate held, A/D/R 0 — innova_envelope's math on the noise payload)
     mov al, [s_noise_per]
     test al, al
     jz .freq
@@ -820,7 +931,7 @@ innova_noise_tick:
     jmp .envSet
 .envDown:
     test cl, cl
-    jz .storeEnv
+    jz .noiseDecayed
     dec cl
 .envSet:
     mov [s_noise_vol], cl
@@ -833,6 +944,13 @@ innova_noise_tick:
     call innova_write                ; EAX survives (innova_write preserves all)
 .storeEnv:
     mov [s_noise_acc], ax
+    jmp .freq
+.noiseDecayed:
+    ; Noise faded to 0. If SFX is still active, mute gate; if drum, restore.
+    cmp byte [s_noise_is_sfx], 0
+    jnz .muteNoise
+    call innova_noise_restore
+    jmp .done
 .freq:
     mov al, [ebp + rAUD4POLY]
     cmp al, [s_noise_nr43]
@@ -842,7 +960,7 @@ innova_noise_tick:
 .len:
     ; length: 256 Hz countdown (innova_length's math); expiry is the note-off
     cmp byte [s_noise_lenen], 0
-    jz .done
+    jz .checkSfxEnd
     movzx eax, word [s_noise_lacc]
     add eax, 256
     movzx ecx, word [s_noise_len]
@@ -855,60 +973,77 @@ innova_noise_tick:
     mov word [s_noise_len], 0
     mov byte [s_noise_lenen], 0
     mov [s_noise_lacc], ax
-    call innova_noise_restore        ; note-off: hand V3 back, TEST hygiene
+    cmp byte [s_noise_is_sfx], 0
+    jnz .muteNoise
+    call innova_noise_restore
     jmp .done
 .save:
     mov [s_noise_len], cx
     mov [s_noise_lacc], ax
+.checkSfxEnd:
+    ; Check if active noise SFX has ended in the engine
+    cmp byte [s_noise_is_sfx], 0
+    jz .done
+    cmp byte [ebp + wChannelSoundIDs + CHAN8], 0
+    jnz .done
+    ; SFX has ended: release Voice 3 back to Wave
+    call innova_noise_restore
 .done:
     ret
+.muteNoise:
+    ; Mute noise gate while SFX channel is still active
+    test byte [edi + SS_LASTCTL], INNOVA_GATE
+    jz .checkSfxEnd
+    mov byte [edi + SS_LASTCTL], INNOVA_CTL_NOISE
+    mov ah, 0x12
+    mov al, INNOVA_CTL_NOISE
+    call innova_write
+    jmp .checkSfxEnd
 
 ; ---------------------------------------------------------------------------
-; innova_noise_restore — hand V3 back: rewrite the saved $0E-$14 image, pulse
-; TEST on $12 to clear any lock-up state (datasheet NOTE: a noise+waveform
-; wedge recovers via TEST, and the ISA card has no RES-pin control so TEST
-; is the only software recovery), then sync the ch2 caches to the restored
-; bytes so later compare-writes see the live hardware. The restored CONTROL
-; re-gates whatever was sounding, so an interrupted pitched note resumes;
-; a V3 that was silent stays silent. Clobbers EAX ECX EDX EDI.
+; innova_noise_restore — hand Voice 3 back to Wave: reconstructs Voice 3
+; directly from the live software state of Channel 2 (Wave) without stale
+; snapshots or disruptive TEST pulses.
+; Clobbers EAX ECX EDX EDI, plus EBX.
 ; ---------------------------------------------------------------------------
 innova_noise_restore:
-    mov al, [s_v3save + 0]
-    mov ah, 0x0E
-    call innova_write                ; Fn lo
-    mov al, [s_v3save + 1]
-    mov ah, 0x0F
-    call innova_write                ; Fn hi
-    mov al, [s_v3save + 2]
-    mov ah, 0x10
-    call innova_write                ; PW lo
-    mov al, [s_v3save + 3]
-    mov ah, 0x11
-    call innova_write                ; PW hi
-    mov al, [s_v3save + 5]
-    mov ah, 0x13
-    call innova_write                ; AD (saved 0)
-    mov al, [s_v3save + 6]
-    mov ah, 0x14
-    call innova_write                ; SR
-    mov al, [s_v3save + 4]
-    mov dl, al                    ; DL = restored CONTROL
-    or al, INNOVA_CTL_TEST
-    mov ah, 0x12
-    call innova_write                ; TEST pulse: reset the noise LFSR
-    mov al, dl
-    mov ah, 0x12
-    call innova_write                ; CONTROL back to the saved byte
-    lea edi, [innova_state + 2*SS_SIZE]
-    mov ax, [s_v3save + 0]
-    mov [edi + SS_LASTFN], ax
-    mov ax, [s_v3save + 2]
-    mov [edi + SS_LASTPW], ax
-    mov al, [s_v3save + 4]
-    mov [edi + SS_LASTCTL], al
-    mov al, [s_v3save + 6]
-    mov [edi + SS_LASTSUS], al
     mov byte [s_noise_on], 0
+    mov byte [s_noise_is_sfx], 0
+    lea edi, [innova_state + 2*SS_SIZE]
+    cmp byte [edi + SS_KEY], 0
+    jz .muteWave
+    test byte [s_nr51_snap], 0x44
+    jz .muteWave
+    test byte [ebp + rAUD3ENA], 0x80
+    jz .muteWave
+    mov al, [ebp + rAUD3LEVEL]
+    shr al, 5
+    and eax, 3
+    mov al, [InnovaWaveSUS + eax]
+    test al, al
+    jz .muteWave
+    shl al, 4                     ; AL = sustain byte
+    mov [edi + SS_LASTSUS], al
+    ; program hardware V3 for Wave (Triangle)
+    mov ah, 0x13
+    xor al, al
+    call innova_write             ; AD = 0x00
+    mov ah, 0x14
+    mov al, [edi + SS_LASTSUS]
+    call innova_write             ; SR = sustain
+    mov word [edi + SS_LASTFN], 0xFFFF ; force frequency rewrite
+    mov ebx, 2
+    call innova_setfreq           ; $0E/$0F from live SS_FREQ
+    mov byte [edi + SS_LASTCTL], INNOVA_CTL_TRI | INNOVA_GATE
+    mov ah, 0x12
+    mov al, INNOVA_CTL_TRI | INNOVA_GATE
+    call innova_write
+    ret
+.muteWave:
+    mov byte [edi + SS_LASTCTL], INNOVA_CTL_TRI
+    mov ah, 0x12
+    mov al, INNOVA_CTL_TRI
+    call innova_write
     ret
 
 ; ---------------------------------------------------------------------------
@@ -993,6 +1128,7 @@ s_v3save:     resb 7              ; stolen-voice image of V3 $0E-$14
                                 ; (+0/1 Fn lo/hi, +2/3 PW lo/hi, +4 CONTROL,
                                 ; +5 AD, +6 SR — from the ch2 LAST* caches)
 s_noise_on:   resb 1              ; 1 = V3 currently stolen by ch3 noise
+s_noise_is_sfx: resb 1            ; 1 = active steal belongs to an SFX (CHAN8)
 s_noise_vol:  resb 1              ; latched NR42 init volume 0-15 (ridden as sustain)
 s_noise_dir:  resb 1              ; envelope direction (1 = up)
 s_noise_per:  resb 1              ; envelope period (0 = off)
