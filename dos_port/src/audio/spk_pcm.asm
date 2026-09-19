@@ -24,6 +24,12 @@ bits 32
 
 global spk_pcm_play
 
+%ifndef ENABLE_PIKA_PCM
+%define ENABLE_PIKA_PCM 1
+%endif
+
+%if ENABLE_PIKA_PCM != 0
+
 extern pcm_pace_init              ; src/audio/sb_pcm.asm
 extern pcm_pace
 
@@ -89,3 +95,12 @@ spk_pcm_play:
 section .bss
 spk_range:      resb 1            ; PWM pulse range (carrier clocks - 1)
 spk_gate_save:  resb 1            ; port 61h state to restore
+
+%else
+
+section .text
+spk_pcm_play:
+    xor eax, eax
+    ret
+
+%endif

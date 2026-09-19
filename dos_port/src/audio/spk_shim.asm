@@ -34,6 +34,12 @@ global spk_shim_shutdown
 global spk_dbg_snapshot
 global g_spk_on
 
+%ifndef ENABLE_AUDIO_SPK
+%define ENABLE_AUDIO_SPK 1
+%endif
+
+%if ENABLE_AUDIO_SPK != 0
+
 section .text
 
 PIT_CMD_PORT  equ 0x43
@@ -381,3 +387,18 @@ spk_state:      resb 2 * SS_SIZE
 spk_last_div:   resw 1
 spk_div_writes: resw 1
 s_nr51_snap:    resb 1
+
+%else
+
+section .text
+spk_shim_init:
+spk_pass:
+spk_silence:
+spk_shim_shutdown:
+spk_dbg_snapshot:
+    ret
+
+section .data
+g_spk_on:       db 0
+
+%endif

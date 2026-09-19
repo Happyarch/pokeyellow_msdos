@@ -30,7 +30,14 @@ global sb_pcm_play
 global pcm_pace_init
 global pcm_pace
 
+%ifndef ENABLE_PIKA_PCM
+%define ENABLE_PIKA_PCM 1
+%endif
+
+%if ENABLE_PIKA_PCM != 0
+
 extern g_sb_base                  ; src/audio/audio_hal.asm (BLASTER A field)
+extern current_pit_divisor        ; boot/timing.asm
 
 PIT_CMD_PORT    equ 0x43
 PIT_CH0_PORT    equ 0x40
@@ -129,7 +136,7 @@ pcm_pace:
     mov [pace_prev], ax
     sub dx, ax                    ; elapsed mode-3 counts = prev - cur
     jnc .noWrap
-    add dx, PIT_DIVISOR           ; latched counter reloaded mid-gap
+    add dx, [current_pit_divisor] ; latched counter reloaded mid-gap
 .noWrap:
     movzx edx, dx
     shl edx, 7                    ; counts dec by 2 per clock; <<8 fp, /2
@@ -156,3 +163,14 @@ align 4
 pace_step:  resd 1                ; PIT clocks per pacing tick, 24.8 fp
 pace_acc:   resd 1                ; accumulated elapsed clocks, 24.8 fp
 pace_prev:  resw 1                ; last latched ch0 count
+
+%else
+
+section .text
+sb_pcm_play:
+pcm_pace_init:
+pcm_pace:
+    xor eax, eax
+    ret
+
+%endif

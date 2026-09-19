@@ -25,6 +25,8 @@
 ; FadeOutAudio ramps NR50, and the enhancement layer must fade with the
 ; base channels or it would keep playing at full level over a fade-out.
 
+bits 32
+
 %include "gb_memmap.inc"
 %include "assets/audio_constants.inc"
 
@@ -33,6 +35,12 @@ global enh_seq_start
 global enh_seq_stop
 global enh_seq_tick
 global enh_dbg_snapshot
+
+%ifndef ENABLE_AUDIO_OPL_ENH
+%define ENABLE_AUDIO_OPL_ENH 1
+%endif
+
+%if ENABLE_AUDIO_OPL_ENH != 0
 
 extern opl_write                  ; src/audio/opl_shim.asm
 extern opl_write_hi
@@ -434,3 +442,15 @@ enh_wait:       resw 1
 enh_on:         resb 1
 enh_master:     resb 1            ; cached NR50 louder terminal (0xFF = none)
 enh_master_att: resb 1
+
+%else
+
+section .text
+enh_init:
+enh_seq_start:
+enh_seq_stop:
+enh_seq_tick:
+enh_dbg_snapshot:
+    ret
+
+%endif

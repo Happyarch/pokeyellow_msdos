@@ -34,6 +34,8 @@
 ; The GB's pulse range reaches ~131 kHz; N clamps to [1, 1023] (N=1 is
 ; ultrasonic, matching opl_shim's fnum clamp).
 
+bits 32
+
 %include "gb_memmap.inc"
 
 global tandy_init
@@ -42,6 +44,12 @@ global tandy_silence
 global tandy_shutdown
 global tandy_dbg_snapshot
 global g_tandy_on
+
+%ifndef ENABLE_AUDIO_TANDY
+%define ENABLE_AUDIO_TANDY 1
+%endif
+
+%if ENABLE_AUDIO_TANDY != 0
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
 
@@ -564,3 +572,18 @@ section .bss
 tandy_state:    resb 4 * TS_SIZE
 t_master_att:   resb 1
 t_nr51_snap:    resb 1
+
+%else
+
+section .text
+tandy_init:
+tandy_pass:
+tandy_silence:
+tandy_shutdown:
+tandy_dbg_snapshot:
+    ret
+
+section .data
+g_tandy_on:     db 0
+
+%endif

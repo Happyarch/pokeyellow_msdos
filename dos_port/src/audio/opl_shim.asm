@@ -61,6 +61,12 @@ extern g_sb_dsp_ver
 extern g_sb_irq
 extern g_sb_dma
 
+%ifndef ENABLE_AUDIO_OPL
+%define ENABLE_AUDIO_OPL 1
+%endif
+
+%if ENABLE_AUDIO_OPL != 0
+
 section .text
 
 OPL_BASE      equ 0x388
@@ -879,6 +885,35 @@ section .data
 g_opl_present:  db 0
 g_opl3:         db 0
 
+%include "assets/sfx_data.inc"
+
+section .bss
+
+voice_state:    resb 4 * VS_SIZE
+master_att:     resb 1
+nr51_snap:      resb 1
+g_opl_ch_override: resb 4   ; per-channel patch-index override (0xFF = none)
+
+%else
+
+section .text
+opl_init:
+opl_shutdown:
+opl_silence:
+opl_pass:
+opl_dbg_snapshot:
+opl_song_patch_select:
+opl_write:
+opl_write_hi:
+    ret
+
+section .data
+g_opl_present:  db 0
+g_opl3:         db 0
+
+%endif
+
+section .data
 ; modulator slot offset per melodic voice 0-8 (carrier = +3)
 OplSlotMod:
     db 0x00, 0x01, 0x02, 0x08, 0x09, 0x0A, 0x10, 0x11, 0x12
@@ -888,11 +923,4 @@ OplRegGroups:
     db 0x20, 0x40, 0x60, 0x80, 0xE0
 
 %include "assets/opl_patches.inc"
-%include "assets/sfx_data.inc"
 
-section .bss
-
-voice_state:    resb 4 * VS_SIZE
-master_att:     resb 1
-nr51_snap:      resb 1
-g_opl_ch_override: resb 4   ; per-channel patch-index override (0xFF = none)

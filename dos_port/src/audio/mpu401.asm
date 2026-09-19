@@ -46,12 +46,20 @@ global midi_seq_start
 global midi_seq_stop
 global midi_seq_tick
 global midi_all_notes_off         ; PlayPikachuSoundClip: cut held notes pre-clip
+global midi_dbg_snapshot
 
-extern tick_count                 ; boot/timing.asm — 60 Hz PIT tick counter
 global g_midi_music
 global g_cfg_midi
 global g_mpu_present
 global g_mpu_base
+
+%ifndef ENABLE_AUDIO_MIDI
+%define ENABLE_AUDIO_MIDI 1
+%endif
+
+%if ENABLE_AUDIO_MIDI != 0
+
+extern tick_count                 ; boot/timing.asm — 60 Hz PIT tick counter
 
 MPU_POLL_BOUND  equ 4000          ; status reads before declaring timeout
 MPU_DRR         equ 0x40          ; status bit 6: 0 = ready for output
@@ -253,7 +261,15 @@ midi_seq_start:
     test esi, esi
     jz .no_stream
 
+    ; midi_all_notes_off clobbers EAX EBX ECX EDX (see below), but the
+    ; MT-32 remap path reuses EAX (sound id) and EBX (bank index) after it —
+    ; preserve both across the call (regression 2026-09-18: unpreserved EBX
+    ; reached bank_setup_tables as a channel-cursor pointer and page-faulted).
+    push eax
+    push ebx
     call midi_all_notes_off       ; clean handover from the previous song
+    pop ebx
+    pop eax
 
     ; MT-32 on-the-fly custom patch pointer remapping:
     ; 1) If previous track modified patches, restore them to factory state
@@ -544,3 +560,23 @@ midi_wait:      resw 1            ; frames until the next op group
 midi_on:        resb 1
 midi_scale:     resb 1            ; NR50 terminal volume 0-7 (7 = full)
 midi_cc7_base:  resb 16           ; last in-stream CC7 per channel ($FF unset)
+
+%else
+
+section .text
+mpu_detect:
+mt32_upload:
+midi_seq_start:
+midi_seq_stop:
+midi_seq_tick:
+midi_all_notes_off:
+midi_dbg_snapshot:
+    ret
+
+section .data
+g_cfg_midi:     db 0
+g_midi_music:   db 0
+g_mpu_present:  db 0
+g_mpu_base:     dw 0x330
+
+%endif

@@ -8,10 +8,14 @@
 ;   FadeOutAudio -> Music_DoLowHealthAlarm -> Audio1_UpdateMusic
 ; (pret bankswitches around the latter two; the port's engine is resident and
 ; Audio1_UpdateMusic is the single interpreter for all four banks). The
-; device-shim pass (opl_shim) hooks in after the engine update: it reads the
-; virtual APU block at [ebp+rAUD*] once per tick and mirrors it to hardware,
-; consuming the NRx4 restart bits. DelayFrame is pushad-wrapped, so the tick
-; may clobber registers freely.
+; device-shim pass hooks in after the engine update: audio_init resolves three
+; tick slots (g_tick_shim/g_tick_enh/g_tick_midi) once from the g_audio_devices
+; role nibbles, and the tick calls them blindly — zero per-tick compares.
+; Unused slots point at tick_noop. Each shim pass is also self-guarded, and
+; under MIDI (g_midi_music) every shim pass mutes music voices itself, so the
+; winner's single pass voices SFX while midi_seq_tick carries the music (never
+; double-pumped). DelayFrame is pushad-wrapped, so the tick may clobber
+; registers freely.
 ;
 ; audio_init flips g_audio_engine_online (the PlaySound gate in
 ; src/home/audio.asm) and then runs the pret boot-path engine reset
@@ -51,6 +55,11 @@ extern tandy_shutdown             ; src/audio/tandy_shim.asm
 extern spk_shim_init              ; src/audio/spk_shim.asm
 extern spk_pass                   ; src/audio/spk_shim.asm
 extern spk_shim_shutdown          ; src/audio/spk_shim.asm
+extern covox_init                 ; src/audio/covox_shim.asm
+extern covox_pass                 ; src/audio/covox_shim.asm
+extern covox_shutdown             ; src/audio/covox_shim.asm
+extern g_covox_rate               ; src/input/input_cfg.asm
+extern pit_set_rate               ; boot/timing.asm
 extern enh_init                   ; src/audio/opl_enh.asm
 extern enh_seq_tick               ; src/audio/opl_enh.asm
 extern enh_seq_stop               ; src/audio/opl_enh.asm
@@ -58,11 +67,38 @@ extern mpu_detect                 ; src/audio/mpu401.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
 extern midi_seq_stop              ; src/audio/mpu401.asm
+global g_audio_devices
+global g_audio_forced
+global g_tick_shim
+global g_tick_enh
+global g_tick_midi
+extern g_midi_music               ; src/audio/mpu401.asm — 1 once mpu_detect IDs a UART
 extern g_cfg_midi                 ; src/audio/mpu401.asm — set by /MT32 or /GM
+extern g_cfg_audio_device         ; src/input/input_cfg.asm — POKEMON.CFG [audio] device request byte
 extern ds_base                    ; boot/entry.asm — linear base of DS
 extern seg_to_flat                ; boot/entry.asm — selector/segment -> flat
 
 section .text
+
+; Device nibble indices into g_audio_devices (one 4-bit role nibble each;
+; nibble 6 reserved for the stage-4 /DISNEY FIFO device, nibble 7 is PCM-only).
+DEV_MIDI   equ 0
+DEV_OPL    equ 1
+DEV_TANDY  equ 2
+DEV_SPK    equ 3
+DEV_COVOX  equ 5
+DEV_DISNEY equ 6
+DEV_SB     equ 7
+; Role bits within a nibble (P S M E, high to low bit)
+ROLE_EN    equ 1
+ROLE_MUSIC equ 2
+ROLE_SFX   equ 4
+ROLE_PCM   equ 8
+; g_audio_forced bit positions (bit N = /FLAG demanded device N)
+FORCE_MIDI   equ (1 << DEV_MIDI)
+FORCE_TANDY  equ (1 << DEV_TANDY)
+FORCE_SPK    equ (1 << DEV_SPK)
+FORCE_COVOX  equ (1 << DEV_COVOX)
 
 audio_tick:
     cmp byte [g_audio_engine_online], 0
@@ -70,28 +106,17 @@ audio_tick:
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
-    ; exactly one device shim consumes the virtual APU (each pass is also
-    ; self-guarded, so a wrong selection no-ops instead of touching ports)
-    mov al, [g_shim_device]
-    cmp al, 1
-    je .opl
-    cmp al, 2
-    je .tandy
-    cmp al, 3
-    je .spk
-    jmp .midi
-.opl:
-    call opl_pass                 ; virtual APU -> FM
-    call enh_seq_tick             ; tier-1 enhancement layer (Phase E)
-    jmp .midi
-.tandy:
-    call tandy_pass               ; virtual APU -> SN76489
-    jmp .midi
-.spk:
-    call spk_pass                 ; virtual APU -> PC speaker (SFX only)
-.midi:
-    call midi_seq_tick            ; MIDI music stream (no-op unless /MT32|/GM)
+    ; Solved dispatch: three init-resolved passes, zero per-tick compares.
+    ; Non-MIDI the winner voices music+SFX in its one pass; under MIDI the
+    ; winner's pass self-mutes to SFX (g_midi_music gate inside each shim)
+    ; and the MIDI slot carries the music. Unused slots are tick_noop.
+    call [g_tick_shim]
+    call [g_tick_enh]
+    call [g_tick_midi]
 .off:
+    ret
+
+tick_noop:
     ret
 
 audio_init:
@@ -101,32 +126,117 @@ audio_init:
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
     call opl_init                 ; detect + reset the OPL (388h)
     call enh_init                 ; enhancement-player caches (no port I/O)
-    ; device shim selection (exactly one active): /TANDY and /SPK force
-    ; theirs (the SN76489 is write-only — no probe is possible, the flag IS
-    ; the detection); the default is OPL when one answered, else the
-    ; speaker SFX shim so a no-card machine still blips.
-    mov al, [g_cfg_shim]
-    cmp al, 2
-    je .tandy
-    cmp al, 3
-    je .spk
+
+    ; Solved device selection (stage 0.4): forced bits (/TANDY, /COVOX, /SPK)
+    ; have strict priority. Unforced, a POKEMON.CFG [audio] device entry
+    ; (g_cfg_audio_device) names an explicit winner; if that entry is 0xFF
+    ; (auto) we pick OPL if present, else the PC-speaker auto-fill. /COVOX is
+    ; explicit-only: auto-fill never selects it.
+    mov eax, [g_audio_forced]
+    test eax, FORCE_TANDY
+    jnz .wTandy
+    test eax, FORCE_COVOX
+    jnz .wCovox
+    test eax, FORCE_SPK
+    jnz .wSpk
+    mov al, [g_cfg_audio_device]  ; 0xFF = auto (no config): today's fill below
+    cmp al, 0xFF
+    je .autoFill
+    cmp al, 2                     ; TANDY
+    je .wTandy
+    cmp al, 5                     ; COVOX
+    je .wCovox
+    cmp al, 3                     ; SPK
+    je .wSpk
+    cmp al, 1                     ; OPL (forced even if the probe found none)
+    je .wOpl
+    test al, al                   ; 0 = none: silence like /NOSOUND from here
+    jz .off                       ; (probes already ran; slots stay tick_noop)
+    jmp .autoFill                 ; unknown byte: ignore, keep today's fill
+.autoFill:
     cmp byte [g_opl_present], 0
-    jz .spk
-    mov byte [g_shim_device], 1   ; OPL
-    jmp .haveShim
-.tandy:
-    call tandy_init
-    mov byte [g_shim_device], 2
-    jmp .haveShim
-.spk:
+    jnz .wOpl
+.wSpk:
+    mov ebx, 3                    ; PC speaker (forced /SPK or auto fallback)
+    mov esi, spk_pass
     call spk_shim_init
-    mov byte [g_shim_device], 3
-.haveShim:
+    jmp .haveWinner
+.wTandy:
+    mov ebx, 2                    ; SN76489
+    mov esi, tandy_pass
+    call tandy_init
+    jmp .haveWinner
+.wCovox:
+    mov ebx, 5                    ; Covox DAC (explicit /COVOX only, never auto)
+    mov esi, covox_pass
+    call covox_init
+    ; Reprogram PIT channel 0 to g_covox_rate: divisor = 1193182 / g_covox_rate
+    movzx ecx, word [g_covox_rate]
+    test ecx, ecx
+    jz .pitDone
+    mov eax, 1193182
+    xor edx, edx
+    div ecx                       ; AX = divisor
+    call pit_set_rate
+.pitDone:
+    jmp .haveWinner
+.wOpl:
+    mov ebx, 1                    ; OPL (opl_init already probed above)
+    mov esi, opl_pass
+.haveWinner:
+    mov [g_tick_shim], esi        ; the single shim pass voices music+SFX
+    mov dword [g_tick_enh], tick_noop
+    cmp ebx, 1                    ; tier-1 enhancement rides only under OPL,
+    jne .noEnh                    ; the old ladder's call pattern exactly
+    mov dword [g_tick_enh], enh_seq_tick
+.noEnh:
+    mov dword [g_tick_midi], tick_noop
     cmp byte [g_cfg_midi], 0      ; /MT32 or /GM: probe the MPU-401 too
-    jz .noMidi
+    jz .buildWord
     call mpu_detect               ; clears g_cfg_midi if nothing answers
     call mt32_upload              ; setup SysEx (no-op unless /MT32 + found)
-.noMidi:
+    cmp byte [g_midi_music], 0
+    jnz .midiLive
+    mov byte [g_cfg_midi], 0      ; already cleared by mpu_detect on real
+                                  ; hardware; explicit for the stub combo where
+                                  ; mpu_detect is a ret-only no-op
+    and dword [g_audio_forced], ~FORCE_MIDI
+    jmp .buildWord
+.midiLive:
+    mov dword [g_tick_midi], midi_seq_tick
+.buildWord:
+    ; assemble the solved role word from the winner (EBX) and the probes
+    xor eax, eax
+    cmp byte [g_midi_music], 0
+    jz .noMidiBit
+    or eax, (ROLE_MUSIC | ROLE_EN) << (DEV_MIDI * 4)
+.noMidiBit:
+    cmp ebx, 1
+    jne .noOplBit
+    or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << (DEV_OPL * 4)
+.noOplBit:
+    cmp ebx, 2
+    jne .noTandyBit
+    or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << (DEV_TANDY * 4)
+.noTandyBit:
+    ; speaker: PCM field always (cry fallback), SFX only as the winner —
+    ; Covox/DSS winners take no speaker SFX (the DAC covers SFX + cry)
+    mov ecx, (ROLE_PCM | ROLE_EN) << (DEV_SPK * 4)
+    cmp ebx, 3
+    jne .spkBase
+    or ecx, (ROLE_SFX) << (DEV_SPK * 4)
+.spkBase:
+    or eax, ecx
+    cmp ebx, 5
+    jne .noCovoxBit
+    or eax, (ROLE_MUSIC | ROLE_SFX | ROLE_PCM | ROLE_EN) << (DEV_COVOX * 4)
+.noCovoxBit:
+    cmp byte [g_sb_present], 0
+    jz .noSbBit
+    or eax, (ROLE_PCM | ROLE_EN) << (DEV_SB * 4)
+.noSbBit:
+    mov [g_audio_devices], eax
+    mov [g_shim_device], bl       ; legacy byte follows the solved winner
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
 .off:
@@ -139,6 +249,10 @@ audio_shutdown:
     call opl_shutdown             ; leave the FM chip silent
     call tandy_shutdown           ; leave the PSG silent (no-op if inactive)
     call spk_shim_shutdown        ; speaker gate off (safe always)
+    call covox_shutdown           ; park the DAC at mid-level (no-op if inactive)
+    ; Restore PIT channel 0 rate to standard 60 Hz frame divisor
+    xor ax, ax
+    call pit_set_rate
     ret
 
 ; hal_dbg_snapshot — record the selected shim device at $D246 (DEBUG_AUDIO
@@ -155,10 +269,18 @@ section .data
 blaster_name:   db "BLASTER=", 0
 
 g_cfg_nosound:  db 0              ; /NOSOUND on the command line
-g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3 (0 = auto)
+g_cfg_shim:     db 0              ; forced shim: /TANDY = 2, /SPK = 3 (0 = auto; /COVOX sets a forced bit only)
 g_cfg_noenh:    db 0              ; /NOENH: disable the tier-1 OPL enhancement layer
 g_cfg_musicloop: db 0            ; /LOOP: DEBUG_AUDIO harness plays music only, forever
-g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker
+g_shim_device:  db 0              ; active shim: 0 none, 1 OPL, 2 SN76489, 3 speaker, 5 covox
+; Solved device set (stage 0.4 bitmask): one 4-bit P-S-M-E role nibble per
+; DEV_* index (PCM, SFX, MUSIC, ENABLE, high to low bit). Written once by
+; audio_init; the tick slots below are resolved from it.
+g_audio_devices: dd 0             ; role nibbles: MIDI 0, OPL 1, TANDY 2, SPK 3, (4), COVOX 5, SB 7
+g_audio_forced:  dd 0             ; /FLAG demands, bit N = device N; unavailable demands clear at solve
+g_tick_shim:    dd tick_noop     ; the single shim pass (winner voices music+SFX)
+g_tick_enh:     dd tick_noop     ; tier-1 enhancement (OPL winner only)
+g_tick_midi:    dd tick_noop     ; MIDI music stream (MIDI nibble music only)
 g_sb_base:      dw 0              ; BLASTER A field (e.g. 0x220); 0 = absent
 g_sb_irq:       db 0              ; BLASTER I field
 g_sb_dma:       db 0              ; BLASTER D field

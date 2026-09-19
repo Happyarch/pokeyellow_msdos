@@ -12,6 +12,11 @@
 ;   start = enter   ; or 0x1C / space
 ;   select = backspace ; or 0x0E / tab / rshift
 ;   device = keyboard  ; or gamepad
+;   [audio]
+;   covox_rate = 7000   ; Covox DAC rate in Hz, decimal; clamped 4000-44500
+;   device = auto       ; requested device: none|opl|tandy|spk|innova|covox|gb|pas
+;                       ; (default auto: a /FLAG above wins, else the OPL
+;                       ; probe / speaker auto-fill decides)
 ;
 ; Loaded ONCE at boot in boot/entry.asm before any pret-translated code runs.
 ; Populates static byte literals (cfg_key_*) in memory with fallback to current
@@ -36,6 +41,8 @@ global cfg_key_b
 global cfg_key_start
 global cfg_key_select
 global g_input_device
+global g_covox_rate
+global g_cfg_audio_device
 
 ; Input device constants
 INPUT_DEVICE_KBD     equ 0
@@ -65,12 +72,30 @@ cfg_key_b:      db 0x2C    ; 'Z'
 cfg_key_start:  db 0x1C    ; Enter
 cfg_key_select: db 0x0E    ; Backspace
 g_input_device: db INPUT_DEVICE_KBD
+; --- Audio Literals (parsed once at boot; zero per-frame cost) ---
+; Covox DAC render/playback rate in Hz (POKEMON.CFG [audio] covox_rate,
+; decimal; clamped at parse to 4000-44500). Default is the DSS fixed rate.
+g_covox_rate: dw 7000
+; Requested audio device (POKEMON.CFG [audio] device, parsed once at boot;
+; zero per-frame cost). 0xFF = auto (default: /FLAG wins, else the OPL probe
+; / speaker auto-fill decides); 0 = none (silence like /NOSOUND once no /FLAG
+; stands); else a DEV_* index (1 = OPL, 2 = TANDY, 3 = SPK, 4 = INNOVA,
+; 5 = COVOX, 8 = CMS, 10 = PAS). Unknown strings leave the default, so a
+; typo keeps today's behavior.
+g_cfg_audio_device: db 0xFF
+; Current [section] while parsing (0 = no header seen yet, 1 = [keyboard],
+; 2 = [audio]). The parser is otherwise section-blind (headers used to be
+; skipped); only the two DEVICE rows below consult this, so every other key
+; behaves exactly as before.
+cfg_section: db 0
 
 cfg_filename:   db "POKEMON.CFG", 0
 
 ; --- Option dispatch table for extensible parsing ---
 PARSE_TYPE_SCANCODE equ 1
 PARSE_TYPE_DEVICE   equ 2
+PARSE_TYPE_COVOX_RATE equ 3
+PARSE_TYPE_AUDIO_DEVICE equ 4
 
 align 4
 opt_table:
@@ -83,6 +108,12 @@ opt_table:
     dd .str_start,  cfg_key_start,  PARSE_TYPE_SCANCODE
     dd .str_select, cfg_key_select, PARSE_TYPE_SCANCODE
     dd .str_device, g_input_device, PARSE_TYPE_DEVICE
+    dd .str_covox_rate, g_covox_rate, PARSE_TYPE_COVOX_RATE
+    ; The audio DEVICE row shares its key text with the input row above; the
+    ; [section] decides which one a line means (see cfg_section + the guards
+    ; in apply_config_key_val). Header-less files keep the legacy input
+    ; meaning, so nothing already in the field changes hands.
+    dd .str_audio_device, g_cfg_audio_device, PARSE_TYPE_AUDIO_DEVICE
     dd 0 ; terminator
 
 .str_up:     db "UP", 0
@@ -94,6 +125,8 @@ opt_table:
 .str_start:  db "START", 0
 .str_select: db "SELECT", 0
 .str_device: db "DEVICE", 0
+.str_covox_rate: db "COVOX_RATE", 0
+.str_audio_device: db "DEVICE", 0
 
 ; --- Key name to scancode lookup table ---
 align 4
@@ -375,7 +408,7 @@ parse_config_buffer:
     cmp al, ';'
     je .skip_to_eol
     cmp al, '['
-    je .skip_to_eol
+    je .section_header
 
     ; Found potential key. Record key start
     mov edx, esi                            ; EDX = key start
@@ -476,6 +509,10 @@ parse_config_buffer:
 
 .apply_done:
     pop esi                                 ; restore scan pointer
+    jmp .skip_to_eol
+
+.section_header:
+    call update_cfg_section                 ; ESI at '[', EBX = end; ESI kept
 
 .skip_to_eol:
     cmp esi, ebx
@@ -535,12 +572,34 @@ apply_config_key_val:
     mov edi, [esi + 4]                      ; EDI = target byte ptr
     mov eax, [esi + 8]                      ; EAX = parse type
 
+    ; The two DEVICE rows share the key text "DEVICE" — the [section] decides
+    ; which one a line means. Header-less files predate sections and keep the
+    ; legacy input meaning, so the audio row matches under [audio] only and
+    ; the input row everywhere but [audio].
+    cmp eax, PARSE_TYPE_DEVICE
+    jne .not_input_device
+    cmp byte [cfg_section], 2
+    je .section_mismatch
+.not_input_device:
+    cmp eax, PARSE_TYPE_AUDIO_DEVICE
+    jne .dispatch_parse
+    cmp byte [cfg_section], 2
+    jne .section_mismatch
+.dispatch_parse:
     ; Parse value [EBP .. ECX) based on type
     cmp eax, PARSE_TYPE_SCANCODE
     je .parse_scancode
     cmp eax, PARSE_TYPE_DEVICE
     je .parse_device
+    cmp eax, PARSE_TYPE_COVOX_RATE
+    je .parse_covox_rate
+    cmp eax, PARSE_TYPE_AUDIO_DEVICE
+    je .parse_audio_device
     jmp .apply_exit
+
+.section_mismatch:
+    add esi, 12                             ; next entry (3 dwords)
+    jmp .match_opt_loop
 
 .key_mismatch:
     pop esi
@@ -643,7 +702,260 @@ apply_config_key_val:
     add esi, 8                              ; next entry (2 dwords)
     jmp .match_name_loop
 
+.parse_covox_rate:
+    ; Decimal Hz into a word literal, clamped 4000-44500. Below 4 kHz the
+    ; Nyquist limit eats GB bass; above ~44.5 kHz exceeds any real parallel
+    ; port. A non-digit ends the parse; an empty (or zero) value clamps up
+    ; to the floor, since 0 Hz is below the usable range, not a default.
+    mov esi, ebp
+    xor eax, eax
+.dec_loop:
+    cmp esi, ecx
+    jae .dec_done
+    mov bl, [esi]
+    cmp bl, '0'
+    jb .dec_done
+    cmp bl, '9'
+    ja .dec_done
+    sub bl, '0'
+    movzx ebx, bl
+    imul eax, eax, 10
+    add eax, ebx
+    inc esi
+    jmp .dec_loop
+.dec_done:
+    cmp eax, 4000
+    jae .dec_hi
+    mov eax, 4000
+.dec_hi:
+    cmp eax, 44500
+    jbe .dec_store
+    mov eax, 44500
+.dec_store:
+    mov [edi], ax
+    jmp .apply_exit
+
+.parse_audio_device:
+    ; Value [EBP .. ECX) names the requested device (case-insensitive):
+    ; NONE = 0 (silence), OPL = 1, TANDY = 2, SPK = 3, COVOX = 5 (DEV_* indices;
+    ; the 0xFF auto default stands on any other text, so a typo keeps today's behavior).
+    ; Length first, then letters; every compare feeds its own branch, no flags carry.
+    mov esi, ebp
+    mov edx, ecx
+    sub edx, esi                            ; EDX = value length
+    cmp edx, 3
+    je .aud_3
+    cmp edx, 4
+    je .aud_4
+    cmp edx, 5
+    je .aud_5
+    jmp .apply_exit
+.aud_3:                                     ; OPL -> 1, SPK -> 3
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'O'
+    je .aud_opl
+    cmp al, 'S'
+    je .aud_spk
+    jmp .apply_exit
+.aud_opl:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'P'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'L'
+    jne .apply_exit
+    mov byte [edi], 1
+    jmp .apply_exit
+.aud_spk:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'P'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'K'
+    jne .apply_exit
+    mov byte [edi], 3
+    jmp .apply_exit
+.aud_4:                                     ; NONE -> 0
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'E'
+    jne .apply_exit
+    mov byte [edi], 0
+    jmp .apply_exit
+.aud_5:                                     ; TANDY -> 2, COVOX -> 5
+    mov al, [esi]
+    and al, 0xDF
+    cmp al, 'T'
+    je .aud_tandy
+    cmp al, 'C'
+    je .aud_covox
+    jmp .apply_exit
+.aud_tandy:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'N'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'D'
+    jne .apply_exit
+    mov al, [esi + 4]
+    and al, 0xDF
+    cmp al, 'Y'
+    jne .apply_exit
+    mov byte [edi], 2
+    jmp .apply_exit
+.aud_covox:
+    mov al, [esi + 1]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 2]
+    and al, 0xDF
+    cmp al, 'V'
+    jne .apply_exit
+    mov al, [esi + 3]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .apply_exit
+    mov al, [esi + 4]
+    and al, 0xDF
+    cmp al, 'X'
+    jne .apply_exit
+    mov byte [edi], 5
+    jmp .apply_exit
+
 .apply_exit:
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; update_cfg_section — set cfg_section from the [name] header line at ESI.
+; In: ESI = line start ('['), EBX = buffer end. Out: cfg_section = 1 for
+; [keyboard], 2 for [audio], 0 for anything else (unknown or malformed keeps
+; the legacy section-blind behavior for every key but DEVICE). Name match is
+; case-insensitive with optional blanks around the name; anything past the
+; ']' is the caller's to skip. Preserves all registers.
+; ---------------------------------------------------------------------------
+update_cfg_section:
+    pushad
+    mov byte [cfg_section], 0               ; default: unknown
+    lea edx, [esi + 1]                      ; past '['
+.skip_pre:
+    cmp edx, ebx
+    jae .done
+    mov al, [edx]
+    cmp al, ' '
+    je .pre_next
+    cmp al, 9
+    je .pre_next
+    jmp .have_name
+.pre_next:
+    inc edx
+    jmp .skip_pre
+.have_name:
+    mov al, [edx]
+    and al, 0xDF
+    cmp al, 'K'
+    je .try_keyboard
+    cmp al, 'A'
+    je .try_audio
+    jmp .done
+.try_keyboard:
+    lea ecx, [edx + 8]
+    cmp ecx, ebx
+    ja .done
+    mov al, [edx + 1]
+    and al, 0xDF
+    cmp al, 'E'
+    jne .done
+    mov al, [edx + 2]
+    and al, 0xDF
+    cmp al, 'Y'
+    jne .done
+    mov al, [edx + 3]
+    and al, 0xDF
+    cmp al, 'B'
+    jne .done
+    mov al, [edx + 4]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .done
+    mov al, [edx + 5]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .done
+    mov al, [edx + 6]
+    and al, 0xDF
+    cmp al, 'R'
+    jne .done
+    mov al, [edx + 7]
+    and al, 0xDF
+    cmp al, 'D'
+    jne .done
+    mov cl, 1
+    lea edx, [edx + 8]
+    jmp .expect_close
+.try_audio:
+    lea ecx, [edx + 5]
+    cmp ecx, ebx
+    ja .done
+    mov al, [edx + 1]
+    and al, 0xDF
+    cmp al, 'U'
+    jne .done
+    mov al, [edx + 2]
+    and al, 0xDF
+    cmp al, 'D'
+    jne .done
+    mov al, [edx + 3]
+    and al, 0xDF
+    cmp al, 'I'
+    jne .done
+    mov al, [edx + 4]
+    and al, 0xDF
+    cmp al, 'O'
+    jne .done
+    mov cl, 2
+    lea edx, [edx + 5]
+.expect_close:
+    cmp edx, ebx
+    jae .done
+    mov al, [edx]
+    cmp al, ']'
+    je .matched
+    cmp al, ' '
+    je .close_next
+    cmp al, 9
+    je .close_next
+    jmp .done
+.close_next:
+    inc edx
+    jmp .expect_close
+.matched:
+    mov [cfg_section], cl
+.done:
     popad
     ret
 

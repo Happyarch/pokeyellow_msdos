@@ -46,19 +46,26 @@ VGA_VSYNC_BIT   equ 3       ; bit 3: 1 = vertical retrace active
 ; ---------------------------------------------------------------------------
 global pit_init
 global pit_restore
+global pit_set_rate
 global wait_vblank
 global wait_pit_tick
 global tick_count        ; dword: total ticks since pit_init
+global current_pit_divisor ; dword: active reload divisor for PIT channel 0
+
+extern g_covox_on
+extern covox_isr_tick
 
 ; ---------------------------------------------------------------------------
 ; BSS
 ; ---------------------------------------------------------------------------
 section .bss
 align 4
-tick_count:     resd 1       ; incremented by the ISR at ~60 Hz
-orig_irq0_off:  resd 1       ; saved original IRQ0 handler offset
-orig_irq0_sel:  resw 1       ; saved original IRQ0 handler selector
-tick_flag:      resb 1       ; set by ISR; cleared by wait_pit_tick
+tick_count:          resd 1       ; incremented by the ISR at ~60 Hz
+orig_irq0_off:       resd 1       ; saved original IRQ0 handler offset
+orig_irq0_sel:       resw 1       ; saved original IRQ0 handler selector
+tick_flag:           resb 1       ; set by ISR; cleared by wait_pit_tick
+current_pit_divisor: resd 1       ; current divisor programmed into PIT channel 0
+frame_pit_accum:     resd 1       ; accumulated PIT clocks towards next 60 Hz frame
 
 ; ---------------------------------------------------------------------------
 ; Data — isr_ds must be in a writable section reachable via CS override.
@@ -101,6 +108,9 @@ pit_init:
     mov edx, tick_isr
     int 0x31
 
+    mov dword [current_pit_divisor], PIT_DIVISOR
+    mov dword [frame_pit_accum], 0
+
     ; Reprogram PIT channel 0: mode 3, lobyte/hibyte, divisor 19886
     mov al, PIT_CMD_CH0_RW
     out PIT_CMD_PORT, al
@@ -125,6 +135,9 @@ pit_restore:
     push ecx
     push edx
 
+    mov dword [current_pit_divisor], PIT_DIVISOR
+    mov dword [frame_pit_accum], 0
+
     ; Divisor 0 = 65536 → 18.2 Hz (BIOS default)
     mov al, PIT_CMD_CH0_RW
     out PIT_CMD_PORT, al
@@ -146,32 +159,73 @@ pit_restore:
     ret
 
 ; ---------------------------------------------------------------------------
-; tick_isr — IRQ 0 service routine (~60 Hz)
+; pit_set_rate — reprogram PIT channel 0 to an audio rate divisor.
+; In: AX = divisor (e.g. 170 for ~7000 Hz, or 0 / PIT_DIVISOR for default 60 Hz)
+; Clobbers: EAX, flags.
+; ---------------------------------------------------------------------------
+pit_set_rate:
+    pushfd
+    cli
+    test ax, ax
+    jnz .haveDiv
+    mov ax, PIT_DIVISOR
+.haveDiv:
+    movzx eax, ax
+    mov [current_pit_divisor], eax
+    mov dword [frame_pit_accum], 0
+
+    mov al, PIT_CMD_CH0_RW
+    out PIT_CMD_PORT, al
+    mov ax, [current_pit_divisor]
+    out PIT_CH0_PORT, al    ; low byte
+    mov al, ah
+    out PIT_CH0_PORT, al    ; high byte
+
+    popfd
+    ret
+
+; ---------------------------------------------------------------------------
+; tick_isr — IRQ 0 service routine (~60 Hz in standard mode, audio rate in Covox mode)
 ;
 ; Loads DS/ES from [cs:isr_ds] because the DPMI host does not guarantee our
 ; data selector in any segment register on entry.
-;
-; NOTE: we do not chain to the original BIOS/DOS IRQ0 handler, so the DOS
-; time-of-day clock is frozen while the game runs (restored on exit by
-; pit_restore). Chaining every 3rd tick is a Phase 1 TODO if DOS clock
-; accuracy ever matters.
 ; ---------------------------------------------------------------------------
 tick_isr:
     push ds
     push es
     push eax
+    push edx
+    push ecx
 
     mov ax, [cs:isr_ds]     ; CS base == DS base under DJGPP, so this works
     mov ds, ax
     mov es, ax
 
+    ; 1. Covox / Disney Sound Source DAC audio pump (1 sample per PIT tick)
+    cmp byte [g_covox_on], 0
+    jz .noAudio
+    call covox_isr_tick
+.noAudio:
+
+    ; 2. Game frame pacing: accumulate PIT clocks until reaching full frame divisor
+    mov eax, [current_pit_divisor]
+    add [frame_pit_accum], eax
+    mov edx, [frame_pit_accum]
+    cmp edx, PIT_DIVISOR
+    jb .noFrameTick
+    sub edx, PIT_DIVISOR
+    mov [frame_pit_accum], edx
+
     inc dword [tick_count]
     mov byte [tick_flag], 1
+.noFrameTick:
 
     ; End-Of-Interrupt to the master PIC
     mov al, PIC_EOI
     out PIC_CMD_PORT, al
 
+    pop ecx
+    pop edx
     pop eax
     pop es
     pop ds

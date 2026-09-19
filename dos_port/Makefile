@@ -130,6 +130,24 @@ NASMFLAGS += -D KBD_NAMING=$(KBD_NAMING)
 # generated). Without this every mon draws the single embedded debug pic (pidgey).
 NASMFLAGS += -D MON_FRONT_PICS
 
+# Audio device / data inclusion flags (1=include, 0=exclude/stub).
+# Defaults build all devices and data. Set to 0 at build time to strip drivers
+# and large asset blobs for smaller binaries (e.g. make ENABLE_PIKA_PCM=0 ENABLE_AUDIO_MIDI=0).
+ENABLE_PIKA_PCM      ?= 1
+ENABLE_AUDIO_MIDI    ?= 1
+ENABLE_AUDIO_OPL     ?= 1
+ENABLE_AUDIO_OPL_ENH ?= 1
+ENABLE_AUDIO_TANDY   ?= 1
+ENABLE_AUDIO_SPK     ?= 1
+ENABLE_AUDIO_COVOX   ?= 1
+NASMFLAGS += -D ENABLE_PIKA_PCM=$(ENABLE_PIKA_PCM)
+NASMFLAGS += -D ENABLE_AUDIO_MIDI=$(ENABLE_AUDIO_MIDI)
+NASMFLAGS += -D ENABLE_AUDIO_OPL=$(ENABLE_AUDIO_OPL)
+NASMFLAGS += -D ENABLE_AUDIO_OPL_ENH=$(ENABLE_AUDIO_OPL_ENH)
+NASMFLAGS += -D ENABLE_AUDIO_TANDY=$(ENABLE_AUDIO_TANDY)
+NASMFLAGS += -D ENABLE_AUDIO_SPK=$(ENABLE_AUDIO_SPK)
+NASMFLAGS += -D ENABLE_AUDIO_COVOX=$(ENABLE_AUDIO_COVOX)
+
 # ---------------------------------------------------------------------------
 # Frame-timing mode — picks the PIT channel-0 divisor (the IRQ 0 / emulated
 # vblank rate that paces the whole game). The Game Boy is NOT exactly 60 Hz, so
@@ -549,6 +567,7 @@ AUDIO_SRCS := \
     src/audio/opl_enh.asm \
     src/audio/tandy_shim.asm \
     src/audio/spk_shim.asm \
+    src/audio/covox_shim.asm \
     src/audio/mpu401.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \
@@ -4130,6 +4149,7 @@ src/audio/tandy_shim.o: assets/tandy_tables.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
                     assets/audio_constants.inc
 src/audio/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
+src/audio/covox_shim.o: assets/pika_pcm.inc
 
 # Pikachu voice clips (Phase C): pret's 1-bit 22 kHz streams -> low-pass-
 # filtered 8-bit PCM blob + pointer table for sb_pcm/spk_pcm.

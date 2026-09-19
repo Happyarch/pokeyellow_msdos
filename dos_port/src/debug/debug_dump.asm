@@ -431,6 +431,7 @@ extern hal_dbg_snapshot
 extern tandy_dbg_snapshot
 extern spk_dbg_snapshot
 extern enh_dbg_snapshot
+extern covox_dbg_snapshot
 extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
@@ -1842,9 +1843,12 @@ windows:
     dd 0xFF00    ; virtual APU: rAUD10-26 ($FF10-26) + wave RAM ($FF30-3F)
     dd 0xDD8E    ; fade block ($CFC6-C8) + wLastMusicSoundID ($CFC9) [WRAM-expansion shifted]
     dd 0xDFAE    ; opl_dbg_snapshot: present, opl3, voice_state[0..61] [WRAM-expansion shifted]
-    dd wPartyMon5Type2    ; SB detect (+0..6) + MIDI driver state (+7..: cfg,
-                 ; present, active, on, dw progress, scale, cc7[16]);
-                 ; $D240 pika PCM, $D246 shim device, $D248 tandy, $D250 spk, $D258 enh
+    ; Window 9 (file 0x200..0x23F): the audio-snapshot tail, repointed at
+    ; (W_PORT_SCRATCH + 0x51). Post-expansion the snapshots live at 0xF500+.
+    ; Covers GB 0xF551..0xF590: MIDI CC7[3..15] (+0x51..5D), pika PCM (+0x60..65),
+    ; hal device (+0x66..67), tandy (+0x68..6F), speaker (+0x70..77),
+    ; OPL enh (+0x78..7C), Covox DAC (+0x81..88, file 0x230..0x237).
+    dd (W_PORT_SCRATCH + 0x51)
 %elifdef DEBUG_BATTLE
 windows:
     dd 0xC468    ; wTileMap row 5 (enemy HP-bar tile IDs, cols 12-20) [WRAM-expansion shifted]
@@ -1990,6 +1994,7 @@ RunAudioTest:
     call tandy_dbg_snapshot                 ; SN76489 shim state -> $D248+
     call spk_dbg_snapshot                   ; speaker shim state -> $D250+
     call enh_dbg_snapshot                   ; OPL enh player state -> $D258+
+    call covox_dbg_snapshot                 ; Covox DAC state -> W_PORT_SCRATCH+0x81+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi

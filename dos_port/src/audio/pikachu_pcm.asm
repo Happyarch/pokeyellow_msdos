@@ -39,6 +39,7 @@ global pika_dbg_snapshot
 
 extern DelayFrame                 ; src/home/vblank.asm
 extern g_audio_engine_online      ; src/home/audio.asm
+extern g_audio_devices            ; src/audio/audio_hal.asm — solved role nibbles
 extern g_sb_present               ; src/audio/audio_hal.asm
 extern sb_pcm_play                ; src/audio/sb_pcm.asm
 extern spk_pcm_play               ; src/audio/spk_pcm.asm
@@ -47,7 +48,14 @@ extern midi_all_notes_off         ; src/audio/mpu401.asm (guarded, no-MPU safe)
 extern tandy_silence              ; src/audio/tandy_shim.asm (guarded)
 extern spk_silence                ; src/audio/spk_shim.asm (also frees PIT ch2
                                   ;  for spk_pcm's mode-0 use; safe always)
+extern covox_silence              ; src/audio/covox_shim.asm (guarded, DAC-safe)
+extern covox_play_clip            ; src/audio/covox_shim.asm (DAC cry player)
 
+%ifndef ENABLE_PIKA_PCM
+%define ENABLE_PIKA_PCM 1
+%endif
+
+%if ENABLE_PIKA_PCM != 0
 section .data
 ; Tier-1 generated data: table + blob (tools/audio/gen_pika_pcm.py). Included
 ; before .text so PIKA_PCM_RATE is defined when PIKA_STEP_FP is evaluated.
@@ -79,15 +87,30 @@ PlayPikachuSoundClip:
     call tandy_silence            ; cut held PSG voices
     call spk_silence              ; speaker gate off + hand PIT ch2 to spk_pcm
     call midi_all_notes_off       ; cut held MT-32/GM notes in MIDI mode
+    call covox_silence            ; cut held DAC voices (no-op when off)
     pop ebx
     mov esi, [PikachuCriesPointerTable + ebx*8]
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]
     mov [pika_dbg_clip], bl
-    mov eax, PIKA_STEP_FP
-    cmp byte [g_sb_present], 0
-    je .speaker
+    ; PCM device select from the solved role nibbles (DEV_* map owned by
+    ; src/audio/audio_hal.asm): Covox DAC when its PCM field is set, else SB
+    ; DSP when its PCM field is set, else the speaker PWM. The SB bit is set
+    ; exactly when g_sb_present is, so that arm matches the old branch
+    ; bit-for-bit. The DAC arm is unreachable when the driver compiled out
+    ; (a compiled-out forced bit never builds a nibble, so the field stays
+    ; clear and the stubs absorb the call).
+    mov edx, [g_audio_devices]
+    test edx, 1 << 23             ; DEV_COVOX PCM field (nibble 5, P bit)
+    jnz .covox
+    test edx, 1 << 31             ; DEV_SB PCM field (nibble 7, P bit)
+    mov eax, PIKA_STEP_FP         ; mov preserves flags: ZF still from test
+    jz .speaker
     mov byte [pika_dbg_device], 1 ; 1 = SB DSP
     call sb_pcm_play
+    jmp .played
+.covox:
+    mov byte [pika_dbg_device], 3 ; 3 = Covox DAC
+    call covox_play_clip          ; ESI/ECX hold blob ptr/len; EAX = played
     jmp .played
 .speaker:
     mov byte [pika_dbg_device], 2 ; 2 = PC speaker
@@ -107,7 +130,7 @@ PlayPikachuSoundClip:
 ; ---------------------------------------------------------------------------
 ; pika_dbg_snapshot — copy PCM-player state into the $D240+ debug scratch
 ; window (DEBUG_AUDIO harness; $D227-$D23D is midi_dbg_snapshot's):
-;   $D240    last clip index      $D241 device (0 none, 1 SB, 2 speaker)
+;   $D240    last clip index      $D241 device (0 none, 1 SB, 2 speaker, 3 DAC)
 ;   $D242-45 dd samples played
 ; In: EBP = GB memory base. Clobbers EAX.
 ;
@@ -127,3 +150,22 @@ align 4
 pika_dbg_played: resd 1           ; samples the player reported back
 pika_dbg_clip:   resb 1           ; last clip index requested
 pika_dbg_device: resb 1           ; 0 = never played, 1 = SB, 2 = speaker
+
+%else
+
+; ---------------------------------------------------------------------------
+; DEVIATION{class=HAL; pret=audio/pikachu_pcm.asm:PlayPikachuSoundClip; behavior=a port-only helper publishes which clip played, which device took it and how many samples it fed into a GB debug scratch window, state the Game Boy version has no equivalent of because it had no device choice; evidence=its only caller is RunAudioTest in src/debug/debug_dump.asm which is assembled into DEBUG_ harness builds only, and the device fields it reports exist solely because the port dispatches PCM across sb_pcm and spk_pcm; lifetime=retires with the DEBUG_AUDIO harness}
+; ---------------------------------------------------------------------------
+section .text
+PlayPikachuSoundClip:
+    push ebx
+    call DelayFrame
+    call DelayFrame
+    call DelayFrame
+    pop ebx
+    ret
+
+pika_dbg_snapshot:
+    ret
+
+%endif
