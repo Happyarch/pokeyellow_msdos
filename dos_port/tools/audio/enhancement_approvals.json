@@ -1,4 +1,8 @@
 {
+  "MUSIC_BIKE_RIDING": {
+    "approved": true,
+    "date": "2026-09-19"
+  },
   "MUSIC_CELADON": {
     "approved": true,
     "date": "2026-09-11"
@@ -18,6 +22,14 @@
   "MUSIC_CITIES2": {
     "approved": true,
     "date": "2026-09-11"
+  },
+  "MUSIC_DUNGEON1": {
+    "approved": true,
+    "date": "2026-09-19"
+  },
+  "MUSIC_DUNGEON2": {
+    "approved": true,
+    "date": "2026-09-19"
   },
   "MUSIC_DUNGEON3": {
     "approved": true,

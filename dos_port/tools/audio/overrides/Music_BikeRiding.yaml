@@ -10,17 +10,17 @@
 # audible enough there. Ear decides if it stays.
 channels:
   1:
-    mt32_program: "Trumpet 1"    # candidate: brass answer vs reed lead (chip rejected — wrong family for this theme)
-    gm_program: "Trumpet"
-    volume: 100
+    mt32_program: "Sax 2"        # blended sister under the Sax 3 lead (Pokecenter precedent): same reed
+    gm_program: "Tenor Sax"      # family restores the GB two-squares texture instead of two soloists
+    volume: 90                   # under the lead; the 106 lift belonged to the distinct-voice attempt
     pan: 44
   2:
     mt32_program: "Sax 3"        # the liked lead voice, kept as-was
     gm_program: "Alto Sax"
-    volume: 96
+    volume: 92                   # eased 96->92; melody still leads
     pan: 84
   3:
     mt32_program: "Warm Bell"
     gm_program: "Music Box"
-    volume: 96                   # was default 110; bell ostinato back under the squares
+    volume: 90                   # was default 110, then 96; bell still sat over the mix
     pan: 64
