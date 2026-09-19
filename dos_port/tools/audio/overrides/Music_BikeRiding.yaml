@@ -10,8 +10,8 @@
 # audible enough there. Ear decides if it stays.
 channels:
   1:
-    mt32_program: "Square Wave"  # candidate: chip lead vs sax melody
-    gm_program: "Lead 1 (square)"
+    mt32_program: "Trumpet 1"    # candidate: brass answer vs reed lead (chip rejected — wrong family for this theme)
+    gm_program: "Trumpet"
     volume: 100
     pan: 44
   2:
