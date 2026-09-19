@@ -109,6 +109,15 @@ PR_POWER_UP   equ 0x04            ; ...then HIGH clocks one byte into the FIFO
                                 ; (rising edge; power stays on)
 COVOX_POLLS equ 64                ; per-burst cadence-poll bound (never a hang)
 
+; PIT ports for the spin calibration (perf.asm's sequence; the latch
+; command disturbs neither mode nor divisor). COVOX_PIT_RELOAD must equal
+; the Makefile PIT_DIVISOR (default 19506): the pump paces due samples
+; across one tick = one PIT reload period.
+PIT_CMD_PORT_CV equ 0x43
+PIT_CH0_PORT_CV equ 0x40
+COVOX_PIT_RELOAD equ 19506
+COVOX_CAL_ITERS equ 4096          ; calibration loop trip count
+
 ; --- per-voice software state (offsets 0-15 mirror innova_shim's SS_*) ----
 CS_FREQ       equ 0    ; word: GB 11-bit freq incl. sweep (ch3: NR43 byte in lo)
 CS_KEY        equ 2    ; byte: key-on flag
@@ -158,6 +167,70 @@ covox_init:
     mov word [s_rd], 0
     mov word [s_carry], 0
     call covox_silence
+    call covox_calibrate         ; pace calibration (spins need it below)
+    popad
+    ret
+
+; ---------------------------------------------------------------------------
+; covox_calibrate — measure dec/jnz loop iterations per PIT clock (8.8
+; fixed point) so the pump can pace its burst across the tick with
+; fixed-count spins (no port I/O in steady state). The DSS rate detector
+; needs steady ~143 µs inter-write spacing to lock 7 kHz; back-to-back
+; bursts fail its sanity checks forever (measured 2026-09-18: analysis
+; never settles, channel never enables, output is clicks — while the
+; PIT-paced cry on the same path sounds good). Called once from
+; covox_init. Preserves all registers.
+; ---------------------------------------------------------------------------
+covox_calibrate:
+    pushad
+    pushfd
+    cli
+    mov al, 0x00
+    out PIT_CMD_PORT_CV, al       ; latch ch0 (disturbs nothing)
+    in al, PIT_CH0_PORT_CV        ; lo first (PIT read order)
+    mov ah, al
+    in al, PIT_CH0_PORT_CV        ; hi
+    xchg al, ah
+    movzx esi, ax                 ; C1
+    mov ecx, COVOX_CAL_ITERS
+.cal:
+    dec ecx                       ; the exact loop shape the pump spins
+    jnz .cal
+    mov al, 0x00
+    out PIT_CMD_PORT_CV, al
+    in al, PIT_CH0_PORT_CV
+    mov ah, al
+    in al, PIT_CH0_PORT_CV
+    xchg al, ah
+    movzx eax, ax                 ; C2
+    popfd                         ; restores IF
+    ; delta = (C1 - C2) mod RELOAD: ch0 counts down and reloads; the run
+    ; is ~1 ms against a 16.6 ms period, so at most one wrap. A delta past
+    ; half a period means a VM stall mid-calibration — fall back to a
+    ; sane default (28 iters/clock) instead of miscalibrating.
+    mov edx, esi
+    sub edx, eax
+    jnc .nowrap
+    add edx, COVOX_PIT_RELOAD
+.nowrap:
+    cmp edx, COVOX_PIT_RELOAD / 2
+    ja .useDefault
+    test edx, edx
+    jnz .haveDelta
+.useDefault:
+    mov dword [s_spincal], 28 << 8
+    popad
+    ret
+.haveDelta:
+    mov ebx, edx
+    mov eax, (COVOX_CAL_ITERS << 8)
+    xor edx, edx
+    div ebx                       ; EAX = iters/clock 8.8 (delta ≥ 1, no fault)
+    cmp eax, 200 << 8             ; sanity: >200 iters/clock is a bad read
+    jbe .store                    ; (would also overflow the slot multiply)
+    mov eax, 28 << 8
+.store:
+    mov [s_spincal], eax
     popad
     ret
 
@@ -511,6 +584,18 @@ covox_pump:
     mov ecx, eax                  ; ECX = samples remaining this burst
     test ecx, ecx
     jz .done                      ; sub-60 Hz fractional tick: none due yet
+    ; pace the burst across the tick: one PIT reload period holds `due'
+    ; samples, so each inter-sample slot is RELOAD/due PIT clocks; spin
+    ; iters = slot × calibrated iters/clock (fixed-count spins, no port
+    ; I/O, resyncs every tick). Steady ~143 µs spacing is what the DSS
+    ; rate detector locks onto (back-to-back bursts fail its sanity
+    ; checks forever — clicks only). EDI survives the whole burst.
+    mov eax, COVOX_PIT_RELOAD
+    xor edx, edx
+    div ecx                       ; EAX = PIT clocks per sample (due ≥ 1)
+    imul eax, [s_spincal]         ; × iters/clock (8.8)
+    shr eax, 8
+    mov edi, eax                  ; EDI = spin iters between samples
 .next:
     ; poll FIRST: on timeout stop for the tick (sticky) — the sample stays
     ; ring-buffered, s_rd untouched, so nothing is lost or reordered
@@ -540,8 +625,15 @@ covox_pump:
     out dx, al                    ; pin 17 low...
     mov al, PR_POWER_UP
     out dx, al                    ; ...rising edge clocks it into the FIFO
-    dec ecx                       ; 32-bit: bursts in the hundreds, never 0-entry
-    jnz .next
+    dec ecx                       ; samples left (32-bit, never 0-entry here)
+    jz .done                      ; last sample: no trailing gap needed
+    mov ebx, edi                  ; pace to the next slot (fixed-count spin)
+    test ebx, ebx
+    jz .next
+.spin:
+    dec ebx
+    jnz .spin
+    jmp .next
 .done:
     popad
     ret
@@ -964,6 +1056,8 @@ s_carry:        resw 1              ; samples-per-tick fractional carry
 s_wr:           resw 1              ; ring write cursor (monotonic)
 s_rd:           resw 1              ; ring read cursor (the pump drains toward s_wr)
 s_pcarry:       resw 1              ; pump samples-per-tick fractional carry
+s_spincal:      resd 1              ; dec/jnz iters per PIT clock, 8.8 fixed
+                                  ; (measured once in covox_init)
 c_step:         resd 1              ; cry resample step, 8.8 input samples/output
 c_len:          resd 1              ; cry input length (blob samples)
 c_count:        resd 1              ; cry outputs requested (for the played tally)
