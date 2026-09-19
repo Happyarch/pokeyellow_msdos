@@ -1,0 +1,275 @@
+
+               ┌────────────────────────────────────────┐
+               │ Programming the GameBlaster Sound Card │
+               └────────────────────────────────────────┘
+
+                  Written for the PC-GPE by Mark Feldman
+              e-mail address : u914097@student.canberra.edu.au
+                               myndale@cairo.anu.edu.au
+
+             ┌───────────────────────────────────────────┐
+             │      THIS FILE MAY NOT BE DISTRIBUTED     │
+             │ SEPARATE TO THE ENTIRE PC-GPE COLLECTION. │
+             └───────────────────────────────────────────┘
+
+
+┌────────────┬───────────────────────────────────────────────────────────────
+│ Disclaimer │
+└────────────┘
+
+I assume no responsibility whatsoever for any effect that this file, the
+information contained therein or the use thereof has on you, your sanity,
+computer, spouse, children, pets or anything else related to you or your
+existance. No warranty is provided nor implied with this information.
+
+┌──────────────┬─────────────────────────────────────────────────────────────
+│ Introduction │
+└──────────────┘
+
+The GameBlaster sound card (also known as the CMS) is now pretty much
+obsolete, well I haven't seen any apart from the one I own. The card was
+developped by Creative Labs, the same people who designed the SoundBlaster.
+You can still buy the CMS chips to place inside your SoundBlaster 1.0 and
+2.0 cards to make them compatible, but believe me, it isn't worth it. The
+only reason I'm writing this file is because the GameBlaster chips are really
+easy to program (due to the fact that it can't do anything) so this should be
+of use to those of you who already own one.
+
+I have no idea how to detect the presence of the CMS chips in a SoundBlaster,
+trying to write to it's registers while the chips were not installed made
+my machine hang.
+
+┌──────────────────────────┬─────────────────────────────────────────────────
+│ General Programming Info │
+└──────────────────────────┘
+
+The GameBlaster has 12 channels. Each channel can produce either a single
+sine wave of a given frequency and magnitude (in stereo), or noise.
+
+The GameBlaster is programmed through 4 ports as follows:
+
+    For voices 1 to 6
+        Write 2x1 with register address
+        Write 2x0 with data to register
+
+    For voices 7 to 12
+        Write 2x3 with register address
+        Write 2x2 with data to register
+
+The x value depends on the jumper setting on your card, x = 1 for 210h, x =
+2 for 220h etc...
+
+┌──────────────────────────┬─────────────────────────────────────────────────
+│ Reseting the GameBlaster │
+└──────────────────────────┘
+
+First you have to reset the GameBlaster and enable all voices. This is done
+by setting register 1Ch, which is laid out as follows:
+
+                      ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                      │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                      └───┴───┴───┴───┴───┴───┴───┴───┘
+                                                │   │
+Sound Enable for all channels ──────────────────┘   │
+  0 all channels disabled                           │
+  1 all channels enabled                            │
+                                                    │
+Reset signal to all generators ─────────────────────┘
+  0 all generators enabled
+  1 all generators reset and synchronized
+
+The following Pascal code will reset and enable the card (assuming jumper
+setting is for 220h) :
+
+  Port[$221] := $1C;
+  Port[$220] := $02; { Reset voices }
+  Port[$221] := $15;
+  Port[$220] := $00; { Disable noise * }
+  Port[$221] := $1C;
+  Port[$220] := $01; { Enable voices }
+
+* Noise is discussed in the next section
+
+
+┌──────────────────────────┬─────────────────────────────────────────────────
+│ Enabling Voice Frequency │
+└──────────────────────────┘
+
+To hear a frequency from a voice you must set the appropriate bit in
+register 14h:
+
+       ┌───┬───┬───┬───┬───┬───┬───┬───┐
+       │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+       └───┴───┴───┴───┴───┴───┴───┴───┘
+                 │   │   │   │   │   │
+                 │   │   │   │   │   └── Frequency enable 1/7
+                 │   │   │   │   └────── Frequency enable 2/8
+                 │   │   │   └────────── Frequency enable 3/9
+                 │   │   └────────────── Frequency enable 4/10
+                 │   └────────────────── Frequency enable 5/11
+                 └────────────────────── Frequency enable 6/12
+
+Note that for each bit in the above table two voice numbers are given. If
+ports 2x1 and 2x0 are used then the first voice is modified. If ports 2x3
+and 2x2 are used then the second voice is modified.
+
+Setting a bit to 1 enables the voice. Clearing it to 0 disables the voice.
+
+┌────────────────────────┬───────────────────────────────────────────────────
+│ Setting a Voice Volume │
+└────────────────────────┘
+
+Each voice can have a volume between 0 and 15 on both left and right
+channels. The amplitude registers are laid out as follows:
+
+                      ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                      │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                      └───┴───┴───┴───┴───┴───┴───┴───┘
+                        └─────┬─────┘   └─────┬─────┘
+                              │               │
+ Right channel volume ────────┘               └──────── Left channel volume
+
+
+To set a channel volume you write the register address to the appropriate
+Register Address port and write the volume byte to the Data To Register
+port. The register address map for amplitudes is as follows:
+
+                   ┌────────────────────────────┐
+                   │ Register Address     Voice │
+                   ├────────────────────────────┤
+                   │       00h             1/7  │
+                   │       01h             2/8  │
+                   │       02h             3/9  │
+                   │       03h             4/10 │
+                   │       04h             5/11 │
+                   │       05h             6/12 │
+                   └────────────────────────────┘
+
+┌───────────────────────────┬────────────────────────────────────────────────
+│ Setting a Voice Frequency │
+└───────────────────────────┘
+
+Setting a voice frequency is similar to setting the volume, one byte is
+written to the appropriate register. The frequency register map is as
+follows:
+
+                   ┌────────────────────────────┐
+                   │ Register Address     Voice │
+                   ├────────────────────────────┤
+                   │       08h             1/7  │
+                   │       09h             2/8  │
+                   │       0Ah             3/9  │
+                   │       0Bh             4/10 │
+                   │       0Ch             5/11 │
+                   │       0Dh             6/12 │
+                   └────────────────────────────┘
+
+The following table is a list of the bytes you write for each note:
+
+
+                         ┌──────────────┐
+                         │ Note   Value │
+                         ├──────────────┤
+                         │  A        3  │
+                         │  A#      31  │
+                         │  B       58  │
+                         │  C       83  │
+                         │  C#     107  │
+                         │  D      130  │
+                         │  D#     151  │
+                         │  E      172  │
+                         │  F      191  │
+                         │  F#     209  │
+                         │  G      226  │
+                         │  G#     242  │
+                         └──────────────┘
+
+This is the first octave available. The C frequency in this octave is
+55 Hz.
+
+To get tones in higher octaves you need to set the octave register for a 
+voice. Each octave register stores the octave number for two voices. The
+octave registers are laid out as follows:
+
+                      ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                      │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                      └───┴───┴───┴───┴───┴───┴───┴───┘
+                            └───┬───┘       └───┬───┘
+                                │               │
+        Octave Number 2 ────────┘               └────── Octave number 1
+
+The octave register address map is as follows:
+
+                    ┌──────────────────────────────────┐
+                    │ Register Address     Voices      │
+                    ├──────────────────────────────────┤
+                    │     10h              2;1 / 8;7   │
+                    │     11h              4;3 / 10;9  │
+                    │     12h              6;5 / 12;11 │
+                    └──────────────────────────────────┘
+
+┌───────┬────────────────────────────────────────────────────────────────────
+│ Noise │
+└───────┘
+
+There are 4 noise generators, each noise genrator can be connected up to
+any of three voices:
+
+                          ┌──────────────────────┐
+                          │   Noise              │
+                          │  Generator   Voices  │
+                          ├──────────────────────┤
+                          │   1           1,2,3  │
+                          │   2           4,5,6  │
+                          │   3           7,8,9  │
+                          │   4         10,11,12 │
+                          └──────────────────────┘
+
+
+The noise generators are controlled via two registers:
+
+Register 16h at ports 2x1 and 2x0 :
+
+                   ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                   │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                   └───┴───┴───┴───┴───┴───┴───┴───┘
+                             └─┬─┘           └─┬─┘
+                               │               │
+           Noise Gen 2 ────────┘               └────── Noise Gen 1
+
+Register 16h at ports 2x3 and 2x2 :
+
+                   ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                   │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                   └───┴───┴───┴───┴───┴───┴───┴───┘
+                             └─┬─┘           └─┬─┘
+                               │               │
+           Noise Gen 4 ────────┘               └────── Noise Gen 3
+
+Each generator has two bits associated with it which control the noise
+generator rate:
+
+                       ┌──────────────────────┐
+                       │ Nn1 Nn0    Frequency │
+                       ├──────────────────────┤
+                       │ 0   0     28.0 kHz   │
+                       │ 0   1     14.0 kHz   │
+                       │ 1   0      6.8 kHz   │
+                       └──────────────────────┘
+
+A voice can be connected to it's noise generator by setting the appropriate
+bit in register 15h:
+
+                ┌───┬───┬───┬───┬───┬───┬───┬───┐
+                │ 7 │ 6 │ 5 │ 4 │ 3 │ 2 │ 1 │ 0 │
+                └───┴───┴───┴───┴───┴───┴───┴───┘
+                          │   │   │   │   │   │
+                          │   │   │   │   │   └── Noice enable 1/7
+                          │   │   │   │   └────── Noice enable 2/8
+                          │   │   │   └────────── Noice enable 3/9
+                          │   │   └────────────── Noice enable 4/10
+                          │   └────────────────── Noice enable 5/11
+                          └────────────────────── Noice enable 6/12
+
+Setting a bit to 1 enables the voice. Clearing it to 0 disables the voice.
+

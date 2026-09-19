@@ -1,0 +1,345 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0" />
+<style type="text/css">
+<!--
+body {
+  color: #000000;
+  font-family: sans-serif;
+  font-size: 12pt;
+  line-height: 1.2;
+  margin: 2ex 2em;
+}
+body, .queryform { background-color: #ffffff; }
+@media screen {
+  body, .queryform { background-color: #f0f0f0; }
+}
+a:link, .intro a:visited { color: #0000f0; }
+a:visited { color: #6000c0; }
+@media screen and (prefers-color-scheme: dark) {
+  body { color: #c0c0c0; }
+  body, .queryform { background-color: #000000; }
+  a:link, .intro a:visited { color: #90c0f0; }
+  a:visited { color: #c060c0; }
+}
+h1 { margin-bottom: 0.5ex; }
+table, th, td { border-collapse: collapse; padding-bottom: 0.5ex; }
+table { margin-top: 1.5ex; }
+.intro th, .intro td { padding-right: 1em; }
+.intro td.page { text-align: right; }
+.intro td.section { padding-left: 3.3em; }
+.spacer { font-size: 6pt; }
+.powered { font-size: 10pt; font-style: italic; }
+.queryform { position: sticky; top: 0px; }
+.queryform { padding-top: 1ex; padding-bottom: 1ex; }
+form { display: flex; flex-wrap: wrap; gap: 3px; }
+label, input { display: flex; flex-direction: column; }
+input { padding-right: 5px; }
+label {
+  text-align: left;
+  text-transform: uppercase;
+  font-weight: normal;
+  font-size: 8pt;
+  padding-bottom: 3px;
+  padding-left: 0.65em;
+}
+label[for="command"] { padding-left: 0.15em; }
+label[for="submit"] span { display: none; }
+label[for="submit"]:after { content: '\00a0'; }
+/* The remember opt-in gets a wrapped row of its own; the explicit
+   display would defeat the hidden attribute without the [hidden]
+   rule. */
+div.remember { display: flex; align-items: center; flex-basis: 100%; }
+div.remember[hidden] { display: none; }
+label[for="remember"] { text-transform: none; padding-bottom: 0; }
+pre, tt, ul.matches { font-family: monospace; }
+pre { white-space: pre-wrap; }
+/* Two blank lines (2 x line-height) where the list of other
+   matches runs straight into the manual page. A menu has no
+   page after it and needs none. */
+ul.matches + pre.manpage { margin-top: 2.4em; }
+@media screen and (max-width: 800px) {
+  body { margin: 0 0.5em; }
+  .queryform { position: static; }
+}
+@media print {
+  body { font-size: 10pt; margin: 0; }
+  h1.manpage, .queryform { display: none; }
+  a:link, a:visited, .intro a:visited { color: #000000; }
+}
+-->
+</style>
+<link rel="shortcut icon" href="/s/NetBSD.ico" type="image/x-icon">
+<title>cms(4) - NetBSD Manual Pages</title>
+<link rel="canonical" href="https://man.netbsd.org/cms.4">
+</head>
+<body>
+<h1 class="manpage">cms(4)
+  - NetBSD Manual Pages</h1>
+<div class="queryform">
+<form method=post action="/cgi-bin/man-cgi">
+  <div>
+    <label for="command">Command:&nbsp;&nbsp;&nbsp;&nbsp;</label>
+    <input name="command" id="command" size="24" type="text"
+      value="cms">
+  </div>
+  <div>
+    <label for="section">Section:&nbsp;&nbsp;&nbsp;</label>
+    <select name="section" id="section">
+      <option value="ANY">ANY - Search in All Sections</option>
+      <option value="1">1 - General Commands</option>
+      <option value="2">2 - System Calls</option>
+      <option value="3">3 - C Library Functions</option>
+      <option value="3f">3f - Fortran Library Functions</option>
+      <option value="3lua">3lua - Lua Modules</option>
+      <option value="4" selected>4 - Special Files and Hardware Support</option>
+      <option value="5">5 - File Formats</option>
+      <option value="6">6 - Games and Demos</option>
+      <option value="7">7 - Miscellaneous Information Pages</option>
+      <option value="8">8 - System Maintenance Commands</option>
+      <option value="9">9 - Kernel Internals</option>
+      <option value="9lua">9lua - Lua Kernel Bindings</option>
+    </select>
+  </div>
+  <div>
+    <label for="arch">Arch:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</label>
+    <select name="arch" id="arch">
+      <option value="NONE">NONE</option>
+    </select>
+  </div>
+  <div>
+    <label for="coll">Collection:</label>
+    <select name="coll" id="coll">
+      <option value="NetBSD-current" selected>NetBSD-current</option>
+    </select>
+  </div>
+  <div>
+    <label for="submit"><span>&gt;&gt;&gt;</span></label>
+    <input id="submit" type="submit" value="Show">
+  </div>
+  <div class="remember" hidden>
+    <input id="remember" type="checkbox">
+    <label for="remember"
+      title="Stored only in this browser, until you untick this. Nothing is sent to the server.">Remember arch and collection across visits</label>
+  </div>
+</form>
+</div>
+<script>
+(function () {
+  // The opt-in flag is read live on every store access, so another
+  // tab's tick or untick is honored here from the next submit on.
+  function persistent() {
+    try {
+      return localStorage.getItem('man-cgi.remember') === 'yes';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function store() {
+    return persistent() ? localStorage : sessionStorage;
+  }
+
+  function remember(key, value) {
+    try {
+      store().setItem('man-cgi.' + key, value);
+    } catch (e) {}
+  }
+
+  function recall(key) {
+    try {
+      return store().getItem('man-cgi.' + key);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // After a move the target mirrors the source and the source is
+  // empty: a key the source does not hold is removed, never kept,
+  // so no stale value is ever adopted. Per-key try/catch: losing
+  // a preference beats retaining withdrawn data.
+  function move(from, to) {
+    var i, v, keys = ['man-cgi.arch', 'man-cgi.coll'];
+    for (i = 0; i < keys.length; i++) {
+      try {
+        v = from.getItem(keys[i]);
+        if (v !== null) {
+          to.setItem(keys[i], v);
+        } else {
+          to.removeItem(keys[i]);
+        }
+      } catch (e) {}
+      try {
+        from.removeItem(keys[i]);
+      } catch (e) {}
+    }
+  }
+
+  function fill(name, fallback) {
+    var sel = document.getElementById(name);
+    if (!sel || !window.fetch) {
+      return;
+    }
+    fetch('/api/v1/' + name + 'list').then(function (r) {
+      if (!r.ok) {
+        throw new Error(r.status);
+      }
+      return r.text();
+    }).then(function (text) {
+      var names = text.split('\n');
+      var want = recall(name) || sel.getAttribute('data-url') || fallback;
+      var i, opt;
+      sel.options.length = 0;
+      for (i = 0; i < names.length; i++) {
+        if (!names[i]) {
+          continue;
+        }
+        opt = document.createElement('option');
+        opt.value = names[i];
+        opt.textContent = names[i];
+        if (names[i] === want) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      }
+    }).catch(function (e) {});
+  }
+
+  var arch, cmd, rem, held = false, heldCode;
+
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (e.key === 'Escape' && !e.isComposing && t && t.id === 'command') {
+      t.setSelectionRange(t.value.length, t.value.length);
+      t.blur();
+      return;
+    }
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey ||
+        e.isComposing) {
+      return;
+    }
+    if (held && e.repeat) {
+      e.preventDefault();
+      return;
+    }
+    if (t && (t.tagName === 'TEXTAREA' || t.isContentEditable ||
+        (t.tagName === 'INPUT' &&
+         !/^(button|checkbox|radio|reset|submit)$/i.test(t.type)))) {
+      return;
+    }
+    if (!cmd) {
+      return;
+    }
+    cmd.focus({preventScroll: true});
+    if (document.activeElement === cmd) {
+      e.preventDefault();
+      cmd.select();
+      held = true;
+      heldCode = e.code;
+    }
+  });
+
+  document.addEventListener('keyup', function (e) {
+    if (e.key === '/' || (heldCode && e.code === heldCode)) {
+      held = false;
+    }
+  });
+
+  window.addEventListener('blur', function () {
+    held = false;
+  });
+
+  cmd = document.getElementById('command');
+  if (cmd && !cmd.autofocus) {
+    cmd.title = 'Press / to focus';
+  }
+
+  // One-time cleanup: the arch/coll keys lived in localStorage
+  // until ADR-0021 moved them to sessionStorage. With the opt-in
+  // ticked they are current again and stay.
+  if (!persistent()) {
+    try {
+      localStorage.removeItem('man-cgi.arch');
+      localStorage.removeItem('man-cgi.coll');
+    } catch (e) {}
+  }
+
+  // The remember opt-in: the row stays hidden until here, so only
+  // pages where the script runs show a working checkbox. Ticking
+  // is the consent: the memory moves to localStorage with the
+  // flag; unticking withdraws it all back to the session.
+  rem = document.getElementById('remember');
+  if (rem) {
+    rem.checked = persistent();
+    rem.parentNode.hidden = false;
+    rem.addEventListener('change', function () {
+      try {
+        if (rem.checked) {
+          localStorage.setItem('man-cgi.remember', 'yes');
+          move(sessionStorage, localStorage);
+        } else {
+          localStorage.removeItem('man-cgi.remember');
+          move(localStorage, sessionStorage);
+        }
+      } catch (e) {}
+      rem.checked = persistent();
+    });
+  }
+
+  fill('arch', 'NONE');
+  fill('coll', '');
+  arch = document.getElementById('arch');
+  if (arch && arch.form) {
+    arch.form.addEventListener('submit', function () {
+      var coll = document.getElementById('coll');
+      remember('arch', arch.value);
+      if (coll) {
+        remember('coll', coll.value);
+      }
+    });
+  }
+})();
+</script>
+<pre class="manpage">
+CMS(4)                  NetBSD Kernel Interfaces Manual                 CMS(4)
+
+<br /><b class="section"><a id="NAME" href="#NAME">NAME</a></b><br />
+     <b>cms</b> -- Creative Music System device driver
+
+<br /><b class="section"><a id="SYNOPSIS" href="#SYNOPSIS">SYNOPSIS</a></b><br />
+     <b>cms0  at isa? port 0x220</b>
+     <b>midi* at cms?</b>
+
+<br /><b class="section"><a id="DESCRIPTION" href="#DESCRIPTION">DESCRIPTION</a></b><br />
+     The <b>cms</b> driver provides support for the Creative Music System (C/MS).
+     These cards were developed by Creative Labs, the same people who designed
+     the SoundBlaster cards.  Chips were available for the SoundBlaster to
+     make them compatible with CMS.
+
+     The CMS cards are only capable of playing basic notes and noises, making
+     them suitable for playing midi, but not much else.  The output is stereo,
+     but the <b>cms</b> driver doesn't support stereo control.  The cards have exter-
+     nal volume control, line-output and speaker.
+
+     The base I/O port address is usually jumper-selected to 0x220.  Valid
+     jumper settings are for 0x210, 0x220, 0x230, 0x240, 0x250 and 0x260.
+     There are no interrupt settings.
+
+<br /><b class="section"><a id="SEE ALSO" href="#SEE ALSO">SEE ALSO</a></b><br />
+     <a href="/isa.4">isa(4)</a>, <a href="/midi.4">midi(4)</a>
+
+<br /><b class="section"><a id="HISTORY" href="#HISTORY">HISTORY</a></b><br />
+     The <b>cms</b> device driver appeared in NetBSD 1.5.
+
+NetBSD 11.99                    April 28, 2000                    NetBSD 11.99
+</pre>
+<p class="powered">Powered by man-cgi (2026-09-02).
+Maintained for <a href="https://www.netbsd.org/">NetBSD</a>
+by <a href="https://kimmo.suominen.com/">Kimmo Suominen</a>.
+Based on <a href="http://users.softlab.ntua.gr/~christia/man-cgi.html"
+>man-cgi</a> by <a href="http://users.softlab.ntua.gr/~christia/"
+>Panagiotis Christias</a>.</p>
+</body>
+</html>
