@@ -1,0 +1,8 @@
+# Music_BikeRiding — per-song MIDI overrides.
+#
+# AUDITION FINDING (maintainer): the default ch3 voice (Warm Bell at the
+# default volume 110 — louder than either square) sits over the whole mix.
+# This file exists only to pull it down a notch; programs stay default.
+channels:
+  3:
+    volume: 96                   # was default 110; bell ostinato back under the squares
