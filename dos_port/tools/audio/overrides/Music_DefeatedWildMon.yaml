@@ -1,0 +1,30 @@
+# Music_DefeatedWildMon — per-song MIDI overrides (see overrides/README.md).
+#
+# Registers from the pret source (audio/music/defeatedwildmon.asm): ch1 is
+# the low fanfare line (GB oct 3: B-A-G#-F#-E intro run, then E/F#/G#
+# figures, F/G/A + Bb color in the second half); ch2 is the victory
+# melody (GB oct 3-4: E-F#-G#-A-B pickup into B/C# arches, C/D second
+# half); ch3 is the wave octave-jumping pump (GB oct 4-6: E/F# pumps,
+# then F/G pumps with D# approaches). No noise channel: no drums:.
+#
+# Shared-material note (pair take): same brass-trio treatment as
+# Music_DefeatedTrainer — trombone / trumpet / horn, same narrow stage
+# (56/72/64), same balances — so the wild-mon and trainer stings sound
+# like two verses of one victory fanfare. No switches: one uniform
+# loop texture throughout.
+channels:
+  1:
+    mt32_program: "Trombone 1"   # low fanfare line, under the trumpet
+    gm_program: "Trombone"
+    volume: 96
+    pan: 56
+  2:
+    mt32_program: "Trumpet 1"    # the victory melody carries
+    gm_program: "Trumpet"
+    volume: 104
+    pan: 72
+  3:
+    mt32_program: "Fr Horn 1"    # octave pump as horn chords
+    gm_program: "French Horn"
+    volume: 88
+    pan: 64

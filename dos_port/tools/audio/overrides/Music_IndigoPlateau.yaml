@@ -1,0 +1,32 @@
+# Music_IndigoPlateau — per-song MIDI overrides (see README.md for schema).
+#
+# Frame-exact register/role audit from audio/music/indigoplateau.asm:
+# ch1 is the low A-pedal tread (GB octave 2 A quarters = A3 MIDI, with
+#   D3/D#3/A#2 punctuations and an F-G-A-A-F-A# final statement) — the
+#   "footsteps" engine of the piece.
+# ch2 is the D-pedal line (GB octave 3 D = D4 MIDI, melody channel per
+#   analysis) rising to a C-C#-D-D-C-D# finale (GB octave 4 = MIDI 5).
+# ch3 is sparse bell pings (GB octave 4 D = D5 MIDI, half notes with rests)
+#   plus whole-note A5/D5/A#5/D#5 pillars in the final two bars.
+# ch4 is a steady noise tread (ids 17/18/19).
+# The default 80/80/38 voicing (two saxes + bell) would make a solemn
+# D major/minor-ambiguous processional sound like a dance cue. Re-voice as
+# low brass / trumpet lead / bell:
+channels:
+  1:
+    mt32_program: "Trombone 1"
+    gm_program: "Trombone"
+    volume: 90
+  2:
+    mt32_program: "Trumpet 1"
+    gm_program: "Trumpet"
+    volume: 96
+  3:
+    mt32_program: "Warm Bell"
+    gm_program: "Orchestral Harp"
+    volume: 92
+# No drums: map: the GB noise tread stays on the default all-snare mapping
+# (ids 17/18/19 -> 38). A kick/hat layering was considered but the GB noise
+# timbres are UNVERIFIED by ear — left as an open audition question.
+# No switches in this draft: a ch2 Trumpet -> Brs Sect 1 switch at the m15
+# finale approach is a candidate if the human wants more arrival weight.

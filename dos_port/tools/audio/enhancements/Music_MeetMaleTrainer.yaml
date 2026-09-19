@@ -1,0 +1,115 @@
+# Music_MeetMaleTrainer — Encounter! Boy Trainer (TIER 1 DRAFT).
+# Pair: Music_MeetFemaleTrainer. Leitmotif coherence: identical tier roles,
+# identical patch set, identical voicing logic in both files; only the notes
+# differ where the songs differ (male moves I-vii7-ii7-bIII7-II7, female sits
+# on I/vi7). Shared material preserved, never "fixed":
+#   - E major, both (male K-S ambiguous E/B — the B runner-up is the V pedal
+#     baked into ch3's E-B ostinato, not a second key);
+#   - the descending E-D#-C#-B-A-G# scalar thread (here ch2 m3);
+#   - chromatic neighbors (male: F natural + bIII7 G7, m5 — the description's
+#     highlighted bar; female: C natural + A#);
+#   - wave ostinato on chord fifths (male E-B/F#-C#/G-D, female G#-E).
+# Authored against analysis/Music_MeetMaleTrainer.yaml (6 mm 4/4, intro m1-m2,
+# loop body m3-m6) + encounter_boy_trainer.md, per music-theory +
+# audio-enhance-opl3. Jingle weight (skill table: fanfare/jingle 1-2 voices):
+# two foundation voices, the missing low end (GB never goes below E4) plus a
+# chromatic third-thread that shadows the song's own semitone language.
+# AUDITION FINDING (maintainer): the stinger needs no FM floor — OPL3's bass
+# is wrong for this track. All enhancement voices are MT-32/GM-only (tier 2);
+# OPL3 plays the pure GB trio. Mirror any change in the Female file.
+# Unison safety by construction: bass octave 2, pad octave 3, GB >= E4 (intro
+# lowest C#4) — no unison with any GB pitch is possible. Tier 2-3 follow
+# under audio-enhance-mt32 (same roles in both songs).
+#
+#   Tier 2 (MT-32/GM only — the whole enhancement lives here; OPL3 gets GB alone):
+#     low_bass — roots per the chord map (C#7/Fdim/E | Emaj7/D#m7 | F#m7 |
+#                 G7 | F#7), octave 2, an octave+ under everything GB.
+#     tenor_pad — chromatic third-thread G#3-F3-E3 | G#3-A#3 | A3 | B3 | A#3
+#                 (fifths/thirds only, common-tone led, half-step motion into
+#                 and out of the bIII7 bar — the song's language, echoed).
+# Loop seam: body ends m6; final notes shaved d3.9 against the end-exclusive
+# boundary (the PkmnHealed trap, cf. MeetEvilTrainer m9b3).
+#
+#   Tier 2 (MT-32/GM only) — tonic_depth: roots an octave under low_bass
+#                 (whole-bar pedals; octave arrivals with the bass on
+#                 downbeats as a tutti effect, oblique within bars — e.g. the
+#                 bass moves E2-D#2 under a held E1 in m3, and C#-E under a
+#                 held C#1 nowhere here since male has no mid-bar bass move
+#                 except m3b3). What FM can't do: bowed low-string weight.
+#                 (Female file: same voice, C#1 whole-bar pedals under m4/m8
+#                 so the mid-bar bass move is oblique there too.)
+#
+#   Tier 3 (MT-32/GM only) — ping: tonic E6 piccolo accents (d0.5) at the
+#                 song downbeat (m1b1, with the pickup run) and the loop-body
+#                 entry (m3b1) — the "!" made audible. E6 sits above every GB
+#                 pitch (max C#6), so unison is impossible by construction.
+#                 (Female file: same voice at m1b1 + m6b1, the first full body
+#                 downbeat after the m5b4.5 seam.) Dropped first under
+#                 polyphony pressure.
+
+schema: 1
+song: Music_MeetMaleTrainer
+
+channels:
+  - name: low_bass
+    tier: 2
+    mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
+    gm_program: 39             # GM Synth Bass 1
+    pan: center
+    volume: 62
+    velocity: 84
+    events:
+      - {m: 1, b: 1, d: 2, n: C#2}   # intro: C#7 root
+      - {m: 1, b: 3, d: 2, n: F2}    # intro: Fdim root
+      - {m: 2, b: 1, d: 4, n: E2}    # intro: I (under the F/B pedals)
+      - {m: 3, b: 1, d: 2, n: E2}    # body: Emaj7 root
+      - {m: 3, b: 3, d: 2, n: D#2}   # body: vii7 (D#m7) root
+      - {m: 4, b: 1, d: 4, n: F#2}   # body: ii7 (F#m7) root
+      - {m: 5, b: 1, d: 4, n: G2}    # body: bIII7 (G7) root
+      - {m: 6, b: 1, d: 3.9, n: F#2} # body: II7 (F#7) root, shaved at end
+
+  - name: tenor_pad
+    tier: 2
+    mt32_patch: 50             # MT-32 Str Sect 2
+    gm_program: 49             # GM String Ensemble 1
+    pan: center
+    volume: 54
+    velocity: 66
+    events:
+      - {m: 1, b: 1, d: 2, n: G#3}   # C#7 fifth
+      - {m: 1, b: 3, d: 2, n: F3}    # Fdim root (octave over the bass)
+      - {m: 2, b: 1, d: 4, n: E3}    # I root
+      - {m: 3, b: 1, d: 2, n: G#3}   # Emaj7 third
+      - {m: 3, b: 3, d: 2, n: A#3}   # D#m7 fifth (step up)
+      - {m: 4, b: 1, d: 4, n: A3}    # F#m7 third (half-step down)
+      - {m: 5, b: 1, d: 4, n: B3}    # G7 third (step up, the bIII color)
+      - {m: 6, b: 1, d: 3.9, n: A#3} # F#7 third (half-step down, shaved)
+
+  # --- Tier 2 (MT-32 / GM only; never OPL) --------------------------------
+  - name: tonic_depth
+    tier: 2                   # premium body — dropped after tier 3
+    mt32_patch: 57            # MT-32 Contrabass (bowed low-string weight)
+    gm_program: 44            # GM Contrabass
+    pan: center
+    volume: 50                # felt, not heard
+    velocity: 60
+    events:
+      - {m: 1, b: 1, d: 2, n: C#1}    # intro roots, octave under low_bass
+      - {m: 1, b: 3, d: 2, n: F1}
+      - {m: 2, b: 1, d: 4, n: E1}
+      - {m: 3, b: 1, d: 4, n: E1}     # body: E pedal (bass E2-D#2 moves oblique)
+      - {m: 4, b: 1, d: 4, n: F#1}    # body: F#m7 root
+      - {m: 5, b: 1, d: 4, n: G1}     # body: bIII7 root
+      - {m: 6, b: 1, d: 3.9, n: F#1}  # body: II7 root, shaved at end
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: ping
+    tier: 3                   # color — dropped first under polyphony
+    mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
+    gm_program: 73            # GM Piccolo
+    pan: center
+    volume: 70
+    velocity: 85
+    events:
+      - {m: 1, b: 1, d: 0.5, n: E6}   # song downbeat, over the pickup run
+      - {m: 3, b: 1, d: 0.5, n: E6}   # loop-body entry accent

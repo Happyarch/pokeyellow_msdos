@@ -1,0 +1,30 @@
+# Music_Dungeon1 (Team Rocket Hideout / Power Plant / Cerulean Cave) —
+# per-song MIDI map.
+#
+# Frantic E-minor chromatic motivic writing over E-pedal ostinatos; all four
+# GB channels are active (density ch1 2.11 / ch2 1.52 / ch3 0.95 / ch4 0.58).
+# Same dungeon-sibling recipe as Music_Dungeon2: three distinct, thin
+# synthetic families so the menace stays strange rather than orchestral —
+# shimmer for the leaping chromatic ch1 ostinato/motive, a focused odd lead
+# for the ch2 E-pedal + melodic accompaniment, rain-like texture for ch3's
+# wide role changes (high motive statements, E pedals, chromatic runs).
+# The default MT-32 80/80/38 map would voice this as two saxes plus a bell.
+channels:
+  1:
+    mt32_program: "Fantasy"
+    gm_program: "FX 3 (crystal)"
+    volume: 90
+    pan: 44
+  2:
+    mt32_program: "Doctor Solo"
+    gm_program: "Lead 4 (chiff)"
+    volume: 100
+    pan: 84
+  3:
+    mt32_program: "Ice Rain"
+    gm_program: "FX 1 (rain)"
+    volume: 92
+    pan: 64
+
+drums:
+  velocity: 86

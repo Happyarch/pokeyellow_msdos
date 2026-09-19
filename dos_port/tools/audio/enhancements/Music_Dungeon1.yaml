@@ -1,0 +1,35 @@
+schema: 1
+song: Music_Dungeon1
+
+# Team Rocket Hideout / Power Plant / Cerulean Cave. E minor, 38 measures,
+# loop at m2 b1; melody on ch1. Frantic single-motive writing: chromatic
+# ostinatos on both squares, E pedals down to GB-octave 1 on ch2/ch3, the
+# wave motive leaping three octaves within a bar, noise throughout.
+#
+# Cave/dungeon cap: no tier 1. There is no honest low-register gap (ch2
+# pedals E1 with ch3 E-pedal reinforcement — a sub-bass would unison or
+# mud), and no harmonic gap an FM pad could fill without imposing clean
+# diatonic function on deliberately chromatic/diminished movement. One
+# quiet tier-2 atmosphere is the entire additive arrangement; tier 3 is
+# intentionally absent. Its E6 sits above every simultaneous GB pitch at
+# the chosen seams (ch3's own file-E6 motive statements live in mm2-9 and
+# at the loop wrap; ch1 peaks at file-C6) and rests through the frantic
+# ostinato stretches and the exposed ch1 dropout (mm~29-32).
+channels:
+  - name: rocket_haze
+    tier: 2
+    mt32_patch: 38         # MT-32 Atmosphere: slow, reverb-friendly LA color
+    gm_program: 100        # GM FX 4 (Atmosphere)
+    pan: center
+    volume: 40
+    velocity: 56
+    events:
+      - {at: 10, pattern: haze_ping}
+      - {at: 21, pattern: haze_ping}
+      - {at: 33, pattern: haze_ping}
+
+patterns:
+  haze_ping:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 4, n: E6}

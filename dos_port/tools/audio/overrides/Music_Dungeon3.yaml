@@ -1,0 +1,64 @@
+# Music_Dungeon3 (Mt. Moon Cave / Rock Tunnel / Victory Road) — per-song
+# MIDI map.
+#
+# E-centered augmented/whole-tone mystery: ch1 arpeggiates augmented triads
+# (B+, E+, F+ regions), ch2 implies whole-tone melody, ch3 contributes only
+# sparse chromatic runs and held chord tones (density 0.25), ch4 is silent
+# by design. Same dungeon-sibling recipe as Music_Dungeon2: thin synthetic
+# families keep the cave strange — shimmer for the arpeggiated ch1, a
+# focused odd lead for the disorienting ch2 melody, rain-like texture for
+# the sparse ch3 sustains. The default MT-32 80/80/38 map would voice
+# this as two saxes plus a bell.
+#
+# AUDITION FINDING (maintainer): Ice Rain is right for the held ch3 tones
+# but wrong for the fast chromatic runs — it washes the 16ths out. So ch3
+# switches to a dry Square Wave for the two scalar passages only:
+# ascending run m12b4-m13b1, return to Ice Rain in the m13b3 silence gap;
+# descending run m19b4-m21b1, return in the m21b2 silence gap (the return
+# also keeps the m12b4 switch a real change on every loop pass, not a
+# wrap-latch no-op). All four points verified against the simulated ch3
+# onsets (frames 1410 / run-end 1462 / 2358 / run-end 2410): each switch
+# lands exactly on a note edge or in silence, never under sustain.
+# MEASURE-MAP WARNING, learned the hard way: this song's tempo ramp
+# (ch1 .sub7, tempo 168->224) dilates the beat grid, so sim_frame/30 does
+# NOT give musical position past m14 — the descending run is m19b4, not
+# m20b3. Always resolve positions through analysis beat_frames, never by
+# dividing frames.
+channels:
+  1:
+    mt32_program: "Fantasy"
+    gm_program: "FX 3 (crystal)"
+    volume: 90
+    pan: 44
+    switches:                     # AUDITION FINDING (maintainer): the ~30 s
+                                  # scales are CH1's chromatic episode
+                                  # (descent F5->D5 m13b1-m14b2.5 + tempo-ramp
+                                  # ascent f=1620-2208), not ch3 — the first
+                                  # attempt switched the right patch on the
+                                  # wrong channel for this passage. Same rule
+                                  # as the ch3 runs: scales go dry Square,
+                                  # everything else keeps its patch. Both
+                                  # points are exact ch1 note edges (descent
+                                  # first note-on f=1440, which abuts the
+                                  # preceding note end; octave-4 re-entry
+                                  # note-on f=2208).
+      - {m: 13, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 18, b: 3, mt32_program: "Fantasy", gm_program: "FX 3 (crystal)"}
+  2:
+    mt32_program: "Doctor Solo"
+    gm_program: "Lead 4 (chiff)"
+    volume: 100
+    pan: 84
+  3:
+    mt32_program: "Ice Rain"
+    gm_program: "FX 1 (rain)"
+    volume: 92
+    pan: 64
+    switches:
+      - {m: 12, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 13, b: 3, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)"}
+      - {m: 19, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 21, b: 2, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)"}
+
+drums:
+  velocity: 80

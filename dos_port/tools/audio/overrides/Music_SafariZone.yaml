@@ -1,0 +1,34 @@
+# Music_SafariZone — per-song MIDI overrides (see README.md for schema).
+#
+# THEORY-ENTRY NOTE: no Safari-Zone-titled transcription exists. Per
+# maintainer direction this track IS the evolution theme: the evolution
+# cutscene plays MUSIC_SAFARI_ZONE (engine/movie/evolution.asm:42-44), so the
+# score-analysis "Evolution" description is the theory entry, cross-checked
+# against audio/music/safarizone.asm. Residual mismatch (lowest confidence):
+# the description credits square 2 with big portamento slides, but the GB
+# source puts pitch_slides in ch1 and plain 16ths in ch2 — audition must
+# confirm the re-voicing below suits the actual timbres.
+#
+# Register/role audit (MIDI octaves; GB octave N = MIDI octave N+1):
+# ch1 C4/G3 quarter churn + F#3 punctuations, slide-flourish intro — the
+#   motor rhythm. ch2 G3/D4 churn + A3/B3 punctuations (melody channel per
+#   analysis), G5/D5 intro 16ths. ch3 A3/D4 half-note bell pings + A4/B4
+#   pillars. NO ch4 (three-channel track) — hence no drums: key at all.
+# The description stresses the two squares share duty/timbre and cross
+# constantly; defaults would blur them further. Re-voice with one distinct
+# folk timbre per line: breath flute (motor), oboe (lead — cuts through the
+# churn), warm bell kept for the wave pings.
+channels:
+  1:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 94
+  2:
+    mt32_program: "Oboe"
+    gm_program: "Oboe"
+    volume: 96
+  3:
+    mt32_program: "Warm Bell"
+    gm_program: "Orchestral Harp"
+    volume: 90
+# No switches in this draft. No drums: — the track has no noise channel.

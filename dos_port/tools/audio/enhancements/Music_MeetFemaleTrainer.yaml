@@ -1,0 +1,113 @@
+# Music_MeetFemaleTrainer — Encounter! Girl Trainer (TIER 1 DRAFT).
+# Pair: Music_MeetMaleTrainer. Leitmotif coherence: identical tier roles,
+# identical patch set, identical voicing logic in both files; only the notes
+# differ where the songs differ (female sits on I/vi7 — E pedal + C#m7 bars —
+# while male moves I-vii7-ii7-bIII7-II7). Shared material preserved:
+# E major; the descending E-D#-C#-B-A-G# thread (here ch2 m6-m9 with the
+# C-natural/A# flourishes); wave ostinato on chord fifths (G#-E here).
+# The description's "octave B's" (ch2 intro B pedal = the "!" over her head)
+# stay square and untouched — tiers support, never cover, the stinger.
+# Authored against analysis/Music_MeetFemaleTrainer.yaml (9 mm 4/4, intro
+# m1-m5b4, loop body m5b4.5-m9) + encounter_girl_trainer.md, per
+# music-theory + audio-enhance-opl3. Jingle weight: two foundation voices, the
+# missing low end (GB never goes below B3, and only there for two quarters)
+# plus a G# common-tone pedal — the third of E, the fifth of C#m7, so one
+# pitch serves every bar without ever touching B3/E4 (ch1's pedal pitches).
+# AUDITION FINDING (maintainer, mirrors Male file): the stinger needs no FM
+# floor — all enhancement voices are MT-32/GM-only (tier 2); OPL3 plays the
+# pure GB trio. SECOND FINDING: MT-32 drops voices (partial exhaustion) —
+# tonic_depth leaves the intro (body only now); ping stays for leitmotif glue.
+# Unison safety by construction: bass octave 2, pad G#3 only, GB >= B3 with
+# B3/E4 explicitly avoided. Tier 2-3 follow under audio-enhance-mt32 (same
+# roles in both songs).
+#
+#   Tier 2 (MT-32/GM only — the whole enhancement lives here; OPL3 gets GB alone):
+#     low_bass — E pedal, C# under the vi7 bars (m4b1, m8b1), octave 2.
+#     tenor_pad — G#3 common-tone pedal through intro + body (ends at the
+#                 m5b4.5 seam, re-articulates for the body — no sustain
+#                 crosses the loop start).
+# Loop seam: intro pad/bass end exactly at m5b4.5 (safe by strict inequality,
+# cf. MeetEvilTrainer frame 441); final notes shaved d3.9 at the end.
+#
+#   Tier 2 (MT-32/GM only) — tonic_depth: BODY ONLY (intro removed — the
+#                 mm1-m5 triple-stacked d8 sustains exhausted MT-32 partials
+#                 and dropped voices). Whole-bar C#1 pedals under the vi7 bars
+#                 (m8) keep the mid-bar bass move oblique and turn it into a
+#                 consonant 3rd (E over C#). What FM can't do: bowed low-string
+#                 weight. Ping stays both songs (leitmotif glue).
+#
+#   Tier 3 (MT-32/GM only) — ping: tonic E6 piccolo accents (d0.5) at the
+#                 song downbeat (m1b1, doubling the "!" of ch2's octave B's
+#                 an octave+ above) and the first full body downbeat (m6b1,
+#                 just past the m5b4.5 seam). E6 sits above every GB pitch, so
+#                 unison is impossible by construction. Dropped first under
+#                 polyphony pressure.
+
+schema: 1
+song: Music_MeetFemaleTrainer
+
+channels:
+  - name: low_bass
+    tier: 2
+    mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
+    gm_program: 39             # GM Synth Bass 1
+    pan: center
+    volume: 62
+    velocity: 84
+    events:
+      - {m: 1, b: 1, d: 8, n: E2}     # intro m1-m2: I (under flourish + B pedal)
+      - {m: 3, b: 1, d: 4, n: E2}     # intro: I
+      - {m: 4, b: 1, d: 2, n: C#2}    # intro: vi7 root
+      - {m: 4, b: 3, d: 2, n: E2}     # intro: I root
+      - {m: 5, b: 1, d: 3.5, n: E2}   # intro: I, ends exactly at loop seam
+      - {m: 5, b: 4.5, d: 0.5, n: E2} # body pickup into the loop
+      - {m: 6, b: 1, d: 4, n: E2}     # body: I
+      - {m: 7, b: 1, d: 4, n: E2}     # body: I
+      - {m: 8, b: 1, d: 2, n: C#2}    # body: vi7 root
+      - {m: 8, b: 3, d: 2, n: E2}     # body: I root
+      - {m: 9, b: 1, d: 3.9, n: E2}   # body: I, shaved at end
+
+  - name: tenor_pad
+    tier: 2
+    mt32_patch: 50             # MT-32 Str Sect 2
+    gm_program: 49             # GM String Ensemble 1
+    pan: center
+    volume: 54
+    velocity: 66
+    events:
+      - {m: 1, b: 1, d: 8, n: G#3}     # I third (octave under ch1's G#4)
+      - {m: 3, b: 1, d: 4, n: G#3}     # I third
+      - {m: 4, b: 1, d: 4, n: G#3}     # vi7 fifth (= I third, common tone)
+      - {m: 5, b: 1, d: 3.5, n: G#3}   # I third, ends at loop seam
+      - {m: 5, b: 4.5, d: 0.5, n: G#3} # body pickup
+      - {m: 6, b: 1, d: 4, n: G#3}     # body: I
+      - {m: 7, b: 1, d: 4, n: G#3}     # body: I
+      - {m: 8, b: 1, d: 4, n: G#3}     # body: vi7 fifth through I
+      - {m: 9, b: 1, d: 3.9, n: G#3}   # body: I, shaved at end
+
+  # --- Tier 2 (MT-32 / GM only; never OPL) --------------------------------
+  - name: tonic_depth
+    tier: 2                   # premium body — body only (intro cut for partials); dropped after tier 3
+    mt32_patch: 57            # MT-32 Contrabass (bowed low-string weight)
+    gm_program: 44            # GM Contrabass
+    pan: center
+    volume: 50                # felt, not heard
+    velocity: 60
+    events:
+      - {m: 5, b: 4.5, d: 0.5, n: E1} # body pickup
+      - {m: 6, b: 1, d: 4, n: E1}     # body: I
+      - {m: 7, b: 1, d: 4, n: E1}     # body: I
+      - {m: 8, b: 1, d: 4, n: C#1}    # body: whole-bar vi7 (bass moves oblique)
+      - {m: 9, b: 1, d: 3.9, n: E1}   # body: I, shaved at end
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: ping
+    tier: 3                   # color — dropped first under polyphony
+    mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
+    gm_program: 73            # GM Piccolo
+    pan: center
+    volume: 70
+    velocity: 85
+    events:
+      - {m: 1, b: 1, d: 0.5, n: E6}   # song downbeat, over the octave B's
+      - {m: 6, b: 1, d: 0.5, n: E6}   # first full body downbeat accent

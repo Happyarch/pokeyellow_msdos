@@ -1,0 +1,136 @@
+# Music_SafariZone — Safari Zone ambience / evolution cutscene (the evolution
+# scene plays MUSIC_SAFARI_ZONE; engine/movie/evolution.asm:42-44). Tier-1 +
+# tier-2 + tier-3 enhancement.
+#
+# THEORY-ENTRY NOTE: no Safari-Zone-titled transcription exists. This draft
+# uses the score-analysis "Evolution" description as its theory entry, per
+# maintainer direction and the verified shared track identity above. What the
+# description contributes: flourish intro into a measure-2 loop; all channels
+# in rhythmic unison; perceived lines G4-every-beat / C4-D4-alternation /
+# A3-every-other-beat; pervasive voice-crossing/register-jumping as Masuda's
+# idiom (cf. Viridian Forest, Title Screen). Residual mismatch, lowest
+# confidence: the description's "square 2 portamento slides" read as ch1's
+# pitch_slides in the GB source — the intro re-voicing is by analogy, confirm
+# by ear. Everything else is authored from analysis/Music_SafariZone.yaml
+# (frame-exact) + the GB source, NOT from prose.
+#
+# Analysis grid: 9 measures 4/4, G major 0.893 (unambiguous; runner-up C
+# major 0.652), melody on ch2, MID-MEASURE loop at m5 b3 (loop_start 445, end
+# 841; 16-beat body m5b3-m9b2). Chord segs: m1 C(IV, 1 half) | m1b3 Am7(ii7,
+# 7 halves) | m5b1 Gmaj7 (1 half) | m5b3 Am7 (7 halves) | m9b1 Cmaj7 (1 half).
+# The piece floats on ii7-IV color with NO tonic bass anywhere — added parts
+# preserve that float and MUST NOT ground it with G roots ("don't fix").
+#
+# Register audit (MIDI; GB octave N = MIDI octave N+1, so GB3 C/G = C4/G4):
+# ch1 C4/G4 quarter churn + F#4 punctuations; ch2 G4/D4 churn + A4/B4
+# punctuations (G5/D5 intro 16ths); ch3 A3/D5 half-note pings + A5/B5
+# pillars. Continuously occupied: C4/G4/D4. Free: everything <= C3, E
+# anywhere (no E in the base at all), C5/D5/E5/G5 in the body (base body max
+# is B5; G5/D5 occur only in the 2-beat intro).
+#
+# Seam treatment (Surfing precedent): intro authored literally mm1-m5b2;
+# body m5b3-m9b2; boundary voices split EXACTLY at the m5b3 loop point, and
+# no note crosses it. Bass/pad hold the same pitch across the seam, so there
+# is no first-pass divergence.
+#
+# Tier 1 (1 voice on OPL3 — the static whole-loop E pedal read as a held
+# horn drone in a bad key, so the pad leaves OPL entirely; bass only):
+#   * savanna_bass — sub_bass roots on the chord grid: C2 under the IV bars,
+#     A1 pedal under the Am7 stretches (same-root holds across quality
+#     changes, Cities1 precedent). Entirely <= C2, unison-proof by register.
+# Tier 1b / Tier 2 (MT-32/GM body, never OPL — pad lives here now):
+#   * savanna_pad — E4 pedal (the one Am7/Cmaj7/C tone the GB never plays)
+#     with C5 added on the two IV bars (m1, m9): 3rd+6th color (the 5th, G4,
+#     is GB-occupied), common-tone voice leading throughout. MT-32/GM only.
+# Tier 2 (2 voices — MT-32/GM body, never duplicating tier 1):
+#   * savanna_pad (moved off OPL, see Tier 1 note) +
+#   * canopy_strings — violin-section half-note arch E5-D5-C5-D5-E5-G5-E5
+#     over the body (5th/11th-9th-3rd colors over Am7), resting the intro and
+#     landing E5 on the m9 Cmaj7. Stepwise on GB-free pitches (strings never
+#     touch the A5/B5 pillar pitches).
+# Tier 3 (1 voice — LA/GM-only glints):
+#   * firefly — two celesta pings: E6 at the m5b3 loop head, G6 at the m9
+#     Cmaj7 arrival. Loop-turn orientation, not a layer.
+# No rhythm channel: the track has no noise channel and the churn is already
+# saturated; a drum layer is unverified need. No switches, no unroll.
+
+schema: 1
+song: Music_SafariZone
+
+channels:
+  # ── Tier 1: OPL3 foundation (also cascades to MT-32 / GM) ────────────────
+  - name: savanna_bass
+    tier: 1
+    opl_patch: sub_bass          # clean sine floor; GB never goes below A3
+    mt32_patch: 29               # MT-32 SynBass1 (precedent: ocean_bass)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 58
+    velocity: 78
+    events:
+      # Intro (first-time; split at the m5b3 seam exactly).
+      - {m: 1, b: 1, d: 2, n: C2}     # C (IV) under the flourish
+      - {m: 1, b: 3, d: 2, n: A1}     # Am7 (ii7)
+      - {m: 2, b: 1, d: 4, n: A1}
+      - {m: 3, b: 1, d: 4, n: A1}
+      - {m: 4, b: 1, d: 4, n: A1}
+      - {m: 5, b: 1, d: 2, n: A1}     # first-time side of the seam
+      # Loop body m5b3-m9b2.
+      - {m: 5, b: 3, d: 2, n: A1}     # loop-return head, same pitch
+      - {m: 6, b: 1, d: 4, n: A1}
+      - {m: 7, b: 1, d: 4, n: A1}
+      - {m: 8, b: 1, d: 4, n: A1}
+      - {m: 9, b: 1, d: 2, n: C2}     # Cmaj7 (IV7) arrival
+
+  - name: savanna_pad
+    tier: 2
+    mt32_patch: 49               # MT-32 Str Sect 1 on the cascade
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 50
+    velocity: 68
+    events:
+      # Intro.
+      - {m: 1, b: 1, d: 2, n: [E4, C5]}  # C major 3rd+6th (both GB-free)
+      - {m: 1, b: 3, d: 2, n: E4}        # Am7 5th
+      - {m: 2, b: 1, d: 4, n: E4}
+      - {m: 3, b: 1, d: 4, n: E4}
+      - {m: 4, b: 1, d: 4, n: E4}
+      - {m: 5, b: 1, d: 2, n: E4}        # first-time side of the seam
+      # Loop body. E4 common tone throughout; C5 only at the IV arrival.
+      - {m: 5, b: 3, d: 2, n: E4}        # loop-return head
+      - {m: 6, b: 1, d: 4, n: E4}
+      - {m: 7, b: 1, d: 4, n: E4}
+      - {m: 8, b: 1, d: 4, n: E4}
+      - {m: 9, b: 1, d: 2, n: [E4, C5]}  # Cmaj7 3rd+6th (5th is GB-occupied)
+
+  # ── Tier 2: MT-32/GM body ───────────────────────────────────────────────
+  - name: canopy_strings
+    tier: 2
+    mt32_patch: 50               # MT-32 Str Sect 2 (pad cascades as Sect 1)
+    gm_program: 50               # GM String Ensemble 2
+    pan: left
+    volume: 60
+    velocity: 72
+    events:
+      # Rests the intro; half-note arch over the loop body only.
+      - {m: 5, b: 3, d: 2, n: E5}     # Am7 5th, loop-head arrival
+      - {m: 6, b: 1, d: 2, n: D5}     # 11th, passing
+      - {m: 6, b: 3, d: 2, n: C5}     # 3rd
+      - {m: 7, b: 1, d: 2, n: D5}     # step back up
+      - {m: 7, b: 3, d: 2, n: E5}
+      - {m: 8, b: 1, d: 2, n: G5}     # 7th-color peak (GB-free in body)
+      - {m: 8, b: 3, d: 2, n: E5}
+      - {m: 9, b: 1, d: 2, n: E5}     # Cmaj7 3rd, common-tone landing
+
+  # ── Tier 3: sparse LA/GM-only glints ────────────────────────────────────
+  - name: firefly
+    tier: 3
+    mt32_patch: 23               # MT-32 Celesta 1
+    gm_program: 9                # GM Celesta
+    pan: right
+    volume: 42
+    velocity: 62
+    events:
+      - {m: 5, b: 3, d: 0.5, n: E6}   # loop-head glint
+      - {m: 9, b: 1, d: 0.5, n: G6}   # Cmaj7 arrival glint

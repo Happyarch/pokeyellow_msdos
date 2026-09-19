@@ -1,0 +1,48 @@
+# Music_Routes3 — per-song MIDI overrides (see README.md for schema).
+#
+# Roles (audio/music/routes3.asm): ch1 (duty 3, vibrato) is the lower
+# homophonic line (YAML G3..G5, one dip to YAML G2 at ~m14), moving with ch2
+# as a unit over the bVII passages (m5-6 etc.); ch2 (duty 2) is the melody
+# (YAML G4..G5); ch3 is the relentless wave-motor ostinato (YAML oct 5-6,
+# density 1.81 — the piece's structural framework per road_to_cerulean_city.md);
+# ch4 is kick/snare/hat traffic on noise ids 17/18/19.
+#
+# ch1 gets the reed (Oboe, home territory for its YAML-oct-4 writing —
+# MeetEvilTrainer precedent) while ch2 gets breath (Flute 1) so the two
+# homophonic squares stay distinct without fighting the pulse-shim family;
+# GM mirrors with Oboe/Flute. Melody (ch2) carries: 100 over 92. Moderate
+# stage spread (48/80) — one marching band, not Lavender's uneasy width
+# (open ear-question for audition).
+# ch3 gets the dry pluck (Pizzicato — Cities1/Celadon precedent: kills the
+# Warm Bell decay wash on busy wave figures); GM Pizzicato Strings. It is
+# the motor, so 96, centered.
+channels:
+  1:
+    mt32_program: "Oboe"
+    gm_program: "Oboe"
+    volume: 92
+    pan: 48
+  2:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 100
+    pan: 80
+  3:
+    mt32_program: "Pizzicato"
+    gm_program: "Pizzicato Strings"
+    volume: 96
+    pan: 64
+drums:
+  # GB-side truth (audio/sfx/noise_instrument{17,18,19}_1.asm): three
+  # DISTINCT timbres (noise_note params 9/7/6 — low/mid/high). Rhythmic
+  # placement confirms the roles: 17 takes the long downbeat lengths
+  # (8/12/4 — kick), 18 the backbeat 1-2s (snare), 19 the 16th bursts
+  # (hat). Default maps all three to snare (38); this differentiates them.
+  # FLAG FOR AUDITION: the 17-low/19-high direction is inferred from the
+  # param ordering + placement, NOT verified by ear — if the kit sounds
+  # inverted, swap 17 <-> 19.
+  velocity: 100
+  map:
+    17: 36                        # kick — long downbeats
+    18: 38                        # snare — default kept, stated for the record
+    19: 42                        # closed hat — subdivision bursts

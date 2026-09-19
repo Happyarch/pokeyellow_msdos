@@ -1,0 +1,127 @@
+# Music_DefeatedWildMon — WILD-MON victory sting. Tier-1-only
+# enhancement (Phase E).
+#
+# Authored against the frame-exact pipeline analysis
+# (music_analysis.py --print Music_DefeatedWildMon: 4/4, 36 beats /
+# 9 measures, loop at m2 b1, i.e. 1-measure intro + 8-measure body) and
+# the score-analysis description (victory_wild_pokemon.md: E major, one
+# measure of introduction, 2 four-bar phrases — first in E major,
+# second modulated to F major, the macroscopic-Neapolitan reference to
+# the battle theme's bII), per audio-enhance-opl3 / music-theory.
+#
+# The track: 3 dense GB voices, no noise. ch1 = low fanfare line
+# (sounding ~E4-B4), ch2 = melody (sounding ~B4-D5), ch3 = wave
+# octave-jumping pump (sounding ~E4-G4 / E5-G5, up to C#6/D#6 pickups).
+# Register audit: everything lives at/above E4. The whole low end below
+# E4 is empty. That is the only clean gap.
+#
+# Shared-material note (pair take): the sibling Music_DefeatedTrainer
+# gets the identical two-voice template (sub-bass roots + octave-3
+# 3rd/5th pad, same patches/balances) — intros scalar-run into the
+# tonic, loop bodies split in two halves with a chromatic lift (here
+# the m6 E-to-F semitone modulation with its Bb color). Same treatment
+# so the stings sit together.
+#
+#   Tier 1 (2 voices — fanfare/jingle ceiling per the OPL3 skill table):
+#     sub_bass — chord roots in octave 2, half-measure rhythm from the
+#                analysis (E / F#m E alternation, then G(m)(7) F
+#                alternation, closing F7). Nothing to double down there.
+#     low_pad  — octave-3 chord tones, 3rd/5th/root only: never D#
+#                (7th of Emaj7, LT of E), never E over F#m7 (its 7th),
+#                never Eb over the closing F7 (its 7th). Ceiling E3/F3,
+#                an 11th-plus under the GB floor (E4). The F-major half
+#                keeps its Bb-free voicings (D3/F3) — the modulation
+#                color stays exactly as the GB wrote it.
+#
+#   Tier 2: omitted. The cascaded tier-1 pad is already the MT-32 string
+#           tenor (patch 49); the GB trio packs every sounding octave
+#           from E4 up with continuous 8ths/octave-pumps, leaving no
+#           clean mid register for a second sustained layer (the
+#           Vermilion-listed failure mode for this family).
+#   Tier 3: omitted. This is a 12-second looping sting, not a one-shot:
+#           a chime/cymbal accent would fire every pass. The tier-1 pair
+#           plus the brass overrides already deliver the fanfare weight.
+#
+# Voice leading (added pair, half-measure): every move is contrary or
+# oblique — E2/E3 =P8, F#2/C#3 =P5, G2/D3 =P5, F2/F3 =P8 — so no
+# parallel P5/P8 exists by construction. Seam m9 (G2/D3, F2/F3) ->
+# body m2b1 (F#2/C#3) is contrary (bass up, pad down). Against the GB:
+# added voices hold 2-beat notes while the GB moves in 8ths (oblique),
+# at >=11 semitones separation, octaves never unisons (lint-verified).
+#
+# Patches match the approved Vermilion/Pallet family: sub_bass ->
+# MT-32 SynBass1 / GM Synth Bass 1; soft_pad -> MT-32 Str Sect 1 /
+# GM Pad 2 (warm).
+
+schema: 1
+song: Music_DefeatedWildMon
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 72
+    velocity: 80
+    events:
+      - {at: 1, pattern: bass_body}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 64                   # under the bass — reinforcement, not a lead
+    velocity: 76
+    events:
+      - {at: 1, pattern: pad_body}
+
+patterns:
+  # Chord roots, octave 2. m1 is the intro (E); the loop body is m2-m9.
+  bass_body:
+    measures: 9
+    events:
+      - {m: 1, b: 1, d: 2, n: E2}     # Emaj7  (V7) — intro
+      - {m: 1, b: 3, d: 2, n: E2}     # E      (V)  — intro
+      - {m: 2, b: 1, d: 2, n: F#2}    # F#m7   (bvi7)
+      - {m: 2, b: 3, d: 2, n: E2}     # E
+      - {m: 3, b: 1, d: 2, n: F#2}    # F#m    (bvi)
+      - {m: 3, b: 3, d: 2, n: E2}     # Emaj7
+      - {m: 4, b: 1, d: 2, n: F#2}    # F#m7 (= m2)
+      - {m: 4, b: 3, d: 2, n: E2}     # E
+      - {m: 5, b: 1, d: 2, n: F#2}    # F#m    (= m3)
+      - {m: 5, b: 3, d: 2, n: E2}     # Emaj7
+      - {m: 6, b: 1, d: 2, n: G2}     # Gm7    (vii7) — F-major half
+      - {m: 6, b: 3, d: 2, n: F2}     # F      (VI)
+      - {m: 7, b: 1, d: 2, n: G2}     # Gm     (vii)
+      - {m: 7, b: 3, d: 2, n: F2}     # F
+      - {m: 8, b: 1, d: 2, n: G2}     # Gm7    (= m6)
+      - {m: 8, b: 3, d: 2, n: F2}     # F
+      - {m: 9, b: 1, d: 2, n: G2}     # Gm
+      - {m: 9, b: 3, d: 1.95, n: F2}  # F7     (VI7; root, not Eb) — seam release
+
+  # Octave-3 tenor: 3rd/5th/root only, nearest-motion. Ceiling F3.
+  pad_body:
+    measures: 9
+    events:
+      - {m: 1, b: 1, d: 2, n: E3}     # Emaj7  root — intro
+      - {m: 1, b: 3, d: 2, n: E3}     # E      root — intro
+      - {m: 2, b: 1, d: 2, n: C#3}    # F#m7   5th (not E — 7th)
+      - {m: 2, b: 3, d: 2, n: E3}     # E      root
+      - {m: 3, b: 1, d: 2, n: C#3}    # F#m    5th — held
+      - {m: 3, b: 3, d: 2, n: E3}     # Emaj7  root (not D# — 7th/LT)
+      - {m: 4, b: 1, d: 2, n: C#3}    # F#m7   5th
+      - {m: 4, b: 3, d: 2, n: E3}     # E      root
+      - {m: 5, b: 1, d: 2, n: C#3}    # F#m    5th
+      - {m: 5, b: 3, d: 2, n: E3}     # Emaj7  root
+      - {m: 6, b: 1, d: 2, n: D3}     # Gm7    5th (not F — 7th)
+      - {m: 6, b: 3, d: 2, n: F3}     # F      root
+      - {m: 7, b: 1, d: 2, n: D3}     # Gm     5th
+      - {m: 7, b: 3, d: 2, n: F3}     # F      root
+      - {m: 8, b: 1, d: 2, n: D3}     # Gm7    5th
+      - {m: 8, b: 3, d: 2, n: F3}     # F      root
+      - {m: 9, b: 1, d: 2, n: D3}     # Gm     5th
+      - {m: 9, b: 3, d: 1.95, n: F3}  # F7     root (not Eb — 7th)

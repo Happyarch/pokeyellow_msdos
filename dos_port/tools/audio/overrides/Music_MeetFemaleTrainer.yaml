@@ -1,0 +1,24 @@
+# Music_MeetFemaleTrainer — per-song MIDI overrides (see overrides/README.md).
+#
+# Encounter! Girl Trainer (MUSIC_MEET_FEMALE_TRAINER: lass/psychic/cooltrainer
+# "!" stinger — home/trainers.asm diverts FemaleTrainerList classes here).
+# Ch1 is the E pedal, ch2 the stepwise melody with chromatic flourishes, ch3
+# the G#-E ostinato. Both squares share one patch (the stinger stays 8-bit);
+# the wave ostinato gets bell body. Identical voicing logic to the
+# MeetMaleTrainer override — one coherent take across the leitmotif pair.
+channels:
+  1:
+    mt32_program: "Square Wave"   # E pedal; stays 8-bit-sharp
+    gm_program: "Lead 1 (square)"
+    volume: 100
+    pan: 52
+  2:
+    mt32_program: "Square Wave"   # stepwise melody; carries
+    gm_program: "Lead 1 (square)"
+    volume: 104
+    pan: 76
+  3:
+    mt32_program: "Warm Bell"     # ostinato attack + sustain body
+    gm_program: "Music Box"
+    volume: 92
+    pan: 64

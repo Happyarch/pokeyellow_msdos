@@ -1,0 +1,123 @@
+# Music_Routes2 — route theme (E major, 10 measures, loop from m1, no intro).
+#
+# Score-analysis identity: "To Bill's Origin - From Cerulean City"
+# (MUSIC_ROUTES2 plays on ROUTE_24/25, the path north of Cerulean to Bill's
+# cottage by the sea). Companion piece to the Cerulean City theme: shared
+# E major, shared [q. xx] rhythmic motif (here opening B->E up a 4th in
+# sq1), cheerful waterfront vibe; sq2 carries a flowing triplet figure.
+# Form: two 4-bar phrases linked by a 2-bar descending sequence (mm5-6?
+# analysis spans: mm1-4 I-V/iii fluct., mm5-7 IV-iii-ii, m8 I, m9 ii7-IV,
+# m10 I). No chromatic traps (bVII hints only) — added voices diatonic.
+#
+# Frame-exact note data: generated MIDI (gb_to_midi.py --target gm --songs
+# Routes2 --no-enhance) parsed per channel, measures via
+# analysis/Music_Routes2.yaml beat map (measure ~114 frames, half = ~57).
+# GB ranges (MIDI numbers, C4=60): ch1 B3(59)..E5(76), lyrical mm1-4 then
+# broken-chord arpeggiation mm5-10; ch2 (analysis melody channel)
+# D#4(63)..C#6(85), soaring lead, rests f1111-1140 (m10 tail); ch3 (wave)
+# E2(40)..G#3(56), bouncy quarter movement mm1-4 (E3/B2 pedals + D3-C#3-D#
+# connectors), sparse half-notes with rests mm5-10; ch4 noise id 3 snare-ish
+# pattern (default GM map id 3 -> 38 Acoustic Snare kept, no drums override).
+# Chord halves (H1..H20, from analysis): E B7 | E G#m7 | E B7 | E G#dim |
+# A G#m | F#m E | F#m7 F#m | E | F#m7 A | E.
+#
+# Tier 1 (route-theme foundation, 2 voices — octave 1 is entirely empty;
+# wave floors at E2):
+#   * sub_bass — chord roots in octave 1, one sustained note per harmony
+#     half-measure (whole-note holds mm7-8). Deep foundation under the
+#     bouncy wave bass.
+#   * low_pad — sustained chord tones in octave 2-3, voice-led by step with
+#     common-tone holds (G#2 across E/G#m7/E, C#3 across F#m7/F#m). Two
+#     deliberate 5th-substitutions where the true 3rd unisons the wave:
+#     H2/H6 (B7) use F#2 not D#3 (wave plays D#3 f99-114, f327-342), H4/H8
+#     (G#m7/G#dim) hold G#2 not B2 (wave B2 sustains through both halves);
+#     H12/H15-H16/H18 use E3 (wave occupies every E-major octave-2 tone in
+#     those halves: check H12 wave B2/E2/G#2, H15-16 G#2/B2). Every pad
+#     pitch was checked against exact wave/ch1/ch2 timing: pad max E3(52)
+#     vs ch1 min B3(59) globally clear; wave collisions avoided per-half
+#     (mm9-10 C#3/E3 pad notes sit an octave below wave's C#4-free... wave
+#     mm9-10 peaks at G#3/E3 — pad G#2 at H20 is an octave below wave's
+#     G#3, permitted). Bass-pad intervals all >= 12 semitones except H2/H6
+#     (B1+F#2 = 19 semis) — no mud below C3.
+#
+# Tier 2: SKIPPED (documented tier-skip). ch1's lyrical line + arpeggiation
+# (B3-E5) and ch2's soaring lead (E5-C#6) leave no clean octave-3/4 band:
+# E3/G#3/B3 all unison the wave or ch1 in some half (E3: wave H1/H3/H5/H7;
+# G#3: wave H20; B3: ch1 mm1-4). Same shape as Music_PalletTown.
+#
+# Tier 3 (MT-32/GM only): one sparse celesta chime per section downbeat —
+# m1b1 E6 (over ch2's E5, octave ok), m5b1 A5 (A-major arrival, over ch1's
+# E5/ch2's C#6), m8b1 E6 (whole-note E), m10b1 E6 (final tonic, ch2 rests
+# f1111+ so the tail is clear).
+
+schema: 1
+song: Music_Routes2
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass
+    mt32_patch: 29        # MT-32 Syn Bass 1 (round, sustaining)
+    gm_program: 39        # GM Synth Bass 1
+    pan: center
+    volume: 56
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 2,   n: E1}   # H1  E (I)
+      - {m: 1,  b: 3, d: 2,   n: B1}   # H2  B7 (V7)
+      - {m: 2,  b: 1, d: 2,   n: E1}   # H3  E
+      - {m: 2,  b: 3, d: 2,   n: G#1}  # H4  G#m7 (iii7)
+      - {m: 3,  b: 1, d: 2,   n: E1}   # H5  E
+      - {m: 3,  b: 3, d: 2,   n: B1}   # H6  B7
+      - {m: 4,  b: 1, d: 2,   n: E1}   # H7  E
+      - {m: 4,  b: 3, d: 2,   n: G#1}  # H8  G#dim (iiiø)
+      - {m: 5,  b: 1, d: 2,   n: A1}   # H9  A (IV)
+      - {m: 5,  b: 3, d: 2,   n: G#1}  # H10 G#m (iii)
+      - {m: 6,  b: 1, d: 2,   n: F#1}  # H11 F#m (ii)
+      - {m: 6,  b: 3, d: 2,   n: E1}   # H12 E
+      - {m: 7,  b: 1, d: 4,   n: F#1}  # H13-H14 F#m7/F#m
+      - {m: 8,  b: 1, d: 4,   n: E1}   # H15-H16 E (whole)
+      - {m: 9,  b: 1, d: 2,   n: F#1}  # H17 F#m7
+      - {m: 9,  b: 3, d: 2,   n: A1}   # H18 A
+      - {m: 10, b: 1, d: 3.9, n: E1}   # H19-H20 E; d3.9 releases just
+                                       # before the loop seam (PalletTown
+                                       # precedent: final frame not
+                                       # beat-addressable)
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad
+    mt32_patch: 49        # MT-32 Str Sect1 (warm string pad)
+    gm_program: 90        # GM Pad 2 (warm)
+    pan: center
+    volume: 70
+    velocity: 82
+    events:
+      - {m: 1,  b: 1, d: 2,   n: G#2}  # H1  E 3rd
+      - {m: 1,  b: 3, d: 2,   n: F#2}  # H2  B7 5th (3rd D# unisons wave)
+      - {m: 2,  b: 1, d: 6,   n: G#2}  # H3-H5 E/G#m7/E (hold)
+      - {m: 3,  b: 3, d: 2,   n: F#2}  # H6  B7 5th (as H2)
+      - {m: 4,  b: 1, d: 4,   n: G#2}  # H7-H8 E/G#dim root (B unisons wave)
+      - {m: 5,  b: 1, d: 2,   n: C#3}  # H9  A 3rd (G#->C# 4th up)
+      - {m: 5,  b: 3, d: 2,   n: B2}   # H10 G#m 3rd (step down)
+      - {m: 6,  b: 1, d: 2,   n: A2}   # H11 F#m 3rd (step down)
+      - {m: 6,  b: 3, d: 2,   n: E3}   # H12 E root up high (oct-2 crowded)
+      - {m: 7,  b: 1, d: 4,   n: C#3}  # H13-H14 F#m7/F#m 5th (hold)
+      - {m: 8,  b: 1, d: 4,   n: E3}   # H15-H16 E (oct-2 tones all taken)
+      - {m: 9,  b: 1, d: 2,   n: C#3}  # H17 F#m7 5th (E->C# 3rd down)
+      - {m: 9,  b: 3, d: 2,   n: E3}   # H18 A 5th (3rd up)
+      - {m: 10, b: 1, d: 2,   n: E2}   # H19 E root (E3->E2 octave drop)
+      - {m: 10, b: 3, d: 1.9, n: G#2}  # H20 E 3rd (E2->G#2 3rd up, final)
+
+  - name: sparkle
+    tier: 3               # color/flourish — dropped first under pressure
+    mt32_patch: 23        # MT-32 Celesta 1
+    gm_program: 9         # GM Celesta
+    pan: center
+    volume: 64
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 1, n: E6}   # tonic arrival (ch2 E5 — octave ok)
+      - {m: 5,  b: 1, d: 1, n: A5}   # subdominant arrival
+      - {m: 8,  b: 1, d: 1, n: E6}   # whole-note tonic
+      - {m: 10, b: 1, d: 1, n: E6}   # final tonic (ch2 tail rests)

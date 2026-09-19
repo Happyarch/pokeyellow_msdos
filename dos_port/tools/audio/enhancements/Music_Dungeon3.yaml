@@ -1,0 +1,243 @@
+schema: 1
+song: Music_Dungeon3
+
+# Mt. Moon Cave / Rock Tunnel / Victory Road. E-centered but tonally
+# evasive: augmented triads on B/E/F, whole-tone melody, shifting meters,
+# a tempo-ramp chromatic ascent, and a climactic I+/V+ layering from
+# opposite whole-tone collections. 41 measures, loop at m1 b1 (no intro);
+# melody on ch2; ch3 very sparse (0.25), ch4 entirely silent — the silence
+# is structural, part of the cave breathing.
+#
+# Cave/dungeon cap: no tier 1. Ch1's arpeggiated augmented triads already
+# saturate the harmony, and any FM pad would impose functional tonality on
+# music whose whole point is augmented/whole-tone evasion (don't "fix" the
+# ambiguity). No bass reinforcement: the B-E perfect-4th pedal relationship
+# is load-bearing and a sub-bass root would pick a winner. One quiet
+# tier-2 atmosphere is the entire additive arrangement; tier 3 is
+# intentionally absent. Its E6 (the tonic pitch, never a functional claim)
+# sounds only at the E+ arrival (m5, root of the sonority) and the tonic
+# arrival (m37, third of C#m), stays above every simultaneous GB pitch
+# (ch2 peaks at file-C6, ch3's own file-E6 sustains sit mid-loop), and
+# rests through the F+ prolongation, the tempo ramp, and the I+/V+ clash.
+#
+# MAINTAINER ADDITION (2026-09-19, audition round): a Theremin ambience
+# voice shadowing the ch2 melody exactly TWO octaves below (tier 2,
+# MT-32/GM only — OPL3 is untouched). One octave proved unworkable: the GB
+# channels arpeggiate the same triads an octave apart, so ch2-12 lands on
+# ch1's notes 33 times (plus 2 on ch3); ch2-24 collides 0/188 against every
+# channel. Cave-cap exception by maintainer request, not arranger precedent.
+channels:
+  - name: moon_haze
+    tier: 2
+    mt32_patch: 38         # MT-32 Atmosphere: slow, reverb-friendly LA color
+    gm_program: 100        # GM FX 4 (Atmosphere)
+    pan: center
+    volume: 40
+    velocity: 56
+    events:
+      - {at: 5, pattern: haze_ping}
+      - {at: 37, pattern: haze_ping}
+
+  # ── Tier 2: Theremin ambience (maintainer request — shadows ch2 exactly, two octaves below) ──
+  - name: cave_theremin
+    tier: 2
+    mt32_patch: "Theremin"       # custom RCA-theremin timbre, timbres.yaml
+    gm_program: 86               # GM Lead 6 (voice), 1-based (Tower fallback)
+    pan: center
+    volume: 46                   # background bed under the ch2 lead; ear will set final level
+    velocity: 62
+    events:
+      - {m: 1, b: 1.0, d: 1.5, n: D#3}
+      - {m: 1, b: 2.5, d: 1.5, n: C#3}
+      - {m: 1, b: 4.0, d: 0.5, n: B2}
+      - {m: 1, b: 4.5, d: 0.5, n: C#3}
+      - {m: 2, b: 1.0, d: 0.5, n: D#3}
+      - {m: 2, b: 1.5, d: 0.5, n: G3}
+      - {m: 2, b: 2.0, d: 0.5, n: D#3}
+      - {m: 2, b: 2.5, d: 1.5, n: C#3}
+      - {m: 2, b: 4.0, d: 0.5, n: B2}
+      - {m: 2, b: 4.5, d: 0.5, n: C#3}
+      - {m: 3, b: 1.0, d: 0.5, n: D#3}
+      - {m: 3, b: 1.5, d: 0.5, n: G3}
+      - {m: 3, b: 2.0, d: 0.5, n: D#3}
+      - {m: 3, b: 2.5, d: 1.5, n: C#3}
+      - {m: 3, b: 4.0, d: 0.5, n: B2}
+      - {m: 3, b: 4.5, d: 0.5, n: A#2}
+      - {m: 4, b: 1.0, d: 1.5, n: B2}
+      - {m: 4, b: 2.5, d: 2.0, n: C#3}
+      - {m: 5, b: 1.0, d: 1.5, n: G#3}
+      - {m: 5, b: 2.5, d: 1.5, n: F#3}
+      - {m: 5, b: 4.0, d: 0.5, n: E3}
+      - {m: 5, b: 4.5, d: 0.5, n: F#3}
+      - {m: 6, b: 1.0, d: 0.5, n: G#3}
+      - {m: 6, b: 1.5, d: 0.5, n: C4}
+      - {m: 6, b: 2.0, d: 0.5, n: G#3}
+      - {m: 6, b: 2.5, d: 1.5, n: F#3}
+      - {m: 6, b: 4.0, d: 0.5, n: E3}
+      - {m: 6, b: 4.5, d: 0.5, n: F#3}
+      - {m: 7, b: 1.0, d: 0.5, n: G#3}
+      - {m: 7, b: 1.5, d: 0.5, n: C4}
+      - {m: 7, b: 2.0, d: 0.5, n: G#3}
+      - {m: 7, b: 2.5, d: 1.5, n: F#3}
+      - {m: 7, b: 4.0, d: 0.5, n: E3}
+      - {m: 7, b: 4.5, d: 0.5, n: D#3}
+      - {m: 8, b: 1.0, d: 1.5, n: E3}
+      - {m: 8, b: 2.5, d: 1.5, n: F#3}
+      - {m: 8, b: 4.0, d: 1.0, n: E3}
+      - {m: 9, b: 1.0, d: 1.5, n: D#3}
+      - {m: 9, b: 2.5, d: 1.5, n: C#3}
+      - {m: 9, b: 4.0, d: 0.5, n: B2}
+      - {m: 9, b: 4.5, d: 0.5, n: C#3}
+      - {m: 10, b: 1.0, d: 0.5, n: D#3}
+      - {m: 10, b: 1.5, d: 0.5, n: G3}
+      - {m: 10, b: 2.0, d: 0.5, n: D#3}
+      - {m: 10, b: 2.5, d: 1.5, n: C#3}
+      - {m: 10, b: 4.0, d: 0.5, n: B2}
+      - {m: 10, b: 4.5, d: 0.5, n: C#3}
+      - {m: 11, b: 1.0, d: 0.5, n: D#3}
+      - {m: 11, b: 1.5, d: 0.5, n: G3}
+      - {m: 11, b: 2.0, d: 0.5, n: D#3}
+      - {m: 11, b: 2.5, d: 1.5, n: C#3}
+      - {m: 11, b: 4.0, d: 0.5, n: B2}
+      - {m: 11, b: 4.5, d: 0.5, n: A#2}
+      - {m: 12, b: 1.0, d: 1.5, n: B2}
+      - {m: 12, b: 2.5, d: 2.0, n: C#3}
+      - {m: 13, b: 1.0, d: 0.5, n: G#3}
+      - {m: 13, b: 1.5, d: 0.5, n: G#3}
+      - {m: 13, b: 2.5, d: 0.5, n: G#3}
+      - {m: 13, b: 3.0, d: 0.5, n: A3}
+      - {m: 13, b: 3.5, d: 0.5, n: A3}
+      - {m: 13, b: 4.0, d: 0.5, n: A#3}
+      - {m: 13, b: 4.5, d: 0.5, n: A#3}
+      - {m: 14, b: 1.5, d: 0.5, n: A#3}
+      - {m: 14, b: 2.0, d: 0.5, n: B3}
+      - {m: 14, b: 2.5, d: 0.5, n: B3}
+      - {m: 18, b: 3.0, d: 0.5, n: B3}
+      - {m: 18, b: 3.5, d: 0.5, n: B3}
+      - {m: 18, b: 4.5, d: 0.5, n: B3}
+      - {m: 19, b: 1.0, d: 0.5, n: A#3}
+      - {m: 19, b: 1.5, d: 0.5, n: A#3}
+      - {m: 19, b: 2.0, d: 0.5, n: A3}
+      - {m: 19, b: 2.5, d: 0.5, n: A3}
+      - {m: 19, b: 3.5, d: 0.5, n: A3}
+      - {m: 19, b: 4.0, d: 0.5, n: G#3}
+      - {m: 19, b: 4.5, d: 0.5, n: G#3}
+      - {m: 20, b: 1.0, d: 2.0, n: C#3}
+      - {m: 20, b: 3.5, d: 1.5, n: B2}
+      - {m: 21, b: 1.0, d: 0.5, n: A#2}
+      - {m: 21, b: 1.5, d: 0.5, n: B2}
+      - {m: 21, b: 2.0, d: 0.5, n: D#3}
+      - {m: 21, b: 2.5, d: 0.5, n: G3}
+      - {m: 21, b: 3.0, d: 0.5, n: D#3}
+      - {m: 21, b: 3.5, d: 1.5, n: C#3}
+      - {m: 22, b: 1.0, d: 0.5, n: B2}
+      - {m: 22, b: 1.5, d: 0.5, n: C#3}
+      - {m: 22, b: 2.0, d: 0.5, n: D#3}
+      - {m: 22, b: 2.5, d: 0.5, n: G3}
+      - {m: 22, b: 3.0, d: 0.5, n: D#3}
+      - {m: 22, b: 3.5, d: 1.5, n: C#3}
+      - {m: 23, b: 1.0, d: 0.5, n: B2}
+      - {m: 23, b: 1.5, d: 0.5, n: C#3}
+      - {m: 23, b: 2.0, d: 1.5, n: D#3}
+      - {m: 23, b: 3.5, d: 1.5, n: G3}
+      - {m: 24, b: 1.0, d: 2.0, n: G2}
+      - {m: 24, b: 3.5, d: 1.5, n: F2}
+      - {m: 25, b: 1.0, d: 0.5, n: E2}
+      - {m: 25, b: 1.5, d: 0.5, n: F2}
+      - {m: 25, b: 2.0, d: 0.5, n: A2}
+      - {m: 25, b: 2.5, d: 0.5, n: C#3}
+      - {m: 25, b: 3.0, d: 0.5, n: A2}
+      - {m: 25, b: 3.5, d: 1.5, n: G2}
+      - {m: 26, b: 1.0, d: 0.5, n: F2}
+      - {m: 26, b: 1.5, d: 0.5, n: G2}
+      - {m: 26, b: 2.0, d: 0.5, n: A2}
+      - {m: 26, b: 2.5, d: 0.5, n: C#3}
+      - {m: 26, b: 3.0, d: 0.5, n: A2}
+      - {m: 26, b: 3.5, d: 1.5, n: G2}
+      - {m: 27, b: 1.0, d: 1.5, n: A2}
+      - {m: 27, b: 2.5, d: 1.5, n: C#3}
+      - {m: 27, b: 4.0, d: 2.0, n: G3}
+      - {m: 28, b: 2.5, d: 1.5, n: F3}
+      - {m: 28, b: 4.0, d: 0.5, n: E3}
+      - {m: 28, b: 4.5, d: 0.5, n: F3}
+      - {m: 29, b: 1.0, d: 0.5, n: A3}
+      - {m: 29, b: 1.5, d: 0.5, n: C#4}
+      - {m: 29, b: 2.0, d: 0.5, n: A3}
+      - {m: 29, b: 2.5, d: 1.5, n: G3}
+      - {m: 29, b: 4.0, d: 0.5, n: A3}
+      - {m: 29, b: 4.5, d: 0.5, n: C#4}
+      - {m: 30, b: 1.0, d: 0.5, n: A3}
+      - {m: 30, b: 1.5, d: 1.5, n: G3}
+      - {m: 30, b: 3.0, d: 1.5, n: A3}
+      - {m: 30, b: 4.5, d: 1.5, n: C#4}
+      - {m: 31, b: 2.0, d: 2.0, n: F#3}
+      - {m: 31, b: 4.5, d: 1.5, n: E3}
+      - {m: 32, b: 2.0, d: 0.5, n: D#3}
+      - {m: 32, b: 2.5, d: 0.5, n: E3}
+      - {m: 32, b: 3.0, d: 0.5, n: G#3}
+      - {m: 32, b: 3.5, d: 0.5, n: C4}
+      - {m: 32, b: 4.0, d: 0.5, n: G#3}
+      - {m: 32, b: 4.5, d: 1.5, n: F#3}
+      - {m: 33, b: 2.0, d: 0.5, n: E3}
+      - {m: 33, b: 2.5, d: 0.5, n: F#3}
+      - {m: 33, b: 3.0, d: 0.5, n: G#3}
+      - {m: 33, b: 3.5, d: 0.5, n: C4}
+      - {m: 33, b: 4.0, d: 0.5, n: G#3}
+      - {m: 33, b: 4.5, d: 1.5, n: F#3}
+      - {m: 34, b: 2.0, d: 1.5, n: G#3}
+      - {m: 34, b: 3.5, d: 1.5, n: C4}
+      - {m: 35, b: 1.0, d: 0.5, n: D#2}
+      - {m: 35, b: 1.5, d: 0.5, n: G2}
+      - {m: 35, b: 2.0, d: 0.5, n: D#2}
+      - {m: 35, b: 2.5, d: 1.5, n: C#2}
+      - {m: 35, b: 4.0, d: 0.5, n: D#2}
+      - {m: 35, b: 4.5, d: 0.5, n: G2}
+      - {m: 36, b: 1.0, d: 0.5, n: D#2}
+      - {m: 36, b: 1.5, d: 1.5, n: C#2}
+      - {m: 36, b: 3.0, d: 0.5, n: E1}
+      - {m: 36, b: 3.5, d: 0.5, n: G#1}
+      - {m: 36, b: 4.0, d: 0.5, n: C2}
+      - {m: 36, b: 4.5, d: 0.5, n: E2}
+      - {m: 37, b: 1.0, d: 0.5, n: G#2}
+      - {m: 37, b: 1.5, d: 0.5, n: C3}
+      - {m: 37, b: 2.0, d: 0.5, n: E3}
+      - {m: 37, b: 2.5, d: 0.5, n: G#3}
+      - {m: 37, b: 3.0, d: 0.5, n: C3}
+      - {m: 37, b: 3.5, d: 0.5, n: E3}
+      - {m: 37, b: 4.0, d: 0.5, n: G#3}
+      - {m: 37, b: 4.5, d: 0.5, n: C3}
+      - {m: 38, b: 1.0, d: 0.5, n: E3}
+      - {m: 38, b: 1.5, d: 0.5, n: G#3}
+      - {m: 38, b: 2.0, d: 0.5, n: C3}
+      - {m: 38, b: 2.5, d: 0.5, n: E3}
+      - {m: 38, b: 3.0, d: 0.5, n: G#3}
+      - {m: 38, b: 3.5, d: 0.5, n: C3}
+      - {m: 38, b: 4.0, d: 0.5, n: E3}
+      - {m: 38, b: 4.5, d: 0.5, n: G#3}
+      - {m: 39, b: 1.0, d: 0.5, n: C3}
+      - {m: 39, b: 1.5, d: 0.5, n: E3}
+      - {m: 39, b: 2.0, d: 0.5, n: G#3}
+      - {m: 39, b: 2.5, d: 0.5, n: C3}
+      - {m: 39, b: 3.0, d: 0.5, n: D#3}
+      - {m: 39, b: 3.5, d: 0.5, n: B1}
+      - {m: 39, b: 4.0, d: 0.5, n: D#2}
+      - {m: 39, b: 4.5, d: 0.5, n: G2}
+      - {m: 40, b: 1.0, d: 0.5, n: B1}
+      - {m: 40, b: 1.5, d: 0.5, n: D#2}
+      - {m: 40, b: 2.0, d: 0.5, n: G2}
+      - {m: 40, b: 2.5, d: 0.5, n: B1}
+      - {m: 40, b: 3.0, d: 0.5, n: D#2}
+      - {m: 40, b: 3.5, d: 0.5, n: B1}
+      - {m: 40, b: 4.0, d: 0.5, n: D#2}
+      - {m: 40, b: 4.5, d: 0.5, n: G2}
+      - {m: 41, b: 1.0, d: 0.5, n: B1}
+      - {m: 41, b: 1.5, d: 0.5, n: D#2}
+      - {m: 41, b: 2.0, d: 0.5, n: G2}
+      - {m: 41, b: 2.5, d: 0.5, n: B1}
+      - {m: 41, b: 3.0, d: 0.5, n: D#2}
+
+patterns:
+  haze_ping:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 4, n: E6}

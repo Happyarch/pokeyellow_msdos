@@ -1,0 +1,43 @@
+# Music_Routes4 — per-song MIDI overrides (see README.md for schema).
+#
+# Roles (audio/music/routes4.asm): ch1 (duty 3, vibrato) carries the stepwise
+# tune (G#-hammered intro in GB-oct2, body YAML B3..E5 with the m11-14
+# descending sequence); ch2 (duty 1/3) is the subordinate ascending line that
+# steals the peaks (YAML C#6 at m7) and the GB-oct2 B depths; ch3 is the wave
+# [q xxxxe q e] ostinato (YAML oct 5, the "perceived bassline" per
+# road_to_lavender_town.md); ch4 rests through the 2-bar intro (enters with a
+# 19/19/18/18 pickup) then drives the body on noise ids 17/18/19.
+#
+# Same route-band family as the Routes3 draft (adjacent areas, one marching
+# band): ch1 reed (Oboe — its body sits YAML-oct-4, oboe home territory),
+# ch2 breath (Flute 1 — carries the C#6 peaks a reed cannot), GM Oboe/Flute.
+# Line-2 carries the peaks: 100 over 92. Same moderate spread (48/80, open
+# ear-question). ch3 gets the dry pluck (Pizzicato / Pizzicato Strings —
+# busy wave-figure precedent); the motor at 96, centered.
+channels:
+  1:
+    mt32_program: "Oboe"
+    gm_program: "Oboe"
+    volume: 92
+    pan: 48
+  2:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 100
+    pan: 80
+  3:
+    mt32_program: "Pizzicato"
+    gm_program: "Pizzicato Strings"
+    volume: 96
+    pan: 64
+drums:
+  # Same kit as Routes3 (audio/sfx/noise_instrument{17,18,19}_1.asm: params
+  # 9/7/6, low/mid/high): 17 long downbeats (kick), 18 backbeats (snare),
+  # 19 subdivision bursts (hat). Default is all-snare (38); differentiated
+  # here. Same FLAG FOR AUDITION: the 17-low/19-high direction is inferred,
+  # not verified by ear — swap 17 <-> 19 if the kit sounds inverted.
+  velocity: 100
+  map:
+    17: 36                        # kick — long downbeats
+    18: 38                        # snare — default kept, stated for the record
+    19: 42                        # closed hat — subdivision bursts

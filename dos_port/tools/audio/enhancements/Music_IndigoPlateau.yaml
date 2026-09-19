@@ -1,0 +1,194 @@
+# Music_IndigoPlateau — "The Final Road" (Route 23 / Indigo Plateau lobby /
+# Lance's + Champion rooms). Tier-1 + tier-2 + tier-3 enhancement.
+#
+# Authored against analysis/Music_IndigoPlateau.yaml (frame-exact: 18 measures
+# of 4/4, intro mm1-2, loop_start at m3 b1, end after m18) and the
+# score-analysis "The Final Road" description (D minor/major-ambiguous
+# homophonic quarter-note tread imitating footsteps; punctuated flat-2
+# dissonances; out-of-key #III/bIII color; motivating chordal statement in
+# the final two bars; kinship with Opening Battle!).
+#
+# Register audit (MIDI octaves; GB octave N = MIDI octave N+1):
+# ch1 A3 pedal quarters nearly throughout (+ D4/D#4/A#3 punctuations, F4/G4/
+#   A4/A3/F4/A#3 finale). ch2 D4 pedal quarters (+ A4/A#4/C#4 punctuations,
+#   C5/C#5/D5/D4/C5/D#5 finale). ch3 D5 bell pings beats 1&3 (+ F#4/A5
+#   punctuations, A5/D5/A#5/D#5 finale pillars). Analysis key D major 0.78 vs
+#   D minor 0.764: genuinely ambiguous — added parts MUST NOT "fix" it to
+#   either side (no F# under F-natural bars, no B-natural-only minor, etc.).
+#
+# Chord grid used (analysis segs): m1 D | m2 b1 D, b3 D#maj7(bII7) | m3-m6b2 D,
+# m6b3 A#maj7(bVI7) | m7-m10b2 D, m10b3 Dmaj7 | m11-m14b2 D, m14b3 A#maj7 |
+# m15-m16b2 Daug(I+), m16b3 Gm7(iv7) | m17 D | m18b1 F(bIII), m18b3 D#(bII).
+#
+# Tier 1 (2 voices — route/processional budget; the GB trio is already dense
+# quarter-note homophony, so foundation = floor + warmth, no extra motor):
+#   * plateau_bass — sub_bass roots, MIDI octave 1-2, whole/half notes on the
+#     chord grid (D2 pedal; D#2/A#1/C#-beat holds; G1 under iv7; F2/D#2 loop
+#     turn). Entirely below the GB floor (lowest base pitch A3), so unison
+#     is impossible by register.
+#   * plateau_pad — soft_pad dyads in octave 3 (3rd+root: D3+F#3; crunch
+#     beats D#3+G3, A#2+D3, C#3+F#3, Bb2+D3). Every pitch verified absent
+#     from the base at overlapping times (pedals sit on A3/D4/D5; GB never
+#     touches MIDI D3/F#3/G3/A#2/C#3/Bb2/D#3). Rests mm17-18: the GB's own
+#     final chordal statement speaks there (no F# under the F-natural bar).
+# Tier 2 (1 voice — MT-32/GM body, never duplicating tier 1):
+#   * horn_fifths — French-horn dominant pedal (A2, GB ch1's own pedal an
+#     octave down) with one color beat: D3 under the m16 iv7 (contrary
+#     motion vs the bass, no parallel 5ths; holds A2 across quality changes
+#     per the score's own pedal aesthetic). Rests mm17-18 with tier-1 pad.
+# Tier 3 (1 voice — LA/GM-only glint):
+#   * summit_bell — celesta answers on beats 2&4 (ch3 pings beats 1&3), A5
+#     with A#5 at the flat-2 crunch beats and G5 into the iv7 bar. GB never
+#     reaches MIDI octave 5 below the finale, and the bell rests mm17-18, so
+#     it is unison-proof by register AND time.
+# No rhythm channel: ch4 already supplies the snare tread (defaults kept in
+# the override), and a second drum layer is unverified-by-ear risk with no
+# demonstrated need. No switches, no unroll (loop return = body restatement).
+
+schema: 1
+song: Music_IndigoPlateau
+
+channels:
+  # ── Tier 1: OPL3 foundation (also cascades to MT-32 / GM) ────────────────
+  - name: plateau_bass
+    tier: 1
+    opl_patch: sub_bass          # clean sine floor beneath the A3 GB pedal
+    mt32_patch: 29               # MT-32 SynBass1 (precedent: ocean_bass)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 60
+    velocity: 80
+    events:
+      # Intro (first-time; loop body restates from m3).
+      - {m: 1,  b: 1, d: 4, n: D2}    # D (I)
+      - {m: 2,  b: 1, d: 2, n: D2}    # D
+      - {m: 2,  b: 3, d: 2, n: D#2}   # D#maj7 (bII7) crunch beat
+      # Loop body mm3-18.
+      - {m: 3,  b: 1, d: 4, n: D2}    # D
+      - {m: 4,  b: 1, d: 4, n: D2}    # D
+      - {m: 5,  b: 1, d: 4, n: D2}    # D
+      - {m: 6,  b: 1, d: 2, n: D2}    # D
+      - {m: 6,  b: 3, d: 2, n: A#1}   # A#maj7 (bVI7)
+      - {m: 7,  b: 1, d: 4, n: D2}    # D
+      - {m: 8,  b: 1, d: 4, n: D2}    # D
+      - {m: 9,  b: 1, d: 4, n: D2}    # D
+      - {m: 10, b: 1, d: 2, n: D2}    # D
+      - {m: 10, b: 3, d: 2, n: D2}    # Dmaj7 — same-root hold
+      - {m: 11, b: 1, d: 4, n: D2}    # D
+      - {m: 12, b: 1, d: 4, n: D2}    # D
+      - {m: 13, b: 1, d: 4, n: D2}    # D
+      - {m: 14, b: 1, d: 2, n: D2}    # D
+      - {m: 14, b: 3, d: 2, n: A#1}   # A#maj7 (bVI7)
+      - {m: 15, b: 1, d: 4, n: D2}    # Daug (I+) — root hold
+      - {m: 16, b: 1, d: 2, n: D2}    # Daug
+      - {m: 16, b: 3, d: 2, n: G1}    # Gm7 (iv7) — plagal drop
+      - {m: 17, b: 1, d: 4, n: D2}    # D — finale statement
+      - {m: 18, b: 1, d: 2, n: F2}    # F (bIII)
+      - {m: 18, b: 3, d: 2, n: D#2}   # D# (bII) — loop turn, steps to D2
+
+  - name: plateau_pad
+    tier: 1
+    opl_patch: soft_pad          # quiet organ-like FM warmth
+    mt32_patch: 49               # MT-32 Str Sect 1 on the cascade
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 52
+    velocity: 70
+    events:
+      # Intro.
+      - {m: 1,  b: 1, d: 4, n: [D3, F#3]}   # D 3rd+root
+      - {m: 2,  b: 1, d: 2, n: [D3, F#3]}   # D
+      - {m: 2,  b: 3, d: 2, n: [D#3, G3]}   # D#maj7 root+3rd (crunch)
+      # Loop body. Rests mm17-18 (GB finale speaks; no F# over F-naturals).
+      - {m: 3,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 4,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 5,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 6,  b: 1, d: 2, n: [D3, F#3]}
+      - {m: 6,  b: 3, d: 2, n: [A#2, D3]}   # A#maj7 root+3rd
+      - {m: 7,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 8,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 9,  b: 1, d: 4, n: [D3, F#3]}
+      - {m: 10, b: 1, d: 2, n: [D3, F#3]}
+      - {m: 10, b: 3, d: 2, n: [C#3, F#3]}  # Dmaj7 7th+3rd (never the root)
+      - {m: 11, b: 1, d: 4, n: [D3, F#3]}
+      - {m: 12, b: 1, d: 4, n: [D3, F#3]}
+      - {m: 13, b: 1, d: 4, n: [D3, F#3]}
+      - {m: 14, b: 1, d: 2, n: [D3, F#3]}
+      - {m: 14, b: 3, d: 2, n: [A#2, D3]}   # A#maj7
+      - {m: 15, b: 1, d: 4, n: [D3, F#3]}   # Daug — common-tone hold
+      - {m: 16, b: 1, d: 2, n: [D3, F#3]}   # Daug
+      - {m: 16, b: 3, d: 2, n: [Bb2, D3]}   # Gm7 3rd+5th (never the 7th)
+
+  # ── Tier 2: MT-32/GM body ───────────────────────────────────────────────
+  - name: horn_fifths
+    tier: 2
+    mt32_patch: 93               # MT-32 Fr Horn 1
+    gm_program: 61               # GM French Horn
+    pan: left
+    volume: 64
+    velocity: 76
+    events:
+      # Intro: dominant pedal, score's own device an octave down.
+      - {m: 1,  b: 1, d: 4, n: A2}
+      - {m: 2,  b: 1, d: 2, n: A2}
+      - {m: 2,  b: 3, d: 2, n: A2}    # holds across the bII crunch (no P5s)
+      # Loop body. A2 pedal; color beats only where voice-led cleanly.
+      - {m: 3,  b: 1, d: 4, n: A2}
+      - {m: 4,  b: 1, d: 4, n: A2}
+      - {m: 5,  b: 1, d: 4, n: A2}
+      - {m: 6,  b: 1, d: 2, n: A2}
+      - {m: 6,  b: 3, d: 2, n: A2}    # held 7th over bVI (flat-2 color)
+      - {m: 7,  b: 1, d: 4, n: A2}
+      - {m: 8,  b: 1, d: 4, n: A2}
+      - {m: 9,  b: 1, d: 4, n: A2}
+      - {m: 10, b: 1, d: 2, n: A2}
+      - {m: 10, b: 3, d: 2, n: A2}    # pedal holds; maj7 color lives in pad
+      - {m: 11, b: 1, d: 4, n: A2}
+      - {m: 12, b: 1, d: 4, n: A2}
+      - {m: 13, b: 1, d: 4, n: A2}
+      - {m: 14, b: 1, d: 2, n: A2}
+      - {m: 14, b: 3, d: 2, n: A2}    # held 7th over bVI
+      - {m: 15, b: 1, d: 4, n: A2}    # Daug — common-tone hold
+      - {m: 16, b: 1, d: 2, n: A2}    # Daug
+      - {m: 16, b: 3, d: 2, n: D3}    # Gm7 5th (contrary vs bass G1 drop)
+      # Rests mm17-18 with the tier-1 pad (GB finale speaks).
+
+  # ── Tier 3: sparse LA/GM-only bell answers ──────────────────────────────
+  - name: summit_bell
+    tier: 3
+    mt32_patch: 23               # MT-32 Celesta 1
+    gm_program: 9                # GM Celesta
+    pan: right
+    volume: 44
+    velocity: 64
+    events:
+      # Beats 2&4 answers to ch3's beats-1&3 pings; A#5 at flat-2 crunches.
+      - {m: 3,  b: 2, d: 0.5, n: A5}
+      - {m: 3,  b: 4, d: 0.5, n: A5}
+      - {m: 4,  b: 2, d: 0.5, n: A5}
+      - {m: 4,  b: 4, d: 0.5, n: A5}
+      - {m: 5,  b: 2, d: 0.5, n: A5}
+      - {m: 5,  b: 4, d: 0.5, n: A5}
+      - {m: 6,  b: 2, d: 0.5, n: A5}
+      - {m: 6,  b: 4, d: 0.5, n: A#5}   # bVI crunch
+      - {m: 7,  b: 2, d: 0.5, n: A5}
+      - {m: 7,  b: 4, d: 0.5, n: A5}
+      - {m: 8,  b: 2, d: 0.5, n: A5}
+      - {m: 8,  b: 4, d: 0.5, n: A5}
+      - {m: 9,  b: 2, d: 0.5, n: A5}
+      - {m: 9,  b: 4, d: 0.5, n: A5}
+      - {m: 10, b: 2, d: 0.5, n: A5}
+      - {m: 10, b: 4, d: 0.5, n: A5}    # common tone over Dmaj7
+      - {m: 11, b: 2, d: 0.5, n: A5}
+      - {m: 11, b: 4, d: 0.5, n: A5}
+      - {m: 12, b: 2, d: 0.5, n: A5}
+      - {m: 12, b: 4, d: 0.5, n: A5}
+      - {m: 13, b: 2, d: 0.5, n: A5}
+      - {m: 13, b: 4, d: 0.5, n: A5}
+      - {m: 14, b: 2, d: 0.5, n: A5}
+      - {m: 14, b: 4, d: 0.5, n: A#5}   # bVI crunch
+      - {m: 15, b: 2, d: 0.5, n: A5}
+      - {m: 15, b: 4, d: 0.5, n: A5}
+      - {m: 16, b: 2, d: 0.5, n: A5}
+      - {m: 16, b: 4, d: 0.5, n: G5}    # iv7 root
+      # Rests intro (bell enters with the loop body) and mm17-18 finale.

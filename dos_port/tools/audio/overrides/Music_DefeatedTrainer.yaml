@@ -1,0 +1,35 @@
+# Music_DefeatedTrainer — per-song MIDI overrides (see overrides/README.md).
+#
+# Registers from the pret source (audio/music/defeatedtrainer.asm): ch1 is
+# the low fanfare arpeggiation (GB oct 3-4: D/A/F# figures into the
+# m2-3 A/Bm motor and the m4 C-natural lift); ch2 is the victory melody
+# (GB oct 4-5: A/B/C# pickup into D5, E5/F#5/G5/A5 fanfare arches);
+# ch3 is the wave 8th-note pump (GB oct 4-5: F#/G#/A/B dyads, C#/D/E
+# rise, C-natural/F-natural color at m4). No noise channel: no drums:.
+#
+# Shared-material note (pair take): DefeatedTrainer and DefeatedWildMon
+# are the same fanfare device — a 1-measure scalar intro into the tonic,
+# an 8-bar-ish loop in two halves with a chromatic lift in the second
+# half (here the m4 C/F-naturals; there the E-to-F-major semitone
+# modulation, the macroscopic Neapolitan both descriptions call out).
+# Both songs get the same brass-trio override so the two stings sit
+# together: trombone under the low line, trumpet on the melody, horn on
+# the wave pump. Narrow centered stage — a short looping sting gets no
+# wide panning. No switches: the loop body is one uniform fanfare
+# texture with no sectional re-voicing.
+channels:
+  1:
+    mt32_program: "Trombone 1"   # low fanfare line, under the trumpet
+    gm_program: "Trombone"
+    volume: 96
+    pan: 56
+  2:
+    mt32_program: "Trumpet 1"    # the victory melody carries
+    gm_program: "Trumpet"
+    volume: 104
+    pan: 72
+  3:
+    mt32_program: "Fr Horn 1"    # 8th-note pump as horn chords
+    gm_program: "French Horn"
+    volume: 88
+    pan: 64

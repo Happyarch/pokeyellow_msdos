@@ -1,0 +1,267 @@
+# Music_Routes3 — Tier 1 (foundation: sub_bass + route_pad).
+#
+# Authored against music_analysis.py output (frame-exact: C major, K-S 0.762,
+# runner-up F major 0.756 = the subdominant color, ambiguous flag from the
+# close tonic/subdominant race — NOT chromatic ambiguity, so no Lavender-style
+# restraint needed; 4/4, tempo 148; 27 measures, loop_start m15 b3.5 frame
+# 1623, frames.end 2955) and audio/music/routes3.asm, per audio-enhance-opl3 /
+# music-theory skills. Identity: Road to Cerulean City (road_to_cerulean_city.md;
+# routes 3-10/16-22 per data/maps/songs.asm; the missing route_3.md is covered
+# by this description — bVII emphasis, wave-motor rhythm, [q. xx] motive).
+#
+# The track: 2-bar head (E-F#-G pickup + rests, m1; m2 all-channels rest) then
+# the A section (mm3-15) over the wave channel's relentless [e q xxe e q]
+# ostinato (YAML oct 5, density 1.81), answered by a varied A' (mm16-27) that
+# is the engine loop body. Harmony is Mixolydian-flavored C major: Em/Am7 head,
+# then C - Em7 - Bb(maj7) - F(maj7) loops with V7->I7 turnarounds (m15, m27).
+# The bVII (Bb) is the color note — bass states it (Bb2), the pad never doubles
+# the chromatic pitch against tonic harmony (3rds only).
+#
+# Register audit: GB octaves map to YAML octaves +1. Squares live YAML 4-5
+# (ch1 melody-homophony G4..G5, ch2 subordinate line), wave YAML 5-6, with ONE
+# exception: ch1 dips to GB-oct2 G (= YAML G2, MIDI 43) at ~m14. Consequences:
+#   * sub_bass in YAML octave 2 shares the octave with that single G2, but
+#     never the pitch: bass at m14 is F2 (F major root). All other bass notes
+#     sit against GB material >= YAML G4. Unison-proof by slot check (lint
+#     backstops it).
+#   * route_pad uses the FULL YAML-octave-3 band (G3..B3) plus C4 twice
+#     (m1b3/m19b3 Am7 3rds): every pad pitch is below the GB floor (YAML G4)
+#     at its own slot — ch1's YAML-oct-4 C's fall at m4/m9 (pad plays E3/G3
+#     there), never at m1/m19. No ceiling cap needed.
+#
+# Harmony: analysis template verbatim. Two template gaps carry rests (BOTH
+# voices silent — "rest where the GB rests"): m2 (all GB channels rest) and
+# m3b1 (melody-entrance pickup breath before the m3b3 C arrival). The pad takes
+# 3rds throughout (5th nowhere needed), never a chord 7th, never the leading
+# tone against tonic (B3 appears ONLY over G7/G dominants, where it is the
+# chord 3rd).
+#
+# Voice leading (bass vs pad, half-measure slots — every transition walked):
+# every slot is a 3rd/10th, so no P5/P8 parallel is constructible; motion is
+# mostly similar into 3rds (m3-chains mm3-8) with contrary turns at the phrase
+# joints (m1 Em->Am7: E2->A2 up P4 against G3->C4 up P4 is similar into m3 —
+# legal; m15 G7->Cmaj7: G2->C2 down P5 against B3->E3 down P4, similar into
+# 10ths — legal). The m5 E2->Bb2 tritone root step is Masuda's own
+# iii7->bVII7 motion, kept as written (roots are roots); the pad slides
+# G3->D3 (P4 down) under it.
+#
+# Loop seam: intro (mm1-15b3.5 per the pipeline's max-intro-end) + body
+# (m15b3.5-27). No note crosses the m15b3.5 boundary: m15b3 is split as
+# d0.5 + d0.5 at b3.5 so the seam re-articulates cleanly on every pass
+# (the b3.5 event fires on first pass AND every loop entry). Last event uses
+# d1.95 (release a hair early for a clean re-key into the body).
+#
+# Patches use the clearer FM variants proven on Cities2/Celadon:
+# sub_bass_clear and soft_pad_clear; both cascade to MT-32/GM as SynBass1 /
+# Str Sect 1 + Synth Bass 1 / Pad 2 (warm).
+
+schema: 1
+song: Music_Routes3
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 64                   # route level; the ch4 motor is busy here
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 2, n: E2}       # Em     (iii) — head
+      - {m: 1,  b: 3, d: 2, n: A2}       # Am7    (vi7)
+      # m2: rest (all GB channels rest)
+      - {m: 3,  b: 3, d: 2, n: C2}       # C      (I) — m3b1 breathes
+      - {m: 4,  b: 1, d: 4, n: C2}       # C      (I) — hold
+      - {m: 5,  b: 1, d: 2, n: E2}       # Em7    (iii7)
+      - {m: 5,  b: 3, d: 2, n: Bb2}      # Bbmaj7 (bVII7) — the color root
+      - {m: 6,  b: 1, d: 4, n: Bb2}      # Bb     (bVII) — hold
+      - {m: 7,  b: 1, d: 2, n: Bb2}      # Bbmaj7 (bVII7)
+      - {m: 7,  b: 3, d: 2, n: F2}       # Fmaj7  (IV7)
+      - {m: 8,  b: 1, d: 4, n: C2}       # C      (I) — hold
+      - {m: 9,  b: 1, d: 2, n: E2}       # Em7    (iii7)
+      - {m: 9,  b: 3, d: 2, n: Bb2}      # Bbmaj7 (bVII7)
+      - {m: 10, b: 1, d: 4, n: Bb2}      # Bb     (bVII) — hold
+      - {m: 11, b: 1, d: 2, n: Bb2}      # Bb     (bVII, hm3 tail)
+      - {m: 11, b: 3, d: 2, n: F2}       # Fmaj7  (IV7)
+      - {m: 12, b: 1, d: 2, n: C2}       # C      (I)
+      - {m: 12, b: 3, d: 2, n: G2}       # G      (V)
+      - {m: 13, b: 1, d: 2, n: G2}       # G      (V, hm2 tail)
+      - {m: 13, b: 3, d: 2, n: F2}       # Fmaj7  (IV7)
+      - {m: 14, b: 1, d: 4, n: F2}       # F      (IV) — hold (ch1's lone
+                                         # YAML-G2 sounds here; bass is F2)
+      - {m: 15, b: 1, d: 2, n: G2}       # G7     (V7)
+      - {m: 15, b: 3, d: 0.5, n: C2}     # Cmaj7  (I7) — pre-seam
+      - {m: 15, b: 3.5, d: 0.5, n: C2}   # Cmaj7  (I7) — seam re-key, fires
+                                         # every pass (loop entry point)
+      - {m: 16, b: 1, d: 4, n: C2}       # C      (I) — body opens, hold
+      - {m: 17, b: 1, d: 2, n: E2}       # Em7    (iii7)
+      - {m: 17, b: 3, d: 2, n: Bb2}      # Bbmaj7 (bVII7)
+      - {m: 18, b: 1, d: 4, n: Bb2}      # Bb     (bVII) — hold
+      - {m: 19, b: 1, d: 2, n: Bb2}      # Bbmaj7 (bVII7)
+      - {m: 19, b: 3, d: 2, n: A2}       # Am7    (vi7)
+      - {m: 20, b: 1, d: 4, n: C2}       # C      (I) — hold
+      - {m: 21, b: 1, d: 2, n: E2}       # Em7    (iii7)
+      - {m: 21, b: 3, d: 2, n: Bb2}      # Bbmaj7 (bVII7)
+      - {m: 22, b: 1, d: 4, n: Bb2}      # Bb     (bVII) — hold
+      - {m: 23, b: 1, d: 2, n: Bb2}      # Bb     (bVII, hm3 tail)
+      - {m: 23, b: 3, d: 2, n: F2}       # Fmaj7  (IV7)
+      - {m: 24, b: 1, d: 2, n: C2}       # C      (I)
+      - {m: 24, b: 3, d: 2, n: G2}       # G      (V)
+      - {m: 25, b: 1, d: 2, n: G2}       # G      (V, hm2 tail)
+      - {m: 25, b: 3, d: 2, n: F2}       # Fmaj7  (IV7)
+      - {m: 26, b: 1, d: 4, n: F2}       # F      (IV) — hold
+      - {m: 27, b: 1, d: 2, n: G2}       # G7     (V7)
+      - {m: 27, b: 3, d: 1.95, n: G2}    # G      (V) — seam release into body
+
+  - name: route_pad
+    tier: 1
+    opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under the squares, over the bass
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 2, n: G3}       # Em     3rd — head
+      - {m: 1,  b: 3, d: 2, n: C4}       # Am7    3rd (GB floor at m1 is
+                                         # YAML G4 — safe)
+      # m2: rest (all GB channels rest)
+      - {m: 3,  b: 3, d: 2, n: E3}       # C      3rd (not C — ch1 sings
+                                         # YAML-C4 at m4; E3 is clear)
+      - {m: 4,  b: 1, d: 4, n: E3}       # C      3rd — hold
+      - {m: 5,  b: 1, d: 2, n: G3}       # Em7    3rd
+      - {m: 5,  b: 3, d: 2, n: D3}       # Bbmaj7 3rd (not Bb — chromatic)
+      - {m: 6,  b: 1, d: 4, n: D3}       # Bb     3rd — hold
+      - {m: 7,  b: 1, d: 2, n: D3}       # Bbmaj7 3rd
+      - {m: 7,  b: 3, d: 2, n: A3}       # Fmaj7  3rd
+      - {m: 8,  b: 1, d: 4, n: E3}       # C      3rd — hold
+      - {m: 9,  b: 1, d: 2, n: G3}       # Em7    3rd
+      - {m: 9,  b: 3, d: 2, n: D3}       # Bbmaj7 3rd
+      - {m: 10, b: 1, d: 4, n: D3}       # Bb     3rd — hold
+      - {m: 11, b: 1, d: 2, n: D3}       # Bb     3rd (hm3 tail)
+      - {m: 11, b: 3, d: 2, n: A3}       # Fmaj7  3rd
+      - {m: 12, b: 1, d: 2, n: E3}       # C      3rd
+      - {m: 12, b: 3, d: 2, n: B3}       # G      3rd (chord tone of V)
+      - {m: 13, b: 1, d: 2, n: B3}       # G      3rd (hm2 tail)
+      - {m: 13, b: 3, d: 2, n: A3}       # Fmaj7  3rd
+      - {m: 14, b: 1, d: 4, n: A3}       # F      3rd — hold (ch1's YAML-G2
+                                         # needs no dodge: pad is A3)
+      - {m: 15, b: 1, d: 2, n: B3}       # G7     3rd (chord tone of V7)
+      - {m: 15, b: 3, d: 0.5, n: E3}     # Cmaj7  3rd — pre-seam
+      - {m: 15, b: 3.5, d: 0.5, n: E3}   # Cmaj7  3rd — seam re-key
+      - {m: 16, b: 1, d: 4, n: E3}       # C      3rd — hold
+      - {m: 17, b: 1, d: 2, n: G3}       # Em7    3rd
+      - {m: 17, b: 3, d: 2, n: D3}       # Bbmaj7 3rd
+      - {m: 18, b: 1, d: 4, n: D3}       # Bb     3rd — hold
+      - {m: 19, b: 1, d: 2, n: D3}       # Bbmaj7 3rd
+      - {m: 19, b: 3, d: 2, n: C4}       # Am7    3rd (no GB YAML-C4 here —
+                                         # ch1/ch2 sit YAML A#4+ at m19)
+      - {m: 20, b: 1, d: 4, n: E3}       # C      3rd — hold
+      - {m: 21, b: 1, d: 2, n: G3}       # Em7    3rd
+      - {m: 21, b: 3, d: 2, n: D3}       # Bbmaj7 3rd
+      - {m: 22, b: 1, d: 4, n: D3}       # Bb     3rd — hold
+      - {m: 23, b: 1, d: 2, n: D3}       # Bb     3rd (hm3 tail)
+      - {m: 23, b: 3, d: 2, n: A3}       # Fmaj7  3rd
+      - {m: 24, b: 1, d: 2, n: E3}       # C      3rd
+      - {m: 24, b: 3, d: 2, n: B3}       # G      3rd
+      - {m: 25, b: 1, d: 2, n: B3}       # G      3rd (hm2 tail)
+      - {m: 25, b: 3, d: 2, n: A3}       # Fmaj7  3rd
+      - {m: 26, b: 1, d: 4, n: A3}       # F      3rd — hold
+      - {m: 27, b: 1, d: 2, n: B3}       # G7     3rd
+      - {m: 27, b: 3, d: 1.95, n: B3}    # G      3rd — seam release
+
+  # TIER 2 (MT-32/GM only — no opl_patch by schema law). trail_strings:
+  # cello dyads supplying root+fifth in YAML octave 3 under the tier-1
+  # 3rd-pad, so each slot blooms into a full close-position triad spread
+  # across three channels (bass root2 / strings root3+fifth3 / pad third3)
+  # with ZERO shared pitches anywhere (audited slot-by-slot). What FM
+  # cannot do and LA can: bowed-string attack/bloom on sustains (Cello 1
+  # uses a slow-attack partial structure) plus real release tails the dry
+  # OPL stream lacks. Register: max Bb3 (58) — under the GB-oct3 floor
+  # (>= YAML C4) and clear of ch1's lone YAML-G2 (strings play F3/C3 at
+  # m14). Mirrors tier-1 slots exactly (d2 halves, d4 bars, d0.5 seam
+  # split, d1.95 final release) so the triad never phase-smears.
+  - name: trail_strings
+    tier: 2
+    mt32_patch: 55               # MT-32 Cello 1 — celli under the violins
+                                 # (tier-1 pad cascades as Str Sect 1)
+    gm_program: 43               # GM Cello
+    pan: center
+    volume: 60                   # a section behind the squares, with the pad
+    velocity: 70
+    events:
+      - {m: 1,  b: 1, d: 2, n: [E3, B3]}       # Em    root+5th (pad: G3)
+      - {m: 1,  b: 3, d: 2, n: [E3, A3]}       # Am7   5th+root (pad: C4)
+      # m2: rest (GB rests; tier-1 rests)
+      - {m: 3,  b: 3, d: 2, n: [C3, G3]}       # C     root+5th (pad: E3)
+      - {m: 4,  b: 1, d: 4, n: [C3, G3]}       # C     — hold
+      - {m: 5,  b: 1, d: 2, n: [E3, B3]}       # Em7   (pad: G3)
+      - {m: 5,  b: 3, d: 2, n: [F3, Bb3]}      # Bbmaj7 5th+root (pad: D3)
+      - {m: 6,  b: 1, d: 4, n: [F3, Bb3]}      # Bb    — hold
+      - {m: 7,  b: 1, d: 2, n: [F3, Bb3]}      # Bbmaj7
+      - {m: 7,  b: 3, d: 2, n: [F3, C3]}       # Fmaj7 root+5th (pad: A3)
+      - {m: 8,  b: 1, d: 4, n: [C3, G3]}       # C     — hold
+      - {m: 9,  b: 1, d: 2, n: [E3, B3]}       # Em7
+      - {m: 9,  b: 3, d: 2, n: [F3, Bb3]}      # Bbmaj7
+      - {m: 10, b: 1, d: 4, n: [F3, Bb3]}      # Bb    — hold
+      - {m: 11, b: 1, d: 2, n: [F3, Bb3]}      # Bb    (hm3 tail)
+      - {m: 11, b: 3, d: 2, n: [F3, C3]}       # Fmaj7
+      - {m: 12, b: 1, d: 2, n: [C3, G3]}       # C
+      - {m: 12, b: 3, d: 2, n: [D3, D4]}       # G: 5th doubled at the octave —
+                                         # ch1 sounds GB-oct2 G (= MIDI 55)
+                                         # here, so the root is UNPLAYABLE
+                                         # in the strings (lint-caught
+                                         # unison 2026-09-19); D4 clears
+                                         # ch1 (G3/B4/A4) and ch2 (D5+)
+      - {m: 13, b: 1, d: 2, n: [D3, D4]}       # G     (hm2 tail, same dodge)
+      - {m: 13, b: 3, d: 2, n: [F3, C3]}       # Fmaj7
+      - {m: 14, b: 1, d: 4, n: [F3, C3]}       # F     — hold
+      - {m: 15, b: 1, d: 2, n: [G3, D3]}       # G7
+      - {m: 15, b: 3, d: 0.5, n: [C3, G3]}     # Cmaj7 — pre-seam
+      - {m: 15, b: 3.5, d: 0.5, n: [C3, G3]}   # Cmaj7 — seam re-key
+      - {m: 16, b: 1, d: 4, n: [C3, G3]}       # C     — hold
+      - {m: 17, b: 1, d: 2, n: [E3, B3]}       # Em7
+      - {m: 17, b: 3, d: 2, n: [F3, Bb3]}      # Bbmaj7
+      - {m: 18, b: 1, d: 4, n: [F3, Bb3]}      # Bb    — hold
+      - {m: 19, b: 1, d: 2, n: [F3, Bb3]}      # Bbmaj7
+      - {m: 19, b: 3, d: 2, n: [E3, A3]}       # Am7   (pad: C4)
+      - {m: 20, b: 1, d: 4, n: [C3, G3]}       # C     — hold
+      - {m: 21, b: 1, d: 2, n: [E3, B3]}       # Em7
+      - {m: 21, b: 3, d: 2, n: [F3, Bb3]}      # Bbmaj7
+      - {m: 22, b: 1, d: 4, n: [F3, Bb3]}      # Bb    — hold
+      - {m: 23, b: 1, d: 2, n: [F3, Bb3]}      # Bb    (hm3 tail)
+      - {m: 23, b: 3, d: 2, n: [F3, C3]}       # Fmaj7
+      # m24: ch1's GB-oct2 G (= MIDI 55) returns here (A' restatement —
+      # second sounding alongside m12; lint-caught 2026-09-19), so the
+      # root is unplayable in the strings again: single-line thinning
+      # (root-only/fifth-only; bass+pad still complete the triads).
+      - {m: 24, b: 1, d: 2, n: [C3]}           # C     root only (pad: E3)
+      - {m: 24, b: 3, d: 2, n: [D3, D4]}       # G     fifth+octave (pad: B3;
+                                         # same dodge as m12b3, re-verified)
+      - {m: 25, b: 1, d: 2, n: [G3, D3]}       # G     (hm2 tail — ch1's G
+                                         # has passed; full dyad resumes)
+      - {m: 25, b: 3, d: 2, n: [F3, C3]}       # Fmaj7
+      - {m: 26, b: 1, d: 4, n: [F3, C3]}       # F     — hold
+      - {m: 27, b: 1, d: 2, n: [G3, D3]}       # G7
+      - {m: 27, b: 3, d: 1.95, n: [G3, D3]}    # G     — seam release
+
+  # TIER 3 (luxury layer, dropped first under pressure). seam_chime: a
+  # single tube-bell stroke on each major arrival — the route-table "bell
+  # ornament". Three strokes total, each a bare downbeat the GB leaves
+  # thin (m3b1: tier-1 rests for the melody-entrance breath; m8b1/m16b1:
+  # section downbeats). C6 (84) sits a full octave above the wave motor's
+  # tessitura at those slots (E5/G5 shapes — lint-verified, no unison).
+  # Short d1: the bell's own decay does the shaping (no reverb on OPL —
+  # irrelevant here, MT-32/GM only).
+  - name: seam_chime
+    tier: 3
+    mt32_patch: 103              # MT-32 Tube Bell — deep, sparse, no shimmer
+    gm_program: 15               # GM Tubular Bells
+    pan: right
+    volume: 56                   # an accent, not a voice
+    velocity: 84
+    events:
+      - {m: 3,  b: 1, d: 1, n: C6}       # A opens (C) — over the entrance breath
+      - {m: 8,  b: 1, d: 1, n: C6}       # A cadences (C)
+      - {m: 16, b: 1, d: 1, n: C6}       # body opens (C) — loop arrival

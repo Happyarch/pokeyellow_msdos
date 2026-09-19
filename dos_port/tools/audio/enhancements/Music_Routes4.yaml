@@ -1,0 +1,220 @@
+# Music_Routes4 — Tier 1 (foundation: sub_bass + route_pad).
+#
+# Authored against music_analysis.py output (frame-exact: E major, K-S 0.923,
+# runner-up B major 0.662 = the dominant, not ambiguous; 4/4, tempo 148;
+# 18 measures = 2-bar intro (mm1-2) + 16-bar body (mm3-18), loop_start m3 b1
+# frame 222, frames.end 1998) and audio/music/routes4.asm, per
+# audio-enhance-opl3 / music-theory skills. Identity: Road to Lavender Town
+# (road_to_lavender_town.md; routes 11-15 per data/maps/songs.asm — the
+# Diglett-tunnel/fishermen path east of Vermilion).
+#
+# The track: G#-hammered intro (ch1 GB-oct2 G# ostinato + ch2 E-F# figure +
+# ch3 E pulse, mm1-2) releasing into the body at m3: ch1's stepwise tune
+# (YAML B3-E5 plus the m11-14 descending sequence and m15-17 ascent) over
+# ch2's subordinate ascending line (peak YAML C#6 at m7) and the wave
+# channel's driving [q xxxxe q e] ostinato (YAML oct 5, the "perceived
+# bassline" per the description) with a snare-pattern noise part. Harmony is
+# sunny E major with modal visitors: bVII (D/Dmaj7 at mm4/8/11-12), V/IV
+# motion (E->A at m16), ii7 loop seam (F#m7 at m18b3 -> E at m3).
+#
+# Register audit: GB octaves map to YAML octaves +1. Body squares live
+# YAML 4-6 (ch1 B3..E5, ch2 up to C#6), wave YAML 5 (E5..B5). The depths are
+# GB-oct2: ch1 G# (= YAML G#2, intro only) and ch2 B (= YAML B2, intro m1-2
+# and ~m5). Consequences:
+#   * sub_bass (YAML oct 2) shares the octave with those two intro/body lows,
+#     so every bass pitch is slot-checked: m1 takes E2 (the G#aug 5th —
+#     ch1 hammers G#2 there, so the root is UNPLAYABLE in the bass);
+#     B2 slots (m4b3 B7, m15b3 B, m16b3 B7) all fall where ch2 sits
+#     YAML 4+ (m4: YAML B4; m15-16: YAML B5/A5). D2/F#2/G#2/A2/E2/C2 slots
+#     never meet a GB-oct2 pitch (ch1's only GB-oct2 pitch is G#;
+#     ch2's only is B). Unison-proof by slot check (lint backstops it).
+#   * route_pad (YAML oct 3, C#3..B3) can never meet GB-oct3+ material
+#     (>= YAML C4) and never meets GB-oct2 material (<= YAML B2). It still
+#     RESTS through the 2-bar intro (mm1-2): the intro is harmonically
+#     volatile (G#aug->G#m->G#m7 against hammered G#2/B2 lows) and the pad
+#     entry at m3 gives the body-arrival lift (Lavender m5-entry precedent).
+#
+# Harmony: analysis template verbatim, no gaps this time (intro chords
+# G#aug/G#m/G#m7 carried by the bass alone). The pad takes 3rds throughout,
+# never a chord 7th (D#3 over B7 is the 3rd, not the 7th; G#3 over
+# Emaj7/E is the 3rd... wait Emaj7 = E G# B D#: 3rd = G# ✓).
+#
+# Voice leading (bass vs pad — every transition walked): every slot is a
+# 3rd/10th, so no P5/P8 parallel is constructible. Joints of interest:
+# m2->m3 G#2->E2 (m3 down) against B3->G#3 (m3 down), similar into 10ths —
+# legal; m15->m16 G#2->A2 / B3->C#3 (steps up), similar into 3rds — legal;
+# m16->m17 B2->E2 (P4 down) against D#3->G#3 (P4 down) — legal; loop seam
+# m18->m3 F#2->E2 / A3->G#3 (steps down) — legal and sings the ii7->I
+# arrival. m4 Dmaj7->B7: D2->B2 (m3 down) against F#3->D#3 (m3 down) — legal.
+#
+# Loop seam: intro (mm1-2) + body (mm3-18); the loop returns to m3 (E), so
+# the last event uses d1.95 (release a hair early for a clean re-key). No
+# mid-measure loop point here (m3b1), so all events sit on the half-bar grid
+# with no splits needed.
+#
+# Patches use the clearer FM variants proven on Cities2/Celadon:
+# sub_bass_clear and soft_pad_clear; both cascade to MT-32/GM as SynBass1 /
+# Str Sect 1 + Synth Bass 1 / Pad 2 (warm).
+
+schema: 1
+song: Music_Routes4
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 64                   # route level; the ch4 motor is busy here
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 4, n: E2}       # G#aug  5th — the root (G#2) is
+                                         # hammered by ch1; play the 5th
+      - {m: 2,  b: 1, d: 2, n: G#2}      # G#m    (iii) — ch1 has moved to
+                                         # YAML B2+ by m2, G#2 is clear
+      - {m: 2,  b: 3, d: 2, n: G#2}      # G#m7   (iii7)
+      - {m: 3,  b: 1, d: 4, n: E2}       # E      (I) — body opens, hold
+      - {m: 4,  b: 1, d: 2, n: D2}       # Dmaj7  (bVII7)
+      - {m: 4,  b: 3, d: 2, n: B2}       # B7     (V7 — ch2 sits YAML B4 here)
+      - {m: 5,  b: 1, d: 2, n: E2}       # E      (I)
+      - {m: 5,  b: 3, d: 2, n: G#2}      # G#m7   (iii7 — ch2's YAML-B2 here
+                                         # is a different pitch)
+      - {m: 6,  b: 1, d: 2, n: E2}       # E      (I)
+      - {m: 6,  b: 3, d: 2, n: G#2}      # G#m7   (iii7)
+      - {m: 7,  b: 1, d: 4, n: E2}       # E      (I) — hold
+      - {m: 8,  b: 1, d: 2, n: D2}       # Dmaj7  (bVII7)
+      - {m: 8,  b: 3, d: 2, n: F#2}      # F#m    (ii)
+      - {m: 9,  b: 1, d: 2, n: E2}       # Emaj7  (I7)
+      - {m: 9,  b: 3, d: 2, n: E2}       # E      (I, hm3 tail)
+      - {m: 10, b: 1, d: 4, n: E2}       # E      (I) — hold
+      - {m: 11, b: 1, d: 2, n: D2}       # D      (bVII — sequence opens)
+      - {m: 11, b: 3, d: 2, n: F#2}      # F#m    (ii)
+      - {m: 12, b: 1, d: 4, n: D2}       # D      (bVII) — hold
+      - {m: 13, b: 1, d: 2, n: E2}       # E      (I)
+      - {m: 13, b: 3, d: 2, n: E2}       # Emaj7  (I7, hm2 tail)
+      - {m: 14, b: 1, d: 2, n: E2}       # Emaj7  (I7, hm2 tail cont.)
+      - {m: 14, b: 3, d: 2, n: E2}       # E      (I)
+      - {m: 15, b: 1, d: 2, n: G#2}      # G#m7   (iii7)
+      - {m: 15, b: 3, d: 2, n: B2}       # B      (V — ch2 sits YAML B5 here)
+      - {m: 16, b: 1, d: 2, n: A2}       # A      (IV)
+      - {m: 16, b: 3, d: 2, n: B2}       # B7     (V7 — ch2 sits YAML A5+)
+      - {m: 17, b: 1, d: 2, n: E2}       # E      (I — climax resolves)
+      - {m: 17, b: 3, d: 2, n: E2}       # Emaj7  (I7)
+      - {m: 18, b: 1, d: 2, n: E2}       # E      (I)
+      - {m: 18, b: 3, d: 1.95, n: F#2}   # F#m7   (ii7) — seam release into
+                                         # m3 (E): steps down, sings ii7->I
+
+  - name: route_pad
+    tier: 1
+    opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under the squares, over the bass
+    velocity: 80
+    events:
+      # mm1-2: rest (intro — harmonically volatile, pad enters at the body)
+      - {m: 3,  b: 1, d: 4, n: G#3}      # E      3rd — body opens, hold
+      - {m: 4,  b: 1, d: 2, n: F#3}      # Dmaj7  3rd
+      - {m: 4,  b: 3, d: 2, n: D#3}      # B7     3rd (chord tone of V7)
+      - {m: 5,  b: 1, d: 2, n: G#3}      # E      3rd
+      - {m: 5,  b: 3, d: 2, n: B3}       # G#m7   3rd (ch2's YAML-B2/C4 here
+                                         # are different pitches)
+      - {m: 6,  b: 1, d: 2, n: G#3}      # E      3rd
+      - {m: 6,  b: 3, d: 2, n: F#3}      # G#m7   5th, NOT the 3rd (B3):
+                                         # ch2 sounds GB-oct2 B (= MIDI 59)
+                                         # here — lint-caught unison 2026-09-19
+      - {m: 7,  b: 1, d: 4, n: G#3}      # E      3rd — hold
+      - {m: 8,  b: 1, d: 2, n: F#3}      # Dmaj7  3rd
+      - {m: 8,  b: 3, d: 2, n: A3}       # F#m    3rd
+      - {m: 9,  b: 1, d: 2, n: G#3}      # Emaj7  3rd
+      - {m: 9,  b: 3, d: 2, n: G#3}      # E      3rd (hm3 tail)
+      - {m: 10, b: 1, d: 4, n: G#3}      # E      3rd — hold
+      - {m: 11, b: 1, d: 2, n: F#3}      # D      3rd (sequence opens)
+      - {m: 11, b: 3, d: 2, n: A3}       # F#m    3rd
+      - {m: 12, b: 1, d: 4, n: F#3}      # D      3rd — hold
+      - {m: 13, b: 1, d: 2, n: G#3}      # E      3rd
+      - {m: 13, b: 3, d: 2, n: G#3}      # Emaj7  3rd (hm2 tail)
+      - {m: 14, b: 1, d: 2, n: G#3}      # Emaj7  3rd (hm2 tail cont.)
+      - {m: 14, b: 3, d: 2, n: G#3}      # E      3rd
+      - {m: 15, b: 1, d: 2, n: B3}       # G#m7   3rd
+      - {m: 15, b: 3, d: 2, n: D#3}      # B      3rd
+      - {m: 16, b: 1, d: 2, n: C#3}      # A      3rd
+      - {m: 16, b: 3, d: 2, n: D#3}      # B7     3rd
+      - {m: 17, b: 1, d: 2, n: G#3}      # E      3rd (climax resolves)
+      - {m: 17, b: 3, d: 2, n: G#3}      # Emaj7  3rd
+      - {m: 18, b: 1, d: 2, n: G#3}      # E      3rd
+      - {m: 18, b: 3, d: 1.95, n: A3}    # F#m7   3rd — seam release
+
+  # TIER 2 (MT-32/GM only — no opl_patch by schema law). trail_strings:
+  # cello dyads supplying root+fifth in YAML octave 3 under the tier-1
+  # 3rd-pad: bass root2 / strings root3+fifth3 / pad third3 = full
+  # close-position triad per slot with ZERO shared pitches (audited).
+  # Enters at m3 with the pad (rests the volatile intro). Max B3 (58):
+  # clear of GB-oct3+ (>= YAML C4) and of ch2's GB-oct2 B's (intro/~m5 —
+  # strings play G#2-free dyads there: m5 strings are [E3,B3]/[G#3,D#3]).
+  # B3-bearing slots (m4b3 B7, m15b3 B, m16b3 B7) all fall where ch2 sits
+  # YAML 4+ (B4/B5/A5). Cello 1 for bowed attack/bloom FM cannot do.
+  - name: trail_strings
+    tier: 2
+    mt32_patch: 55               # MT-32 Cello 1 — celli under the violins
+                                 # (tier-1 pad cascades as Str Sect 1)
+    gm_program: 43               # GM Cello
+    pan: center
+    volume: 60                   # a section behind the squares, with the pad
+    velocity: 70
+    events:
+      # mm1-2: rest (intro — enters with the pad at the body)
+      - {m: 3,  b: 1, d: 4, n: [E3, B3]}       # E      root+5th (pad: G#3)
+      - {m: 4,  b: 1, d: 2, n: [D3, A3]}       # Dmaj7  root+5th (pad: F#3)
+      - {m: 4,  b: 3, d: 2, n: [F#3, B3]}      # B7     5th+root (pad: D#3)
+      - {m: 5,  b: 1, d: 2, n: [E3, B3]}       # E      (pad: G#3)
+      - {m: 5,  b: 3, d: 2, n: [G#3, D#3]}     # G#m7   root+5th (pad: B3)
+      # m6b1: REST (one half-bar celli breath) — ch2 sounds GB-oct2 B
+      # (= MIDI 59) here, so the 5th is UNPLAYABLE in the strings
+      # (lint-caught unison 2026-09-19); every in-octave substitute
+      # collides (E4 = ch1's E4; G#3 = pad's 3rd). Root+3rd (bass+pad)
+      # carry the slot; the 5th returns at m6b3.
+      - {m: 6,  b: 3, d: 2, n: [G#3, D#3]}     # G#m7   (pad: F#3, the
+                                               # lint-fix 5th — all distinct)
+      - {m: 7,  b: 1, d: 4, n: [E3, B3]}       # E      — hold
+      - {m: 8,  b: 1, d: 2, n: [D3, A3]}       # Dmaj7
+      - {m: 8,  b: 3, d: 2, n: [F#3, C#3]}     # F#m    root+5th (pad: A3)
+      - {m: 9,  b: 1, d: 2, n: [E3, B3]}       # Emaj7  (pad: G#3)
+      - {m: 9,  b: 3, d: 2, n: [E3, B3]}       # E      (hm3 tail)
+      - {m: 10, b: 1, d: 4, n: [E3, B3]}       # E      — hold
+      - {m: 11, b: 1, d: 2, n: [D3, A3]}       # D      (sequence opens)
+      - {m: 11, b: 3, d: 2, n: [F#3, C#3]}     # F#m
+      - {m: 12, b: 1, d: 4, n: [D3, A3]}       # D      — hold
+      - {m: 13, b: 1, d: 2, n: [E3, B3]}       # E
+      - {m: 13, b: 3, d: 2, n: [E3, B3]}       # Emaj7  (hm2 tail)
+      - {m: 14, b: 1, d: 2, n: [E3, B3]}       # Emaj7  (hm2 tail cont.)
+      - {m: 14, b: 3, d: 2, n: [E3, B3]}       # E
+      - {m: 15, b: 1, d: 2, n: [G#3, D#3]}     # G#m7
+      - {m: 15, b: 3, d: 2, n: [F#3, B3]}      # B      5th+root (pad: D#3)
+      - {m: 16, b: 1, d: 2, n: [E3, A3]}       # A      5th+root (pad: C#3)
+      - {m: 16, b: 3, d: 2, n: [F#3, B3]}      # B7     (pad: D#3)
+      - {m: 17, b: 1, d: 2, n: [E3, B3]}       # E      (climax resolves)
+      - {m: 17, b: 3, d: 2, n: [E3, B3]}       # Emaj7
+      - {m: 18, b: 1, d: 2, n: [E3, B3]}       # E
+      - {m: 18, b: 3, d: 1.95, n: [F#3, C#3]}  # F#m7   — seam release into
+                                               # m3 (E): ii7->I arrival
+
+  # TIER 3 (luxury layer, dropped first under pressure). trail_chime: a
+  # single tube-bell stroke on each structural arrival — the route-table
+  # "bell ornament". Three strokes: body opening (m3, E6 over the wave's
+  # E5 motor — octave apart, distinct), sequence opening (m11, D6 over
+  # the bVII descent), climax resolution (m17, E6). Short d1; the bell's
+  # own decay shapes it.
+  - name: trail_chime
+    tier: 3
+    mt32_patch: 103              # MT-32 Tube Bell — deep, sparse, no shimmer
+    gm_program: 15               # GM Tubular Bells
+    pan: right
+    volume: 56                   # an accent, not a voice
+    velocity: 84
+    events:
+      - {m: 3,  b: 1, d: 1, n: E6}       # body opens (E)
+      - {m: 11, b: 1, d: 1, n: D6}       # sequence opens (D, bVII)
+      - {m: 17, b: 1, d: 1, n: E6}       # climax resolves (E)

@@ -1,0 +1,21 @@
+# Music_Routes2 — per-song MIDI overrides (see overrides/README.md for schema).
+# Registers verified from the generated MIDI (gb_to_midi.py --target gm
+# --songs Routes2 --no-enhance): ch1 lyrical B3-E5 + broken-chord
+# arpeggiation, ch2 soaring lead E5-C#6 (the [q. xx] motif voice), ch3
+# bouncy wave bass E3 down to E2. Warm waterfront families, one per line;
+# drums left at default (noise id 3 -> 38 Acoustic Snare suits the pattern).
+channels:
+  1:
+    mt32_program: "Flute 1"     # lyrical melody + arpeggiation
+    gm_program: "Flute"
+    volume: 100
+    pan: 54
+  2:
+    mt32_program: "Violin 1"    # soaring lead voice
+    gm_program: "Violin"
+    volume: 96
+    pan: 74
+  3:
+    mt32_program: "Acou Bass 1" # bouncy bass (E3-E2)
+    gm_program: "Acoustic Bass"
+    volume: 104
