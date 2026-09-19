@@ -110,7 +110,7 @@ channels:
     mt32_patch: 58               # Harp 1
     gm_program: 47               # Orchestral Harp
     pan: right
-    volume: 56
+    volume: 50                   # cut 56->50 per audition (twinkles sat over the melody); velocity untouched
     velocity: 78
     events:
       - {at: 1,  pattern: harp_body}
