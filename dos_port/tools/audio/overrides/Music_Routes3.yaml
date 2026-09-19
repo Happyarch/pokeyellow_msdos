@@ -20,11 +20,11 @@ channels:
   1:
     mt32_program: "Oboe"
     gm_program: "Oboe"
-    volume: 92
+    volume: 97
     pan: 48
   2:
-    mt32_program: "Flute 1"
-    gm_program: "Flute"
+    mt32_program: "Bassoon"
+    gm_program: "Bassoon"
     volume: 100
     pan: 80
   3:
