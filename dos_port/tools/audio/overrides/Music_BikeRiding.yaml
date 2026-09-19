@@ -1,8 +1,26 @@
 # Music_BikeRiding — per-song MIDI overrides.
 #
-# AUDITION FINDING (maintainer): the default ch3 voice (Warm Bell at the
-# default volume 110 — louder than either square) sits over the whole mix.
-# This file exists only to pull it down a notch; programs stay default.
+# AUDITION FINDINGS (maintainer): the default ch3 voice (Warm Bell at the
+# default volume 110 — louder than either square) sits over the whole mix,
+# so ch3 is pulled down to 96. Programs now explicit: ch2 keeps the liked
+# Sax 3 lead (Pokecenter precedent voices it Alto Sax on GM); ch3 keeps
+# Warm Bell (PkmnHealed precedent voices it Music Box on GM). Ch1's
+# answering line gets Square Wave as the opening candidate — chip character
+# against the reedy lead (Celadon ch1 precedent), since Sax 3 is not
+# audible enough there. Ear decides if it stays.
 channels:
+  1:
+    mt32_program: "Square Wave"  # candidate: chip lead vs sax melody
+    gm_program: "Lead 1 (square)"
+    volume: 100
+    pan: 44
+  2:
+    mt32_program: "Sax 3"        # the liked lead voice, kept as-was
+    gm_program: "Alto Sax"
+    volume: 96
+    pan: 84
   3:
+    mt32_program: "Warm Bell"
+    gm_program: "Music Box"
     volume: 96                   # was default 110; bell ostinato back under the squares
+    pan: 64
