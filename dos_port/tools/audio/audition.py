@@ -183,6 +183,21 @@ def run_interactive_audition(
                 aplay_proc.stdin.write(sess.tick())
             aplay_proc.stdin.flush()
     else:
+        # MIDI targets are played by an external synth process (MUNT or
+        # FluidSynth) driven over ALSA; audition.py never receives PCM from
+        # them (MidiSession.tick() returns None). Writing --out on this path
+        # used to open a WAV, write nothing, and close a 44-byte header-only
+        # file. Fail loudly instead of emitting that empty artifact.
+        if out_wav:
+            raise SystemExit(
+                f"--out is not supported for --target {target}: "
+                f"{target.upper()} renders inside an external synth process "
+                "(MUNT/FluidSynth) fed over ALSA, so audition.py has no PCM to "
+                f"capture. Use --target opl3 --out {out_wav} for an offline "
+                "render, run the synth live without --out, or use the "
+                "dos-gb-audio-dbg headless MT-32/GM renderer for a batch "
+                "reference."
+            )
         import midi_renderer
         port = port_override or pick_port(target)
         setup_msgs = None
@@ -205,18 +220,11 @@ def run_interactive_audition(
                 sess.send_init()
             mt32_cleanup_msgs = song_cleanup
         rate = 48000
-        if out_wav:
-            import wave
-            wav_file = wave.open(str(out_wav), "wb")
-            wav_file.setnchannels(2)
-            wav_file.setsampwidth(2)
-            wav_file.setframerate(rate)
-        else:
-            aplay_cmd = ["aplay", "-r", str(rate), "-f", "S16_LE", "-c", "2", "-q"]
-            try:
-                aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
-            except FileNotFoundError:
-                aplay_proc = None
+        aplay_cmd = ["aplay", "-r", str(rate), "-f", "S16_LE", "-c", "2", "-q"]
+        try:
+            aplay_proc = subprocess.Popen(aplay_cmd, stdin=subprocess.PIPE)
+        except FileNotFoundError:
+            aplay_proc = None
 
     canonical_name = sess.song_label
     yaml_path = ENHANCE_DIR / f"{canonical_name}.yaml"
