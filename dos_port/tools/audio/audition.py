@@ -12,6 +12,7 @@ Controls (OPL3 interactive mode):
   [Tab]         Toggle A/B (Working Copy ↔ Previous Revision)
   [Space] / [E] Toggle Enhancements On / Off (Pure GB ↔ Enhanced)
   [1]           Toggle Tier 1
+  [5]/[6]/[7]/[8] Mute GB base ch1/ch2/ch3/ch4 (isolation dashboard)
   [M]           Solo Enhancements (mute base GB channels)
   [C]           Save manual checkpoint to disk
   [ [ ] / [ ] ] Step backward / forward through disk revisions
@@ -429,6 +430,12 @@ def run_interactive_audition(
                         sess.send_init()
                     status_msg = f"Solo Enhancements: {'ON' if sess.solo_enh else 'OFF'}"
                     status_timer = 90
+                elif key in ("5", "6", "7", "8"):
+                    if hasattr(sess, "toggle_base_mute"):
+                        v = int(key) - 5  # 5..8 -> GB voices 0..3
+                        muted = sess.toggle_base_mute(v)
+                        status_msg = f"Base ch{v + 1}: {'MUTED' if muted else 'on'}"
+                        status_timer = 90
                 elif key == "[":  # previous revision
                     if rev_history and browse_rev_idx > 0:
                         browse_rev_idx -= 1

@@ -759,7 +759,13 @@ voice_length:
 ; ---------------------------------------------------------------------------
 ; voice_volume — carrier TL = base + envelope/level + master, written on
 ; change. A channel with both NR51 bits clear is force-muted (rests/ducks).
+;
+; Global FM noise-voice trim, in OPL TL units (~0.75 dB each): GB noise
+; through FM is harsher than the GB LFSR at equal TL and sat over every
+; mix (Routes1 audition 2026-09-19). Tune by ear here; the host audition
+; renderer mirrors it as NOISE_V3_TRIM in opl_renderer.py.
 ; ---------------------------------------------------------------------------
+NOISE_V3_TRIM equ 6
 voice_volume:
     cmp ebx, 2
     je .wave
@@ -775,6 +781,10 @@ voice_volume:
     and eax, 3
     mov al, [OplWaveLevelAtt + eax]
 .att:
+    cmp ebx, 3
+    jne .no_noise_trim
+    add al, NOISE_V3_TRIM     ; voice 3 only (GB noise); clamped below
+.no_noise_trim:
     add al, [master_att]
     ; NR51: both terminal bits clear -> mute
     mov cl, bl

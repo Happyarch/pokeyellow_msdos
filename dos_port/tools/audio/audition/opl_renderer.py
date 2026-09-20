@@ -37,6 +37,12 @@ POOL_OPL2_SAFE = 5
 
 OPL_VOL_TABLE = [63, 31, 23, 19, 15, 13, 11, 9, 7, 6, 5, 4, 3, 2, 1, 0]
 
+# Global FM noise-voice trim, OPL TL units (~0.75 dB each). GB noise through
+# FM is harsher than the GB LFSR at equal TL and sat over every mix
+# (Routes1 audition 2026-09-19). Mirrors NOISE_V3_TRIM in
+# dos_port/src/audio/opl_shim.asm (voice_volume); tune by ear in both.
+NOISE_V3_TRIM = 6
+
 DRUM_PARAMS: dict[int, tuple[int, int, int]] = {
     1: (12, 1, 51),
     2: (11, 1, 51),
@@ -366,7 +372,8 @@ class OplEngine:
             self.env_period[voice] = fade_period
             self.env_dir[voice] = 0  # always decays
             self.env_acc[voice] = 0
-            tl = min(63, base_patch_tl + OPL_VOL_TABLE[init_vol])
+            tl = min(63, base_patch_tl + OPL_VOL_TABLE[init_vol]
+                     + (NOISE_V3_TRIM if voice == 3 else 0))
         elif voice in (0, 1):
             # GB Pulse channels: recover GB volume (0..15) and simulate envelope decay
             gb_vol = min(15, max(1, (vel - 15) // 7))
@@ -554,6 +561,7 @@ class SongSession:
         self.enable_base = True
         self.enable_enh = True
         self.solo_enh = False
+        self.muted_base: set[int] = set()  # GB voices 0-3 muted in all paths
         self.tier_filter = {1}
         self.current_frame = 0
 
@@ -671,6 +679,15 @@ class SongSession:
             off_f = min(frame + dur, self.total_frames)
             self.enh_events.setdefault(off_f, []).append(("off", opl_v, None))
 
+    def toggle_base_mute(self, v: int) -> bool:
+        """Toggles mute on one GB base voice (0-3); returns muted state."""
+        if v in self.muted_base:
+            self.muted_base.remove(v)
+        else:
+            self.muted_base.add(v)
+            self.engine.key_off(v)
+        return v in self.muted_base
+
     def silence_enhancements(self):
         for v in range(4, 14):
             self.engine.key_off(v)
@@ -695,9 +712,14 @@ class SongSession:
         f = self.current_frame
 
         # Track active base notes for instant seamless G/Pause transitions
+        # (muted voices never enter: they stay silent across toggles/resume).
         for ev_type, v, args in self.base_events.get(f, []):
             if ev_type == "on":
-                self.active_base_notes[v] = args
+                if v in self.muted_base:
+                    self.active_base_notes.pop(v, None)
+                    self.engine.key_off(v)
+                else:
+                    self.active_base_notes[v] = args
             elif ev_type == "off":
                 self.active_base_notes.pop(v, None)
 
@@ -720,6 +742,8 @@ class SongSession:
                     self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
                 for ev_type, v, args in self.base_events.get(f, []):
                     if ev_type == "on":
+                        if v in self.muted_base:
+                            continue
                         key, vel, fade, is_drum = args
                         if is_drum or v == 3:
                             params = DRUM_PARAMS.get(key, (8, 1, 34))
@@ -744,6 +768,9 @@ class SongSession:
             if effective_base:
                 for ev_type, v, args in self.base_events.get(f, []):
                     if ev_type == "on":
+                        if v in self.muted_base:
+                            self.engine.key_off(v)
+                            continue
                         key, vel, fade, is_drum = args
                         self.engine.key_on(v, key, vel=vel, fade=fade, is_drum=is_drum)
                     elif ev_type == "off":

@@ -19,7 +19,8 @@ channels:
     gm_program: "Acoustic Bass"
     volume: 104
 drums:                          # GB ch4: noise id 15 ticking the off-beats
-  velocity: 92                  # ("and" of almost every beat, mm1-8)
+  velocity: 92                  # restored: easing to 80 hurt MT-32; OPL hat fixed separately (see below)
+                                # ("and" of almost every beat, mm1-8)
   map:
     # Default maps id 15 -> 45 (Low Tom), which thuds on every off-beat;
     # a light hat keeps Masuda's syncopated tick (audition to confirm).

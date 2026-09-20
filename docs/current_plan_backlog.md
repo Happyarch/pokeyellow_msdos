@@ -1052,3 +1052,13 @@ work was ADOPTED by `docs/current_plan_overworld_realign.md` Stage J
   Indigo, Poké Flute consumption in the Route 12/16 batches, catching tutorial,
   Ghost Marowak, Safari story) is DORMANT with no owner. Open a dedicated plan
   when the rollout resumes — do not reopen the archived one.
+
+### 38. Per-device audio voice levels (OPL3 vs MT-32/GM trim)
+Filed 2026-09-19 from the BikeRiding audition round (maintainer direction):
+Tier-1 `volume`/`velocity` are shared across all devices (OPL level is
+`vel * volume // 127` in `audition/opl_renderer.py:carrier_level`, no
+OPL-side trim exists), so a request to ease Tier 1 "on the OPL3" cannot be
+done without also moving MT-32/GM — on a just-approved track. Tolerated
+for now. Future tooling change: add an OPL3-only level trim (or
+per-target volume/velocity) to the enhancement schema + lint + renderers,
+so FM balance can be tuned without voiding the MT-32 audition.

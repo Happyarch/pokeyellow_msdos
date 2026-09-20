@@ -18,8 +18,8 @@
 # Chord halves (H1..H24, from analysis): D Bm | D A | A A | A D | D D | Bm D |
 # D A | A A | A A | A D | D D | G | Bm A | D G | Bm D  (mm1-8 I-V, mm9-12 IV).
 #
-# Tier 1 (route-theme foundation, 2 voices — the whole register below G3 is
-# empty; everything GB sits A3 and up):
+# Tier 2 (route-theme foundation — promoted off OPL3 per audition, which
+# plays the pure GB trio now; MT-32/GM unchanged):
 #   * sub_bass — chord roots in octave 1-2, one sustained note per harmony
 #     half-measure. The deep foundation Masuda's tiny-speaker mix omits.
 #   * low_pad — sustained chord 3rds/5ths in C3..F#3, voice-led by step with
@@ -31,12 +31,13 @@
 #     C#4(61) — zero unison collisions by construction (mm10-11 C#3/D3 pad
 #     notes sit an octave below wave's C#4/D4, which is permitted).
 #
-# Tier 2: SKIPPED (documented tier-skip). The midrange is fully packed — two
-# busy pulse channels (ch1 lyrical + ch2 figuration/descant) cover A4..E6
-# with density 1.42/2.15, and the wave owns A3..D4. A sustained string pad
-# anywhere in octave 3-5 is unison roulette against the 16th figuration;
-# forcing one would mud the cadences. Same shape as Music_PalletTown (tier
-# 1x2 + tier 3x1, no tier 2).
+# (No tier-1 voices remain. The old tier-skip note is retired: the midrange
+# is still fully packed, which is why nothing new was ADDED in tier 2 —
+# the promoted foundation just lives here now.)
+#
+# Tier 2 holds the promoted foundation (see above) — nothing was added in
+# the packed midrange; forcing a string pad there would be unison roulette
+# against the 16th figuration (PalletTown shape: foundation + tier-3 chime).
 #
 # Tier 3 (MT-32/GM only): one sparse celesta chime on phrase downbeats,
 # octave 6, marking the form (m1/m5/m9 downbeats + final H24), all checked
@@ -49,8 +50,7 @@ song: Music_Routes1
 
 channels:
   - name: sub_bass
-    tier: 1
-    opl_patch: sub_bass
+    tier: 2
     mt32_patch: 29        # MT-32 Syn Bass 1 (round, sustaining)
     gm_program: 39        # GM Synth Bass 1
     pan: center
@@ -78,8 +78,7 @@ channels:
                                        # beat-addressable)
 
   - name: low_pad
-    tier: 1
-    opl_patch: soft_pad
+    tier: 2
     mt32_patch: 49        # MT-32 Str Sect1 (warm string pad)
     gm_program: 90        # GM Pad 2 (warm)
     pan: center
