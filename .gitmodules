@@ -13,3 +13,6 @@
 	url = git@github.com:Happyarch/dosbox-x.git
 	branch = mcp-debug
 	shallow = true
+[submodule "dos_port/tools/dos-gb-audio-dbg"]
+	path = dos_port/tools/dos-gb-audio-dbg
+	url = git@github.com:Happyarch/dos-gb-audio-dbg.git
