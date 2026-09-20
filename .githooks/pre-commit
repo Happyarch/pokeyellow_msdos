@@ -26,6 +26,33 @@ if git diff --cached --quiet -- "$root/dos_port"; then
     exit 0
 fi
 
+# If all staged changes under dos_port/ are submodules or independent tools, skip static_gate.
+subproject_paths=$(git config --file "$root/.gitmodules" --get-regexp path 2>/dev/null | awk '{print $2}' || true)
+non_subproject_found=0
+while IFS= read -r file; do
+    [ -z "$file" ] && continue
+    is_sub=0
+    for sp in $subproject_paths "dos_port/tools/viewer"; do
+        case "$file" in
+            "$sp"|"$sp"/*)
+                is_sub=1
+                break
+                ;;
+        esac
+    done
+    if [ "$is_sub" -eq 0 ]; then
+        non_subproject_found=1
+        break
+    fi
+done <<EOF
+$(git diff --cached --name-only -- "$root/dos_port")
+EOF
+
+if [ "$non_subproject_found" -eq 0 ]; then
+    echo "pre-commit: only submodules/subprojects changed under dos_port; skipping static_gate."
+    exit 0
+fi
+
 if [ ! -x "$root/dos_port/tools/static_gate" ]; then
     echo "pre-commit: dos_port/tools/static_gate is missing or not executable; skipping." >&2
     exit 0
