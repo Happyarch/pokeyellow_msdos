@@ -33,35 +33,69 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(MT32EMU IMPORTED_TARGET REQUIRED mt32emu)
 pkg_check_modules(FLUIDSYNTH IMPORTED_TARGET REQUIRED fluidsynth)
 
-# --- Vendored Dear ImGui (v1.91.x) ------------------------------------------
+# --- Dear ImGui (v1.91.9b) & ImPlot (v0.16) -----------------------------------
+# Third-party libraries fetched via CMake FetchContent (or local third_party/ if present).
+if(POLICY CMP0169)
+  cmake_policy(SET CMP0169 OLD)
+endif()
+include(FetchContent)
+
+set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui")
+set(IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/implot")
+
+if(NOT EXISTS "${IMGUI_DIR}/imgui.cpp")
+  FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.91.9b
+  )
+  FetchContent_GetProperties(imgui)
+  if(NOT imgui_POPULATED)
+    FetchContent_Populate(imgui)
+    set(IMGUI_DIR "${imgui_SOURCE_DIR}")
+  endif()
+endif()
+
+if(NOT EXISTS "${IMPLOT_DIR}/implot.cpp")
+  FetchContent_Declare(
+    implot
+    GIT_REPOSITORY https://github.com/epezent/implot.git
+    GIT_TAG        v0.16
+  )
+  FetchContent_GetProperties(implot)
+  if(NOT implot_POPULATED)
+    FetchContent_Populate(implot)
+    set(IMPLOT_DIR "${implot_SOURCE_DIR}")
+  endif()
+endif()
 
 add_library(imgui STATIC
-  third_party/imgui/imgui.cpp
-  third_party/imgui/imgui_draw.cpp
-  third_party/imgui/imgui_tables.cpp
-  third_party/imgui/imgui_widgets.cpp
-  third_party/imgui/backends/imgui_impl_sdl2.cpp
-  third_party/imgui/backends/imgui_impl_opengl3.cpp
+  ${IMGUI_DIR}/imgui.cpp
+  ${IMGUI_DIR}/imgui_draw.cpp
+  ${IMGUI_DIR}/imgui_tables.cpp
+  ${IMGUI_DIR}/imgui_widgets.cpp
+  ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+  ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC
-  third_party/imgui
-  third_party/imgui/backends
+  ${IMGUI_DIR}
+  ${IMGUI_DIR}/backends
 )
 target_link_libraries(imgui PUBLIC SDL2::SDL2 OpenGL::GL)
 # Third-party code builds warning-free by construction; silence warnings so a
-# host -Wall default cannot fail the build on vendored sources.
+# host -Wall default cannot fail the build on third-party sources.
 target_compile_options(imgui PRIVATE -w)
 set_target_properties(imgui PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-# --- Vendored ImPlot (v0.16) -------------------------------------------------
+# --- ImPlot (v0.16) -----------------------------------------------------------
 
 add_library(implot STATIC
-  third_party/implot/implot.cpp
-  third_party/implot/implot_items.cpp
+  ${IMPLOT_DIR}/implot.cpp
+  ${IMPLOT_DIR}/implot_items.cpp
 )
 target_include_directories(implot PUBLIC
-  third_party/implot
-  third_party/imgui
+  ${IMPLOT_DIR}
+  ${IMGUI_DIR}
 )
 target_link_libraries(implot PUBLIC imgui)
 target_compile_options(implot PRIVATE -w)
@@ -207,7 +241,7 @@ add_executable(pkmn-audio-dbg-tests
 )
 target_include_directories(pkmn-audio-dbg-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_include_directories(pkmn-audio-dbg-tests SYSTEM PRIVATE
   ${NUKEDOPL_INC}
@@ -237,7 +271,7 @@ add_executable(pkmn-audio-dbg-audio-tests
 )
 target_include_directories(pkmn-audio-dbg-audio-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_link_libraries(pkmn-audio-dbg-audio-tests PRIVATE
   SDL2::SDL2
@@ -260,7 +294,7 @@ add_executable(pkmn-audio-dbg-synth-tests
 )
 target_include_directories(pkmn-audio-dbg-synth-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_include_directories(pkmn-audio-dbg-synth-tests SYSTEM PRIVATE
   ${NUKEDOPL_INC}
@@ -292,7 +326,7 @@ add_executable(pkmn-audio-dbg-midi-tests
 )
 target_include_directories(pkmn-audio-dbg-midi-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_link_libraries(pkmn-audio-dbg-midi-tests PRIVATE
   PkgConfig::MT32EMU
@@ -325,7 +359,7 @@ add_executable(pkmn-audio-dbg-session-tests
 )
 target_include_directories(pkmn-audio-dbg-session-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 # Absolute repo root so the catalog test finds constants/ + audio/headers/
 # regardless of the CWD ctest runs from.
@@ -353,7 +387,7 @@ add_executable(pkmn-audio-dbg-transport-tests
 )
 target_include_directories(pkmn-audio-dbg-transport-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_link_libraries(pkmn-audio-dbg-transport-tests PRIVATE imgui)
 target_compile_options(pkmn-audio-dbg-transport-tests PRIVATE -Wall -Wextra)
@@ -379,7 +413,7 @@ add_executable(pkmn-audio-dbg-tab-tests
 )
 target_include_directories(pkmn-audio-dbg-tab-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_link_libraries(pkmn-audio-dbg-tab-tests PRIVATE
   imgui
@@ -413,7 +447,7 @@ add_executable(pkmn-audio-dbg-synth-tab-tests
 )
 target_include_directories(pkmn-audio-dbg-synth-tab-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_include_directories(pkmn-audio-dbg-synth-tab-tests SYSTEM PRIVATE
   ${NUKEDOPL_INC}
@@ -455,7 +489,7 @@ add_executable(pkmn-audio-dbg-cli-tests
 )
 target_include_directories(pkmn-audio-dbg-cli-tests PRIVATE
   src
-  third_party/imgui
+  ${IMGUI_DIR}
 )
 target_include_directories(pkmn-audio-dbg-cli-tests SYSTEM PRIVATE
   ${NUKEDOPL_INC}
