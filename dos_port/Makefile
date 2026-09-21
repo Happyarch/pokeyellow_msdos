@@ -4476,6 +4476,20 @@ assets/midi/.stamp-mt32: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
 	python3 tools/audio/gb_to_midi.py --target mt32
 	@touch $@
 
+# GB-APU debugger baseline (Phase B): same simulation, but noise ch4 carries
+# raw pret instrument ids on MIDI channel 9 and no enhancement tracks are
+# merged — the GB device consumes exactly the 4 pret channels (mirroring
+# audition's live gb_events). Not consumed by the ROM build (music_streams
+# stays mt32-only); read at runtime by dos-gb-audio-dbg (midiPathFor "gb").
+# Deps mirror .stamp-mt32 minus the enhancements glob (gb ignores it).
+assets/midi/.stamp-gb: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
+		tools/audio/gen_audio_data.py ../audio.asm \
+		../constants/music_constants.asm \
+		tools/audio/yaml_lint.py tools/audio/music_analysis.py \
+		$(wildcard tools/audio/overrides/*.yaml)
+	python3 tools/audio/gb_to_midi.py --target gb
+	@touch $@
+
 assets/music_streams.inc: assets/midi/.stamp-mt32 tools/audio/midi_to_stream.py
 	python3 tools/audio/midi_to_stream.py --target mt32
 
@@ -5139,6 +5153,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/bg_map_attributes.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/sfx_data.inc assets/music_streams.inc assets/mt32_sysex.inc \
+        assets/midi/.stamp-gb \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
         assets/font_1bpp.inc assets/font_extra_2bpp.inc \

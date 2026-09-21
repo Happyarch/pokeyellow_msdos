@@ -21,7 +21,12 @@ parts 1-3), noise ch4 → MIDI channel 9 (drums; MT-32 rhythm part). Note
 numbers: pulse = pitch + 12*octave + 24 (octave 4 C_ = GB freq $705 ≈ 523 Hz
 = C5 = 72 ✓); the wave channel sounds one octave lower for the same register
 value, so ch3 = pitch + 12*octave + 12. Drum instrument ids (noise SFX ids)
-map to GM drum notes via DEFAULT_DRUM_MAP + per-song overrides.
+map to GM drum notes via DEFAULT_DRUM_MAP + per-song overrides — except for
+the `gb` target, which carries the raw instrument ids on MIDI channel 9 and
+no enhancement tracks: the GB-APU debugger device consumes exactly the 4
+pret channels (mirroring audition's live gb_events, which never pass through
+drum_key or overrides), looking up authentic NR43/volume/envelope per
+instrument id from the DRUM_PARAMS table.
 
 Hand-tuning lives in tools/audio/overrides/<SongLabel>.yaml (see the README
 there); generated output is never edited by hand.
@@ -826,7 +831,10 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
     tracks.append(track_chunk(ev0))
 
     prog_key = "mt32_program" if target == "mt32" else "gm_program"
-    sw_evs = override_switch_events(song.label, ov, song, target)
+    # Program resolution only knows the mt32/gm banks (the GB device ignores
+    # Program Changes); resolve gb through the gm side.
+    resolve_target = "gm" if target == "gb" else target
+    sw_evs = override_switch_events(song.label, ov, song, resolve_target)
     for gc in used:
         mc = 9 if gc == 4 else gc             # MIDI channel (0-based)
         evs: list[tuple[int, int, bytes]] = []  # (tick, order, bytes)
@@ -836,7 +844,7 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
                 chan_setting(ov, gc, prog_key,
                              chan_setting(ov, gc, "program",
                                           DEFAULT_PROGRAM[gc])),
-                target, f"{song.label} ch{gc} {prog_key}")
+                resolve_target, f"{song.label} ch{gc} {prog_key}")
             evs.append((0, 1, bytes((0xC0 | mc, prog))))
             for f, sprog in sw_evs.get(gc, []):
                 # order 1: note-offs (0) sort before, note-ons (2) after —
@@ -853,7 +861,12 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
         for n in song.notes:
             if n.chan != gc:
                 continue
-            key = drum_key(ov, n.key) if gc == 4 else n.key
+            if gc == 4 and target == "gb":
+                # Raw pret noise instrument id (see module docstring): the
+                # GB-APU device resolves it via DRUM_PARAMS, like audition.
+                key = n.key
+            else:
+                key = drum_key(ov, n.key) if gc == 4 else n.key
             vel = drum_vel if gc == 4 else n.vel
             if not 0 <= key <= 127:
                 raise ValueError(f"{song.label} ch{gc}: key {key} out of range")
@@ -873,7 +886,7 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--target", choices=("mt32", "gm"), default="mt32")
+    ap.add_argument("--target", choices=("mt32", "gm", "gb"), default="mt32")
     ap.add_argument("--songs", help="substring filter on header labels")
     ap.add_argument("--no-enhance", action="store_true",
                     help="ignore enhancements/<Song>.yaml layers")
@@ -898,7 +911,10 @@ def main():
         song = simulate_song(rom, amap, label, channels,
                              1 if args.no_enhance else unroll_for(label))
         ov = load_overrides(label)
-        enh = None if args.no_enhance else load_enhancement(label)
+        # The gb target is enhancement-free by design (see module docstring):
+        # the GB device drops MIDI ch4-8, and enhancement rhythm on ch9 must
+        # not leak onto GB noise (audition mutes enhancement in GB mode).
+        enh = None if (args.no_enhance or args.target == "gb") else load_enhancement(label)
         write_midi(out_dir / f"{label}.mid", song, ov, args.target, enh)
         loop = (f"loop {song.loop_start}+{song.end - song.loop_start}f"
                 if song.loop_start is not None else f"once {song.end}f")
