@@ -763,6 +763,31 @@ class SwitchTest(unittest.TestCase):
                 bad.append((path.name, rep.errors))
         self.assertEqual(bad, [])
 
+    def test_opl_voices_tier1_only(self):
+        sys.path.insert(
+            0, str(HERE.parent / "dos-gb-audio-dbg" / "src"))
+        try:
+            from enhancement_dump import resolve_opl_voices
+        finally:
+            sys.path.remove(str(HERE.parent / "dos-gb-audio-dbg" / "src"))
+        rep, resolved, _ = lint(
+            HERE / "enhancements" / "Music_IndigoPlateau.yaml")
+        self.assertEqual(rep.errors, [])
+        by_ch = {mc: (vol, pan, pb)
+                 for mc, vol, pan, pb in resolve_opl_voices(resolved)}
+        # Tier-1 only: bass + pad with authored bytes; the tier-2 horn and
+        # tier-3 bell are excluded (the OPL3 device never plays them).
+        self.assertEqual(sorted(by_ch), [4, 5])
+        self.assertEqual(by_ch[4][:2], (60, 0x30))
+        self.assertEqual(by_ch[4][2], list(PATCHES["sub_bass"]))
+        self.assertEqual(by_ch[5][:2], (52, 0x30))
+        self.assertEqual(by_ch[5][2], list(PATCHES["soft_pad"]))
+        # A tier-2-only song (PokemonTower night_wind) yields no OPL voices.
+        rep2, resolved2, _ = lint(
+            HERE / "enhancements" / "Music_PokemonTower.yaml")
+        self.assertEqual(rep2.errors, [])
+        self.assertEqual(resolve_opl_voices(resolved2), [])
+
     def test_all_overrides_lint_clean(self):
         import gen_audio_data
         consts, _ = gen_audio_data.parse_music_constants()
