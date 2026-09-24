@@ -61,6 +61,7 @@ extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3, /IN
 extern g_audio_forced    ; src/audio/audio_hal.asm — /FLAG demands, bit N = device N
 extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
 extern g_cfg_musicloop   ; src/audio/audio_hal.asm — set by /LOOP
+extern g_sb_nodma       ; src/audio/sb_pcm.asm — set by /NODMA
 extern Init              ; src/home/init.asm — power-on init
 %ifdef DEBUG_AUDIO
 extern RunAudioTest      ; src/debug/debug_dump.asm — audio-engine gate
@@ -106,6 +107,7 @@ arg_gb:       db '/GB',      0
 arg_pas:      db '/PAS',     0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
+arg_nodma:    db '/NODMA',   0
 ; Link-cable transport selection (docs/current_plan_link_cable.md Stage 2).
 arg_com1:     db '/COM1',    0
 arg_com2:     db '/COM2',    0
@@ -430,6 +432,12 @@ parse_cmdline:
     jnz .no_loop
     mov byte [g_cfg_musicloop], 1 ; DEBUG_AUDIO: music-only, loop forever
 .no_loop:
+
+    mov edi, arg_nodma
+    call find_token
+    jnz .no_nodma
+    mov byte [g_sb_nodma], 1      ; disable SB DMA, use direct mode
+.no_nodma:
 
     ; --- link-cable transport flags (net_hal.asm owns the config bytes) ----
     mov edi, arg_com1

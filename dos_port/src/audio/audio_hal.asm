@@ -73,6 +73,8 @@ extern enh_init                   ; src/audio/opl_enh.asm
 extern enh_seq_tick               ; src/audio/opl_enh.asm
 extern enh_seq_stop               ; src/audio/opl_enh.asm
 extern mpu_detect                 ; src/audio/mpu401.asm
+extern sb_dma_init                ; src/audio/sb_pcm.asm
+extern sb_dma_shutdown            ; src/audio/sb_pcm.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
 extern midi_seq_stop              ; src/audio/mpu401.asm
@@ -146,6 +148,7 @@ audio_init:
     jnz .off
     call audio_parse_blaster      ; BLASTER env -> g_sb_base/irq/dma
     call dsp_detect               ; DSP reset + E1h version (Phase C consumer)
+    call sb_dma_init              ; allocate conventional DMA buffer & hook IRQ
     call opl_init                 ; detect + reset the OPL (388h)
     call enh_init                 ; enhancement-player caches (no port I/O)
     ; device shim selection: solved = /FLAG forced, then config requested,
@@ -316,6 +319,7 @@ audio_init:
 
 audio_shutdown:
     mov byte [g_audio_engine_online], 0
+    call sb_dma_shutdown          ; free DMA buffer & restore IRQ
     call midi_seq_stop            ; all-notes-off on the MIDI module
     call enh_seq_stop             ; enhancement voices off before chip reset
     call opl_shutdown             ; leave the FM chip silent

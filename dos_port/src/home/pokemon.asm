@@ -89,7 +89,9 @@ extern WaitForSoundToFinish             ; src/home/delay.asm — block until cha
 extern g_sb_present                     ; src/audio/audio_hal.asm
 extern g_shim_device                    ; src/audio/audio_hal.asm
 extern sb_cry_play                      ; src/audio/sb_pcm.asm (Stage 2/3)
+DEV_OPL   equ 1
 DEV_COVOX equ 5
+DEV_SB    equ 7
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame
 extern DumpBackbuffer
@@ -656,8 +658,17 @@ PlayCry:
 
     cmp byte [g_sb_present], 0
     jz .fallback
-    cmp byte [g_shim_device], DEV_COVOX
-    je .fallback
+    mov al, [g_shim_device]
+    cmp al, DEV_OPL
+    je .sb_cry
+    cmp al, DEV_SB
+    je .sb_cry
+    cmp al, 0xFF                      ; default / auto
+    je .sb_cry
+    jmp .fallback
+
+.sb_cry:
+    mov al, bh                        ; restore species ID
     call sb_cry_play
     jmp .done
 
