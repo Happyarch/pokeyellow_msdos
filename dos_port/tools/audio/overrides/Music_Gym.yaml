@@ -1,0 +1,26 @@
+# overrides/Music_Gym.yaml - base-track MT-32 patch map for the gym interior.
+# C major, exuberant, loop-seamless; ch1 is the singable augmented-motive
+# melody (GB o3-4, MIDI ~C4-D5: natural human-whistle range).
+#
+# ch1 -> Whistle 2 (user audition winner over Whistle 1; the MT-32 whistles
+# read as a human whistling a tune - the whistled-tune concept for this
+# interior). GM Whistle to match by ear per-target. ch2 -> Violin 2 (user
+# audition; sustains the pillars). ch3 -> Marimba (user audition; bounces
+# with the wave motor), volume tucked to 78 - mallet transient sits hot.
+# Stereo spread: whistle center, violin right, marimba left.
+channels:
+  1:
+    mt32_program: "Whistle 2"
+    gm_program: "Whistle"
+    volume: 82
+    pan: 64
+  2:
+    mt32_program: "Violin 2"
+    gm_program: "Violin"
+    volume: 85
+    pan: 80
+  3:
+    mt32_program: "Marimba"
+    gm_program: "Marimba"
+    volume: 68
+    pan: 48
