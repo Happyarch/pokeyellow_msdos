@@ -1,0 +1,50 @@
+# Music_OaksLab — per-song MIDI overrides (see README.md for schema).
+#
+# Professor Oak's laboratory theme. A major, 4/4: a 2-beat Bm7 pickup, then
+# a 16-measure body in two 8-measure statements (squares identical both
+# times; only the wave texture changes — syncopated off-beats in statement
+# 1, steady eighths in statement 2). Score transcription is
+# professor_oaks_lab.md. A tier-1 sub_bass + low_pad (cascading to MT-32 as
+# a string tenor) and a tier-3 celesta sparkle already exist; this file
+# re-voices only the three GB channels and adds no switches.
+#
+# Channel roles (enhancement header audit + frame-exact analysis):
+# ch2 (G#4..A5) is the melody, on top; ch1 (E4..E5) is the sustained
+#   harmony just beneath it; ch3 (wave, A3..A4) is the motor ostinato.
+#
+# This file exists because there was NO override: the base renders on the
+# 80/80/38 defaults — MT-32 factory "Sax 3" + "Sax 3" (identical timbres
+# collapsing wherever ch1/ch2 move together) plus "Warm Bell" on ch3,
+# whose long decay + hall reverb smears the 8th-note motor over the
+# quiet-lab texture (at default volume 110).
+channels:
+  1:
+    mt32_program: "Clarinet 1"  # same reed family as the sax lead — maximum
+    gm_program: "Clarinet"      # blend, distinct preset (the distinguished-
+                                # sisters idea across the reed choir);
+                                # Clarinet 2 is the swap candidate if this
+                                # one reads too dark/bright by ear
+    volume: 92                  # under the sax lead
+    pan: 48                     # harmony left, melody right
+  2:
+    mt32_program: "Sax 3"       # the liked lead voice, kept as-voiced
+                                # (maintainer audition 2026-09-24)
+    gm_program: "Trumpet"       # GM brass, NOT sax: this GM synth's sax
+                                # samples play out of tune (GameCorner
+                                # precedent); trumpet is the proven in-tune
+                                # GM lead (Cities1 precedent)
+    volume: 100                 # the tune — foreground
+    pan: 80
+  3:
+    mt32_program: "Harp 1"      # plucked warmth for the 8th-note motor;
+    gm_program: "Orchestral Harp"  # gentle enough for the lab
+                                # (PalletTown ch3 precedent for the treble
+                                # inner-line role). Pizzicato was the drier
+                                # alternative; harp flows better through
+                                # statement 2's steady eighths. Audition
+                                # watch: the tier-1 pad cascades as
+                                # sustained strings just below (C#3–G#3) —
+                                # plucked-vs-sustained should separate them,
+                                # but the ear decides.
+    volume: 72                  # motor audible between the spread lines
+    pan: 64
