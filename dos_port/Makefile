@@ -4490,6 +4490,22 @@ assets/midi/.stamp-gb: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
 	python3 tools/audio/gb_to_midi.py --target gb
 	@touch $@
 
+# GM debugger baseline: same simulation + overrides as mt32, but programs
+# resolved through the GM bank and enhancement tracks merged with gm_program
+# (the GM device tab consumes this, never the mt32 target — MT-32 program
+# numbers displayed as GM names are the classic symptom of a missing/stale
+# gm file, e.g. MT-32 90/88 "Trombone 1"/"Trumpet 1" reading as GM "Pad 3
+# (polysynth)"/"Pad 1 (new age)"). Not consumed by the ROM build; read at
+# runtime by dos-gb-audio-dbg (midiPathFor "gm"). Deps mirror .stamp-mt32.
+assets/midi/.stamp-gm: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
+		tools/audio/gen_audio_data.py ../audio.asm \
+		../constants/music_constants.asm \
+		tools/audio/yaml_lint.py tools/audio/music_analysis.py \
+		$(wildcard tools/audio/overrides/*.yaml) \
+		$(wildcard tools/audio/enhancements/*.yaml)
+	python3 tools/audio/gb_to_midi.py --target gm
+	@touch $@
+
 assets/music_streams.inc: assets/midi/.stamp-mt32 tools/audio/midi_to_stream.py
 	python3 tools/audio/midi_to_stream.py --target mt32
 
@@ -5154,6 +5170,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/sfx_data.inc assets/music_streams.inc assets/mt32_sysex.inc \
         assets/midi/.stamp-gb \
+        assets/midi/.stamp-gm \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \
         assets/mon_icons.inc \
         assets/font_1bpp.inc assets/font_extra_2bpp.inc \
