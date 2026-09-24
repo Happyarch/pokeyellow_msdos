@@ -23,6 +23,14 @@
     "approved": true,
     "date": "2026-09-11"
   },
+  "MUSIC_DEFEATED_TRAINER": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
+  "MUSIC_DEFEATED_WILD_MON": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
   "MUSIC_DUNGEON1": {
     "approved": true,
     "date": "2026-09-19"
@@ -35,9 +43,17 @@
     "approved": true,
     "date": "2026-09-19"
   },
+  "MUSIC_GAME_CORNER": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
   "MUSIC_GYM_LEADER_BATTLE": {
     "approved": true,
     "date": "2026-08-12"
+  },
+  "MUSIC_INDIGO_PLATEAU": {
+    "approved": true,
+    "date": "2026-09-24"
   },
   "MUSIC_JIGGLYPUFF_SONG": {
     "approved": true,
@@ -75,6 +91,10 @@
     "approved": true,
     "date": "2026-09-12"
   },
+  "MUSIC_ROUTES1": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
   "MUSIC_ROUTES2": {
     "approved": true,
     "date": "2026-09-19"
@@ -94,6 +114,10 @@
   "MUSIC_SS_ANNE": {
     "approved": true,
     "date": "2026-09-11"
+  },
+  "MUSIC_SURFING": {
+    "approved": true,
+    "date": "2026-09-24"
   },
   "MUSIC_VERMILION": {
     "approved": true,
