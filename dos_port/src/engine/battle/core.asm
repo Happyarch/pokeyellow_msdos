@@ -5496,6 +5496,7 @@ ChooseNextMon:
     call LoadBattleMonFromParty
     call GBPalWhiteOut
     call LoadHudTilePatterns
+    call RestoreBattleScreenState       ; port-only teardown — see RestoreBattleScreenState
     call LoadScreenTilesFromBuffer1
     call RunDefaultPaletteCommand
     call GBPalNormal
@@ -6060,7 +6061,7 @@ EnemySendOutFirstMon:
     ; not at all and dispatched on junk. See faint_switch.asm. Ledger M-72.
     mov bh, SET_PAL_BATTLE                        ; ld b, SET_PAL_BATTLE
     call RunPaletteCommand
-    ; pret: GBPalNormal (palette fade path) — Phase-5 deferral, unchanged.
+    call GBPalNormal                              ; pret core.asm:1459 — restores BGP/OBP0 after .next7's GBPalWhiteOut
     ; pret: ld hl, TrainerSentOutText / call PrintText
     mov esi, TrainerSentOutText
     call PrintBattleText
