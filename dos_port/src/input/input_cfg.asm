@@ -42,6 +42,7 @@ global cfg_key_start
 global cfg_key_select
 global g_input_device
 global g_covox_rate
+global g_cry_rate
 global g_cfg_audio_device
 
 ; Input device constants
@@ -76,6 +77,9 @@ g_input_device: db INPUT_DEVICE_KBD
 ; Covox DAC render/playback rate in Hz (POKEMON.CFG [audio] covox_rate,
 ; decimal; clamped at parse to 4000-44500). Default is the DSS fixed rate.
 g_covox_rate: dw 7000
+; Pokemon cry render/playback rate in Hz (POKEMON.CFG [audio] cry_rate,
+; decimal; clamped at parse to 4000-44500). Default is 22050 Hz.
+g_cry_rate:   dw 22050
 ; Requested audio device (POKEMON.CFG [audio] device, parsed once at boot;
 ; zero per-frame cost). 0xFF = auto (default: /FLAG wins, else the OPL probe
 ; / speaker auto-fill decides); 0 = none (silence like /NOSOUND once no /FLAG
@@ -109,6 +113,7 @@ opt_table:
     dd .str_select, cfg_key_select, PARSE_TYPE_SCANCODE
     dd .str_device, g_input_device, PARSE_TYPE_DEVICE
     dd .str_covox_rate, g_covox_rate, PARSE_TYPE_COVOX_RATE
+    dd .str_cry_rate, g_cry_rate, PARSE_TYPE_COVOX_RATE
     ; The audio DEVICE row shares its key text with the input row above; the
     ; [section] decides which one a line means (see cfg_section + the guards
     ; in apply_config_key_val). Header-less files keep the legacy input
@@ -126,6 +131,7 @@ opt_table:
 .str_select: db "SELECT", 0
 .str_device: db "DEVICE", 0
 .str_covox_rate: db "COVOX_RATE", 0
+.str_cry_rate:   db "CRY_RATE", 0
 .str_audio_device: db "DEVICE", 0
 
 ; --- Key name to scancode lookup table ---

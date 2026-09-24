@@ -86,6 +86,10 @@ extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachu
 extern CryData                          ; assets/cry_data.inc via src/data/pokemon/cries.asm
 extern PlaySound                        ; src/home/audio.asm — AL = sound id
 extern WaitForSoundToFinish             ; src/home/delay.asm — block until channels drain
+extern g_sb_present                     ; src/audio/audio_hal.asm
+extern g_shim_device                    ; src/audio/audio_hal.asm
+extern sb_cry_play                      ; src/audio/sb_pcm.asm (Stage 2/3)
+DEV_COVOX equ 5
 %ifdef DEBUG_PARTYMENU
 extern DelayFrame
 extern DumpBackbuffer
@@ -638,6 +642,8 @@ LoadFrontSpriteByMonIndex:
 ; The wLowHealthAlarm save/zero/restore is pret's: the alarm must not fight the
 ; cry for the SFX channels while it plays.
 ;
+; DEVIATION{class=HAL; pret=home/pokemon.asm:PlayCry; behavior=Sound Blaster DSP cry playback (sb_cry_play) used when SB present unless Covox forced, falling back to pret GetCryData/PlaySound/WaitForSoundToFinish; evidence=Game Boy APU cry channels have no OPL FM counterpart and direct DSP DAC plays synthesized 8-bit PCM faithfully while preserving blocking duration; lifetime=permanent hardware routing}
+;
 ; In:  AL = species index. Out: AL/EBX preserved as pret preserves A/BC.
 ; ---------------------------------------------------------------------------
 PlayCry:
@@ -647,9 +653,20 @@ PlayCry:
     push eax                                ; push af
     mov byte [ebp + wLowHealthAlarm], 0     ; xor a / ld [wLowHealthAlarm], a
     mov al, bh                              ; ld a, b
+
+    cmp byte [g_sb_present], 0
+    jz .fallback
+    cmp byte [g_shim_device], DEV_COVOX
+    je .fallback
+    call sb_cry_play
+    jmp .done
+
+.fallback:
     call GetCryData
     call PlaySound
     call WaitForSoundToFinish               ; THE blocking step — see above
+
+.done:
     pop eax                                 ; pop af
     mov [ebp + wLowHealthAlarm], al
     pop ebx                                 ; pop bc

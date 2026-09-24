@@ -8,6 +8,14 @@ These files are **human-owned Tier-2 configuration sources** — never wiped by 
 
 One file per sound effect named after its constant in `assets/audio_constants.inc` (without the `SFX_` prefix, case-insensitive, e.g. `Go_Outside.yaml` or `SFX_Go_Outside.yaml`).
 
+## Excluded: Pokémon Cries
+
+**No YAML profiles should ever be created for Pokémon cries (`SFX_CRY_*`).**
+
+Cries in Generation 1 are not static single-channel sound effects. They are dynamic 3-channel Game Boy APU routines utilizing rapid 60 Hz duty-cycle modulation, 11-bit frequency overflow, and chaotic 7-bit/15-bit LFSR scrambling. They cannot be represented by static OPL FM patch overrides.
+
+Instead, Pokémon cries route through the dedicated cry engine (Sound Blaster DSP direct mode/DMA, Covox/DSS DAC, GUS DRAM, or native SID pulse-width modulation). `tools/audio/gen_sfx_data.py` will reject any attempt to define a cry profile in this directory.
+
 ## Schema
 
 ```yaml

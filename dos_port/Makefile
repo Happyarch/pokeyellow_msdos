@@ -589,7 +589,8 @@ AUDIO_SRCS := \
     src/audio/play_battle_music.asm \
     src/audio/pokedex_rating_sfx.asm \
     src/audio/poke_flute.asm \
-    src/audio/alternate_tempo.asm
+    src/audio/alternate_tempo.asm \
+    src/audio/cry_synth.asm
 
 # Phase 2: game-loop core
 GAME_SRCS := \

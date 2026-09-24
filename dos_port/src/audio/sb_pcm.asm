@@ -26,9 +26,12 @@
 
 bits 32
 
+%include "gb_memmap.inc"
+
 global sb_pcm_play
 global pcm_pace_init
 global pcm_pace
+global sb_cry_play
 
 %ifndef ENABLE_PIKA_PCM
 %define ENABLE_PIKA_PCM 1
@@ -38,6 +41,22 @@ global pcm_pace
 
 extern g_sb_base                  ; src/audio/audio_hal.asm (BLASTER A field)
 extern current_pit_divisor        ; boot/timing.asm
+
+; --- Pokemon cry audio engine externs (Stage 2/3) ---
+extern opl_silence                ; src/audio/opl_shim.asm
+extern enh_seq_stop               ; src/audio/opl_enh.asm
+extern midi_all_notes_off         ; src/audio/mpu401.asm
+extern tandy_silence              ; src/audio/tandy_shim.asm
+extern spk_silence                ; src/audio/spk_shim.asm
+extern covox_silence              ; src/audio/covox_shim.asm
+extern cms_silence                ; src/audio/cms_shim.asm
+extern innova_silence             ; src/audio/innova_shim.asm
+extern g_cry_rate                 ; src/input/input_cfg.asm
+extern cry_synth_set_rate         ; src/audio/cry_synth.asm
+extern cry_pcm_buffer             ; src/audio/cry_synth.asm
+extern cry_render_species         ; src/audio/cry_synth.asm
+extern g_cry_frames_rendered      ; src/audio/cry_synth.asm
+extern tick_count                 ; boot/timing.asm
 
 PIT_CMD_PORT    equ 0x43
 PIT_CH0_PORT    equ 0x40
@@ -158,6 +177,85 @@ pit_latch_ch0:
     xchg al, ah                   ; AX = lo | hi<<8
     ret
 
+; ---------------------------------------------------------------------------
+; sb_cry_play — play monster AL's cry on Sound Blaster DSP (Stage 2/3).
+; Mutes all active sound sources, sets sample rate, renders cry via APU synth
+; into cry_pcm_buffer, paces direct-mode DSP playback, reconciles frame timing
+; for frozen tick_count / hFrameCounter / autokey_frame, and clears SFX channels.
+;
+; In:  AL  = species ID (1..151)
+;      EBP = GB memory base
+; Out: AL, EBX, EBP preserved.
+; Clobbers: ECX, EDX, ESI, EDI.
+; ---------------------------------------------------------------------------
+sb_cry_play:
+    push ebx
+    push esi
+    push edi
+    push eax                      ; preserve AL (species ID) on stack
+
+    ; a) Silence/mute all active sound sources:
+    call opl_silence
+    call enh_seq_stop
+    call midi_all_notes_off
+    call tandy_silence
+    call spk_silence
+    call covox_silence
+    call cms_silence
+    call innova_silence
+
+    ; b) Setup sample rate:
+    movzx eax, word [g_cry_rate]
+    call cry_synth_set_rate
+
+    ; c) Render the cry into cry_pcm_buffer:
+    mov al, [esp]                 ; restore AL = species ID
+    mov edi, cry_pcm_buffer
+    mov ecx, 65536
+    call cry_render_species
+    ; EAX = samples rendered
+
+    ; d) If EAX > 0:
+    test eax, eax
+    jz .reconcile
+    push eax                      ; save samples rendered
+
+    ; Calculate pacing step: step = (1193182 * 256 + rate / 2) / rate
+    ; 1193182 * 256 = 305454592
+    movzx ecx, word [g_cry_rate]
+    test ecx, ecx
+    jnz .haveRate
+    mov ecx, 22050
+.haveRate:
+    mov eax, ecx
+    shr eax, 1                    ; rate / 2
+    add eax, 305454592            ; 1193182 * 256 + rate / 2
+    xor edx, edx
+    div ecx                       ; EAX = step in 24.8 fixed point
+
+    pop ecx                       ; ECX = samples count
+    mov esi, cry_pcm_buffer
+    call sb_pcm_play
+
+.reconcile:
+    ; e) Reconcile frame timing:
+    mov ecx, [g_cry_frames_rendered]
+    add [tick_count], ecx
+    sub byte [ebp + hFrameCounter], cl
+
+    ; f) Clear stale sound IDs on CHAN5-CHAN8:
+    xor eax, eax
+    mov [ebp + wChannelSoundIDs + CHAN5], al
+    mov [ebp + wChannelSoundIDs + CHAN6], al
+    mov [ebp + wChannelSoundIDs + CHAN7], al
+    mov [ebp + wChannelSoundIDs + CHAN8], al
+
+    pop eax                       ; restore AL (species ID)
+    pop edi
+    pop esi
+    pop ebx
+    ret
+
 section .bss
 align 4
 pace_step:  resd 1                ; PIT clocks per pacing tick, 24.8 fp
@@ -170,6 +268,7 @@ section .text
 sb_pcm_play:
 pcm_pace_init:
 pcm_pace:
+sb_cry_play:
     xor eax, eax
     ret
 

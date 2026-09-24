@@ -22,10 +22,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_opl_patches import PATCH_ORDER
 
 
-def load_sfx_constants() -> dict[str, int]:
-    """Parse audio_constants.inc for SFX_* equ values."""
+def load_sfx_constants() -> tuple[dict[str, int], int | None, int | None]:
+    """Parse audio_constants.inc for SFX_* equ values and cry bounds."""
     constants = {}
-    pattern = re.compile(r"^(SFX_\w+)\s+equ\s+(0x[0-9A-Fa-f]+|\d+)")
+    cry_start = None
+    cry_end = None
+    pattern = re.compile(r"^([A-Za-z0-9_]+)\s+equ\s+(0x[0-9A-Fa-f]+|\d+)")
     with open(CONST_INC, "r", encoding="utf-8") as f:
         for line in f:
             m = pattern.match(line.strip())
@@ -34,11 +36,15 @@ def load_sfx_constants() -> dict[str, int]:
                 val_str = m.group(2)
                 val = int(val_str, 16) if val_str.startswith("0x") else int(val_str)
                 constants[name] = val
-    return constants
+                if name == "CRY_SFX_START":
+                    cry_start = val
+                elif name == "CRY_SFX_END":
+                    cry_end = val
+    return constants, cry_start, cry_end
 
 
 def main():
-    sfx_ids = load_sfx_constants()
+    sfx_ids, cry_start, cry_end = load_sfx_constants()
     patch_indices = {name: idx for idx, name in enumerate(PATCH_ORDER)}
 
     rows: list[tuple[int, int, int, int, str, str]] = []
@@ -65,6 +71,20 @@ def main():
                 continue
 
             sfx_id = sfx_ids[sfx_name_upper]
+
+            # Reject any profile attempting to configure a Pokémon cry.
+            # Cries are multi-channel APU routines rendered via the dedicated cry/DAC path,
+            # not static OPL FM patch overrides.
+            if sfx_name_upper.startswith("SFX_CRY_") or (
+                cry_start is not None and cry_end is not None and cry_start <= sfx_id < cry_end
+            ):
+                print(
+                    f"Error: {ypath.name}: Pokémon cries ({sfx_name}) cannot have SFX YAML profiles. "
+                    "Cries are dynamic multi-channel APU routines routed via the dedicated cry/DAC path, "
+                    "not static OPL FM patch overrides.",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
             channels = data.get("channels", {})
             for ch_num, ch_data in channels.items():
                 try:
