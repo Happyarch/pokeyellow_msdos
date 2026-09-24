@@ -11,8 +11,10 @@ Covers the toolchain side of the switches plan:
   * audition/midi_renderer: timelines + send_init(at_frame) on the re-sync
     paths (fabricated session — no ALSA hardware needed).
   * Cities2 pilot: 303 base notes + 2 timed 0xC0s at frames 1443/1928.
-  * Compatibility: all 16 enhancement + all override files lint clean;
-    switchless songs emit exactly one tick-0 0xC0 per melodic channel.
+  * Compatibility: all enhancement + override files lint clean (counts
+    pinned as tripwires — bump when adding songs); switchless songs emit
+    exactly one tick-0 0xC0 per melodic channel; every switch-using song
+    is registered below with its exact per-channel switch counts.
 
 Usage:
     python3 dos_port/tools/audio/test_switches.py
@@ -755,7 +757,8 @@ class SwitchTest(unittest.TestCase):
     # -- compatibility ------------------------------------------------------
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
-        self.assertEqual(len(files), 21)
+        # Bump when adding songs (tripwire: notices added/removed files).
+        self.assertEqual(len(files), 33)
         bad = []
         for path in files:
             rep, _, _ = lint(path)
@@ -794,13 +797,19 @@ class SwitchTest(unittest.TestCase):
         labels = {lbl for n, lbl in consts.items() if n.startswith("MUSIC_")}
         files = sorted((HERE / "overrides").glob("*.yaml"))
         canonical = [p for p in files if p.stem in labels]
-        # 20 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
+        # 33 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
         # matches no song label and is never read by load_overrides).
-        self.assertEqual(len(canonical), 20)
+        # Bump when adding songs (tripwire: notices added/removed files).
+        self.assertEqual(len(canonical), 33)
+        # Exact per-song switch sets (regression pins: a silently dropped
+        # or added switch still lints clean, so only these numbers catch
+        # it). Register a song here when giving it switches; every other
+        # song must resolve none.
         switched = {
             "Music_Cities2": {2: 2},
             "Music_Celadon": {1: 2, 2: 2},
             "Music_WildBattle": {1: 6, 2: 2},
+            "Music_Dungeon3": {1: 2, 3: 4},
         }
         bad = []
         for path in canonical:

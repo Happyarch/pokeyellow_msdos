@@ -77,6 +77,13 @@ own patch), or names a GM percussion program (Timpani 48, or the Percussive
 family 113–120). This is intrinsic to the file — there is no CLI flag to
 remember, and the asset pipeline sees the same verdict you do.
 
+After lint passes: if you added timed program switches to a song, register
+its exact per-channel switch counts in the `switched` dict in
+`dos_port/tools/audio/test_switches.py` (every unregistered song must
+resolve zero switches — a silently dropped switch still lints clean, so
+only those numbers catch it), and bump the file counts there when adding a
+song. Then run `python3 dos_port/tools/audio/test_switches.py` to green.
+
 ---
 
 ## Decision Flowchart — When to Check References

@@ -130,6 +130,13 @@ family 113–120) are exempt from the pitched-voice rules — unison-doubling,
 in-channel overlap, and pitch range — since drums/hits share pitches by
 nature; the OPL3 voice budget (polyphony) still counts them.
 
+After lint passes: if you added timed program switches to a song, register
+its exact per-channel switch counts in the `switched` dict in
+`dos_port/tools/audio/test_switches.py` (every unregistered song must
+resolve zero switches — a silently dropped switch still lints clean, so
+only those numbers catch it), and bump the file counts there when adding a
+song. Then run `python3 dos_port/tools/audio/test_switches.py` to green.
+
 ---
 
 ## Arrangement Priorities by Track Type
