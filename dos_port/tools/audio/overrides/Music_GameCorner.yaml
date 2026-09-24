@@ -1,0 +1,52 @@
+# Music_GameCorner — per-song MIDI overrides (see README.md for schema).
+#
+# The Celadon Game Corner casino theme (B major, 4/4, 26 measures:
+# 2-measure intro + 24-measure loop body). 3 channels, no noise:
+# ch1 (pulse 1) is the fast ornate jazz melody (B3–B5, vibrato);
+# ch2 (pulse 2) is the flowing inner harmony (B2–C#4, arpeggio steps);
+# ch3 (wave) is the constant 16th-note "casino ticker" arpeggio cycling
+# root/3rd/5th chord tones in oct 4 (C#4–B4) — VERY DENSE, every chord
+# tone covered each beat via rapid arpeggio.
+#
+# This file exists because there was NO override: the base rendered on the
+# 80/80/38 defaults — MT-32 factory "Sax 3" + "Sax 3" (IDENTICAL timbres
+# collapsing wherever ch1/ch2 move together, which per the score analysis
+# is most of the A section's homophonic writing) plus "Warm Bell" on ch3,
+# whose long decay + hall reverb washes the 16th ticker over both lines
+# (and reads far too loud for a background arpeggio). User audition
+# 2026-09-24: the bell is meh and has to go.
+#
+# Cure follows the Pokecenter precedent (same 3-channel no-noise shape,
+# same diagnosis, audition-liked): the duet is back as DISTINGUISHED
+# sisters (Sax 2 under Sax 3 — same reed family that blends for the
+# A-section homophony, distinct presets that don't collapse in the
+# B-section sequential imitation), and ch3 gets the proven dry pluck
+# instead of the bell (Celadon/Cities1/Vermilion cure for bell wash on
+# busy patterned wave figures). Jazz horns suit the casino's flashy,
+# playful character; the pluck keeps the ticker glittering underneath
+# instead of smearing over the horns.
+#
+# Considered and rejected: dual factory Square Waves + custom Sawtooth
+# (WildBattle pattern). Identical squares reintroduce the collapse bug on
+# the homophonic A section, and the sustaining 2-partial Sawtooth on
+# constant 16ths would be harsh where a short-decay pluck breathes.
+# If the chip-lead character is ever wanted back, voice ch1/ch2 as
+# Square Wave + Sawtooth (distinguished, never identical) — not two
+# of the same.
+channels:
+  1:
+    mt32_program: "Sax 3"       # lead horn: the ornate jazz melody (B3–B5)
+    gm_program: "Alto Sax"
+    volume: 100                 # foreground over the inner line + ticker
+    pan: 80                     # melody right, inner line left
+  2:
+    mt32_program: "Sax 2"       # lower sister under the lead; same reed
+    gm_program: "Tenor Sax"     # family, distinct preset — blends, not collapses
+    volume: 92                  # under the lead
+    pan: 48
+  3:
+    mt32_program: "Pizzicato"   # dry pluck for the 16th-note ticker arpeggio;
+    gm_program: "Pizzicato Strings"  # kills the Warm Bell decay wash
+    volume: 70                  # dense 16ths sit well under both horns
+                                # (cf. Celadon 60, Cities1 72, Pokecenter 76)
+    pan: 64
