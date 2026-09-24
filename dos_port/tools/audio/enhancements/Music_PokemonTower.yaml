@@ -29,7 +29,7 @@ channels:
     tier: 2
     percussion: true
     mt32_patch: "NightWind"
-    gm_program: 122           # Breath Noise (GM)
+    gm_program: 79
     pan: left
     volume: 95                # audible ambient atmospheric bed
     velocity: 85

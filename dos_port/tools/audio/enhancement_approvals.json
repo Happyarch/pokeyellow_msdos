@@ -23,6 +23,10 @@
     "approved": true,
     "date": "2026-09-11"
   },
+  "MUSIC_DEFEATED_GYM_LEADER": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
   "MUSIC_DEFEATED_TRAINER": {
     "approved": true,
     "date": "2026-09-24"
@@ -43,7 +47,15 @@
     "approved": true,
     "date": "2026-09-19"
   },
+  "MUSIC_FINAL_BATTLE": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
   "MUSIC_GAME_CORNER": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
+  "MUSIC_GYM": {
     "approved": true,
     "date": "2026-09-24"
   },
@@ -74,6 +86,14 @@
   "MUSIC_MEET_MALE_TRAINER": {
     "approved": true,
     "date": "2026-09-19"
+  },
+  "MUSIC_MUSEUM_GUY": {
+    "approved": true,
+    "date": "2026-09-24"
+  },
+  "MUSIC_OAKS_LAB": {
+    "approved": true,
+    "date": "2026-09-24"
   },
   "MUSIC_PALLET_TOWN": {
     "approved": true,

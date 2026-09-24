@@ -1,0 +1,13 @@
+# overrides/Music_MeetProfOak.yaml - flute for Oak's lyrical ch2.
+#
+# ch2 is the stepwise lyrical line (GB o3-5, B-C#-D#-E waves, G#16 climax);
+# flute reads gentle-mentor without brassiness. ch1 untouched: the sq1
+# call/response octave game IS the piece - re-voicing it would blur Masuda's
+# device. ch3 sparse pings stay chip. GM Flute to match per-target.
+channels:
+  2:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 96
+    pan: 64
+

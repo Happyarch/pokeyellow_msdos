@@ -1,0 +1,261 @@
+# enhancements/Music_DefeatedGymLeader.yaml - gym-leader victory sting.
+#
+# Sibling template (Music_DefeatedTrainer/WildMon): 2 tier-1 voices -
+# sub_bass roots + low_pad 3rd/5th, no tier 3 (looping sting; a chime accent
+# would fire every pass), plus one tier-2 RHYTHM voice (user request):
+# ceremonial victory drums - low-tom quarters + kick, crashes on section
+# downbeats, snare fill across the loop seam. Rests the 2-bar intro (first
+# pass only), joins at the m3 loop entry and drives every pass after.
+# Static-loop note: body content is identical every pass, so drums cannot
+# sit out body-pass-1 and join pass 2 - the intro rest is the only
+# first-pass-only space, and the seam fill is the end-of-iteration accent.
+# Authored against
+# music_analysis.py Music_DefeatedGymLeader (D major 0.88, 26 measures, loop
+# m3) and victory_gym_leader.md (binary A A' B B' B B'', I-V/V-V-I B section).
+#
+# Register audit (YAML octaves are MIDI octaves, C4 = 60; verified with
+# simulate_song: 413 base notes, floor A3 (57) at mm11/15/19/23 - the ch1
+# low fanfare dips. Bass octave 2 (max A2 = 45) clears everything. Pad
+# 3rds/5ths in octave 3: A3 sounds only at m2/m6/m16 (floors 69/59/61, no
+# 57 present); every D-major bar takes F#3, stepping around the A3 pedal.
+# No chord 7ths in the pad (Trainer-sting discipline). No timed switches.
+# Loop body written out explicitly mm1-26.
+schema: 1
+song: Music_DefeatedGymLeader
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass
+    mt32_patch: 29        # Syn Bass 1 (sibling family)
+    gm_program: 39        # GM Synth Bass 1
+    pan: center
+    volume: 72
+    velocity: 80
+    events:
+      - {m: 1, b: 1, d: 2, n: D2}
+      - {m: 1, b: 3, d: 2, n: D2}
+      - {m: 2, b: 1, d: 2, n: D2}
+      - {m: 2, b: 3, d: 2, n: F#2}
+      - {m: 3, b: 1, d: 2, n: B2}
+      - {m: 3, b: 3, d: 2, n: A2}
+      - {m: 4, b: 1, d: 2, n: D2}
+      - {m: 4, b: 3, d: 2, n: D2}
+      - {m: 5, b: 1, d: 2, n: B2}
+      - {m: 5, b: 3, d: 2, n: A2}
+      - {m: 6, b: 1, d: 2, n: F#2}
+      - {m: 6, b: 3, d: 2, n: B2}
+      - {m: 7, b: 1, d: 2, n: D2}
+      - {m: 7, b: 3, d: 2, n: A2}
+      - {m: 8, b: 1, d: 2, n: D2}
+      - {m: 8, b: 3, d: 2, n: D2}
+      - {m: 9, b: 1, d: 2, n: D2}
+      - {m: 9, b: 3, d: 2, n: A2}
+      - {m: 10, b: 1, d: 2, n: D2}
+      - {m: 10, b: 3, d: 2, n: B2}
+      - {m: 11, b: 1, d: 2, n: D2}
+      - {m: 11, b: 3, d: 2, n: D2}
+      - {m: 12, b: 1, d: 2, n: D2}
+      - {m: 12, b: 3, d: 2, n: D2}
+      - {m: 13, b: 1, d: 2, n: C#2}
+      - {m: 13, b: 3, d: 2, n: E2}
+      - {m: 14, b: 1, d: 2, n: E2}
+      - {m: 14, b: 3, d: 2, n: E2}
+      - {m: 15, b: 1, d: 2, n: A2}
+      - {m: 15, b: 3, d: 2, n: A2}
+      - {m: 16, b: 1, d: 2, n: A2}
+      - {m: 16, b: 3, d: 2, n: F#2}
+      - {m: 17, b: 1, d: 2, n: D2}
+      - {m: 17, b: 3, d: 2, n: E2}
+      - {m: 18, b: 1, d: 2, n: D2}
+      - {m: 18, b: 3, d: 2, n: D2}
+      - {m: 19, b: 1, d: 2, n: D2}
+      - {m: 19, b: 3, d: 2, n: D2}
+      - {m: 20, b: 1, d: 2, n: D2}
+      - {m: 20, b: 3, d: 2, n: D2}
+      - {m: 21, b: 1, d: 2, n: C#2}
+      - {m: 21, b: 3, d: 2, n: E2}
+      - {m: 22, b: 1, d: 2, n: E2}
+      - {m: 22, b: 3, d: 2, n: E2}
+      - {m: 23, b: 1, d: 2, n: A2}
+      - {m: 23, b: 3, d: 2, n: A2}
+      - {m: 24, b: 1, d: 2, n: A2}
+      - {m: 24, b: 3, d: 2, n: A2}
+      - {m: 25, b: 1, d: 0.4, n: 38}
+      - {m: 25, b: 3, d: 0.4, n: 38}
+      - {m: 26, b: 1, d: 2, n: D2}
+      - {m: 26, b: 3, d: 2, n: D2}
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad
+    mt32_patch: 49        # Str Sect 1 on the cascade
+    gm_program: 90        # GM Pad 2 (warm)
+    pan: center
+    volume: 64
+    velocity: 76
+    events:
+      - {m: 1, b: 1, d: 2, n: F#3}
+      - {m: 1, b: 3, d: 2, n: F#3}
+      - {m: 2, b: 1, d: 2, n: F#3}
+      - {m: 2, b: 3, d: 2, n: A3}
+      - {m: 3, b: 1, d: 2, n: D3}
+      - {m: 3, b: 3, d: 2, n: C#3}
+      - {m: 4, b: 1, d: 2, n: F#3}
+      - {m: 4, b: 3, d: 2, n: F#3}
+      - {m: 5, b: 1, d: 2, n: D3}
+      - {m: 5, b: 3, d: 2, n: C#3}
+      - {m: 6, b: 1, d: 2, n: A3}
+      - {m: 6, b: 3, d: 2, n: D3}
+      - {m: 7, b: 1, d: 2, n: F#3}
+      - {m: 7, b: 3, d: 2, n: C#3}
+      - {m: 8, b: 1, d: 2, n: F#3}
+      - {m: 8, b: 3, d: 2, n: F#3}
+      - {m: 9, b: 1, d: 2, n: F#3}
+      - {m: 9, b: 3, d: 2, n: C#3}
+      - {m: 10, b: 1, d: 2, n: F#3}
+      - {m: 10, b: 3, d: 2, n: D3}
+      - {m: 11, b: 1, d: 2, n: F#3}
+      - {m: 11, b: 3, d: 2, n: F#3}
+      - {m: 12, b: 1, d: 2, n: F#3}
+      - {m: 12, b: 3, d: 2, n: F#3}
+      - {m: 13, b: 1, d: 2, n: E3}
+      - {m: 13, b: 3, d: 2, n: G#3}
+      - {m: 14, b: 1, d: 2, n: G#3}
+      - {m: 14, b: 3, d: 2, n: G#3}
+      - {m: 15, b: 1, d: 2, n: C#3}
+      - {m: 15, b: 3, d: 2, n: C#3}
+      - {m: 16, b: 1, d: 2, n: C#3}
+      - {m: 16, b: 3, d: 2, n: A3}
+      - {m: 17, b: 1, d: 2, n: F#3}
+      - {m: 17, b: 3, d: 2, n: G#3}
+      - {m: 18, b: 1, d: 2, n: F#3}
+      - {m: 18, b: 3, d: 2, n: F#3}
+      - {m: 19, b: 1, d: 2, n: F#3}
+      - {m: 19, b: 3, d: 2, n: F#3}
+      - {m: 20, b: 1, d: 2, n: F#3}
+      - {m: 20, b: 3, d: 2, n: F#3}
+      - {m: 21, b: 1, d: 2, n: E3}
+      - {m: 21, b: 3, d: 2, n: G#3}
+      - {m: 22, b: 1, d: 2, n: G#3}
+      - {m: 22, b: 3, d: 2, n: G#3}
+      - {m: 23, b: 1, d: 2, n: C#3}
+      - {m: 23, b: 3, d: 2, n: C#3}
+      - {m: 24, b: 1, d: 2, n: C#3}
+      - {m: 24, b: 3, d: 2, n: C#3}
+      - {m: 25, b: 1, d: 0.4, n: 38}
+      - {m: 25, b: 3, d: 0.4, n: 38}
+      - {m: 26, b: 1, d: 2, n: F#3}
+      - {m: 26, b: 3, d: 2, n: F#3}
+
+  - name: victory_drums
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 76
+    velocity: 88
+    events:
+      - {m: 3, b: 1, d: 0.4, n: 36}
+      - {m: 3, b: 2, d: 0.4, n: 47}
+      - {m: 3, b: 3, d: 0.4, n: 36}
+      - {m: 3, b: 4, d: 0.4, n: 47}
+      - {m: 3, b: 1, d: 0.4, n: 49, v: 100}
+      - {m: 4, b: 1, d: 0.4, n: 36}
+      - {m: 4, b: 2, d: 0.4, n: 47}
+      - {m: 4, b: 3, d: 0.4, n: 36}
+      - {m: 4, b: 4, d: 0.4, n: 47}
+      - {m: 5, b: 1, d: 0.4, n: 36}
+      - {m: 5, b: 2, d: 0.4, n: 47}
+      - {m: 5, b: 3, d: 0.4, n: 36}
+      - {m: 5, b: 4, d: 0.4, n: 47}
+      - {m: 6, b: 1, d: 0.4, n: 36}
+      - {m: 6, b: 2, d: 0.4, n: 47}
+      - {m: 6, b: 3, d: 0.4, n: 36}
+      - {m: 6, b: 4, d: 0.4, n: 47}
+      - {m: 7, b: 1, d: 0.4, n: 36}
+      - {m: 7, b: 2, d: 0.4, n: 47}
+      - {m: 7, b: 3, d: 0.4, n: 36}
+      - {m: 7, b: 4, d: 0.4, n: 47}
+      - {m: 8, b: 1, d: 0.4, n: 36}
+      - {m: 8, b: 2, d: 0.4, n: 47}
+      - {m: 8, b: 3, d: 0.4, n: 36}
+      - {m: 8, b: 4, d: 0.4, n: 47}
+      - {m: 9, b: 1, d: 0.4, n: 36}
+      - {m: 9, b: 2, d: 0.4, n: 47}
+      - {m: 9, b: 3, d: 0.4, n: 36}
+      - {m: 9, b: 4, d: 0.4, n: 47}
+      - {m: 10, b: 1, d: 0.4, n: 36}
+      - {m: 10, b: 2, d: 0.4, n: 47}
+      - {m: 10, b: 3, d: 0.4, n: 36}
+      - {m: 10, b: 4, d: 0.4, n: 47}
+      - {m: 11, b: 1, d: 0.4, n: 36}
+      - {m: 11, b: 2, d: 0.4, n: 47}
+      - {m: 11, b: 3, d: 0.4, n: 36}
+      - {m: 11, b: 4, d: 0.4, n: 47}
+      - {m: 11, b: 1, d: 0.4, n: 49, v: 100}
+      - {m: 12, b: 1, d: 0.4, n: 36}
+      - {m: 12, b: 2, d: 0.4, n: 47}
+      - {m: 12, b: 3, d: 0.4, n: 36}
+      - {m: 12, b: 4, d: 0.4, n: 47}
+      - {m: 13, b: 1, d: 0.4, n: 36}
+      - {m: 13, b: 2, d: 0.4, n: 47}
+      - {m: 13, b: 3, d: 0.4, n: 36}
+      - {m: 13, b: 4, d: 0.4, n: 47}
+      - {m: 14, b: 1, d: 0.4, n: 36}
+      - {m: 14, b: 2, d: 0.4, n: 47}
+      - {m: 14, b: 3, d: 0.4, n: 36}
+      - {m: 14, b: 4, d: 0.4, n: 47}
+      - {m: 15, b: 1, d: 0.4, n: 36}
+      - {m: 15, b: 2, d: 0.4, n: 47}
+      - {m: 15, b: 3, d: 0.4, n: 36}
+      - {m: 15, b: 4, d: 0.4, n: 47}
+      - {m: 16, b: 1, d: 0.4, n: 36}
+      - {m: 16, b: 2, d: 0.4, n: 47}
+      - {m: 16, b: 3, d: 0.4, n: 36}
+      - {m: 16, b: 4, d: 0.4, n: 47}
+      - {m: 17, b: 1, d: 0.4, n: 36}
+      - {m: 17, b: 2, d: 0.4, n: 47}
+      - {m: 17, b: 3, d: 0.4, n: 36}
+      - {m: 17, b: 4, d: 0.4, n: 47}
+      - {m: 18, b: 1, d: 0.4, n: 36}
+      - {m: 18, b: 2, d: 0.4, n: 47}
+      - {m: 18, b: 3, d: 0.4, n: 36}
+      - {m: 18, b: 4, d: 0.4, n: 47}
+      - {m: 19, b: 1, d: 0.4, n: 36}
+      - {m: 19, b: 2, d: 0.4, n: 47}
+      - {m: 19, b: 3, d: 0.4, n: 36}
+      - {m: 19, b: 4, d: 0.4, n: 47}
+      - {m: 19, b: 1, d: 0.4, n: 49, v: 100}
+      - {m: 20, b: 1, d: 0.4, n: 36}
+      - {m: 20, b: 2, d: 0.4, n: 47}
+      - {m: 20, b: 3, d: 0.4, n: 36}
+      - {m: 20, b: 4, d: 0.4, n: 47}
+      - {m: 21, b: 1, d: 0.4, n: 36}
+      - {m: 21, b: 2, d: 0.4, n: 47}
+      - {m: 21, b: 3, d: 0.4, n: 36}
+      - {m: 21, b: 4, d: 0.4, n: 47}
+      - {m: 22, b: 1, d: 0.4, n: 36}
+      - {m: 22, b: 2, d: 0.4, n: 47}
+      - {m: 22, b: 3, d: 0.4, n: 36}
+      - {m: 22, b: 4, d: 0.4, n: 47}
+      - {m: 23, b: 1, d: 0.4, n: 36}
+      - {m: 23, b: 2, d: 0.4, n: 47}
+      - {m: 23, b: 3, d: 0.4, n: 36}
+      - {m: 23, b: 4, d: 0.4, n: 47}
+      - {m: 24, b: 1, d: 0.4, n: 36}
+      - {m: 24, b: 2, d: 0.4, n: 47}
+      - {m: 24, b: 3, d: 0.4, n: 36}
+      - {m: 24, b: 4, d: 0.4, n: 47}
+      - {m: 24, b: 1, d: 0.4, n: 49, v: 100}
+      - {m: 25, b: 1, d: 0.4, n: 38}
+      - {m: 25, b: 2, d: 0.4, n: 38}
+      - {m: 25, b: 3, d: 0.4, n: 38}
+      - {m: 25, b: 4, d: 0.4, n: 38}
+      - {m: 26, b: 1, d: 0.4, n: 36}
+      - {m: 26, b: 1.5, d: 0.4, n: 47}
+      - {m: 26, b: 2, d: 0.4, n: 47}
+      - {m: 26, b: 2.5, d: 0.4, n: 47}
+      - {m: 26, b: 3, d: 0.4, n: 36}
+      - {m: 26, b: 3.5, d: 0.4, n: 47}
+      - {m: 26, b: 4, d: 0.4, n: 47}
+      - {m: 26, b: 4.5, d: 0.4, n: 47}

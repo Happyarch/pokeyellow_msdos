@@ -1,0 +1,12 @@
+# overrides/Music_MeetRival.yaml - trumpet bravado for Gary.
+#
+# ch1 is the smirking chromatic lead (GB o3-4, flourish + D-F-F#-G approach);
+# trumpet attack suits the bravado. ch2/ch3 GB-default (high sustains + busy
+# wave stay chip - one base-voice change for a leitmotif). GM Trumpet to match.
+channels:
+  1:
+    mt32_program: "Trumpet 1"
+    gm_program: "Trumpet"
+    volume: 100
+    pan: 64
+

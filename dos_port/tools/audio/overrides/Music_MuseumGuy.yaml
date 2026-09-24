@@ -26,13 +26,13 @@ channels:
                                 # warm and breathy in the B3–B4 register
                                 # (PalletTown ch1 precedent)
     gm_program: "Flute"
-    volume: 108                 # the tune — foreground (bumped per audition
+    volume: 120                 # the tune — foreground (bumped per audition
                                 # 2026-09-24: flute sat under the EP sparkle)
     pan: 80                     # melody right, figuration left
   2:
     mt32_program: "Elec Piano 1"  # bounce for the arpeggiated figuration
     gm_program: "Electric Piano 1"  # (Cities1 motor precedent)
-    volume: 92                  # under the flute
+    volume: 86                  # under the flute
     pan: 48
   3:
     mt32_program: "Pizzicato"   # dry pluck for the octave-6 counter-melody;

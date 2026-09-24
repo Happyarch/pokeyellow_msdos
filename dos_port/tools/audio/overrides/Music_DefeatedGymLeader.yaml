@@ -1,0 +1,25 @@
+# overrides/Music_DefeatedGymLeader.yaml - brass trio (Trainer-sting mirror).
+#
+# Registers from audio/music/defeatedgymleader.asm: ch1 carries the A-section
+# stepwise melody AND the low octave-2 fanfare dips; ch2 takes the high
+# echo/imitation up to octave 5; ch3 is the wave accompaniment. Same device
+# as DefeatedTrainer/WildMon, so the same trio: trombone under the low
+# line (ch1's dips want it), trumpet on the high echo, horn on the pump.
+# Narrow centered stage - a looping sting gets no wide panning. No switches:
+# one uniform fanfare texture, no sectional re-voicing.
+channels:
+  1:
+    mt32_program: "Trombone 1"
+    gm_program: "Trombone"
+    volume: 96
+    pan: 56
+  2:
+    mt32_program: "Trumpet 1"
+    gm_program: "Trumpet"
+    volume: 104
+    pan: 72
+  3:
+    mt32_program: "Fr Horn 1"
+    gm_program: "French Horn"
+    volume: 88
+    pan: 64
