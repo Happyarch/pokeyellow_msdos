@@ -17,11 +17,13 @@
 # 2026-09-24: the bell is meh and has to go.
 #
 # Cure follows the Pokecenter precedent (same 3-channel no-noise shape,
-# same diagnosis, audition-liked): the duet is back as DISTINGUISHED
-# sisters (Sax 2 under Sax 3 — same reed family that blends for the
-# A-section homophony, distinct presets that don't collapse in the
-# B-section sequential imitation), and ch3 gets the proven dry pluck
-# instead of the bell (Celadon/Cities1/Vermilion cure for bell wash on
+# same diagnosis, audition-liked): on MT-32 the duet is back as
+# DISTINGUISHED sisters (Sax 2 under Sax 3 — same reed family that
+# blends for the A-section homophony, distinct presets that don't
+# collapse in the B-section sequential imitation), while GM voices the
+# same two lines as a brass duo (Trombone under Trumpet) because the GM
+# synth's sax samples play audibly out of tune (audition 2026-09-24).
+# Ch3 gets the proven dry pluck instead of the bell (Celadon/Cities1/Vermilion cure for bell wash on
 # busy patterned wave figures). Jazz horns suit the casino's flashy,
 # playful character; the pluck keeps the ticker glittering underneath
 # instead of smearing over the horns.
@@ -36,12 +38,16 @@
 channels:
   1:
     mt32_program: "Sax 3"       # lead horn: the ornate jazz melody (B3–B5)
-    gm_program: "Alto Sax"
+    gm_program: "Trumpet"       # GM brass, NOT sax: the GM synth's sax samples
+                                # play out of tune (audition 2026-09-24); trumpet
+                                # carries the lead in tune (Cities1 precedent)
     volume: 100                 # foreground over the inner line + ticker
     pan: 80                     # melody right, inner line left
   2:
     mt32_program: "Sax 2"       # lower sister under the lead; same reed
-    gm_program: "Tenor Sax"     # family, distinct preset — blends, not collapses
+    gm_program: "Trombone"      # GM brass partner to the trumpet lead
+                                # (DefeatedTrainer/IndigoPlateau/Vermilion
+                                # precedent); same out-of-tune GM saxes avoided
     volume: 92                  # under the lead
     pan: 48
   3:
