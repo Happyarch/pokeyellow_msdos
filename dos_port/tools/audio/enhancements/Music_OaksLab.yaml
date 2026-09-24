@@ -60,6 +60,11 @@
 # Patches mirror the approved Pallet Town set (same family, proven in
 # audition): sub_bass -> MT-32 SynBass1/GM Synth Bass 1; soft_pad ->
 # MT-32 Str Sect 1/GM Pad 2 (warm); celesta -> MT-32 Celesta 1/GM Celesta.
+#
+# Final base voicing (overrides/Music_OaksLab.yaml — read alongside; the
+# register notes above assume it): ch1 Clarinet 1 / Clarinet, ch2 Sax 3
+# lead / Trumpet on GM (GM saxes play out of tune), ch3 Shakuhachi on
+# both targets.
 
 schema: 1
 song: Music_OaksLab

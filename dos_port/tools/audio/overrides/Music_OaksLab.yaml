@@ -25,7 +25,7 @@ channels:
                                 # Clarinet 2 is the swap candidate if this
                                 # one reads too dark/bright by ear
     volume: 92                  # under the sax lead
-    pan: 48                     # harmony left, melody right
+    pan: 20                     # harmony left, melody right
   2:
     mt32_program: "Sax 3"       # the liked lead voice, kept as-voiced
                                 # (maintainer audition 2026-09-24)
@@ -36,15 +36,12 @@ channels:
     volume: 100                 # the tune — foreground
     pan: 80
   3:
-    mt32_program: "Harp 1"      # plucked warmth for the 8th-note motor;
-    gm_program: "Orchestral Harp"  # gentle enough for the lab
-                                # (PalletTown ch3 precedent for the treble
-                                # inner-line role). Pizzicato was the drier
-                                # alternative; harp flows better through
-                                # statement 2's steady eighths. Audition
-                                # watch: the tier-1 pad cascades as
-                                # sustained strings just below (C#3–G#3) —
-                                # plucked-vs-sustained should separate them,
-                                # but the ear decides.
-    volume: 72                  # motor audible between the spread lines
-    pan: 64
+    mt32_program: "Shakuhachi"     # breathy flute for the 8th-note motor — airy
+                                  # enough for the lab, reedy enough to sit with
+                                  # the clarinet/sax choir (maintainer's final
+                                  # pick; replaces Harp 1, tried over Koto)
+    gm_program: "Shakuhachi"      # same voice on GM (stays in tune — unlike
+                                  # the saxes, per the GameCorner lesson)
+    volume: 80                    # motor present between the spread lines,
+                                  # under the sax lead
+    pan: 50                       # near-center motor under the spread duo
