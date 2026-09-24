@@ -758,7 +758,7 @@ class SwitchTest(unittest.TestCase):
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
         # Bump when adding songs (tripwire: notices added/removed files).
-        self.assertEqual(len(files), 34)
+        self.assertEqual(len(files), 35)
         bad = []
         for path in files:
             rep, _, _ = lint(path)

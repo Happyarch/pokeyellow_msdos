@@ -22,9 +22,14 @@ channels:
   1:
     mt32_program: "Square Wave"
   # square 2 — higher, more active secondary voice (reaches E6); disguises the
-  # motive inside a busier line.
+  # motive inside a busier line. Custom "Sawtooth" (timbres.yaml, Patch #27)
+  # instead of factory Square Wave: the detuned-twin saw gives the busy line
+  # more cut against the tier-2 rhythm guitars without another chorus layer.
+  # Audition variable - if it pierces up at E6, revert to "Square Wave".
+  # ch1 stays Square Wave: it is the reserved electric-guitar candidate.
   2:
-    mt32_program: "Square Wave"
+    mt32_program: "Sawtooth"
+    gm_program: "Lead 2 (sawtooth)"
   # wave table — busiest voice (D3-G5): carries the low end and restates the
   # melody near the loop (m.52-53). Atmosphere pads the tense harmonic bed
   # behind the squares (as on Gym Leader), tucked a little under the leads.
