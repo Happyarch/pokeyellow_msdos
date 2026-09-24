@@ -1,0 +1,54 @@
+# Music_MuseumGuy — per-song MIDI overrides (see README.md for schema).
+#
+# The "follow me" theme (Pewter guide, Oak, the mart guy...). A major, 4/4,
+# 10.5 measures: 2-bar dominant intro (E as V) + 4-bar phrase (I–IV–vi7–V7
+# / I–IV–V–I) + 4-bar loop phrase (I–IV–vi7–V7 / I–vi7–V7–I), loop entry at
+# m7 b1.5. Score transcription is guidepost.md ("Guidepost").
+#
+# Channel roles (pret audio/music/museumguy.asm + guidepost.md):
+# ch1 (pulse, GB oct 2-3 ≈ B3–B4) holds the melody — mostly sustained Es
+#   with F#/D neighbor motion. Sparse, singable.
+# ch2 (pulse, GB oct 3-4 ≈ A3–A5) is the busy voice: A–C#–E / D–F#–A
+#   arpeggios, scalar runs, ornamented in the loop. Density 1.83, highest.
+# ch3 (wave) is silent in the intro, off-beat A/G# stabs in phrase 1, then
+#   jumps to GB oct 5-6 (≈ A5–F#6) as a counter-melody in the loop.
+# ch4 is silent until the loop, then a drum pattern (ids 17/18/19) the
+#   transcription calls a snare part — the loop's development, not wallpaper.
+#
+# This file exists because there was NO override: the base renders on the
+# 80/80/38 defaults — MT-32 factory "Sax 3" + "Sax 3" (identical timbres
+# collapsing wherever ch1/ch2 move together) plus "Warm Bell" on ch3,
+# whose long decay + hall reverb at GB octave 6 would smear a piercing
+# wash over the whole stroll (and sits at default volume 110).
+channels:
+  1:
+    mt32_program: "Flute 1"     # lyrical wind for the sustained melody;
+                                # warm and breathy in the B3–B4 register
+                                # (PalletTown ch1 precedent)
+    gm_program: "Flute"
+    volume: 100                 # the tune — foreground
+    pan: 80                     # melody right, figuration left
+  2:
+    mt32_program: "Elec Piano 1"  # bounce for the arpeggiated figuration
+    gm_program: "Electric Piano 1"  # (Cities1 motor precedent)
+    volume: 92                  # under the flute
+    pan: 48
+  3:
+    mt32_program: "Pizzicato"   # dry pluck for the octave-6 counter-melody;
+    gm_program: "Pizzicato Strings"  # kills the Warm Bell wash (Celadon/
+                                # Cities1/Vermilion cure). Glock was the
+                                # alternative; pizz is the proven quantity.
+    volume: 68                  # tucked — high register carries on its own
+                                # (default 110 up there would scream)
+    pan: 64
+drums:
+  # GB-side truth (DRUM_PARAMS / NR43): 17/18/19 share NR43 $22 (same
+  # 15-bit noise burst), differing ONLY in volume (9/7/6). The MIDI path
+  # uses one fixed velocity for all hits, so the dynamics have to live in
+  # the note choice: 17 is the backbeat (loudest) → snare; 18/19 are the
+  # softer subdivision pairs → hats. (Cities1-style kit orchestration.)
+  velocity: 100
+  map:
+    17: 38                      # acoustic snare — the backbeat
+    18: 42                      # closed hat — subdivision ghosts
+    19: 42                      # closed hat — subdivision ghosts

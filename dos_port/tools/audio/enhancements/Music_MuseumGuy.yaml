@@ -1,0 +1,101 @@
+# Music_MuseumGuy — LLM-authored enhancement (Phase E).
+#
+# Song: the "follow me" theme (Pewter guide, Oak, mart guy...). A major,
+# 4/4, 10.5 measures (2-bar dominant intro + 4-bar phrase + 4-bar loop
+# phrase; loop entry at m7 b1.5). Key analysis from
+# music_analysis.py --print Music_MuseumGuy:
+#   tonic: A, mode: major, score 0.828; runner-up E major (0.799) — the
+#   dominant-heavy intro. The ambiguity is intro color, NOT a modulation;
+#   nothing here "fixes" toward E.
+#
+# Source: audio/music/museumguy.asm — 4-channel piece WITH noise:
+#   Ch1 (pulse): sustained-E melody with F#/D neighbors, GB oct 2-3.
+#                Real range ≈ B3–B4 (formulas in gb_to_midi.py).
+#   Ch2 (pulse): busy arpeggio/figuration, GB oct 3-4. Real ≈ A3–A5.
+#                Density 1.83 — the busiest voice (analysis melody_channel
+#                heuristic names ch2, but the singable tune per guidepost.md
+#                is ch1's sustained line; the override voices them flute/EP
+#                accordingly).
+#   Ch3 (wave):  off-beat stabs, then GB oct 5-6 counter-melody in the loop.
+#                Real ≈ A5–F#6. Override voices it Pizzicato, tucked.
+#   Ch4 (noise): silent until the loop, then the snare-part pattern
+#                (ids 17/18/19). Override maps 17→snare, 18/19→hats.
+#
+# Register gap analysis:
+#   - Below B3: EMPTY. Nothing in any GB channel. The single correct
+#     enhancement: a bass floor (same diagnosis as the GameCorner
+#     casino_bass). Everything else is already covered — the loop runs all
+#     four GB channels, so any further voice would crowd the texture.
+#   - Phrase 1 has no drums BY DESIGN (snare enters at the loop as
+#     development). No percussion added — rest where the GB rests.
+#
+# Enhancement strategy: ONE tier-1 voice, chord roots in oct 1–2, half-note
+# plod (a walking bass for a walking theme). No tier 2, no tier 3.
+#
+# Chord map (from analysis, half-measure granularity — read from the
+# analysis, never from the prose description):
+#   m1: vii°(G#dim)/iii7(C#m7)  m2: V7(Emaj7)/V(E)  m3: I(A)/IV(D)
+#   m4: vi7(F#m7)/V7(E7)        m5: I(A)/IV(D)      m6: V(E)/I(A, full bar)
+#   m7: I(A cont.)/IV(D)        m8: vi7(F#m7)/V7(E7)
+#   m9: I(A)/vi7(F#m7)          m10: V7(E7)/I(A, to seam)
+# NOTE the loop body is NOT a clean repeat of mm3-6: m9 b3 is vi7 where
+# m5 b3 is IV (verified in analysis output — a symmetry guess would write
+# D here and clash with ch2's F#-A figuration).
+#
+# Seam handling: loop entry is mid-measure (m7 b1.5, frame 588), landing
+# inside m6 b3's sustained A. The m6 b3 note releases at m7 b1 and a fresh
+# A pickup fires exactly at the loop point (m7 b1.5) so every pass gets a
+# downbeat anchor with no truncated attack; the final m10 b3 A releases a
+# few frames before the seam (d=1.9, casino_bass precedent) so it re-keys
+# cleanly on loop-back.
+#
+# Voice-leading notes:
+#   - Root motion only: G#→C# (P4 up), C#→E (m3 up), E→A (P4 up),
+#     A→D (P4 up), D→F# (m3 up), F#→E (m2 down), E→A (P4 up)... all
+#     standard root-position moves, contrary/oblique against ch2's
+#     figuration more often than not.
+#   - The bass sits 1+ octaves below ch1's floor (B3); the register gap
+#     guarantees no parallel-P5 exposure with any GB voice.
+
+schema: 1
+song: Music_MuseumGuy
+
+channels:
+  # ── Tier 1 ─────────────────────────────────────────────────────────────────
+  - name: follow_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; no FM sidebands muddying the low end
+    mt32_patch: 29               # MT-32 SynBass1 (same as casino_bass)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 88                   # felt, not heard — a stroll, not a march
+    velocity: 100
+    events:
+      # Intro: mm. 1–2 (dominant setup: vii° → iii7 → V7 → V).
+      - {m: 1, b: 1, d: 2, n: G#1}   # G#dim (vii°)
+      - {m: 1, b: 3, d: 2, n: C#2}   # C#m7 (iii7)
+      - {m: 2, b: 1, d: 2, n: E2}    # Emaj7 (V7)
+      - {m: 2, b: 3, d: 2, n: E2}    # E (V)
+      # Phrase 1: mm. 3–6.
+      - {m: 3, b: 1, d: 2, n: A1}    # A (I)
+      - {m: 3, b: 3, d: 2, n: D2}    # D (IV)
+      - {m: 4, b: 1, d: 2, n: F#1}   # F#m7 (vi7)
+      - {m: 4, b: 3, d: 2, n: E2}    # E7 (V7)
+      - {m: 5, b: 1, d: 2, n: A1}    # A (I)
+      - {m: 5, b: 3, d: 2, n: D2}    # D (IV)
+      - {m: 6, b: 1, d: 2, n: E2}    # E (V)
+      - {m: 6, b: 3, d: 2, n: A1}    # A (I) — releases at m7 b1
+      # Loop body: mm. 7–10 (repeats; intro above plays once).
+      # m7 b1.5 pickup: the loop point lands inside m6 b3's sustained A,
+      # so anchor it with a fresh attack exactly on the seam.
+      - {m: 7, b: 1.5, d: 1.5, n: A1}  # A (I) — loop-point pickup, ends m7 b3
+      - {m: 7, b: 3, d: 2, n: D2}    # D (IV)
+      - {m: 8, b: 1, d: 2, n: F#1}   # F#m7 (vi7)
+      - {m: 8, b: 3, d: 2, n: E2}    # E7 (V7)
+      - {m: 9, b: 1, d: 2, n: A1}    # A (I)
+      - {m: 9, b: 3, d: 2, n: F#1}   # F#m7 (vi7) — NOT IV (cf. m5 b3);
+                                     # verified in analysis, not symmetry
+      - {m: 10, b: 1, d: 2, n: E2}   # E7 (V7)
+      # Final note: d=1.9 beats, releasing just before the loop seam at
+      # frame 972, so it re-keys cleanly on loop-back.
+      - {m: 10, b: 3, d: 1.9, n: A1} # A (I) — turnaround → m7 pickup
