@@ -1,0 +1,417 @@
+# Music_Credits — tier 1–3 enhancement (Phase E). UNLISTENED draft.
+#
+# A major, 4/4, 56 measures, ONE-SHOT (loop: null, end frame 5880, ~98 s) —
+# the minute-and-a-half unlooping finale the score description calls "a rare
+# instance of unlooping music" and an overture-finale pair with Title Screen
+# (pervasive [q. xx] rhythm mm1-2, ascending-major-triad motive mm11-14/52-53,
+# I–bVII shifts throughout, road-rhythm quote mm54-56 on tonic A across
+# octaves). Authored full-span literal + patterns; no unroll (nothing loops),
+# schema 1 (no switches). Chords/roman numerals verbatim from
+# analysis/Music_Credits.yaml (key score 0.878 A major, runner-up D 0.665 —
+# the IV-heavy pull, not ambiguous; melody channel ch2).
+#
+# This is the game's emotional payoff — the send-off after the whole journey —
+# so it gets full weight: 2 foundation + 2 orchestral + 1 color voices. All
+# MT-32 colors are warm factory presets (no custom timbres: Theremin judged
+# wrong character for this cue; JigglyVox/Sawtooth/NightWind likewise).
+#
+# Registers from simulate_song: ch1 inner pulse (213 notes, B3..E5, rests
+# m24-25/m28-29); ch2 MELODY (178 notes, B3..A5, whole-note sparse mm22-53
+# with octave-5 peaks mm48-49/52-53 and A5 coda mm54-56); ch3 busy 8th-note
+# wave arps (411 notes, density 1.83, D4..B4, single A5 in m3, D5 in m21).
+# NOTHING sounds below B3 anywhere (GB floor) or above A5 (ch2/ch3 peaks).
+# Consequences:
+#   * bass (octave 1, E1..C#2) and pad (B2..A3) are unison-proof BY
+#     CONSTRUCTION — no GB voice ever enters their bands, whatever the rhythm.
+#   * violin descant lives in octave 5–6; every pitch was checked against the
+#     per-measure ch1/ch2 pitch dump: chord tones where clean, 9th/11th
+#     suspensions (m7 B5 9th→m8 A5 3rd; m40-41 G5 11th→9th pedal under the
+#     iv–bVI modal passage) where the triad is saturated. Only brief oblique
+#     transients with moving lines remain; no sustained octave with a held
+#     melody note (m51 uses F#5 not A4 — ch3 may hold A4; m52 holds E5 —
+#     ch2 states D5 in m52).
+#   * english horn sings ONLY the quiet middle (mm24-33 window), threading
+#     chord tones through the GB gaps slot by slot (see voice-leading notes);
+#     every pitch is either band-proof (<=A3) or slot-verified against the
+#     ch1/ch2 dump, and every interval against the violin is consonant
+#     (3rds/4ths/6ths — the m24-33 violin+horn pairs walk in 3rds).
+#   * celesta pings (B5..C#7) sit above the A5 GB ceiling: exact unison is
+#     impossible by register; octave transients are d1 grace accents only.
+#
+# Repeats map: only two single-measure echoes (m9=m5, m18=m14) — no
+# multi-measure repeated spans, so no whole-song patterns. My own material
+# repeats exactly at mm5-8/mm9-12 (bass+pad A-section), mm13-14/mm17-18
+# (bass+pad+violin B-section) and mm7-8/mm11-12 (violin lift): six small
+# patterns orchestrate those once (bass_A, pad_A, bass_B, pad_B, desc_AA,
+# desc_B); everything else literal.
+#
+#   Tier 1 (2 voices — lyrical-finale foundation under 3 busy GB channels):
+#     credits_bass — chord roots, octave 1, half-measure harmonic rhythm,
+#                    whole-note holds on static harmony (A→A7, G→Gmaj7,
+#                    E→E7, D→Dmaj7 all hold the root). The floor the GB
+#                    speaker implied but could not play.
+#     credits_pad  — 3rds/5ths (root only for m2b3 Amaj7 arrival and m41
+#                    Fmaj7), B2..A3 stepwise/common-tone/hold. Never the
+#                    leading tone (no G# anywhere), never a chord 7th (all
+#                    7th-chords take 3rd/5th/root — verified per slot).
+#                    Voice-led against the bass slot by slot: similar motion
+#                    only into imperfect intervals, contrary/oblique
+#                    everywhere else; the A→D corners (m15b3, m20b3, m23b3,
+#                    m25b1) move in legal parallel 4ths to keep the IV 3rd
+#                    color, and every P5/P8 approach is contrary or oblique
+#                    (m37b1 takes D3 not B2 to dodge similar-into-8ve; m38
+#                    takes B2 not E3 to dodge parallel 8ves; m40b1 takes D3
+#                    and m40b3 A3 to dodge parallel 5ths/8ves). The m35→m36
+#                    violin/pad hidden-8ve (pad leaps P4, violin steps M2)
+#                    is an inner-voice edge at a tempo-slow hymn pace,
+#                    accepted per the Cities1 precedent (documented, stepwise
+#                    upper voice, F# keeps the D-major 3rd the bar needs).
+#   Tier 2 (2 voices — the MT-32-only orchestra; novel factory presets):
+#     sendoff_violin — Violin 1 (novel as an enhancement voice) / GM Violin:
+#                    long chord-tone sustains at phrase pillars, climaxes and
+#                    the V7 third (m49 G#5 — the leading tone at the climax,
+#                    then C#5→A5 across m50 to dodge the direct-octave trap
+#                    of a V→I bass leap). Rests mm1-6 (fanfare + statement 1
+#                    speak alone), mm9-10, m27, m47 (intimate duets breathe).
+#                    d>=2 everywhere.
+#     english_horn — English Horn (novel) / GM English Horn: the middle-voice
+#                    song inside the song. Pillars at m24/m26 (A3-root pedal,
+#                    band-proof), mm28-29 (D5 5th-pedals a 6th below the
+#                    violin), mm32-33 (G3-root pedal grounding the violin's
+#                    9th suspension). Rests m25 (saturated chromatic slot —
+#                    ch3's E4 arp collides exactly — GB speaks alone), m27
+#                    (duet breathes), m30-31 (m30b1 would parallel-octave
+#                    the A1→C#2 bass; m31 saturated), m34+ (yields to the
+#                    ii–V drive and the build).
+#   Tier 3 (1 voice — color, dropped first under pressure):
+#     credits_bells — celesta arrival pings (d1) at phrase heads; m1 C#7 and
+#                    m54 C#7 bookend the piece (nostalgia frame); m49 B6
+#                    crowns the V7 climax a 3rd above the violin's G#5.
+#                    Nothing at m56 — the tonic unisons speak alone.
+#
+# Tier budget: 2 + 2 + 1 = 5 added parts (3 base + 5 = 8 of 8 MT-32 parts;
+# exactly at the lint warn threshold, not over it). Harmony follows the
+# analysis template verbatim (I/bVII/VI/I7/vi7/A7/bVII7/v7/IV7/ii7/V/V7/iv/
+# bVI7/iii7 — A major with the signature bVII everywhere; the bVII is never
+# "fixed"). Rest discipline: foundation (bass/pad) plays through the thin
+# middle (mm24-29) as the exposed-solo support; violin rests where the GB
+# thins to duet; horn sings only inside the mm24-33 window.
+#
+# Patches match the approved house set: sub_bass -> Syn Bass 1 / Synth Bass 1;
+# soft_pad -> Str Sect 1 / Pad 2 (warm); Violin 1 -> Violin; Engl Horn ->
+# English Horn; Celesta 1 -> Celesta.
+
+schema: 1
+song: Music_Credits
+
+channels:
+  - name: credits_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # Syn Bass 1 (round, sustaining)
+    gm_program: 39               # Synth Bass 1
+    pan: center
+    volume: 64
+    velocity: 76
+    events:
+      - {m: 1, b: 1, d: 2, n: A1}      # A (I)
+      - {m: 1, b: 3, d: 2, n: G1}      # G (bVII)
+      - {m: 2, b: 1, d: 2, n: F#1}     # F# (VI)
+      - {m: 2, b: 3, d: 2, n: A1}      # Amaj7 (I7) — root hold
+      - {m: 3, b: 1, d: 4, n: A1}      # A (I)
+      - {m: 4, b: 1, d: 2, n: A1}      # A (I) cont.
+      - {m: 4, b: 3, d: 2, n: F#1}     # F#m7 (vi7)
+      - {at: 5, pattern: bass_A}
+      - {at: 9, pattern: bass_A}
+      - {at: 13, pattern: bass_B}
+      - {m: 15, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 15, b: 3, d: 2, n: D1}     # Dmaj7 (IV7)
+      - {m: 16, b: 1, d: 2, n: F#1}    # F#m7 (vi7)
+      - {m: 16, b: 3, d: 2, n: A1}     # A (I)
+      - {at: 17, pattern: bass_B}
+      - {m: 19, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 19, b: 3, d: 2, n: F#1}    # F#m7 (vi7)
+      - {m: 20, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 20, b: 3, d: 2, n: D1}     # Dmaj7 (IV7)
+      - {m: 21, b: 1, d: 2, n: G1}     # Gmaj7 (bVII7)
+      - {m: 21, b: 3, d: 2, n: E1}     # Em7 (v7)
+      - {m: 22, b: 1, d: 2, n: A1}     # A7 (I7)
+      - {m: 22, b: 3, d: 2, n: F#1}    # F#m7 (vi7)
+      - {m: 23, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 23, b: 3, d: 2, n: D1}     # D (IV)
+      - {m: 24, b: 1, d: 4, n: A1}     # A (I) — exposed solo support
+      - {m: 25, b: 1, d: 2, n: D1}     # D (IV)
+      - {m: 25, b: 3, d: 2, n: A1}     # A7 (I7)
+      - {m: 26, b: 1, d: 4, n: A1}     # A -> A7 root hold
+      - {m: 27, b: 1, d: 4, n: A1}     # A (I)
+      - {m: 28, b: 1, d: 4, n: G1}     # G (bVII)
+      - {m: 29, b: 1, d: 4, n: G1}     # G -> Gmaj7 root hold
+      - {m: 30, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 30, b: 3, d: 2, n: C#2}    # C#m7 (iii7)
+      - {m: 31, b: 1, d: 4, n: A1}     # A (I)
+      - {m: 32, b: 1, d: 4, n: G1}     # G (bVII)
+      - {m: 33, b: 1, d: 4, n: G1}     # G -> Gmaj7 root hold
+      - {m: 34, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 34, b: 3, d: 2, n: F#1}    # F#m7 (vi7)
+      - {m: 35, b: 1, d: 4, n: A1}     # A -> Amaj7 root hold
+      - {m: 36, b: 1, d: 4, n: D1}     # D -> Dmaj7 root hold
+      - {m: 37, b: 1, d: 2, n: B1}     # Bm7 (ii7)
+      - {m: 37, b: 3, d: 2, n: D1}     # D (IV)
+      - {m: 38, b: 1, d: 4, n: E1}     # E -> E7 root hold (V arrival)
+      - {m: 39, b: 1, d: 4, n: E1}     # E (V) pedal
+      - {m: 40, b: 1, d: 2, n: D1}     # Dm (iv)
+      - {m: 40, b: 3, d: 2, n: F1}     # Fmaj7 (bVI7)
+      - {m: 41, b: 1, d: 2, n: D1}     # Dm7 (iv7)
+      - {m: 41, b: 3, d: 2, n: F1}     # Fmaj7 (bVI7)
+      - {m: 42, b: 1, d: 4, n: G1}     # G -> G7 root hold
+      - {m: 43, b: 1, d: 2, n: E1}     # Em7 (v7)
+      - {m: 43, b: 3, d: 2, n: G1}     # G (bVII)
+      - {m: 44, b: 1, d: 4, n: A1}     # A (I)
+      - {m: 45, b: 1, d: 4, n: A1}     # A -> A7 root hold
+      - {m: 46, b: 1, d: 4, n: A1}     # A (I)
+      - {m: 47, b: 1, d: 4, n: A1}     # A (I) cont.
+      - {m: 48, b: 1, d: 4, n: E1}     # Em7 (v7)
+      - {m: 49, b: 1, d: 4, n: E1}     # E7 -> Em7 root hold (V7 climax)
+      - {m: 50, b: 1, d: 4, n: A1}     # A -> A7 root hold
+      - {m: 51, b: 1, d: 2, n: A1}     # A (I)
+      - {m: 51, b: 3, d: 2, n: F#1}    # F#m7 (vi7)
+      - {m: 52, b: 1, d: 2, n: E1}     # Em7 (v7)
+      - {m: 52, b: 3, d: 2, n: G1}     # Gmaj7 (bVII7)
+      - {m: 53, b: 1, d: 2, n: E1}     # Em7 (v7)
+      - {m: 53, b: 3, d: 2, n: G1}     # G (bVII)
+      - {m: 54, b: 1, d: 4, n: A1}     # A (I) coda
+      - {m: 55, b: 1, d: 4, n: A1}     # A (I)
+      - {m: 56, b: 1, d: 3.9, n: A1}   # A tonic unison close (shaved)
+
+  - name: credits_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # Str Sect 1 — cascades as real strings
+    gm_program: 90               # Pad 2 (warm)
+    pan: center
+    volume: 68
+    velocity: 72
+    events:
+      - {m: 1, b: 1, d: 2, n: C#3}     # A 3rd
+      - {m: 1, b: 3, d: 2, n: B2}      # G 3rd
+      - {m: 2, b: 1, d: 2, n: A#2}     # F# 3rd (VI-major color, piece's own)
+      - {m: 2, b: 3, d: 2, n: A2}      # Amaj7 root (contrary into the octave)
+      - {m: 3, b: 1, d: 4, n: C#3}     # A 3rd
+      - {m: 4, b: 1, d: 2, n: C#3}     # A 3rd hold
+      - {m: 4, b: 3, d: 2, n: A2}      # F#m7 3rd
+      - {at: 5, pattern: pad_A}
+      - {at: 9, pattern: pad_A}
+      - {at: 13, pattern: pad_B}
+      - {m: 15, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 15, b: 3, d: 2, n: F#3}    # Dmaj7 3rd (parallel 4ths w/ bass, legal)
+      - {m: 16, b: 1, d: 2, n: C#3}    # F#m7 5th (contrary into the 5th)
+      - {m: 16, b: 3, d: 2, n: C#3}    # A 3rd (common tone)
+      - {at: 17, pattern: pad_B}
+      - {m: 19, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 19, b: 3, d: 2, n: A2}     # F#m7 3rd
+      - {m: 20, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 20, b: 3, d: 2, n: F#3}    # Dmaj7 3rd
+      - {m: 21, b: 1, d: 2, n: B2}     # Gmaj7 3rd (contrary)
+      - {m: 21, b: 3, d: 2, n: B2}     # Em7 5th (common tone)
+      - {m: 22, b: 1, d: 2, n: C#3}    # A7 3rd
+      - {m: 22, b: 3, d: 2, n: A2}     # F#m7 3rd
+      - {m: 23, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 23, b: 3, d: 2, n: F#3}    # D 3rd
+      - {m: 24, b: 1, d: 4, n: C#3}    # A 3rd (solo support)
+      - {m: 25, b: 1, d: 2, n: F#3}    # D 3rd
+      - {m: 25, b: 3, d: 2, n: C#3}    # A7 3rd
+      - {m: 26, b: 1, d: 4, n: C#3}    # A -> A7 3rd hold
+      - {m: 27, b: 1, d: 4, n: C#3}    # A 3rd hold
+      - {m: 28, b: 1, d: 4, n: B2}     # G 3rd
+      - {m: 29, b: 1, d: 4, n: B2}     # G -> Gmaj7 3rd hold
+      - {m: 30, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 30, b: 3, d: 2, n: E3}     # C#m7 3rd
+      - {m: 31, b: 1, d: 4, n: C#3}    # A 3rd
+      - {m: 32, b: 1, d: 4, n: B2}     # G 3rd
+      - {m: 33, b: 1, d: 4, n: B2}     # G -> Gmaj7 3rd hold
+      - {m: 34, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 34, b: 3, d: 2, n: A2}     # F#m7 3rd
+      - {m: 35, b: 1, d: 4, n: C#3}    # A -> Amaj7 3rd hold
+      - {m: 36, b: 1, d: 4, n: F#3}    # D -> Dmaj7 3rd hold (see header note)
+      - {m: 37, b: 1, d: 2, n: D3}     # Bm7 b3rd (not B2 — similar-into-8ve)
+      - {m: 37, b: 3, d: 2, n: D3}     # D root (oblique hold)
+      - {m: 38, b: 1, d: 4, n: B2}     # E -> E7 5th (not E3 — parallel 8ves)
+      - {m: 39, b: 1, d: 4, n: B2}     # E 5th hold
+      - {m: 40, b: 1, d: 2, n: D3}     # Dm b3rd (contrary, not A2 — P5s)
+      - {m: 40, b: 3, d: 2, n: A3}     # Fmaj7 3rd (out of the 8ve, legal)
+      - {m: 41, b: 1, d: 2, n: F3}     # Dm7 b3rd
+      - {m: 41, b: 3, d: 2, n: F3}     # Fmaj7 root (oblique hold)
+      - {m: 42, b: 1, d: 4, n: B2}     # G -> G7 3rd hold (contrary entry)
+      - {m: 43, b: 1, d: 2, n: B2}     # Em7 5th (oblique hold)
+      - {m: 43, b: 3, d: 2, n: B2}     # G 3rd (oblique hold)
+      - {m: 44, b: 1, d: 4, n: C#3}    # A 3rd
+      - {m: 45, b: 1, d: 4, n: C#3}    # A -> A7 3rd hold
+      - {m: 46, b: 1, d: 4, n: C#3}    # A 3rd hold
+      - {m: 47, b: 1, d: 4, n: C#3}    # A 3rd hold
+      - {m: 48, b: 1, d: 4, n: B2}     # Em7 5th
+      - {m: 49, b: 1, d: 4, n: B2}     # E7 -> Em7 5th hold
+      - {m: 50, b: 1, d: 4, n: C#3}    # A -> A7 3rd hold
+      - {m: 51, b: 1, d: 2, n: C#3}    # A 3rd
+      - {m: 51, b: 3, d: 2, n: A2}     # F#m7 3rd
+      - {m: 52, b: 1, d: 2, n: B2}     # Em7 5th (contrary)
+      - {m: 52, b: 3, d: 2, n: B2}     # Gmaj7 3rd (oblique hold)
+      - {m: 53, b: 1, d: 2, n: B2}     # Em7 5th (oblique hold)
+      - {m: 53, b: 3, d: 2, n: B2}     # G 3rd (oblique hold)
+      - {m: 54, b: 1, d: 4, n: C#3}    # A 3rd
+      - {m: 55, b: 1, d: 4, n: C#3}    # A 3rd hold
+      - {m: 56, b: 1, d: 3.9, n: C#3}  # A 3rd (shaved with the close)
+
+  - name: sendoff_violin
+    tier: 2                      # MT-32/GM only — no opl_patch allowed
+    mt32_patch: 53               # Violin 1 (novel as an enhancement voice)
+    gm_program: 41               # Violin
+    pan: center
+    volume: 62
+    velocity: 72
+    events:
+      # mm1-6 rest: fanfare + statement 1 speak alone.
+      - {at: 7, pattern: desc_AA}
+      # mm9-10 rest: phrase breathing (mirrors the mm5-6 rest).
+      - {at: 11, pattern: desc_AA}
+      - {at: 13, pattern: desc_B}
+      - {m: 15, b: 1, d: 4, n: A5}     # A root -> Dmaj7 5th (common tone)
+      - {m: 16, b: 1, d: 2, n: A5}     # F#m7 3rd
+      - {m: 16, b: 3, d: 2, n: C#6}    # A 3rd (similar into M3, legal)
+      - {at: 17, pattern: desc_B}
+      - {m: 19, b: 1, d: 4, n: C#6}    # A 3rd -> F#m7 5th (common tone)
+      - {m: 20, b: 1, d: 4, n: E6}     # A 5th -> Dmaj7 9th (sus hold)
+      - {m: 21, b: 1, d: 4, n: B5}     # Gmaj7 3rd -> Em7 5th (common tone)
+      - {m: 22, b: 1, d: 4, n: E6}     # A7 5th -> F#m7 7th (common-tone hold)
+      - {m: 23, b: 1, d: 4, n: A5}     # A root -> D 5th (static-8ve pedal)
+      - {m: 24, b: 1, d: 4, n: A5}     # A root (solo support)
+      - {m: 25, b: 1, d: 2, n: A5}     # D 5th
+      - {m: 25, b: 3, d: 2, n: C#5}    # A7 3rd (out of the 5th, legal)
+      - {m: 26, b: 1, d: 4, n: C#5}    # A -> A7 3rd (common tone)
+      # m27 rest: intimate duet breathes.
+      - {m: 28, b: 1, d: 4, n: B5}     # G 3rd (entry from rest)
+      - {m: 29, b: 1, d: 4, n: B5}     # G -> Gmaj7 3rd hold
+      - {m: 30, b: 1, d: 4, n: C#5}    # A 3rd -> C#m7 root (common tone)
+      - {m: 31, b: 1, d: 4, n: E5}     # A 5th (contrary vs bass)
+      - {m: 32, b: 1, d: 4, n: B5}     # G 3rd (out of the 5th, legal)
+      - {m: 33, b: 1, d: 4, n: B5}     # G -> Gmaj7 3rd hold
+      - {m: 34, b: 1, d: 4, n: A5}     # A root -> F#m7 3rd (common tone)
+      - {m: 35, b: 1, d: 4, n: E5}     # A -> Amaj7 5th hold (contrary entry)
+      - {m: 36, b: 1, d: 4, n: F#5}    # D -> Dmaj7 3rd (out of the 5th, legal)
+      - {m: 37, b: 1, d: 4, n: D5}     # Bm7 b3rd -> D root (common tone)
+      - {m: 38, b: 1, d: 4, n: A5}     # E11 sus (out of the 8ve, legal)
+      - {m: 39, b: 1, d: 4, n: B5}     # E 5th lift (oblique vs static bass)
+      - {m: 40, b: 1, d: 4, n: G5}     # Dm 11th -> Fmaj7 9th (common tone)
+      - {m: 41, b: 1, d: 4, n: G5}     # Dm7 11th -> Fmaj7 9th hold
+      - {m: 42, b: 1, d: 4, n: G5}     # G -> G7 root (oblique resolution)
+      - {m: 43, b: 1, d: 4, n: G5}     # Em7 b3rd -> G root (common tone)
+      - {m: 44, b: 1, d: 4, n: E5}     # A 5th (contrary entry)
+      - {m: 45, b: 1, d: 4, n: E5}     # A -> A7 5th hold
+      - {m: 46, b: 1, d: 4, n: E5}     # A 5th pedal
+      # m47 rest: sparse-dialogue breath before the final climb.
+      - {m: 48, b: 1, d: 4, n: B5}     # Em7 5th (entry from rest)
+      - {m: 49, b: 1, d: 4, n: G#5}    # E7 3rd — the leading tone at the climax
+      - {m: 50, b: 1, d: 2, n: C#5}    # A 3rd (contrary, dodges direct 8ve)
+      - {m: 50, b: 3, d: 2, n: A5}     # A root (oblique vs static bass)
+      - {m: 51, b: 1, d: 4, n: F#5}    # A 6th -> F#m7 root (oblique)
+      - {m: 52, b: 1, d: 4, n: E5}     # Em7 root hold (ch2 states D5 here)
+      - {m: 53, b: 1, d: 4, n: E6}     # Em7 root -> G 6th (contrary)
+      - {m: 54, b: 1, d: 4, n: E6}     # A 5th (infinite-fifth pedal)
+      - {m: 55, b: 1, d: 4, n: E6}     # A 5th hold
+      - {m: 56, b: 1, d: 3.9, n: E6}   # the eternal fifth (shaved)
+
+  - name: english_horn
+    tier: 2                      # MT-32/GM only — no opl_patch allowed
+    mt32_patch: 86               # Engl Horn (novel) — the middle-voice song
+    gm_program: 70               # English Horn
+    pan: center
+    volume: 58
+    velocity: 68
+    events:
+      # Sings only the mm24-33 window (rests m25: the chromatic D–G–F#–F
+      # passing slot is saturated — ch3's E4 arp coincides exactly — so the
+      # GB speaks alone; rests m27/m30-31/m34+ per below).
+      - {m: 24, b: 1, d: 4, n: A3}     # A root pedal (band-proof; 8ve w/ violin)
+      - {m: 26, b: 1, d: 4, n: A3}     # A root pillar (entry from rest; 3rd w/ violin)
+      # m27 rest.
+      - {m: 28, b: 1, d: 4, n: D5}     # G 5th (entry from rest; 6th w/ violin)
+      - {m: 29, b: 1, d: 4, n: D5}     # G 5th hold (ch3's G4 arp collides)
+      # m30-31 rest (m30b1 would parallel-octave the bass; m31 saturated).
+      - {m: 32, b: 1, d: 4, n: G3}     # G root pedal (band-proof; grounds the sus)
+      - {m: 33, b: 1, d: 4, n: G3}     # G -> Gmaj7 root hold
+      # m34+ rest: yields to the ii–V drive and the build.
+
+  - name: credits_bells
+    tier: 3                      # color/flourish — dropped first under pressure
+    mt32_patch: 23               # Celesta 1
+    gm_program: 9                # Celesta
+    pan: right
+    volume: 60
+    velocity: 78
+    events:
+      - {m: 1,  b: 1, d: 1, n: C#7}    # I 3rd — opening bookend
+      - {m: 5,  b: 1, d: 1, n: A6}     # I root — A-section head
+      - {m: 9,  b: 1, d: 1, n: A6}     # I root — echo head
+      - {m: 13, b: 1, d: 1, n: E6}     # bVII 6th — B-section head
+      - {m: 17, b: 1, d: 1, n: E6}     # B-section repeat head
+      - {m: 21, b: 1, d: 1, n: B5}     # bVII7 3rd — bridge head
+      - {m: 25, b: 1, d: 1, n: D6}     # IV root — middle-episode head
+      - {m: 30, b: 1, d: 1, n: A6}     # I root — rebuild head
+      - {m: 34, b: 1, d: 1, n: A6}     # I root — second rebuild head
+      - {m: 38, b: 1, d: 1, n: B5}     # V 5th — dominant arrival
+      - {m: 40, b: 1, d: 1, n: F6}     # iv b3rd — modal-color head
+      - {m: 44, b: 1, d: 1, n: A6}     # I root — final-section head
+      - {m: 48, b: 1, d: 1, n: E6}     # v7 root — final-climb head
+      - {m: 49, b: 1, d: 1, n: B6}     # V7 5th — climax crown (3rd above G#5)
+      - {m: 54, b: 1, d: 1, n: C#7}    # I 3rd — closing bookend
+      # m56 rest: the tonic unisons speak alone.
+
+patterns:
+  # A-section bass roots, octave 1 (mm5-8 = mm9-12; chords identical).
+  bass_A:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 4, n: A1}      # A -> A7 root hold
+      - {m: 2, b: 1, d: 2, n: G1}      # Gmaj7 (bVII7)
+      - {m: 2, b: 3, d: 2, n: E1}      # Em7 (v7)
+      - {m: 3, b: 1, d: 4, n: A1}      # A (I)
+      - {m: 4, b: 1, d: 2, n: A1}      # A (I)
+      - {m: 4, b: 3, d: 2, n: F#1}     # F#m7 (vi7)
+
+  # A-section pad 3rds/5ths, B2..C#3 (mm5-8 = mm9-12).
+  pad_A:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 4, n: C#3}     # A 3rd
+      - {m: 2, b: 1, d: 2, n: B2}      # Gmaj7 3rd
+      - {m: 2, b: 3, d: 2, n: B2}      # Em7 5th (common tone)
+      - {m: 3, b: 1, d: 4, n: C#3}     # A 3rd
+      - {m: 4, b: 1, d: 2, n: C#3}     # A 3rd hold
+      - {m: 4, b: 3, d: 2, n: A2}      # F#m7 3rd
+
+  # B-section bass roots (mm13-14 = mm17-18: G -> Em7).
+  bass_B:
+    measures: 2
+    events:
+      - {m: 1, b: 1, d: 4, n: G1}      # G (bVII)
+      - {m: 2, b: 1, d: 4, n: E1}      # Em7 (v7)
+
+  # B-section pad (mm13-14 = mm17-18): G 3rd -> Em7 5th common tone.
+  pad_B:
+    measures: 2
+    events:
+      - {m: 1, b: 1, d: 4, n: B2}      # G 3rd
+      - {m: 2, b: 1, d: 4, n: B2}      # Em7 5th (common tone)
+
+  # Descant lift, twice-stated (mm7-8 = mm11-12): 9th suspension to 3rd.
+  desc_AA:
+    measures: 2
+    events:
+      - {m: 1, b: 1, d: 4, n: B5}      # A 9th sus
+      - {m: 2, b: 1, d: 4, n: A5}      # F#m7 3rd (9th -> 3rd)
+
+  # B-section descant pillar (mm13-14 = mm17-18): E 6th -> root common tone.
+  desc_B:
+    measures: 2
+    events:
+      - {m: 1, b: 1, d: 4, n: E6}      # G 6th
+      - {m: 2, b: 1, d: 4, n: E6}      # Em7 root (common tone)

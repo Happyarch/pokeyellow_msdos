@@ -1,0 +1,219 @@
+# Music_YellowUnusedSong — the Yellow-exclusive unused track (G minor, 16 bars).
+# Tier 1 + tier 2 + tier 3 enhancement (Phase E). Marked UNLISTENED.
+#
+# Authored against analysis/Music_YellowUnusedSong.yaml (frame-exact) and
+# audio/music/yellowunusedsong.asm (read directly; this track has no
+# score-analysis description), per the music-theory / audio-enhance-opl3 /
+# audio-enhance-mt32 skills.
+#
+# The track (MIDI naming, C4 = 60; pulse = pitch+12*oct+24, wave an octave
+# lower): intro mm1-4, loop body mm5-16 (loop at m5b1, frame 420; end 1680).
+# ch1 (duty 3, oct 3): motoric A4 ostinato (A A A A | Bb Bb | G G A E...),
+#   silent mm9-12, m8 turnaround G4 D#5 D5. ch2 (duty 2, melody): D5 motor
+#   mirroring ch1 a fourth up, m4/m16 leap D5 Bb5 A5(hold), m8 cry
+#   C5 G#5 G5(hold), mm9-12 soft whole notes Eb4 Eb4 | Bb3 Bb3 | Eb4 F4.
+#   ch3 (wave): sparse pickup C4 D4 Eb4 G4 Bb4, then a phased 8-bar body
+#   (A4 Bb4 G4 ... C#5 D5, long Eb5s, Bb4, F5, long D4s) that restarts
+#   mid-loop — a nested-loop phase offset like Lavender/Mansion; do not try
+#   to shadow it exactly. ch4: noise id 3 throughout, dense (density 1.52).
+# Chord map: V-VI-IV-ii-V-VI-i ... V-VI-IV-V-VI-bII7-I(Picardy!) ...
+#   breakdown Eb pedal ... V-VI-IV-V-VI-i. The Neapolitan (m8b1 G#maj7)
+#   and the major-tonic arrival (m8b3 G major) are matched, never "fixed".
+#
+# Track-type guidance: driving minor ostinato with breakdown = battle-type
+# (bass reinforcement + rhythmic stabs, 3-5 voices), but the track is
+# UNUSED, so the budget stays modest: 3 tier-1 + 1 tier-2 + 1 tier-3.
+#
+#   Tier 1 (OPL3 + MT-32/GM):
+#     low_root — sub_bass roots per half-bar (octave 1-2, max C2=36: never
+#       unisons anything, base floor is Bb3=58). m8b1 takes C2 (Neapolitan
+#       third — ch1 holds a G-natural rub there, so the root is avoided);
+#       m8b3 G2 under the Picardy arrival.
+#     tenor_pad — soft_pad chord thirds (octave 3, E3-B3: ch3 lives at
+#       C4+, so no unison is possible by register). Rests m8b1 (exposed
+#       Neapolitan) and the whole breakdown (ch2/ch3 exposed); B3 under
+#       the m8b3 Picardy third. All bass-vs-pad intervals are 10ths/11ths.
+#     drive_stab — pulse_soft offbeat (b2/b4, d0.5) chord-tone pairs at
+#       F#5-D6 (ch3 never exceeds F5, so stabs are ch3-safe by pitch
+#       class; per-shape audit vs ch1/ch2 in the comments). Silent m4/m8
+#       arrivals... no: m4/m16 DO stab (full voicing at arrivals); silent
+#       m8 + breakdown only.
+#
+#   Tier 2 (MT-32/GM only): doom_pedal — Tuba (factory, FIRST USE in this
+#     project) static G1 tonic pedal at phrase starts (m1/m4/m5/m8b3/
+#     m9/m12/m13/m16). Static = oblique against everything: no parallel
+#     5ths/8ves possible with the planing bass. Skips m2b3 (Am: G pedal
+#     would rub the A2 bass a 2nd apart) and mm6-7/10-11/14-15 (keeps it
+#       sparse). An octave under the bass's G2 arrivals: octaves, not unison.
+#
+#   Tier 3 (MT-32/GM only): glass_answers — Soundtrack (factory, FIRST USE)
+#     high whole-note answers ONLY in the breakdown (Bb5 G5 | D6 Eb6) plus
+#     a G6 arrival chime on m16b1. ch3 never exceeds F5 and breakdown ch2
+#     is Eb4/Bb3/F4, so every bell pitch is collision-free by register.
+#     GM fallback Pad 8 (sweep) (96). Tier 3 drops first under pressure.
+#
+# Loop seam: nothing spans m5b1. m4 bass/pad d4 notes end exactly at the
+# loop start (safe by strict inequality). m16 bass/pad shaved to d3.9
+# against the end-exclusive frame 1680 (the PkmnHealed trap).
+#
+# Custom timbres: none required. Audition alternative noted in the report
+# (Theremin for glass_answers).
+
+schema: 1
+song: Music_YellowUnusedSong
+
+channels:
+  - name: low_root
+    tier: 1
+    opl_patch: sub_bass        # sine carrier — foundation, not a pulse
+    mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
+    gm_program: 39             # GM Synth Bass 1
+    pan: center
+    volume: 64
+    velocity: 84
+    events:
+      - {m: 2, b: 1, d: 2, n: C2}    # intro m2b1 (IV)
+      - {m: 2, b: 3, d: 2, n: A2}    # intro m2b3 (ii)
+      - {m: 4, b: 1, d: 4, n: G2}    # intro m4 (i arrival)
+      - {m: 6, b: 1, d: 2, n: C2}    # body m6b1 literal (IV; m6b3 in pattern)
+      - {m: 8, b: 1, d: 2, n: C2}    # body m8b1 Neapolitan third (not root:
+                                     # ch1 holds a G-natural rub here)
+      - {m: 8, b: 3, d: 2, n: G2}    # body m8b3 Picardy arrival (I)
+      - {m: 9, b: 1, d: 4, n: Eb2}   # breakdown Eb pedal
+      - {m: 10, b: 1, d: 4, n: Eb2}
+      - {m: 11, b: 1, d: 4, n: Bb1}  # breakdown Bb (two octaves under ch2 Bb3)
+      - {m: 12, b: 1, d: 4, n: Eb2}
+      - {m: 16, b: 1, d: 3.9, n: G2} # final i (shaved for end-exclusive 1680)
+      - {at: 1, pattern: bass_drive}
+      - {at: 3, pattern: bass_drive}
+      - {at: 5, pattern: bass_drive}
+      - {at: 6, pattern: bass_step}  # m6b3 D (V)
+      - {at: 7, pattern: bass_drive}
+      - {at: 13, pattern: bass_drive}
+      - {at: 14, pattern: bass_step} # m14b3 D (V)
+      - {at: 15, pattern: bass_drive}
+
+  - name: tenor_pad
+    tier: 1
+    opl_patch: soft_pad        # sustained thirds under the motor
+    mt32_patch: 35             # MT-32 Chorale (vocal-ish thirds)
+    gm_program: 53             # GM Choir Aahs
+    pan: center
+    volume: 56
+    velocity: 72
+    events:
+      - {m: 2, b: 1, d: 2, n: E3}    # C major third (ch1 has E4: octave, fine)
+      - {m: 2, b: 3, d: 2, n: E3}    # Am fifth (avoids ch3's C4)
+      - {m: 4, b: 1, d: 4, n: Bb3}   # Gm third at the arrival
+      - {m: 8, b: 3, d: 2, n: B3}    # Picardy third (no B-natural in base)
+      - {m: 16, b: 1, d: 3.9, n: Bb3} # final arrival (shaved for 1680)
+      - {at: 1, pattern: pad_third}
+      - {at: 3, pattern: pad_third}
+      - {at: 5, pattern: pad_third}
+      - {at: 6, pattern: pad_step}
+      - {at: 7, pattern: pad_third}
+      - {at: 13, pattern: pad_third}
+      - {at: 14, pattern: pad_step}
+      - {at: 15, pattern: pad_third}
+      # m8b1 and mm9-12: rest (exposed Neapolitan + exposed breakdown)
+
+  - name: drive_stab
+    tier: 1
+    opl_patch: pulse_soft      # soft pulse comping, under the GB squares
+    mt32_patch: 25             # MT-32 Syn Brass 1 (stab attack)
+    gm_program: 63             # GM Synth Brass 1
+    pan: right
+    volume: 60
+    velocity: 80
+    events:
+      - {m: 2, b: 2, d: 0.5, n: [E5, G5]}    # C (ch1/2: G4 A4 E4 C5 D5)
+      - {m: 2, b: 4, d: 0.5, n: [A5, C6]}    # Am (A5/C6 free at m2)
+      - {m: 4, b: 2, d: 0.5, n: [G5, D6]}    # Gm arrival stabs
+      - {m: 4, b: 4, d: 0.5, n: [G5, D6]}
+      - {m: 16, b: 2, d: 0.5, n: [G5, D6]}
+      - {m: 16, b: 4, d: 0.5, n: [G5, D6]}
+      - {at: 1, pattern: stab_drive}
+      - {at: 3, pattern: stab_drive}
+      - {at: 5, pattern: stab_drive}
+      - {at: 6, pattern: stab_step}
+      - {at: 7, pattern: stab_drive}
+      - {at: 13, pattern: stab_drive}
+      - {at: 14, pattern: stab_step}
+      - {at: 15, pattern: stab_drive}
+      # m8 and mm9-12: rest (turnaround hole + breakdown)
+
+  # --- Tier 2 (MT-32 / GM only; never OPL) --------------------------------
+  - name: doom_pedal
+    tier: 2                   # ominous tonic hum — premium body
+    mt32_patch: 95            # MT-32 Tuba (FIRST USE project-wide)
+    gm_program: 59            # GM Tuba
+    pan: center
+    volume: 52                # felt, not heard
+    velocity: 64
+    events:
+      - {m: 1, b: 1, d: 4, n: G1}     # under V-VI (12th/10th vs bass)
+      - {m: 4, b: 1, d: 4, n: G1}     # i arrival (octave under bass G2)
+      - {m: 5, b: 1, d: 4, n: G1}     # loop-body restatement
+      - {m: 8, b: 3, d: 2, n: G1}     # Picardy arrival
+      - {m: 9, b: 1, d: 4, n: G1}     # breakdown Eb (major 10th vs bass)
+      - {m: 12, b: 1, d: 4, n: G1}    # breakdown close
+      - {m: 13, b: 1, d: 4, n: G1}    # final drive opens
+      - {m: 16, b: 1, d: 3.9, n: G1}  # final arrival (shaved for 1680)
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: glass_answers
+    tier: 3                   # eerie color — dropped first under pressure
+    mt32_patch: 37            # MT-32 Soundtrack (FIRST USE project-wide)
+    gm_program: 96            # GM Pad 8 (sweep)
+    pan: left
+    volume: 60
+    velocity: 76
+    events:
+      - {m: 9, b: 1, d: 4, n: Bb5}    # breakdown answers (all above ch3's
+      - {m: 10, b: 1, d: 4, n: G5}    # F5 ceiling: collision-free)
+      - {m: 11, b: 1, d: 4, n: D6}    # Bb-major third
+      - {m: 12, b: 1, d: 4, n: Eb6}   # pedal root
+      - {m: 16, b: 1, d: 1, n: G6}    # final arrival chime
+
+patterns:
+  # One-measure motor cells (D | Eb half-bars).
+  bass_drive:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 2, n: D2}    # V root
+      - {m: 1, b: 3, d: 2, n: Eb2}   # VI root
+
+  # One-measure step cell (C | D half-bars, mm6/14).
+  bass_step:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 2, n: C2}    # IV root
+      - {m: 1, b: 3, d: 2, n: D2}    # V root
+
+  # Thirds over the motor cell.
+  pad_third:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 2, n: F#3}   # D major third
+      - {m: 1, b: 3, d: 2, n: G3}    # Eb major third
+
+  # Thirds over the step cell.
+  pad_step:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 2, n: E3}    # C major third
+      - {m: 1, b: 3, d: 2, n: F#3}   # D major third
+
+  # Offbeat brass pairs over the motor cell.
+  stab_drive:
+    measures: 1
+    events:
+      - {m: 1, b: 2, d: 0.5, n: [F#5, A5]}   # D (3rd+5th; D5 taken by ch2)
+      - {m: 1, b: 4, d: 0.5, n: [G5, Bb5]}   # Eb (3rd+5th; octave vs ch1 Bb4)
+
+  # Offbeat brass pairs over the step cell.
+  stab_step:
+    measures: 1
+    events:
+      - {m: 1, b: 2, d: 0.5, n: [E5, G5]}    # C (3rd+5th; C5/E4 taken)
+      - {m: 1, b: 4, d: 0.5, n: [F#5, A5]}   # D

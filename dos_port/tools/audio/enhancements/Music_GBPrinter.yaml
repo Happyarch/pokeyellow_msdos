@@ -1,0 +1,136 @@
+# Music_GBPrinter — LLM-authored enhancement (Phase E). UNLISTENED.
+#
+# Song: the GB Printer menu cue. Single-voice WAVE-ONLY piece
+# (audio/headers/musicheaders4.asm: channel_count 1, channel 3;
+# audio/music/printer.asm is one Ch3 line). B major (analysis K-S 0.855,
+# runner-up E major 0.854 — genuinely ambiguous, subdominant-heavy tune),
+# 4/4, 18 measures, intro mm1-2, loop body mm3-18 (loop: m3 b1).
+# Texture: staccato eighth-note music-box figuration (note 1 / rest 1
+# throughout) oscillating around E4/B4, with a B-major scalar descent in
+# the intro and octave-3 B dips in mm13+.
+#
+# Register math (MIDI naming, C4 = 60; GB oct4 C = MIDI 72 per
+# gb_to_midi.py, so the wave line spans MIDI ~59 (GB-oct3 B) to ~88):
+#   - Wave pitch set is {59} union [64..88]: below GB-oct4 it plays ONLY
+#     B (all "octave 3" notes in printer.asm are B_).
+#   - Every added pitch in this file is <= MIDI 58 (A#3). The pad never
+#     writes B3 (59): E-major voicings use root+3rd (E3+G#3), B-family
+#     voicings use 3rd+5th/3rd+7th (D#3+F#3, D#3+A#3), so no added voice
+#     can ever unison-double the wave line — octaves at closest.
+#   - Bass roots sit in octave 2 (MIDI 37-47), 12+ semitones under the
+#     wave floor. No parallel-5th exposure: ours are sustained tones
+#     against a leaping staccato line (oblique by texture).
+#
+# Chord map (from analysis/Music_GBPrinter.yaml, half-measure
+# granularity — read from the analysis, never from prose):
+#   m1: (none — bare scalar pickup, left alone: see below)
+#   m2: C#m7 / G#m7
+#   m3-4: E | m5: F#m / F# | m6-8: E (5 halves: m6b1-m8b3)
+#   m9: F#m / G#m7 | m10: E / C#m7 | m11: B | m12: E | m13: F#m
+#   m14: Bmaj7 / G#dim | m15: B | m16: E | m17: F#m / D#dim
+#   m18b1: D#dim (1-half extension of m17b3 — the analysis jumps from
+#     m17b3 to m18b3; the wave descends D#..A over it, so holding the
+#     D#dim one more half-measure is continuation, not a guess)
+#   m18b3: G#m (vi turnaround into the loop-back to E)
+#
+# Tier budget: TIER-1 ONLY, two voices. Skill table: jingles/utility cues
+# get light reinforcement at most; Lavender gets almost nothing. This is
+# a 72-beat functional loop on an edge-case screen (the GB Printer menu)
+# with ONE sounding voice and no bass or harmony at all — so a warm pad
+# (chord color in the empty octave-3 band) plus a sub-bass floor (roots
+# in octave 2) earn their place as the OPL3 foundation, and the track
+# earns nothing more:
+#   - No tier 2: the wave figuration already saturates octaves 4-6 with
+#     staccato motion, leaving no register lane for a sustained MT-32
+#     layer that would not collide with it; a second pad would double
+#     tier 1's function.
+#   - No tier 3: color hits on a printer menu are over-orchestration.
+#   - Custom timbres considered per maintainer addendum and rejected:
+#     NightWind is non-tonal wind (keyfollow 0) — a howling-wind bed
+#     under a printer menu is thematically wrong; Theremin is a singing
+#     lead with no free melodic lane (unison doubling the wave is
+#     prohibited, an octave counterline is a second melody on a
+#     utility cue); Sawtooth doubles pulse leads and there is no pulse
+#     lead here; JigglyVox is a vocal vowel — wrong family entirely.
+#     The addendum's novelty instead lands in the override: MT-32
+#     "Glock" is a preset no other song uses.
+#
+# m1 stays bare BY DESIGN: one bar of solo music box before the pad
+# enters at m2 lets the cue establish itself (and m1 has no analyzed
+# harmony to support). "Rest where the GB rests" is about silence;
+# this is orchestration dynamics, not filling silence.
+#
+# Seam: final m18b3 notes use d=1.9 (MuseumGuy/casino_bass precedent),
+# releasing just before the loop-back to m3 so they re-key cleanly.
+
+schema: 1
+song: Music_GBPrinter
+
+channels:
+  # Warm chord-color pad, octave 3 (never B3 — see register math above).
+  - name: printer_pad
+    tier: 1
+    opl_patch: soft_pad         # organ-like FM warmth; not a pulse
+    mt32_patch: 49              # Str Sect 1 — cascades as real strings
+    gm_program: 49              # String Ensemble 1 (same family both targets)
+    pan: center
+    volume: 52                  # bed under the music box, not a second lead
+    velocity: 64
+    events:
+      # Intro m2 only (m1 bare by design).
+      - {m: 2, b: 1, d: 2, n: [E3, G#3]}     # C#m7 (3+5)
+      - {m: 2, b: 3, d: 2, n: [D#3, F#3]}    # G#m7 (5+7; 3rd would be B3)
+      # Loop body mm3-18 (repeats).
+      - {m: 3, b: 1, d: 4, n: [E3, G#3]}     # E (R+3)
+      - {m: 5, b: 1, d: 2, n: [A3, C#3]}     # F#m (3+5)
+      - {m: 5, b: 3, d: 2, n: [A#3, C#3]}    # F# major (3+5)
+      - {m: 6, b: 1, d: 4, n: [E3, G#3]}     # E mm6-7
+      - {m: 8, b: 1, d: 2, n: [E3, G#3]}     # E m8
+      - {m: 9, b: 1, d: 2, n: [A3, C#3]}     # F#m
+      - {m: 9, b: 3, d: 2, n: [D#3, F#3]}    # G#m7
+      - {m: 10, b: 1, d: 2, n: [E3, G#3]}    # E
+      - {m: 10, b: 3, d: 2, n: [E3, G#3]}    # C#m7 (3+5)
+      - {m: 11, b: 1, d: 4, n: [D#3, F#3]}   # B (3+5; root in bass)
+      - {m: 12, b: 1, d: 4, n: [E3, G#3]}    # E
+      - {m: 13, b: 1, d: 4, n: [A3, C#3]}    # F#m
+      - {m: 14, b: 1, d: 2, n: [D#3, A#3]}   # Bmaj7 (3+7 color)
+      - {m: 14, b: 3, d: 2, n: [G#3, D3]}    # G#dim (R+b5; 3rd would be B3)
+      - {m: 15, b: 1, d: 4, n: [D#3, F#3]}   # B
+      - {m: 16, b: 1, d: 4, n: [E3, G#3]}    # E
+      - {m: 17, b: 1, d: 2, n: [A3, C#3]}    # F#m
+      - {m: 17, b: 3, d: 2, n: [F#3, A3]}    # D#dim (3+5)
+      - {m: 18, b: 1, d: 2, n: [F#3, A3]}    # D#dim held one more half
+      - {m: 18, b: 3, d: 1.9, n: [D#3, G#3]} # G#m turnaround (5+R)
+
+  # Sub-bass floor: chord roots in octave 2, half/whole notes.
+  - name: printer_foot
+    tier: 1
+    opl_patch: sub_bass          # pure sine; no FM sidebands in the low end
+    mt32_patch: 29               # Syn Bass 1 (MuseumGuy precedent)
+    gm_program: 39               # Synth Bass 1
+    pan: center
+    volume: 48                  # a floor, not a voice
+    velocity: 60
+    events:
+      - {m: 2, b: 1, d: 2, n: C#2}    # C#m7
+      - {m: 2, b: 3, d: 2, n: G#2}    # G#m7
+      - {m: 3, b: 1, d: 4, n: E2}     # E
+      - {m: 5, b: 1, d: 2, n: F#2}    # F#m
+      - {m: 5, b: 3, d: 2, n: F#2}    # F#
+      - {m: 6, b: 1, d: 4, n: E2}     # E mm6-7
+      - {m: 8, b: 1, d: 2, n: E2}     # E m8
+      - {m: 9, b: 1, d: 2, n: F#2}    # F#m
+      - {m: 9, b: 3, d: 2, n: G#2}    # G#m7
+      - {m: 10, b: 1, d: 2, n: E2}    # E
+      - {m: 10, b: 3, d: 2, n: C#2}   # C#m7
+      - {m: 11, b: 1, d: 4, n: B2}    # B
+      - {m: 12, b: 1, d: 4, n: E2}    # E
+      - {m: 13, b: 1, d: 4, n: F#2}   # F#m
+      - {m: 14, b: 1, d: 2, n: B2}    # Bmaj7
+      - {m: 14, b: 3, d: 2, n: G#2}   # G#dim
+      - {m: 15, b: 1, d: 4, n: B2}    # B
+      - {m: 16, b: 1, d: 4, n: E2}    # E
+      - {m: 17, b: 1, d: 2, n: F#2}   # F#m
+      - {m: 17, b: 3, d: 2, n: D#2}   # D#dim
+      - {m: 18, b: 1, d: 2, n: D#2}   # D#dim held one more half
+      - {m: 18, b: 3, d: 1.9, n: G#2} # G#m turnaround

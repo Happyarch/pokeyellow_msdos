@@ -1,0 +1,166 @@
+# Music_HallOfFame — Hall of Fame cutscene cue. Tier-1-only enhancement.
+#
+# Authored against the frame-exact pipeline analysis
+# (music_analysis.py Music_HallOfFame: G major K-S 0.803, 4/4,
+# 20 measures, loop at m5 b1 — 4-measure intro + 16-measure body) and
+# the score-analysis description (hall_of_fame.md: four statements of a
+# four-bar phrase, subtonic arriving on each statement's 4th bar; wave
+# pedal-I for the first 12 bars, I-IV-V-bVII implication in mm13-16),
+# per audio-enhance-opl3 / music-theory.
+#
+# The track (GB octaves; MIDI sim sounds +1): ch1 = whole-note cantus
+# (sounding C5 E5 F#5 F5); ch2 = melody (sounding ~D4-C5); ch3 = wave
+# 8th-note D5/G5 pedal (mm1-12), then quarter figures (mm13-16). No
+# noise channel. Register audit: NOTHING sits below sounding D4 — the
+# classic high-register GB victory sound. The whole low end is empty;
+# that is the only clean gap, so bass reinforcement + a low pad is the
+# whole treatment (same 2-voice template as the DefeatedTrainer sting).
+#
+#   Tier 1 (2 voices — fanfare/jingle ceiling per the OPL3 skill table):
+#     sub_bass — chord roots in octave 2, half-measure rhythm from the
+#                analysis (G/D | G | G/D | G/D | D | Em | G/D | G/D |
+#                D | Em | G/D | G/D | D | C/Em | D/F#m | F | then the
+#                intro-material return). F-natural/bVII color is kept
+#                via the roots (never "fixed").
+#     low_pad  — mostly a D3 pedal (5th of G, root of D), mirroring the
+#                composition's own wave-pedal device; moves only where
+#                the harmony leaves the G/D orbit: B2 under Em (5th)
+#                and G-major returns (3rd), A2 under D7 (5th) and the
+#                mm15-16 F#m/F (3rd), C3+B2 under the m14 C/Em pair.
+#                Ceiling D3, a 9th under the GB floor (D4).
+#
+#   Tier 2 (MT-32/GM only — no opl_patch): a single timpani voice,
+#           one downbeat stroke at each statement head (m5, m9, m13,
+#           m17 — roots D/D/D/G under the bass arrivals). FM has no
+#           timpani and the GB has no noise channel here, so a real
+#           kettle-drum attack is the thing LA synthesis adds that
+#           nothing else in the mix can do; GM Timpani doubles it
+#           acceptably. Pitched-percussion program (GM 48), so the
+#           pitched-voice exemptions cover the shared downbeat roots.
+#           Loop-coherent by construction (statement heads repeat with
+#           the loop); silent in the intro so the pickup stays light.
+#   Tier 3: omitted. This loops (sound_loop 0, .mainloop) — a
+#           chime/cymbal accent would fire every pass (the
+#           DefeatedTrainer-listed failure mode for looping stings).
+#           Brass overrides + tier-1 foundation + timpani downbeats
+#           deliver the weight.
+#
+# Voice leading (added pair): static/common-tone motion wherever the
+# harmony sits still (oblique against the GB 8ths); every change is
+# contrary or oblique — m5->m6 (bass D2->E2 up, pad D3->B2 down),
+# m10->m11 (bass E2->G2 up, pad holds B2), m13->m14b1 (bass D2->C2
+# down, pad A2->C3 up), m14b3->m15 (P5->P4 similar, allowed),
+# m16->m17 (F2/A2 3rd -> G2/B2 3rd similar, no perfect involved).
+# No F# anywhere in the pad (no leading-tone doubling hazard); the
+# m15b3 bass F#2 is the F#m chord root. Separation >= 11 semitones
+# from the GB floor at all times; octaves, never unisons
+# (lint-verified).
+#
+# Loop seam: loop body starts m5 b1 (frame 336); no note crosses it
+# (non-evolving channels, intro + one body authored). Final m20 notes
+# shaved (d1.9) to release before the end frame.
+
+schema: 1
+song: Music_HallOfFame
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 72
+    velocity: 80
+    events:
+      - {at: 1, pattern: halfG}
+      - {m: 2, b: 1, d: 4, n: G2}           # G (I) — intro
+      - {at: 3, pattern: halfG}
+      - {at: 4, pattern: halfG}             # Gm7/Dm color via roots
+      - {at: 5, pattern: stmt_bass}
+      - {at: 9, pattern: stmt_bass}         # mm9-12 repeat mm5-8
+      - {m: 13, b: 1, d: 4, n: D2}          # D7 (V7)
+      - {m: 14, b: 1, d: 2, n: C2}          # C (IV)
+      - {m: 14, b: 3, d: 2, n: E2}          # Em (vi)
+      - {m: 15, b: 1, d: 2, n: D2}          # D (V)
+      - {m: 15, b: 3, d: 2, n: F#2}         # F#m (vii) — chord root
+      - {m: 16, b: 1, d: 4, n: F2}          # Fmaj7 (bVII7) — kept, not fixed
+      - {at: 17, pattern: halfG}
+      - {m: 18, b: 1, d: 4, n: G2}          # G (I)
+      - {at: 19, pattern: halfG}
+      - {m: 20, b: 1, d: 2, n: G2}          # Gm7 via root
+      - {m: 20, b: 3, d: 1.9, n: D2}        # Dm via root — shaved for song end
+
+  - name: low_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 64                   # under the bass — reinforcement, not a lead
+    velocity: 76
+    events:
+      - {at: 1, pattern: dped}
+      - {at: 2, pattern: dped}
+      - {at: 3, pattern: dped}
+      - {at: 4, pattern: dped}
+      - {at: 5, pattern: stmt_pad}
+      - {at: 9, pattern: stmt_pad}          # mm9-12 repeat mm5-8
+      - {m: 13, b: 1, d: 4, n: A2}          # D7 5th (not F# — LT hazard)
+      - {m: 14, b: 1, d: 2, n: C3}          # C root (octave vs bass C2)
+      - {m: 14, b: 3, d: 2, n: B2}          # Em 5th
+      - {m: 15, b: 1, d: 4, n: A2}          # D 5th -> F#m 3rd (common tone)
+      - {m: 16, b: 1, d: 4, n: A2}          # Fmaj7 3rd (common tone)
+      - {m: 17, b: 1, d: 2, n: B2}          # G 3rd
+      - {m: 17, b: 3, d: 2, n: D3}          # D root
+      - {at: 18, pattern: dped}
+      - {at: 19, pattern: dped}
+      - {m: 20, b: 1, d: 3.9, n: D3}        # Gm7 5th -> Dm root — shaved for song end
+
+  # ── Tier 2 (MT-32/GM only; never OPL) ────────────────────────────────────
+  - name: hall_timpani
+    tier: 2                   # color — dropped first under polyphony
+    mt32_patch: 113           # MT-32 Timpani (factory idx 112, 1-based 113)
+    gm_program: 48            # GM Timpani
+    pan: center
+    volume: 72                # a downbeat stroke, not a section
+    velocity: 88
+    events:
+      - {m: 5, b: 1, d: 1, n: D2}           # statement 1 head (V arrival)
+      - {m: 9, b: 1, d: 1, n: D2}           # statement 2 head (repeat)
+      - {m: 13, b: 1, d: 1, n: D2}          # final-quartet head (V7)
+      - {m: 17, b: 1, d: 1, n: G2}          # return head (I arrival)
+
+patterns:
+  # G/D half-measure alternation (intro + statement tails + return).
+  halfG:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 2, n: G2}
+      - {m: 1, b: 3, d: 2, n: D2}
+
+  # Statement bass: D7 | Em7 | G/D | G/D (mm5-8, repeated mm9-12).
+  stmt_bass:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 4, n: D2}           # D7 (V7)
+      - {m: 2, b: 1, d: 4, n: E2}           # Em7 (vi7)
+      - {m: 3, b: 1, d: 2, n: G2}           # Gmaj7 (I7)
+      - {m: 3, b: 3, d: 2, n: D2}           # D (V)
+      - {m: 4, b: 1, d: 2, n: G2}           # Gm7 via root
+      - {m: 4, b: 3, d: 2, n: D2}           # Dm via root
+
+  # D pedal, one bar (5th of G, root of D).
+  dped:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 4, n: D3}
+
+  # Statement pad: D3 pedal, B2 under Em/G, D3 tail.
+  stmt_pad:
+    measures: 4
+    events:
+      - {m: 1, b: 1, d: 4, n: D3}           # D7 root
+      - {m: 2, b: 1, d: 4, n: B2}           # Em7 5th
+      - {m: 3, b: 1, d: 4, n: B2}           # Gmaj7 3rd (common tone, oblique)
+      - {m: 4, b: 1, d: 4, n: D3}           # Gm7 5th -> Dm root

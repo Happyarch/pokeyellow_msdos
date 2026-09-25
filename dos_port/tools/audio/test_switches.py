@@ -758,7 +758,7 @@ class SwitchTest(unittest.TestCase):
     def test_all_enhancements_lint_clean(self):
         files = sorted((HERE / "enhancements").glob("*.yaml"))
         # Bump when adding songs (tripwire: notices added/removed files).
-        self.assertEqual(len(files), 39)
+        self.assertEqual(len(files), 48)
         bad = []
         for path in files:
             rep, _, _ = lint(path)
@@ -797,10 +797,10 @@ class SwitchTest(unittest.TestCase):
         labels = {lbl for n, lbl in consts.items() if n.startswith("MUSIC_")}
         files = sorted((HERE / "overrides").glob("*.yaml"))
         canonical = [p for p in files if p.stem in labels]
-        # 36 canonical on disk (the orphan Music_GymLeaderBattle_enh.yaml
+        # Canonical overrides on disk (the orphan Music_GymLeaderBattle_enh.yaml
         # matches no song label and is never read by load_overrides).
         # Bump when adding songs (tripwire: notices added/removed files).
-        self.assertEqual(len(canonical), 40)
+        self.assertEqual(len(canonical), 49)
         # Exact per-song switch sets (regression pins: a silently dropped
         # or added switch still lints clean, so only these numbers catch
         # it). Register a song here when giving it switches; every other

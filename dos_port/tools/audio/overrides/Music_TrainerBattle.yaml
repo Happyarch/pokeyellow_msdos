@@ -1,0 +1,28 @@
+# Music_TrainerBattle overrides — base GB voicing for the MIDI path.
+#
+# ch1 (square, chromatic inner runs + fanfare figures): keeps the house
+#   Square Wave / Lead 1 (square) — the runs should still read as chip.
+# ch2 (square, THE battle melody): Sawtooth custom timbre (its documented
+#   purpose is chip-lead doubling — an MT-32-native saw instead of factory
+#   Square Wave's detuned chorus pair) + GM Lead 2 (sawtooth). Aggressive
+#   edged lead for the highest-exposure melody in the game.
+# ch3 (wave, motoric 8th-note bass): Elec Bass 1 + GM Electric Bass (finger)
+#   — a picked electric bass driving the 8th-note motor; novel preset use.
+# No channel 4 exists (channel_count 3), so there is no drums: map — the
+# drum part is created wholesale by the tier-2 rhythm channels.
+# No switches: all three channels play continuously and no section asks
+# for a re-voicing; explicit volumes set the base balance (lead forward,
+# motor bass under it) against the enhancement layer.
+channels:
+  1:
+    mt32_program: "Square Wave"
+    gm_program: "Lead 1 (square)"
+    volume: 100
+  2:
+    mt32_program: "Sawtooth"
+    gm_program: "Lead 2 (sawtooth)"
+    volume: 105
+  3:
+    mt32_program: "Elec Bass 1"
+    gm_program: "Electric Bass (finger)"
+    volume: 95

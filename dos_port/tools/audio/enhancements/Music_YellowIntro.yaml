@@ -1,0 +1,214 @@
+# Music_YellowIntro — tier 1–3 enhancement (Phase E).
+#
+# Yellow's cinematic intro-movie theme (audio bank $1F, same bank as the
+# title theme). E major, 4/4, tempo 116, 15 measures, ONE SHOT — loop:
+# null (sound_ret; end frame 1305). No score-analysis description exists
+# for this track (the index's introduction.md is transcription methodology,
+# not this song), so this arrangement is authored from
+# analysis/Music_YellowIntro.yaml (frame-exact: E major K-S 0.926,
+# melody ch2, arch contour A4–C#6) plus a direct reading of
+# audio/music/yellowintro.asm (3 channels — header lists ch1/2/3 only,
+# NO noise channel).
+#
+# The piece from the pret source: a through-composed miniature arch —
+#   mm1–4   I opening: ch1/ch2 state rocking G#/B and B/E pedal figures
+#           (m2b3 Emaj7, m3b1–b3 E→C#m7 with chromatic C#–C–C# / G#–G–G#
+#           neighbors), ch3 broken-chord 8th arps (E–G#–B...).
+#   mm5–6   lift to ii: ch3 F#m arps, ch2 climbs E–G#–B to the C#6 climax
+#           (whole-measure C# in m5), ch1 answers F#–E, then ch1 ascends
+#           A–B–C#–B while ch2 descends A–G#–F#–E (m6).
+#   mm7–8   I dialogue: ch1/ch2 trade echoing B/E/G# figures over the
+#           tonic (analysis: single I segment spanning both measures).
+#   mm9–11  development: ch1 descends A–F#–A–B–F#–G#–A–G#–F#–D# while ch2
+#           moves C#–A–C#–D#–E...; ii (m9) → ii7/vii° (m10) → I (m11).
+#   mm12–14 dominant pedal: both pulses encircle B with chromatic upper
+#           neighbors (F#–F–F# / B–A#–B cells), ch1 descends F#–E–D#–C#
+#           into... F#m7 (m12b1) → B7 (m12b3–m13b2) → Bmaj7 (m13b3) →
+#           B7 (m14b1) → F#m7 (m14b3), ch2 runs the only fast figure in
+#           the piece (m14 32nd descent B–A–G#–F#).
+#   m15     PAC tonic: ch3 bows out (ascending F#–G#–A–C#–E scale, its
+#           last E5 ending one 16th into the bar, then rest 15) leaving
+#           ch1 B + ch2 E — an open fifth that the arrangement below
+#           completes into E major.
+# Chord labels follow the analysis table; half-measure changes are the
+# event rhythm of the added voices.
+#
+# Register audit (YAML/MIDI naming, C4 = 60; pitches verified against the
+# frame-exact sim, not the written octaves): the pulse channels sit at/above
+# G#4 (ch1's GB-oct3 G# = 68; melody ch2 B4–C#6 = 71–85). The wave channel
+# renders an OCTAVE below its written pitch in the MIDI path (sim: ch3's
+# GB-oct3 B = 59, its GB-oct5 climax notes = 73–78), so the true base floor
+# is B3 (59) and ch3 spans 59–78. The whole low end below B3 is empty — the
+# tiny-speaker omission — so the tier-1 layer goes there, exactly the
+# proven town/route reasoning (OaksLab/PalletTown precedent): the pad never
+# rises above G#3 (56), a minor 3rd clear of the base floor.
+#
+#   Tier 1 (OPL3 + MT-32/GM), 2 voices:
+#     intro_bass — chord roots E1–D#2, one note per half-measure change
+#                  (whole/half notes on the held I bars). E→C#→E→F#→E→
+#                  F#→D#→E→F#→B→F#: textbook ii–V–I bass (F#→B→E) with the
+#                  D#→E leading-tone step into m11.
+#     intro_pad  — tenor 3rds/5ths/7ths (G#2–G#3), stepwise/common-tone,
+#                  never above G#3 so base contact (floor 59) is
+#                  impossible. vii° color: m10b3 takes C#3 (7th, m7 above
+#                  the D#2 bass) instead of holding A2 (which would sit a
+#                  dim-5th under the bass below C3); m3b3 takes E3 over
+#                  the C#2 bass (contrary motion — B2→E3 up against
+#                  E1→C#2 down — instead of similar motion into a P5).
+#                  The m15 arrival is G#3: bass E1 + pad G#3 + GB B4/E5
+#                  completes the open fifth into a full E-major triad.
+#
+#   Tier 2 (MT-32/GM only):
+#     intro_horn — French horn 5th/root pillars (B2, E2 at the ii bar
+#                  where the pad holds the 3rd, E3 for the final root).
+#                  The FM-incapable slow-brass swell; I pillars only plus
+#                  the V pedal (m13b3–m14b2 B2 under the B root) and the
+#                  final tonic, mirroring the TitleScreen triad_horn role.
+#                  A 3rd apart from the pad in places (normal tenor/alto
+#                  choral spacing, distinct timbres); never unison with
+#                  bass (octaves at most) or base.
+#
+#   Tier 3 (MT-32/GM only):
+#     distant_chime — celesta strokes, the FM-impossible bell: single E6
+#                  at the m1 opening downbeat and the m5 climax downbeat,
+#                  full [G#5, B5, E6] voicing at the m15 PAC. m1/m5 they
+#                  sit a 3rd+ clear of every base pitch then sounding;
+#                  m15's voicing (80/83/88) clears the final B4 + E5/E5
+#                  (71/76 — ch3's last E5 ends one 16th into the bar).
+#     final_choir  — MT-32 Chorale (novel factory voice, unused until now)
+#                  accents only: E4 under the m5 climax, [E4, G#4] halo
+#                  over the m15 final. Register-verified clear of the base
+#                  at both spots (see channel header).
+#
+# Voice leading (added vs GB and added vs added) was checked segment by
+# segment: bass/pad moves are contrary or oblique everywhere except
+# imperfect→imperfect similar motion (m4→m5 M10→m10, m6→m7, m11→m12b1);
+# no parallel/hidden 5ths or 8ves; leaps over a P5 occur once (pad
+# E3→G#2, m6 down, followed by step back up to A2). No added voice ever
+# unisons a GB channel (lint §7 verifies frame-exact against the sim).
+#
+# One-shot: loop is null, so no loop seam and no patterns — literal events
+# only. Final longs release at m15b4 (d3 from m15b1), just inside the song
+# end (frame 1305), instead of ringing to the boundary.
+#
+# Patches mirror the audition-proven sets: sub_bass → MT-32 SynBass1 / GM
+# Synth Bass 1; soft_pad → MT-32 Str Sect 1 / GM Pad 2 (warm); horn →
+# MT-32 Fr Horn 1 / GM French Horn (TitleScreen set); chime → MT-32
+# Celesta 1 / GM Celesta (OaksLab/PkmnHealed set).
+#
+# Final base voicing (overrides/Music_YellowIntro.yaml — read alongside):
+# ch1 Square Wave / Lead 1 (square), ch2 Flute 1 / Flute, ch3 Harp 1 /
+# Orchestral Harp.
+
+schema: 1
+song: Music_YellowIntro
+
+channels:
+  # ── Tier 1 (OPL3 + MT-32/GM) ───────────────────────────────────────────
+  - name: intro_bass
+    tier: 1
+    opl_patch: sub_bass           # pure sine; sits under the pulse shim
+    mt32_patch: 29                # SynBass1 (round, sustaining)
+    gm_program: 39                # Synth Bass 1
+    pan: center
+    volume: 58
+    velocity: 80
+    events:
+      - {m: 1,  b: 1, d: 6, n: E1}    # I (spans mm1–m2b2)
+      - {m: 2,  b: 3, d: 2, n: E1}    # Emaj7 (root)
+      - {m: 3,  b: 1, d: 2, n: E1}    # I
+      - {m: 3,  b: 3, d: 2, n: C#2}   # C#m7 (vi7)
+      - {m: 4,  b: 1, d: 4, n: E1}    # I (whole bar)
+      - {m: 5,  b: 1, d: 4, n: F#1}   # ii (whole bar)
+      - {m: 6,  b: 1, d: 4, n: F#1}   # ii (whole bar)
+      - {m: 7,  b: 1, d: 8, n: E1}    # I (spans mm7–8)
+      - {m: 9,  b: 1, d: 4, n: F#1}   # ii (whole bar)
+      - {m: 10, b: 1, d: 2, n: F#1}   # F#m7 (ii7)
+      - {m: 10, b: 3, d: 2, n: D#2}   # D#dim (vii°) — steps up to E at m11
+      - {m: 11, b: 1, d: 4, n: E1}    # I (whole bar)
+      - {m: 12, b: 1, d: 2, n: F#1}   # F#m7 (ii7)
+      - {m: 12, b: 3, d: 4, n: B1}    # B7 (V7, spans m12b3–m13b2)
+      - {m: 13, b: 3, d: 2, n: B1}    # Bmaj7 (V7)
+      - {m: 14, b: 1, d: 2, n: B1}    # B7 (V7)
+      - {m: 14, b: 3, d: 2, n: F#1}   # F#m7 (ii7)
+      - {m: 15, b: 1, d: 3, n: E1}    # I — final PAC, releases at m15b4
+
+  - name: intro_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not strings
+    mt32_patch: 49               # Str Sect 1 — cascades as real strings on MT-32
+    gm_program: 90               # Pad 2 (warm)
+    pan: center
+    volume: 58
+    velocity: 76
+    events:
+      - {m: 1,  b: 1, d: 6, n: G#3}   # I, 3rd
+      - {m: 2,  b: 3, d: 2, n: G#3}   # Emaj7, 3rd (common tone)
+      - {m: 3,  b: 1, d: 2, n: B2}    # I, 5th
+      - {m: 3,  b: 3, d: 2, n: E3}    # C#m7, 3rd (contrary vs bass E1→C#2)
+      - {m: 4,  b: 1, d: 4, n: G#2}   # I, 3rd
+      - {m: 5,  b: 1, d: 4, n: A2}    # ii, 3rd
+      - {m: 6,  b: 1, d: 4, n: A2}    # ii, 3rd (held)
+      - {m: 7,  b: 1, d: 8, n: G#2}   # I, 3rd (spans mm7–8)
+      - {m: 9,  b: 1, d: 4, n: A2}    # ii, 3rd
+      - {m: 10, b: 1, d: 2, n: A2}    # F#m7, 3rd
+      - {m: 10, b: 3, d: 2, n: C#3}   # D#dim, 7th (m7 above bass, not dim-5th)
+      - {m: 11, b: 1, d: 4, n: G#2}   # I, 3rd
+      - {m: 12, b: 1, d: 2, n: A2}    # F#m7, 3rd
+      - {m: 12, b: 3, d: 4, n: F#2}   # B7, 5th (spans m12b3–m13b2)
+      - {m: 13, b: 3, d: 2, n: F#2}   # Bmaj7, 5th (common tone)
+      - {m: 14, b: 1, d: 2, n: A2}    # B7, 7th
+      - {m: 14, b: 3, d: 2, n: E3}    # F#m7, 7th
+      - {m: 15, b: 1, d: 3, n: G#3}   # I, 3rd — completes the GB open fifth
+
+  # ── Tier 2 (MT-32/GM only; never OPL) ───────────────────────────────────
+  # Slow brass the FM side cannot do. Pillars only — the I statements, the
+  # V pedal, the final tonic — so the chromatic neighbor motion in the GB
+  # voices keeps its edge and the form still reads.
+  - name: intro_horn
+    tier: 2
+    mt32_patch: 93               # Fr Horn 1
+    gm_program: 61               # French Horn
+    pan: left
+    volume: 52
+    velocity: 72
+    events:
+      - {m: 1,  b: 1, d: 6, n: B2}    # I opening, 5th (pad has the 3rd)
+      - {m: 4,  b: 1, d: 4, n: B2}    # I return after the chromatic m3
+      - {m: 5,  b: 1, d: 4, n: E2}    # ii, 7th (pad has the 3rd, P4 apart)
+      - {m: 7,  b: 1, d: 8, n: B2}    # I dialogue section (spans mm7–8)
+      - {m: 11, b: 1, d: 4, n: B2}    # I after the vii°
+      - {m: 13, b: 3, d: 4, n: B2}    # V pedal (spans m13b3–m14b2, with bass)
+      - {m: 15, b: 1, d: 3, n: E3}    # I — final root under the pad 3rd
+
+  # ── Tier 3 (MT-32/GM only; never OPL) ───────────────────────────────────
+  # Novel factory voice per maintainer guidance (unused by any track so
+  # far): the MT-32 Chorale — slow-attack LA choir FM cannot approximate.
+  # Two accent swells only (tier-3 guidance: choir accents): the root
+  # under the m5 C#6 climax and the 3rd+root halo over the m15 PAC.
+  # Register-verified clear of the base: m5 holds E4 (64) while the base
+  # sits at/above 61 (ch3's GB-oct4 C# arp); m15 holds [E4, G#4] (64/68)
+  # while only B4/E5 (71/76) sound. Octaves below the pad/horn, never
+  # unison.
+  - name: final_choir
+    tier: 3                     # color — dropped first under polyphony
+    mt32_patch: 35               # Chorale (factory idx 34)
+    gm_program: 53               # Choir Aahs
+    pan: center
+    volume: 48                  # halo under the climax/final, not a lead
+    velocity: 70
+    events:
+      - {m: 5,  b: 1, d: 4, n: E4}              # climax root under C#6
+      - {m: 15, b: 1, d: 3, n: [E4, G#4]}       # final halo with the chime
+
+  - name: distant_chime
+    tier: 3                     # color — dropped first under polyphony
+    mt32_patch: 23               # Celesta 1
+    gm_program: 9                # Celesta
+    pan: right
+    volume: 56
+    velocity: 78
+    events:
+      - {m: 1,  b: 1, d: 1, n: E6}              # opening tonic stroke
+      - {m: 5,  b: 1, d: 1, n: E6}              # climax downbeat (ii 7th)
+      - {m: 15, b: 1, d: 3, n: [G#5, B5, E6]}   # final PAC, full E major

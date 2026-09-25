@@ -1,0 +1,99 @@
+# Music_MeetJessieJames — Team Rocket motto cue (TIER 1 DRAFT).
+# Yellow-only Jessie & James encounter stinger: D minor (analysis K-S 0.439,
+# ambiguous vs A# major 0.43 — the bII/bVI planing IS the piece, preserved
+# never "fixed"), 10 mm 4/4, intro m1-m2 (chromatic diminished descent over
+# Em7/Cdim/D#dim/Adim), loop body m3-m10 (Dmaj7 / A#maj7 / D#maj7 / A# /
+# Bmaj7 planing; m9 repeats m7 per the analysis repeated_spans).
+# GB registers (MIDI naming, C4 = 60): ch1 sq3 stabs + D-D# motto chatter
+# (o2-4, down to A2? no — ch1 floor D3; long D4 whole-bar + D#4/C4 longs in
+# intro); ch2 = the melody (analysis melody_channel: 2), C#-D motto chatter
+# + D#4-F4 episodes, floor A2 (m4b3); ch3 wave D4-A3 eighth ostinato moving
+# to D#3-A#2, floor A3 (m6) / A#3. No noise channel, so no drums: section.
+# Authored against analysis/Music_MeetJessieJames.yaml (frame-exact) per
+# music-theory + audio-enhance-opl3/mt32. Restraint (maintainer addendum):
+# mirror the meet-track siblings (Male/Female: tiers 2-3 only, 3 voices;
+# Evil: villain-family architecture) — one clear identity, no bombast.
+# No tier 1: encounter stingers need no FM floor (Male/Female AUDITION
+# FINDINGS — OPL3 bass is wrong for this track family); OPL3 plays the
+# pure GB trio. Unison safety by construction: bass octave 1-2, pad octave
+# 2 (fifths only, never thirds — the maj7 color stays GB's), ping D6 above
+# every GB pitch (max F5 per analysis).
+#
+#   Tier 2 (MT-32/GM only):
+#     low_bass — roots per the chord map (E2/C2/D#2/A1 intro walk, then
+#                 D2/A#1/D2/A#1/D#2/A#1/D#2/B1 body), octave 1-2: an octave+
+#                 under everything GB (intro GB >= C3, body chatter >= D3
+#                 except ch2's m4b3 A2, met with A#1 = an octave, oblique).
+#                 Static roots under moving chatter = oblique motion only.
+#     motto_theremin — the cue's one identity: custom "Theremin" timbre
+#                 (timbres.yaml; GM 86 Lead 6 voice per the Dungeon3
+#                 precedent) on chord FIFTHS of the long bars only
+#                 (B2/G2/A#2 intro, A2/A2/A#2/A#2 body d3s) — a slinky
+#                 60s-villain wail under the motto. Short VI-arrival
+#                 half-bars left bare (bass + GB stabs punch through);
+#                 theremin's scoop attack never takes a d1 note. Rests
+#                 m2b3 (Adim) so the ch3 entry + melody arrival speak
+#                 alone — setup before the body.
+# Loop seam: intro's last bass note (m2b3 A1, d2) ends exactly at the loop
+# start m3b1 (safe by strict inequality, cf. MeetEvilTrainer frame 441);
+# pad's last note (m9b1, d3) ends m10b1; final bass B1 shaved d0.9 against
+# the end-exclusive boundary (the PkmnHealed trap, cf. MeetMaleTrainer m6).
+#
+#   Tier 3 (MT-32/GM only) — ping: tonic D6 piccolo accents (d0.5) at the
+#                 song downbeat (m1b1, over the descent start) and the
+#                 loop-body entry (m3b1, over ch1's whole-bar D4) — the "!"
+#                 made audible, leitmotif glue with Male/Female (their E6).
+#                 Dropped first under polyphony pressure.
+
+schema: 1
+song: Music_MeetJessieJames
+
+channels:
+  - name: low_bass
+    tier: 2
+    mt32_patch: 29             # MT-32 Syn Bass 1 (house family, cf. Male/Female)
+    gm_program: 39             # GM Synth Bass 1
+    pan: center
+    volume: 62
+    velocity: 84
+    events:
+      - {m: 1, b: 1, d: 2, n: E2}    # intro: Em7 root (GB >= C3 here)
+      - {m: 1, b: 3, d: 2, n: C2}    # intro: Cdim root
+      - {m: 2, b: 1, d: 2, n: D#2}   # intro: D#dim root (under the D#4/A3 longs)
+      - {m: 2, b: 3, d: 2, n: A1}    # intro: Adim root, ends at loop start
+      - {m: 3, b: 1, d: 3, n: D2}    # body: Dmaj7 root
+      - {m: 4, b: 3, d: 1, n: A#1}   # body: A#maj7 arrival (octave over ch2's A2)
+      - {m: 5, b: 1, d: 3, n: D2}    # body: Dmaj7 root
+      - {m: 6, b: 3, d: 1, n: A#1}   # body: A#maj7 arrival
+      - {m: 7, b: 1, d: 3, n: D#2}   # body: D#maj7 root (bII menace)
+      - {m: 8, b: 3, d: 1, n: A#1}   # body: A# arrival
+      - {m: 9, b: 1, d: 3, n: D#2}   # body: D#maj7 root (m7 repeat)
+      - {m: 10, b: 3, d: 0.9, n: B1} # body: Bmaj7 arrival, shaved at end
+
+  - name: motto_theremin
+    tier: 2                   # the identity — dropped after tier 3
+    mt32_patch: "Theremin"    # custom RCA-theremin timbre, timbres.yaml
+    gm_program: 86            # GM Lead 6 (voice), 1-based (Dungeon3 precedent)
+    pan: center
+    volume: 50                # felt wail under the motto, below the melody
+    velocity: 64
+    events:
+      - {m: 1, b: 1, d: 2, n: B2}    # intro: Em7 fifth
+      - {m: 1, b: 3, d: 2, n: G2}    # intro: Cdim fifth
+      - {m: 2, b: 1, d: 2, n: A#2}   # intro: D#dim fifth (under the longs)
+      - {m: 3, b: 1, d: 3, n: A2}    # body: Dmaj7 fifth (ends m4b2, ch2's A2 starts m4b3)
+      - {m: 5, b: 1, d: 3, n: A2}    # body: Dmaj7 fifth
+      - {m: 7, b: 1, d: 3, n: A#2}   # body: D#maj7 fifth
+      - {m: 9, b: 1, d: 3, n: A#2}   # body: D#maj7 fifth (m7 repeat)
+
+  # --- Tier 3 (MT-32 / GM only; never OPL) --------------------------------
+  - name: ping
+    tier: 3                   # color — dropped first under polyphony
+    mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
+    gm_program: 73            # GM Piccolo
+    pan: center
+    volume: 70
+    velocity: 85
+    events:
+      - {m: 1, b: 1, d: 0.5, n: D6}   # song downbeat, over the descent start
+      - {m: 3, b: 1, d: 0.5, n: D6}   # loop-body entry, over ch1's whole-bar D4

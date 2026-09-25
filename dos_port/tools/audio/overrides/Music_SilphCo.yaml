@@ -1,0 +1,33 @@
+# Music_SilphCo (Silph Co.) — per-song MIDI overrides (see README.md).
+#
+# The GB channels (verified against audio/music/silphco.asm + the analysis
+# melody_channel: 2):
+# - ch1: low-mid B-pedal ostinato + chromatic runs + the long ritardando
+#   tones (GB o2-o3 -> MIDI ~47-76). Menacing dark reed: MT-32 "Bassoon".
+# - ch2: the lead — countersubject + development diminutions + octave-5
+#   recap screams (MIDI ~52-88). Mischievous and wide-ranged: MT-32
+#   "Clarinet 1" carries both the chatter and the climb.
+# - ch3: wave-channel countersubject, high and glassy (GB o4-o6 ->
+#   MIDI ~76-100). The GB wave is a mellow sine-ish voice, so both targets
+#   stay flutey: MT-32 "Flute 1", GM "Flute".
+# - ch4: absent (no noise in this song), so no `drums:` map — all keys
+#   optional, and there is nothing to remap.
+# No timed switches: the duty-cycle fragmentation in the development is
+# timbral motion inside the GB voice, not a patch change (schema 1).
+
+channels:
+  1:
+    mt32_program: "Bassoon"
+    gm_program: "Bassoon"
+    volume: 96
+    pan: 48
+  2:
+    mt32_program: "Clarinet 1"
+    gm_program: "Clarinet"
+    volume: 100
+    pan: 64
+  3:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 90
+    pan: 80

@@ -1,0 +1,303 @@
+# Music_SurfingPikachu — Pikachu's Beach surfing-minigame theme. Tier 1–3.
+#
+# E major, 4/4, 38 grid measures, loop at m23 b1 (frame 1930, end 3334).
+# Intro = mm1-22, loop body = mm23-38 (a restatement of the intro's
+# second-half material: m23=m7, m24=m8, m25=m9, m26=m10, m29=m13,
+# m30=m14, m31-32=m15-16, m33-34=m17-18, m35-36=m31-32-shape, m37-38=m21-22).
+# Authored literal throughout (no patterns for the pitched voices); the
+# body is written out so the loop-return variant is honest.
+#
+# Base texture (pret_audio.AudioROM + gb_to_midi.simulate_song): only THREE
+# channels, no noise. ch1 B3-E5 lower thematic line (238 notes), ch2 E4-E6
+# melody (151 notes, peaks C#6 m21/m37, B5/E6 m22/m38), ch3 B3-E5 busy
+# eighth-note accompaniment figure (302 notes). Harmony is a static,
+# sunny I-ii-V-IV-vi loop (E, F#m/m7, Emaj7, B7, Amaj7, C#m7, D#dim,
+# C#aug); the analysis' "C#aug" at m17/m33 sounds C# + F# + A (+C passing),
+# so the pad takes A3 there, never E-natural against it.
+#
+# Register audit: the whole GB mix sits at MIDI 59 (B3) and above, and the
+# E4-B4 band is saturated by all three channels at once. Two bands are
+# empty: the bass floor below B3, and everything above C#6 (85). Octave 3
+# below A3 (57) is also unison-free (base minimum is 59).
+#
+#   Tier 1 (OPL3 + MT-32/GM), light-route budget of 2:
+#     surf_bass — chord roots in octave 2, one per half-measure change.
+#                 The bounce the tiny speaker omitted; on MT-32/GM it is a
+#                 round plucked acoustic bass, on OPL3 a pure sine floor.
+#     sunny_pad — tenor 3rds/5ths/7ths in C3-A3 (never the root pitch-class
+#                 the bass is on, so no parallel 8ves between the added
+#                 voices; step/common-tone motion throughout). Cascades to
+#                 MT-32 as real strings.
+#   Tier 2 (MT-32/GM only):
+#     beach_groove — rhythm channel (exempt from pitched rules): soft kick
+#                 on 1 & 3, maracas on 2 & 4. The GB song has no noise at
+#                 all, so this light backbeat is the main bounce source, and
+#                 being MT-32/GM-side it never touches the GB noise channel
+#                 SFX need. One 1-bar pattern instanced across all 38 bars.
+#   Tier 3 (MT-32/GM only):
+#     sun_glint — eight short pan-pipe pings (E6/F#6/A6, all above the C#6
+#                 base ceiling) at the song open, the two D#dim/B7 turns,
+#                 the C#aug peaks, the F#m climbs, and the loop return.
+#                 Pan Pipes is unused elsewhere in the project and reads as
+#                 sun-on-water; GM pairs it with Pan Flute. No custom timbre:
+#                 JigglyVox/Sawtooth/Theremin/NightWind are all eerie or vocal
+#                 and wrong for a sunny beach cue.
+#
+# Loop seam: every pitched note tiles half-measure to half-measure, so none
+# crosses frame 1930; the m22 b3 bass/pad (C#2/E3, d2) end exactly on m23 b1.
+# The groove blips (d<=0.4) and glints (d0.5) never touch a boundary.
+
+schema: 1
+song: Music_SurfingPikachu
+
+channels:
+  # ── Tier 1: OPL3 foundation (also cascades to MT-32 / GM) ────────────────
+  - name: surf_bass
+    tier: 1
+    opl_patch: sub_bass          # pure sine; sits under the pulse shim
+    mt32_patch: 65               # Acou Bass 1: round plucked beach bounce
+    gm_program: 33               # Acoustic Bass
+    pan: center
+    volume: 62
+    velocity: 80
+    events:
+      - {m: 1, b: 1, d: 2, n: E2}    # E
+      - {m: 1, b: 3, d: 2, n: E2}
+      - {m: 2, b: 1, d: 2, n: F#2}   # F#m
+      - {m: 2, b: 3, d: 2, n: F#2}
+      - {m: 3, b: 1, d: 2, n: F#2}   # F#m7
+      - {m: 3, b: 3, d: 2, n: F#2}
+      - {m: 4, b: 1, d: 2, n: F#2}   # F#m7
+      - {m: 4, b: 3, d: 2, n: A2}    # Amaj7
+      - {m: 5, b: 1, d: 2, n: E2}    # E
+      - {m: 5, b: 3, d: 2, n: E2}
+      - {m: 6, b: 1, d: 2, n: E2}    # E
+      - {m: 6, b: 3, d: 2, n: C#2}   # C#m7
+      - {m: 7, b: 1, d: 2, n: E2}    # E
+      - {m: 7, b: 3, d: 2, n: F#2}   # F#m7
+      - {m: 8, b: 1, d: 2, n: E2}    # E
+      - {m: 8, b: 3, d: 2, n: E2}    # Emaj7
+      - {m: 9, b: 1, d: 2, n: F#2}   # F#m
+      - {m: 9, b: 3, d: 2, n: F#2}
+      - {m: 10, b: 1, d: 2, n: E2}   # E
+      - {m: 10, b: 3, d: 2, n: E2}   # Emaj7
+      - {m: 11, b: 1, d: 2, n: E2}   # E
+      - {m: 11, b: 3, d: 2, n: F#2}  # F#m7
+      - {m: 12, b: 1, d: 2, n: E2}   # Emaj7
+      - {m: 12, b: 3, d: 2, n: E2}   # E
+      - {m: 13, b: 1, d: 2, n: D#2}  # D#dim
+      - {m: 13, b: 3, d: 2, n: B2}   # B7
+      - {m: 14, b: 1, d: 2, n: E2}   # E
+      - {m: 14, b: 3, d: 2, n: E2}   # Emaj7
+      - {m: 15, b: 1, d: 2, n: B2}   # B
+      - {m: 15, b: 3, d: 2, n: B2}   # B7
+      - {m: 16, b: 1, d: 2, n: E2}   # E
+      - {m: 16, b: 3, d: 2, n: A2}   # Amaj7
+      - {m: 17, b: 1, d: 2, n: C#2}  # C#aug
+      - {m: 17, b: 3, d: 2, n: F#2}  # F#m
+      - {m: 18, b: 1, d: 2, n: E2}   # E
+      - {m: 18, b: 3, d: 2, n: C#2}  # C#m7
+      - {m: 19, b: 1, d: 2, n: B2}   # B
+      - {m: 19, b: 3, d: 2, n: B2}   # B7
+      - {m: 20, b: 1, d: 2, n: E2}   # E
+      - {m: 20, b: 3, d: 2, n: A2}   # Amaj7
+      - {m: 21, b: 1, d: 2, n: F#2}  # F#m
+      - {m: 21, b: 3, d: 2, n: D#2}  # D#dim
+      - {m: 22, b: 1, d: 2, n: E2}   # Emaj7
+      - {m: 22, b: 3, d: 2, n: C#2}  # C#m7, ends exactly on the loop seam
+      # Loop body (mm23-38).
+      - {m: 23, b: 1, d: 2, n: E2}   # E
+      - {m: 23, b: 3, d: 2, n: F#2}  # F#m7
+      - {m: 24, b: 1, d: 2, n: E2}   # E
+      - {m: 24, b: 3, d: 2, n: E2}   # Emaj7
+      - {m: 25, b: 1, d: 2, n: F#2}  # F#m
+      - {m: 25, b: 3, d: 2, n: F#2}
+      - {m: 26, b: 1, d: 2, n: E2}   # E
+      - {m: 26, b: 3, d: 2, n: E2}   # Emaj7
+      - {m: 27, b: 1, d: 2, n: E2}   # E
+      - {m: 27, b: 3, d: 2, n: F#2}  # F#m7
+      - {m: 28, b: 1, d: 2, n: E2}   # Emaj7
+      - {m: 28, b: 3, d: 2, n: E2}
+      - {m: 29, b: 1, d: 2, n: D#2}  # D#dim
+      - {m: 29, b: 3, d: 2, n: B2}   # B7
+      - {m: 30, b: 1, d: 2, n: E2}   # E
+      - {m: 30, b: 3, d: 2, n: E2}   # Emaj7
+      - {m: 31, b: 1, d: 2, n: B2}   # B
+      - {m: 31, b: 3, d: 2, n: B2}   # B7
+      - {m: 32, b: 1, d: 2, n: E2}   # E
+      - {m: 32, b: 3, d: 2, n: A2}   # Amaj7
+      - {m: 33, b: 1, d: 2, n: C#2}  # C#aug
+      - {m: 33, b: 3, d: 2, n: F#2}  # F#m
+      - {m: 34, b: 1, d: 2, n: E2}   # E
+      - {m: 34, b: 3, d: 2, n: C#2}  # C#m7
+      - {m: 35, b: 1, d: 2, n: B2}   # B
+      - {m: 35, b: 3, d: 2, n: B2}   # B7
+      - {m: 36, b: 1, d: 2, n: E2}   # E
+      - {m: 36, b: 3, d: 2, n: A2}   # Amaj7
+      - {m: 37, b: 1, d: 2, n: F#2}  # F#m
+      - {m: 37, b: 3, d: 2, n: D#2}  # D#dim
+      - {m: 38, b: 1, d: 2, n: E2}   # Emaj7
+      - {m: 38, b: 3, d: 2, n: C#2}  # C#m7, song end
+
+  - name: sunny_pad
+    tier: 1
+    opl_patch: soft_pad          # organ-like FM warmth, not strings
+    mt32_patch: 49               # Str Sect 1: cascades as real strings
+    gm_program: 90               # Pad 2 (warm)
+    pan: center
+    volume: 56
+    velocity: 74
+    events:
+      - {m: 1, b: 1, d: 2, n: G#3}   # E 3rd
+      - {m: 1, b: 3, d: 2, n: G#3}
+      - {m: 2, b: 1, d: 2, n: A3}    # F#m 3rd
+      - {m: 2, b: 3, d: 2, n: A3}
+      - {m: 3, b: 1, d: 2, n: A3}    # F#m7 3rd
+      - {m: 3, b: 3, d: 2, n: A3}
+      - {m: 4, b: 1, d: 2, n: A3}    # F#m7 3rd
+      - {m: 4, b: 3, d: 2, n: G#3}   # Amaj7 7th
+      - {m: 5, b: 1, d: 2, n: G#3}   # E 3rd
+      - {m: 5, b: 3, d: 2, n: G#3}
+      - {m: 6, b: 1, d: 2, n: G#3}   # E 3rd
+      - {m: 6, b: 3, d: 2, n: E3}    # C#m7 3rd
+      - {m: 7, b: 1, d: 2, n: G#3}   # E 3rd
+      - {m: 7, b: 3, d: 2, n: A3}    # F#m7 3rd
+      - {m: 8, b: 1, d: 2, n: G#3}   # E 3rd
+      - {m: 8, b: 3, d: 2, n: G#3}   # Emaj7 3rd
+      - {m: 9, b: 1, d: 2, n: A3}    # F#m 3rd
+      - {m: 9, b: 3, d: 2, n: A3}
+      - {m: 10, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 10, b: 3, d: 2, n: D#3}  # Emaj7 7th
+      - {m: 11, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 11, b: 3, d: 2, n: A3}   # F#m7 3rd
+      - {m: 12, b: 1, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 12, b: 3, d: 2, n: G#3}  # E 3rd
+      - {m: 13, b: 1, d: 2, n: F#3}  # D#dim b3rd
+      - {m: 13, b: 3, d: 2, n: F#3}  # B7 5th
+      - {m: 14, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 14, b: 3, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 15, b: 1, d: 2, n: F#3}  # B 5th
+      - {m: 15, b: 3, d: 2, n: D#3}  # B7 3rd
+      - {m: 16, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 16, b: 3, d: 2, n: E3}   # Amaj7 5th
+      - {m: 17, b: 1, d: 2, n: A3}   # C#aug 6th (E-nat would rub the E#)
+      - {m: 17, b: 3, d: 2, n: A3}   # F#m 3rd
+      - {m: 18, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 18, b: 3, d: 2, n: E3}   # C#m7 3rd
+      - {m: 19, b: 1, d: 2, n: F#3}  # B 5th
+      - {m: 19, b: 3, d: 2, n: D#3}  # B7 3rd
+      - {m: 20, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 20, b: 3, d: 2, n: E3}   # Amaj7 5th
+      - {m: 21, b: 1, d: 2, n: A3}   # F#m 3rd
+      - {m: 21, b: 3, d: 2, n: A3}   # D#dim b5th
+      - {m: 22, b: 1, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 22, b: 3, d: 2, n: E3}   # C#m7 3rd, ends on the loop seam
+      # Loop body (mm23-38).
+      - {m: 23, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 23, b: 3, d: 2, n: A3}   # F#m7 3rd
+      - {m: 24, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 24, b: 3, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 25, b: 1, d: 2, n: A3}   # F#m 3rd
+      - {m: 25, b: 3, d: 2, n: A3}
+      - {m: 26, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 26, b: 3, d: 2, n: D#3}  # Emaj7 7th
+      - {m: 27, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 27, b: 3, d: 2, n: A3}   # F#m7 3rd
+      - {m: 28, b: 1, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 28, b: 3, d: 2, n: G#3}
+      - {m: 29, b: 1, d: 2, n: F#3}  # D#dim b3rd
+      - {m: 29, b: 3, d: 2, n: F#3}  # B7 5th
+      - {m: 30, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 30, b: 3, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 31, b: 1, d: 2, n: F#3}  # B 5th
+      - {m: 31, b: 3, d: 2, n: D#3}  # B7 3rd
+      - {m: 32, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 32, b: 3, d: 2, n: E3}   # Amaj7 5th
+      - {m: 33, b: 1, d: 2, n: A3}   # C#aug 6th
+      - {m: 33, b: 3, d: 2, n: A3}   # F#m 3rd
+      - {m: 34, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 34, b: 3, d: 2, n: E3}   # C#m7 3rd
+      - {m: 35, b: 1, d: 2, n: F#3}  # B 5th
+      - {m: 35, b: 3, d: 2, n: D#3}  # B7 3rd
+      - {m: 36, b: 1, d: 2, n: G#3}  # E 3rd
+      - {m: 36, b: 3, d: 2, n: E3}   # Amaj7 5th
+      - {m: 37, b: 1, d: 2, n: A3}   # F#m 3rd
+      - {m: 37, b: 3, d: 2, n: A3}   # D#dim b5th
+      - {m: 38, b: 1, d: 2, n: G#3}  # Emaj7 3rd
+      - {m: 38, b: 3, d: 2, n: E3}   # C#m7 3rd, song end
+
+  # ── Tier 2: MT-32/GM-only groove (never OPL3) ────────────────────────────
+  - name: beach_groove
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 64
+    velocity: 80
+    events:
+      - {at: 1, pattern: surf_groove}
+      - {at: 2, pattern: surf_groove}
+      - {at: 3, pattern: surf_groove}
+      - {at: 4, pattern: surf_groove}
+      - {at: 5, pattern: surf_groove}
+      - {at: 6, pattern: surf_groove}
+      - {at: 7, pattern: surf_groove}
+      - {at: 8, pattern: surf_groove}
+      - {at: 9, pattern: surf_groove}
+      - {at: 10, pattern: surf_groove}
+      - {at: 11, pattern: surf_groove}
+      - {at: 12, pattern: surf_groove}
+      - {at: 13, pattern: surf_groove}
+      - {at: 14, pattern: surf_groove}
+      - {at: 15, pattern: surf_groove}
+      - {at: 16, pattern: surf_groove}
+      - {at: 17, pattern: surf_groove}
+      - {at: 18, pattern: surf_groove}
+      - {at: 19, pattern: surf_groove}
+      - {at: 20, pattern: surf_groove}
+      - {at: 21, pattern: surf_groove}
+      - {at: 22, pattern: surf_groove}
+      - {at: 23, pattern: surf_groove}
+      - {at: 24, pattern: surf_groove}
+      - {at: 25, pattern: surf_groove}
+      - {at: 26, pattern: surf_groove}
+      - {at: 27, pattern: surf_groove}
+      - {at: 28, pattern: surf_groove}
+      - {at: 29, pattern: surf_groove}
+      - {at: 30, pattern: surf_groove}
+      - {at: 31, pattern: surf_groove}
+      - {at: 32, pattern: surf_groove}
+      - {at: 33, pattern: surf_groove}
+      - {at: 34, pattern: surf_groove}
+      - {at: 35, pattern: surf_groove}
+      - {at: 36, pattern: surf_groove}
+      - {at: 37, pattern: surf_groove}
+      - {at: 38, pattern: surf_groove}
+
+  # ── Tier 3: MT-32/GM-only sun sparkle ─────────────────────────────────────
+  - name: sun_glint
+    tier: 3
+    mt32_patch: 78               # Pan Pipes: breathy sun-on-water, novel
+    gm_program: 76               # Pan Flute
+    pan: right
+    volume: 48
+    velocity: 68
+    events:
+      - {m: 1, b: 1, d: 0.5, n: E6}    # song open (ch2 has E5: octave)
+      - {m: 13, b: 1, d: 0.5, n: F#6}  # D#dim/B7 turn into phrase 2
+      - {m: 17, b: 1, d: 0.5, n: A6}   # C#aug peak (ch2 has A5: octave)
+      - {m: 21, b: 1, d: 0.5, n: F#6}  # F#m climb before the m22 peak
+      - {m: 23, b: 1, d: 0.5, n: E6}   # loop-return open
+      - {m: 29, b: 1, d: 0.5, n: F#6}  # D#dim/B7 turn into phrase 3
+      - {m: 33, b: 1, d: 0.5, n: A6}   # C#aug peak restated
+      - {m: 37, b: 1, d: 0.5, n: F#6}  # final climb into the close
+
+patterns:
+  # Light backbeat: soft kick on 1 & 3, maracas on 2 & 4. GM drum numbers
+  # (note number IS the drum: no transpose, no switches on rhythm channels).
+  surf_groove:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 0.4, n: 36}
+      - {m: 1, b: 2, d: 0.3, n: 70, v: 64}
+      - {m: 1, b: 3, d: 0.4, n: 36}
+      - {m: 1, b: 4, d: 0.3, n: 70, v: 64}

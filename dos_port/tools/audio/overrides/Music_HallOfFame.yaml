@@ -1,0 +1,36 @@
+# Music_HallOfFame — per-song MIDI overrides (see overrides/README.md).
+#
+# Registers from the pret source (audio/music/halloffame.asm): ch1 is a
+# slow whole-note cantus (GB oct 3 pickup D3 E3 F3 F#3, then GB oct 4
+# whole notes C4 E4 F#4 F4 per 4-bar statement — sounding C5 E5 F#5 F5);
+# ch2 is the celebratory melody (GB oct 3-4, sounding ~D4-C5); ch3 is
+# the wave pedal (GB oct 4 D4/G4 8th-note alternation, sounding D5/G5,
+# for the first 12 bars, then quarter-note accompaniment figures in the
+# last 4 bars). No noise channel, so no drums: section.
+#
+# The score description (hall_of_fame.md) notes the I-bVII kinship with
+# Title Screen / Pokemon Gym and the wave pedal-I under the first 12
+# bars. Voicing follows the fanfare precedent (DefeatedTrainer): brass
+# trio, narrow centered stage — a brief looping cutscene cue gets no
+# wide panning. ch1 whole notes -> trombone (sustained, under the
+# trumpet); ch2 melody -> trumpet (carries); ch3 busy high pedal ->
+# Pizzicato, whose crisp pluck articulates the 8th-note D-G alternation
+# without smearing it the way a sustained string patch would. No
+# switches: one uniform celebratory texture, no sectional re-voicing
+# (the last-4-bars shift is a note change, not a timbre change).
+channels:
+  1:
+    mt32_program: "Trombone 1"   # whole-note cantus, under the trumpet
+    gm_program: "Trombone"
+    volume: 96
+    pan: 56
+  2:
+    mt32_program: "Trumpet 1"    # the Hall of Fame melody carries
+    gm_program: "Trumpet"
+    volume: 104
+    pan: 72
+  3:
+    mt32_program: "Pizzicato"    # 8th-note D-G pedal + quarter figures
+    gm_program: "Pizzicato Strings"
+    volume: 88
+    pan: 64

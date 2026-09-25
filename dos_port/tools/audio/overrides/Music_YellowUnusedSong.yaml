@@ -1,0 +1,35 @@
+# Music_YellowUnusedSong — per-song MIDI overrides (see README.md for schema).
+#
+# Registers verified from audio/music/yellowunusedsong.asm: ch1 is the
+# motoric A4 ostinato (duty 3, oct 3, vibrato) — the menace engine; ch2
+# (duty 2) is the stark repeated-note melody (D5 motor, D5-Bb5-A5 leaps,
+# C5-G#5-G5 cry, soft Eb4/Bb3 whole-note breakdown); ch3 (wave) is the
+# phased countermelody (C4-G4-Bb4 pickups, C#5-D5, long Eb5s/F5/D4s).
+# Noise channel carries only instrument id 3, dense throughout.
+# Intro mm1-4, loop body mm5-16 (frame 420) to end 1680.
+#
+# Voicing: the ostinato keeps its 8-bit edge (Square Wave — delay would
+# smear the motor); the melody gets a dark woody lead (Clarinet 2, FIRST
+# USE project-wide; GM Clarinet) that suits the G-minor/Neapolitan
+# menace better than a fanfare brass; the wave line gets Flute 1 (its
+# sine-ish wave maps naturally). No switches in this draft.
+channels:
+  1:
+    mt32_program: "Square Wave"   # the motor stays 8-bit-sharp
+    gm_program: "Lead 1 (square)"
+    volume: 100
+    pan: 52
+  2:
+    mt32_program: "Clarinet 2"    # dark woody menace (FIRST USE); trumpet
+    gm_program: "Clarinet"        # was the alternative — see report
+    volume: 102                   # melody carries
+    pan: 76
+  3:
+    mt32_program: "Flute 1"       # wave countermelody, natural mapping
+    gm_program: "Flute"
+    volume: 92                    # texture, below the melody
+    pan: 64
+drums:
+  velocity: 96                # dense id-3 pattern sits under the motor
+  map:
+    3: 38                     # snare backbeat (documents the default)

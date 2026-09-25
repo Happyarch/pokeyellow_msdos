@@ -1,0 +1,21 @@
+# Music_GBPrinter — per-song MIDI overrides (see README.md for schema).
+#
+# The GB Printer menu cue: a single-voice WAVE-ONLY song (channel_count 1,
+# channel 3 — audio/headers/musicheaders4.asm; the whole printer.asm is one
+# Ch3 wave line). B major, 18 measures, intro mm1-2, loop body mm3-18:
+# staccato eighth-note music-box figuration (note 1 / rest 1 throughout),
+# mostly an E/B oscillation with a scalar B-major descent in the intro and
+# a B3-dipping low register in mm13+. No pulse, no noise.
+#
+# ch3 -> MT-32 "Glock" (factory glockenspiel): short bright mallet attack
+# that matches the staccato wave figuration better than a sustaining bell.
+# Novel on the MT-32 side — no other song uses Glock (Warm Bell / Ice Rain
+# cover the other wave voices). GM side -> "Music Box" (BikeRiding /
+# MeetEvilTrainer precedent voices wave music-box figures exactly this
+# way). Foreground volume; the enhancement pad sits well underneath.
+channels:
+  3:
+    mt32_program: "Glock"
+    gm_program: "Music Box"
+    volume: 100
+    pan: 64

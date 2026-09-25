@@ -1,0 +1,32 @@
+# Music_SurfingPikachu — per-song MIDI overrides (see README.md for schema).
+#
+# Frame-exact register/role audit (pret_audio.AudioROM +
+# gb_to_midi.simulate_song): three channels, no noise. ch1 is the lower
+# thematic square line (B3-E5, 238 notes), ch2 is the singing melody
+# (E4-E6, 151 notes, peaks C#6 mm21/37 and B5/E6 mm22/38), ch3 is the busy
+# eighth-note accompaniment figure (B3-E5, 302 notes). The default
+# placeholder 80/80/38 is two square-lead timbres plus a synth bass on GM
+# (two saxes plus a bell on MT-32) — too hard-edged for a sunny minigame,
+# and it assigns a bass timbre to a high arpeggio figure.
+#
+# Light, breathy, beach-buoyant voices, one timbral family per GB line:
+# clarinet (warm mid theme), flute (singing melody), harp (plucky
+# accompaniment figure — same water-family choice as Music_Surfing). The
+# additive enhancement supplies the real low bass separately; with no GB
+# noise channel in the song, no drum override applies.
+channels:
+  1:
+    mt32_program: "Clarinet 1"
+    gm_program: "Clarinet"
+    volume: 94
+    pan: 56
+  2:
+    mt32_program: "Flute 1"
+    gm_program: "Flute"
+    volume: 100
+    pan: 64
+  3:
+    mt32_program: "Harp 1"
+    gm_program: "Orchestral Harp"
+    volume: 92
+    pan: 72

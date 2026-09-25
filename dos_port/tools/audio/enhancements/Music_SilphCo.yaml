@@ -1,0 +1,327 @@
+schema: 1
+song: Music_SilphCo
+
+# Music_SilphCo (Silph Co.) — E minor, 66 measures, loop at m34 b4.5.
+#
+# Score read (sylph_company.md): a mischievous altered-fugue — wave channel
+# states a stepwise chromatic subject hovering around E (mm2-5), sq1 restates
+# it, sq2 carries the fast rising/falling countersubject; development
+# diminishes the subject (m11+), ritardando + recap an octave higher (m24+).
+# The loop return differs slightly from the first statement (modified loop
+# point), so everything below is authored against the loop BODY: exposition
+# patterns instance at m1 AND m34/m35, development at m11 AND m43,
+# ritardando at m24 AND m56. Seam measures (m33-35, m66 tail) stay on neutral
+# E/B pedals that are consonant under both the first-time transition and the
+# loop-return variant.
+#
+# Base registers (YAML convention C4 = MIDI 60; GB octave-N C = MIDI note
+# 12N+24, i.e. GB o2 E = E3 = 52): ch1/ch2 occupy MIDI 52-88, ch3 (wave)
+# 86-100. Nothing in the base ever sounds below MIDI 52, and nothing sounds
+# at/above MIDI 93 outside the two ritardando climbs (m24-33, m56-66) —
+# the added voices live in exactly those two gaps, so no unison doubling
+# is possible by construction (lint §7 verifies it frame-exactly).
+#
+# Tier 1 (OPL3 foundation, 2 voices — the fugue texture is already dense at
+# GB density 1.6-1.7, so restraint; both sine-family patches that sit UNDER
+# the shim's buzzy pulses instead of fighting them):
+# - deep_root (sub_bass_clear): tonic/dominant whole-note anchor two+ octaves
+#   below the fray. E1 exposition, B1 development pedal, E1 ritardando.
+# - low_tenor (soft_pad_clear): slow contrary-motion line a fifth/octave above
+#   the bass (E1/B1/E2/F#2/G2/B2 vocabulary keeps every low sonority at
+#   P5/P8 — no mud below C3). Never parallels the bass into a fifth.
+#
+# Tier 2 (MT-32/GM body, 2 voices):
+# - ghost_theremin (custom "Theremin", 1 partial; GM 86 Lead 6 (voice)): the
+#   cold surveillance-camera descant — slow B6-A6-C7-D7 whole notes floating
+#   above the exposition/development, falling SILENT for both ritardando
+#   climbs where the wave channel screams up the octave (it yields the climax
+#   rather than competing). Per maintainer direction.
+# - fluoro_hum (PROPOSED custom timbre — NOT YET in mt32/timbres.yaml, expect
+#   one lint error on the name until the integrator lands it; GM 104
+#   FX 8 (sci-fi) fallback): the building itself — fluorescent-ballast hum +
+#   HVAC rumble bed under the exposition only, then it holds its breath for
+#   the chase. `percussion: true` (non-tonal, NightWind precedent) so the
+#   pitched-voice rules don't judge a keyfollow-0 drone. Full recipe in the
+#   arrangement report.
+#
+# Tier 3 (luxury, drops first): hinge_marks — lone crash hits (GM 49) on the
+# five structural hinges (dev, rit, body-restart, body-dev, body-rit).
+
+channels:
+  - name: deep_root
+    tier: 1
+    opl_patch: sub_bass_clear  # octave-up sideband for pitch definition
+    mt32_patch: 57             # 1-based: Contrabass (factory #57)
+    gm_program: 44             # 1-based: Contrabass
+    pan: center
+    volume: 54                 # felt more than heard
+    velocity: 78
+    events:
+      - {at: 1,  pattern: bs_expo}
+      - {at: 34, pattern: bs_expo_b}
+      - {at: 11, pattern: bs_dev}
+      - {at: 43, pattern: bs_dev}
+      - {at: 24, pattern: bs_rit}
+      - {at: 56, pattern: bs_rit_b}
+      - {m: 66, b: 1, d: 3, n: E1}   # shaved song-end fence (cf. Mansion)
+
+  - name: low_tenor
+    tier: 1
+    opl_patch: soft_pad_clear  # presence without buzz
+    mt32_patch: 54             # 1-based: Cello 1 (factory #54)
+    gm_program: 43             # 1-based: Cello
+    pan: left
+    volume: 60
+    velocity: 84
+    events:
+      - {at: 1,  pattern: tn_expo}
+      - {at: 34, pattern: tn_expo_b}
+      - {at: 11, pattern: tn_dev}
+      - {at: 43, pattern: tn_dev}
+      - {at: 24, pattern: tn_rit}
+      - {at: 56, pattern: tn_rit_b}
+
+  - name: ghost_theremin
+    tier: 2
+    mt32_patch: "Theremin"     # custom timbre, Patch #12, 1 partial
+    gm_program: 86             # 1-based: Lead 6 (voice), the recipe's GM pair
+    pan: right
+    volume: 76                 # distant watcher, not a soloist
+    velocity: 88
+    events:
+      - {at: 2,  pattern: th_expo_a}
+      - {at: 35, pattern: th_expo_b}
+      - {at: 11, pattern: th_dev}
+      - {at: 43, pattern: th_dev}
+      # Tacit m1 (pickup breath) and m24-34 / m56-66: the ritardando climbs
+      # belong to the wave channel — the watcher yields rather than competing.
+
+  - name: fluoro_hum
+    tier: 2
+    percussion: true           # non-tonal keyfollow-0 drone (NightWind pattern)
+    mt32_patch: "FluoroHum"    # PROPOSED — not yet in mt32/timbres.yaml
+    gm_program: 104            # 1-based: FX 8 (sci-fi), sterile hum fallback
+    pan: center
+    volume: 58                 # institutional dread bed, under the tenor
+    velocity: 70
+    events:
+      - {at: 1,  pattern: fh_expo}
+      - {at: 34, pattern: fh_expo_b}
+
+  - name: hinge_marks
+    tier: 3
+    rhythm: true               # crash on the drum part; note number IS the drum
+    pan: center
+    volume: 72
+    velocity: 90
+    events:
+      - {m: 11, b: 1, d: 0.5, n: 49}
+      - {m: 24, b: 1, d: 0.5, n: 49}
+      - {m: 35, b: 1, d: 0.5, n: 49}
+      - {m: 43, b: 1, d: 0.5, n: 49}
+      - {m: 56, b: 1, d: 0.5, n: 49}
+
+patterns:
+  # --- deep_root ---
+  bs_expo:                     # E1 anchor, B1 under the m7-8 tension
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: E1}
+      - {m: 2, b: 1, d: 4, n: E1}
+      - {m: 3, b: 1, d: 4, n: E1}
+      - {m: 4, b: 1, d: 4, n: E1}
+      - {m: 5, b: 1, d: 4, n: E1}
+      - {m: 6, b: 1, d: 4, n: E1}
+      - {m: 7, b: 1, d: 4, n: B1}
+      - {m: 8, b: 1, d: 4, n: B1}
+      - {m: 9, b: 1, d: 4, n: E1}
+      - {m: 10, b: 1, d: 4, n: E1}
+  bs_expo_b:                   # body restatement, m34-42 (m34 event is
+    measures: 9                # first-pass-only; its tail is consonant B/E
+    events:                    # under the loop-return pickup either way)
+      - {m: 1, b: 1, d: 4, n: E1}
+      - {m: 2, b: 1, d: 4, n: E1}
+      - {m: 3, b: 1, d: 4, n: E1}
+      - {m: 4, b: 1, d: 4, n: E1}
+      - {m: 5, b: 1, d: 4, n: E1}
+      - {m: 6, b: 1, d: 4, n: B1}
+      - {m: 7, b: 1, d: 4, n: B1}
+      - {m: 8, b: 1, d: 4, n: E1}
+      - {m: 9, b: 1, d: 4, n: E1}
+  bs_dev:                      # B1 dominant pedal, C2 sigh at m10
+    measures: 13
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}
+      - {m: 2, b: 1, d: 4, n: B1}
+      - {m: 3, b: 1, d: 4, n: B1}
+      - {m: 4, b: 1, d: 4, n: B1}
+      - {m: 5, b: 1, d: 4, n: B1}
+      - {m: 6, b: 1, d: 4, n: B1}
+      - {m: 7, b: 1, d: 4, n: B1}
+      - {m: 8, b: 1, d: 4, n: B1}
+      - {m: 9, b: 1, d: 4, n: B1}
+      - {m: 10, b: 1, d: 4, n: C2}
+      - {m: 11, b: 1, d: 4, n: B1}
+      - {m: 12, b: 1, d: 4, n: B1}
+      - {m: 13, b: 1, d: 4, n: B1}
+  bs_rit:                      # E1 under the long tones, m24-33
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: E1}
+      - {m: 2, b: 1, d: 4, n: E1}
+      - {m: 3, b: 1, d: 4, n: E1}
+      - {m: 4, b: 1, d: 4, n: E1}
+      - {m: 5, b: 1, d: 4, n: E1}
+      - {m: 6, b: 1, d: 4, n: E1}
+      - {m: 7, b: 1, d: 4, n: E1}
+      - {m: 8, b: 1, d: 4, n: E1}
+      - {m: 9, b: 1, d: 4, n: E1}
+      - {m: 10, b: 1, d: 4, n: E1}
+  bs_rit_b:                    # m56-64 (m65 breathes; m66 is the literal above)
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: E1}
+      - {m: 2, b: 1, d: 4, n: E1}
+      - {m: 3, b: 1, d: 4, n: E1}
+      - {m: 4, b: 1, d: 4, n: E1}
+      - {m: 5, b: 1, d: 4, n: E1}
+      - {m: 6, b: 1, d: 4, n: E1}
+      - {m: 7, b: 1, d: 4, n: E1}
+      - {m: 8, b: 1, d: 4, n: E1}
+      - {m: 9, b: 1, d: 4, n: E1}
+
+  # --- low_tenor (every sonority vs the bass is P5/P8) ---
+  tn_expo:
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}
+      - {m: 2, b: 1, d: 4, n: B1}
+      - {m: 3, b: 1, d: 4, n: E2}
+      - {m: 4, b: 1, d: 4, n: E2}
+      - {m: 5, b: 1, d: 4, n: B1}
+      - {m: 6, b: 1, d: 4, n: B1}
+      - {m: 7, b: 1, d: 4, n: F#2}
+      - {m: 8, b: 1, d: 4, n: F#2}
+      - {m: 9, b: 1, d: 4, n: E2}
+      - {m: 10, b: 1, d: 4, n: E2}
+  tn_expo_b:
+    measures: 9
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}
+      - {m: 2, b: 1, d: 4, n: E2}
+      - {m: 3, b: 1, d: 4, n: E2}
+      - {m: 4, b: 1, d: 4, n: B1}
+      - {m: 5, b: 1, d: 4, n: B1}
+      - {m: 6, b: 1, d: 4, n: F#2}
+      - {m: 7, b: 1, d: 4, n: F#2}
+      - {m: 8, b: 1, d: 4, n: E2}
+      - {m: 9, b: 1, d: 4, n: E2}
+  tn_dev:                      # B2 octave over the B1 pedal, F#2 fifth, G2
+    measures: 13               # fifth over the C2 sigh
+    events:
+      - {m: 1, b: 1, d: 4, n: B2}
+      - {m: 2, b: 1, d: 4, n: B2}
+      - {m: 3, b: 1, d: 4, n: B2}
+      - {m: 4, b: 1, d: 4, n: B2}
+      - {m: 5, b: 1, d: 4, n: B2}
+      - {m: 6, b: 1, d: 4, n: B2}
+      - {m: 7, b: 1, d: 4, n: F#2}
+      - {m: 8, b: 1, d: 4, n: F#2}
+      - {m: 9, b: 1, d: 4, n: F#2}
+      - {m: 10, b: 1, d: 4, n: G2}
+      - {m: 11, b: 1, d: 4, n: B2}
+      - {m: 12, b: 1, d: 4, n: B2}
+      - {m: 13, b: 1, d: 4, n: B2}
+  tn_rit:
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}
+      - {m: 2, b: 1, d: 4, n: B1}
+      - {m: 3, b: 1, d: 4, n: B1}
+      - {m: 4, b: 1, d: 4, n: B1}
+      - {m: 5, b: 1, d: 4, n: B1}
+      - {m: 6, b: 1, d: 4, n: E2}
+      - {m: 7, b: 1, d: 4, n: E2}
+      - {m: 8, b: 1, d: 4, n: E2}
+      - {m: 9, b: 1, d: 4, n: E2}
+      - {m: 10, b: 1, d: 4, n: E2}
+  tn_rit_b:                    # thins to bass-only for m65-66 (seam inhale)
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: B1}
+      - {m: 2, b: 1, d: 4, n: B1}
+      - {m: 3, b: 1, d: 4, n: B1}
+      - {m: 4, b: 1, d: 4, n: B1}
+      - {m: 5, b: 1, d: 4, n: B1}
+      - {m: 6, b: 1, d: 4, n: E2}
+      - {m: 7, b: 1, d: 4, n: E2}
+      - {m: 8, b: 1, d: 4, n: E2}
+      - {m: 9, b: 1, d: 4, n: E2}
+
+  # --- ghost_theremin (register 93-98: above every base note in m2-23/m35-55) ---
+  th_expo_a:                   # cold sigh over the exposition: B6, A6 neighbor
+    measures: 9                # dip, C7 glance, back to B6
+    events:
+      - {m: 1, b: 1, d: 4, n: B6}
+      - {m: 2, b: 1, d: 4, n: B6}
+      - {m: 3, b: 1, d: 4, n: B6}
+      - {m: 4, b: 1, d: 4, n: B6}
+      - {m: 5, b: 1, d: 4, n: A6}
+      - {m: 6, b: 1, d: 4, n: A6}
+      - {m: 7, b: 1, d: 4, n: B6}
+      - {m: 8, b: 1, d: 4, n: C7}
+      - {m: 9, b: 1, d: 4, n: B6}
+  th_expo_b:                   # body restatement, m35-42
+    measures: 8
+    events:
+      - {m: 1, b: 1, d: 4, n: B6}
+      - {m: 2, b: 1, d: 4, n: B6}
+      - {m: 3, b: 1, d: 4, n: B6}
+      - {m: 4, b: 1, d: 4, n: B6}
+      - {m: 5, b: 1, d: 4, n: A6}
+      - {m: 6, b: 1, d: 4, n: A6}
+      - {m: 7, b: 1, d: 4, n: B6}
+      - {m: 8, b: 1, d: 4, n: C7}
+  th_dev:                      # i-ii-III arch tracking the development tension
+    measures: 13
+    events:
+      - {m: 1, b: 1, d: 4, n: C7}
+      - {m: 2, b: 1, d: 4, n: C7}
+      - {m: 3, b: 1, d: 4, n: D7}
+      - {m: 4, b: 1, d: 4, n: D7}
+      - {m: 5, b: 1, d: 4, n: C7}
+      - {m: 6, b: 1, d: 4, n: C7}
+      - {m: 7, b: 1, d: 4, n: B6}
+      - {m: 8, b: 1, d: 4, n: B6}
+      - {m: 9, b: 1, d: 4, n: B6}
+      - {m: 10, b: 1, d: 4, n: A6}
+      - {m: 11, b: 1, d: 4, n: A6}
+      - {m: 12, b: 1, d: 4, n: B6}
+      - {m: 13, b: 1, d: 4, n: B6}
+
+  # --- fluoro_hum (tonic bed, exposition only — then it holds its breath) ---
+  fh_expo:
+    measures: 10
+    events:
+      - {m: 1, b: 1, d: 4, n: E2}
+      - {m: 2, b: 1, d: 4, n: E2}
+      - {m: 3, b: 1, d: 4, n: E2}
+      - {m: 4, b: 1, d: 4, n: E2}
+      - {m: 5, b: 1, d: 4, n: E2}
+      - {m: 6, b: 1, d: 4, n: E2}
+      - {m: 7, b: 1, d: 4, n: E2}
+      - {m: 8, b: 1, d: 4, n: E2}
+      - {m: 9, b: 1, d: 4, n: E2}
+      - {m: 10, b: 1, d: 4, n: E2}
+  fh_expo_b:
+    measures: 9
+    events:
+      - {m: 1, b: 1, d: 4, n: E2}
+      - {m: 2, b: 1, d: 4, n: E2}
+      - {m: 3, b: 1, d: 4, n: E2}
+      - {m: 4, b: 1, d: 4, n: E2}
+      - {m: 5, b: 1, d: 4, n: E2}
+      - {m: 6, b: 1, d: 4, n: E2}
+      - {m: 7, b: 1, d: 4, n: E2}
+      - {m: 8, b: 1, d: 4, n: E2}
+      - {m: 9, b: 1, d: 4, n: E2}

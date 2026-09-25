@@ -1,0 +1,765 @@
+# Music_TrainerBattle — full-weight battle arrangement (tier 1 + tier 2 + tier 3).
+#
+# Authored against music_analysis.py output (frame-exact: E minor, K-S 0.612,
+# runner-up A minor 0.582 = genuinely ambiguous, NOT a clear major; 4/4,
+# 69 measures = 10-bar intro (mm1-10, chromatic dissolve flourish) + 59-bar
+# loop body (mm11-69), loop_start m11 frame 840, frames.end 5796) and
+# audio/music/trainerbattle.asm, per music-theory + audio-enhance-opl3/mt32.
+# Description: battle_trainer.md — B-minor-feel loop (engine pitch reads E
+# minor here; note names below follow the ANALYSIS pitch, which is what
+# gb_to_midi renders), Neapolitan bII everywhere, chromatic ascending
+# sequences, Bm->Am->A-major->Bm modulation arc. Do NOT "fix" the
+# chromaticism: every added pitch is a sounding chord root or 3rd.
+#
+# Loop seam: the loop returns to m11 (Bm), identical to the first statement
+# of the body — no first-pass divergence. Authored intro + one body only.
+# Last events release early (d 1.95 / omitted m69b4 drive + hat hits) so
+# nothing crosses the loop end; the m69b4 hole is a breath before re-entry.
+#
+# Register audit (measured via simulate_song on the base .mid):
+#   ch1 (sq, inner runs): 54-79 (F#3-G5)   ch2 (sq, melody): 66-91 (F#4-G6)
+#   ch3 (wave, motor bass): 43-59 (G2-B3)  ch4: absent (channel_count 3)
+# Consequences:
+#   * Every tier-1 pitch lives in octave 1 (24-42), unison-proof BY
+#     CONSTRUCTION (base minimum is 43). Verified per-slot by scratch audit
+#     (/tmp/opencode/trainer_audit.py): 138 slots, no lane violations
+#     (third always above bass), no pitches >= 43, no parallel P5/P8 by
+#     similar motion between sub_bass and third_line.
+#   * No sustained pitched voice is placed in octaves 3+ : the base packs
+#     three-deep there (ch1 runs + ch2 sustains + ch3 arpeggios), so any pad
+#     or stab would either err (unison) or force constant rests. Premium
+#     weight comes from the exempt channels instead: drums (tier 2) and a
+#     timpani line (tier 3, gm 48 exemption).
+#   * Below C3 the added voices are single-note lines (sub roots, 3rds,
+#     8th... rather quarter pulses) — no dyads, no mud.
+#
+# Harmony: analysis chord-roots verbatim for sub_bass/bass_drive; third_line
+# takes the chord 3rd (never the leading tone as a doubled color, never a
+# chord 7th), with two octave displacements where the 3rd would dip below
+# the bass: A-major-family 3rds voiced as C#2 (mm17b3, 18b3, 21-22, 25-26,
+# 55b1, 59, 61b3, 62b3, 63) and B-major 3rds as D#2 (mm36b3-37b1, 66-67).
+# The Neapolitan arrivals (F at m13, A# as bV at m38/44/48/52/54/57/64-65,
+# C as bVI at m51/53/55/68-69) get full bass + 3rd + timpani weight.
+#
+# Arc: intro (mm1-10) = sub + third + drive + hat only (ticking tension
+# under the chromatic flourish); the full kit + crash + timpani enter at
+# the m11 loop-body downbeat. Kit rests only at the final seam (m69 tail).
+#
+# Patches: proven FM pair sub_bass / sub_bass_clear (defined low end) and
+# soft_pad_clear (presence without buzz); cascades Syn Bass 1 / Syn Bass 2 /
+# Str Sect 1 + Synth Bass / Pad 2 (warm) follow house precedent.
+
+schema: 1
+song: Music_TrainerBattle
+
+channels:
+  - name: sub_bass
+    tier: 1
+    opl_patch: sub_bass
+    mt32_patch: 29               # MT-32 Syn Bass 1 (round, sustaining)
+    gm_program: 39               # GM Synth Bass 1
+    pan: center
+    volume: 85                   # battle level; no ch4 motor in this track
+    velocity: 90
+    events:
+      # intro: chromatic dissolve, half-note roots
+      - {m: 1, b: 1, d: 2, n: F#1}      # F#m   (ii)
+      - {m: 1, b: 3, d: 2, n: F1}       # Fmaj7 (bII7, Neapolitan color)
+      - {m: 2, b: 1, d: 2, n: D1}       # Dmaj7 (VII7)
+      - {m: 2, b: 3, d: 2, n: G#1}      # G#m   (biii)
+      - {m: 3, b: 1, d: 2, n: E1}       # E7    (I7)
+      - {m: 3, b: 3, d: 2, n: B1}       # Bdim  (v°)
+      - {m: 4, b: 1, d: 2, n: E1}       # E7
+      - {m: 4, b: 3, d: 2, n: D1}       # Dm7   (vii7)
+      - {m: 5, b: 1, d: 2, n: E1}       # E7
+      - {m: 5, b: 3, d: 2, n: B1}       # Bdim
+      - {m: 6, b: 1, d: 2, n: E1}       # E7
+      - {m: 6, b: 3, d: 2, n: A#1}      # A#maj7 (bV7)
+      - {m: 7, b: 1, d: 2, n: E1}       # E7
+      - {m: 7, b: 3, d: 2, n: B1}       # Bdim (holds m8b1)
+      - {m: 8, b: 3, d: 2, n: A#1}      # A#maj7
+      - {m: 9, b: 1, d: 2, n: E1}       # E7
+      - {m: 9, b: 3, d: 2, n: B1}       # Bdim (holds m10b1)
+      - {m: 10, b: 3, d: 2, n: A#1}     # A#maj7
+      # loop body
+      - {m: 11, b: 1, d: 4, n: B1}      # Bm (v) — body opens, mm11-12
+      - {m: 12, b: 1, d: 4, n: B1}
+      - {m: 13, b: 1, d: 2, n: F1}      # F (bII, Neapolitan arrival)
+      - {m: 13, b: 3, d: 2, n: C1}      # Cm (vi, holds m14b1)
+      - {m: 14, b: 3, d: 2, n: C1}      # C (VI)
+      - {m: 15, b: 1, d: 4, n: B1}      # Bm, mm15-16
+      - {m: 16, b: 1, d: 4, n: B1}
+      - {m: 17, b: 1, d: 2, n: D1}      # D (VII)
+      - {m: 17, b: 3, d: 2, n: A1}      # A (IV)
+      - {m: 18, b: 1, d: 2, n: B1}      # Bm7 (v7)
+      - {m: 18, b: 3, d: 2, n: A1}      # Amaj7 (IV7)
+      - {m: 19, b: 1, d: 4, n: G1}      # G (III), mm19-20
+      - {m: 20, b: 1, d: 4, n: G1}
+      - {m: 21, b: 1, d: 4, n: A1}      # A7 (IV7), mm21-22
+      - {m: 22, b: 1, d: 4, n: A1}
+      - {m: 23, b: 1, d: 4, n: G1}      # G (m19 repeat)
+      - {m: 24, b: 1, d: 2, n: E1}      # Em7 (i7)
+      - {m: 24, b: 3, d: 2, n: G1}      # Gmaj7 (III7)
+      - {m: 25, b: 1, d: 4, n: A1}      # A7/A
+      - {m: 26, b: 1, d: 4, n: A1}      # A7
+      - {m: 27, b: 1, d: 2, n: B1}      # Bm
+      - {m: 27, b: 3, d: 2, n: B1}      # Bm7 (holds m28b1)
+      - {m: 28, b: 3, d: 2, n: D1}      # D7 (VII7)
+      - {m: 29, b: 1, d: 2, n: C1}      # Cm — ascending sequence starts
+      - {m: 29, b: 3, d: 2, n: C1}      # Cm7 (holds m30b1)
+      - {m: 30, b: 3, d: 2, n: D#1}     # D#7 (bVII7)
+      - {m: 31, b: 1, d: 2, n: C#1}     # C#m (bvi)
+      - {m: 31, b: 3, d: 2, n: C#1}     # C#m7 (holds m32b1)
+      - {m: 32, b: 3, d: 2, n: E1}      # E7
+      - {m: 33, b: 1, d: 4, n: D1}      # Dm/Dm7
+      - {m: 34, b: 1, d: 2, n: D1}      # Dmaj7 (VII7)
+      - {m: 34, b: 3, d: 2, n: E1}      # Em7
+      - {m: 35, b: 1, d: 2, n: D1}      # D (VII)
+      - {m: 35, b: 3, d: 2, n: C1}      # Cmaj7 (holds m36b1)
+      - {m: 36, b: 3, d: 2, n: B1}      # Baug (V+, holds m37b1)
+      - {m: 37, b: 3, d: 2, n: D1}      # D7
+      - {m: 38, b: 1, d: 4, n: A#1}     # A#maj7/A# (bV)
+      - {m: 39, b: 1, d: 4, n: G1}      # Gm7 (iii7)
+      - {m: 40, b: 1, d: 4, n: E1}      # E (I), mm40-41
+      - {m: 41, b: 1, d: 4, n: E1}
+      - {m: 42, b: 1, d: 4, n: A1}      # Am (iv), mm42-43
+      - {m: 43, b: 1, d: 4, n: A1}
+      - {m: 44, b: 1, d: 4, n: A#1}     # A# (bV), mm44-45
+      - {m: 45, b: 1, d: 4, n: A#1}
+      - {m: 46, b: 1, d: 4, n: A1}      # Am (m42 repeat), mm46-47
+      - {m: 47, b: 1, d: 4, n: A1}
+      - {m: 48, b: 1, d: 4, n: A#1}     # A# (bV)
+      - {m: 49, b: 1, d: 2, n: G1}      # Gm7 — Neapolitan development
+      - {m: 49, b: 3, d: 6, n: A#1}     # A# (holds all of m50)
+      - {m: 51, b: 1, d: 4, n: C1}      # C7 (VI7)
+      - {m: 52, b: 1, d: 4, n: A#1}     # A#
+      - {m: 53, b: 1, d: 2, n: E1}      # Edim (i°)
+      - {m: 53, b: 3, d: 2, n: C1}      # C7
+      - {m: 54, b: 1, d: 4, n: A#1}     # A#
+      - {m: 55, b: 1, d: 2, n: A#1}     # A#dim (bv°)
+      - {m: 55, b: 3, d: 2, n: C1}      # C7
+      - {m: 56, b: 1, d: 2, n: G1}      # Gm (iii)
+      - {m: 56, b: 3, d: 2, n: E1}      # Edim
+      - {m: 57, b: 1, d: 2, n: A#1}     # A#
+      - {m: 57, b: 3, d: 2, n: G1}      # Gm7
+      - {m: 58, b: 1, d: 4, n: E1}      # Edim
+      - {m: 59, b: 1, d: 4, n: A1}      # A (IV)
+      - {m: 60, b: 1, d: 4, n: A1}      # Am (iv)
+      - {m: 61, b: 1, d: 2, n: E1}      # Edim
+      - {m: 61, b: 3, d: 2, n: A1}      # A
+      - {m: 62, b: 1, d: 4, n: A1}      # Am/A7
+      - {m: 63, b: 1, d: 4, n: A1}      # A — final ascent gathers
+      - {m: 64, b: 1, d: 4, n: A#1}     # A#/A#m (bV)
+      - {m: 65, b: 1, d: 4, n: A#1}     # A#
+      - {m: 66, b: 1, d: 4, n: B1}      # B (V) — dominant arrival
+      - {m: 67, b: 1, d: 4, n: B1}      # B
+      - {m: 68, b: 1, d: 4, n: C1}      # C (VI) — deceptive close
+      - {m: 69, b: 1, d: 2, n: C1}      # C/C7 — seam release into m11 (Bm)
+      - {m: 69, b: 3, d: 1.95, n: C1}
+
+  - name: third_line
+    tier: 1
+    opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
+    mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
+    gm_program: 90               # GM Pad 2 (warm)
+    pan: center
+    volume: 70                   # under the squares, over the bass
+    velocity: 80
+    events:
+      - {m: 1, b: 1, d: 2, n: A1}       # F#m  3rd
+      - {m: 1, b: 3, d: 2, n: A1}       # Fmaj7 3rd (not F — chromatic root, pad only)
+      - {m: 2, b: 1, d: 2, n: F1}       # Dmaj7 3rd
+      - {m: 2, b: 3, d: 2, n: B1}       # G#m  3rd
+      - {m: 3, b: 1, d: 2, n: G#1}      # E7   3rd
+      - {m: 3, b: 3, d: 2, n: D2}       # Bdim 3rd
+      - {m: 4, b: 1, d: 2, n: G#1}
+      - {m: 4, b: 3, d: 2, n: F1}       # Dm7  3rd
+      - {m: 5, b: 1, d: 2, n: G#1}
+      - {m: 5, b: 3, d: 2, n: D2}
+      - {m: 6, b: 1, d: 2, n: G#1}
+      - {m: 6, b: 3, d: 2, n: D2}       # A#maj7 3rd
+      - {m: 7, b: 1, d: 2, n: G#1}
+      - {m: 7, b: 3, d: 2, n: D2}       # holds m8b1
+      - {m: 8, b: 3, d: 2, n: D2}
+      - {m: 9, b: 1, d: 2, n: G#1}
+      - {m: 9, b: 3, d: 2, n: D2}       # holds m10b1
+      - {m: 10, b: 3, d: 2, n: D2}
+      - {m: 11, b: 1, d: 4, n: D2}      # Bm   3rd
+      - {m: 12, b: 1, d: 4, n: D2}
+      - {m: 13, b: 1, d: 2, n: A1}      # F    3rd
+      - {m: 13, b: 3, d: 2, n: D#2}     # Cm   3rd (Eb, holds m14b1)
+      - {m: 14, b: 3, d: 2, n: E1}      # C    3rd
+      - {m: 15, b: 1, d: 4, n: D2}
+      - {m: 16, b: 1, d: 4, n: D2}
+      - {m: 17, b: 1, d: 2, n: F#1}     # D    3rd
+      - {m: 17, b: 3, d: 2, n: C#2}     # A    3rd (up octave: lane discipline)
+      - {m: 18, b: 1, d: 2, n: D2}      # Bm7  3rd
+      - {m: 18, b: 3, d: 2, n: C#2}     # Amaj7 3rd
+      - {m: 19, b: 1, d: 4, n: B1}      # G    3rd
+      - {m: 20, b: 1, d: 4, n: B1}
+      - {m: 21, b: 1, d: 4, n: C#2}     # A7   3rd
+      - {m: 22, b: 1, d: 4, n: C#2}
+      - {m: 23, b: 1, d: 4, n: B1}
+      - {m: 24, b: 1, d: 2, n: G1}      # Em7  3rd
+      - {m: 24, b: 3, d: 2, n: B1}      # Gmaj7 3rd
+      - {m: 25, b: 1, d: 4, n: C#2}
+      - {m: 26, b: 1, d: 4, n: C#2}
+      - {m: 27, b: 1, d: 2, n: D2}
+      - {m: 27, b: 3, d: 2, n: D2}      # holds m28b1
+      - {m: 28, b: 3, d: 2, n: F#1}     # D7   3rd
+      - {m: 29, b: 1, d: 2, n: D#1}     # Cm   3rd
+      - {m: 29, b: 3, d: 2, n: D#1}     # holds m30b1
+      - {m: 30, b: 3, d: 2, n: G1}      # D#7  3rd
+      - {m: 31, b: 1, d: 2, n: E1}      # C#m  3rd
+      - {m: 31, b: 3, d: 2, n: E1}      # holds m32b1
+      - {m: 32, b: 3, d: 2, n: G#1}     # E7   3rd
+      - {m: 33, b: 1, d: 4, n: F1}      # Dm   3rd
+      - {m: 34, b: 1, d: 2, n: F#1}     # Dmaj7 3rd
+      - {m: 34, b: 3, d: 2, n: G1}      # Em7  3rd
+      - {m: 35, b: 1, d: 2, n: F#1}
+      - {m: 35, b: 3, d: 2, n: E1}      # Cmaj7 3rd (holds m36b1)
+      - {m: 36, b: 3, d: 2, n: D#2}     # Baug 3rd (up octave; holds m37b1)
+      - {m: 37, b: 3, d: 2, n: F#1}     # D7   3rd
+      - {m: 38, b: 1, d: 4, n: D2}      # A#   3rd
+      - {m: 39, b: 1, d: 4, n: A#1}     # Gm7  3rd
+      - {m: 40, b: 1, d: 4, n: G#1}     # E    3rd
+      - {m: 41, b: 1, d: 4, n: G#1}
+      - {m: 42, b: 1, d: 4, n: C2}      # Am   3rd
+      - {m: 43, b: 1, d: 4, n: C2}
+      - {m: 44, b: 1, d: 4, n: D2}      # A#   3rd
+      - {m: 45, b: 1, d: 4, n: D2}
+      - {m: 46, b: 1, d: 4, n: C2}
+      - {m: 47, b: 1, d: 4, n: C2}
+      - {m: 48, b: 1, d: 4, n: D2}
+      - {m: 49, b: 1, d: 2, n: A#1}     # Gm7  3rd
+      - {m: 49, b: 3, d: 6, n: D2}      # A# (all of m50)
+      - {m: 51, b: 1, d: 4, n: E1}      # C7   3rd
+      - {m: 52, b: 1, d: 4, n: D2}
+      - {m: 53, b: 1, d: 2, n: G1}      # Edim 3rd
+      - {m: 53, b: 3, d: 2, n: E1}
+      - {m: 54, b: 1, d: 4, n: D2}
+      - {m: 55, b: 1, d: 2, n: C#2}     # A#dim 3rd (up octave)
+      - {m: 55, b: 3, d: 2, n: E1}
+      - {m: 56, b: 1, d: 2, n: A#1}     # Gm   3rd (Bb)
+      - {m: 56, b: 3, d: 2, n: G1}      # Edim 3rd
+      - {m: 57, b: 1, d: 2, n: D2}
+      - {m: 57, b: 3, d: 2, n: A#1}     # Gm7  3rd
+      - {m: 58, b: 1, d: 4, n: G1}
+      - {m: 59, b: 1, d: 4, n: C#2}     # A    3rd
+      - {m: 60, b: 1, d: 4, n: C2}      # Am   3rd
+      - {m: 61, b: 1, d: 2, n: G1}
+      - {m: 61, b: 3, d: 2, n: C#2}
+      - {m: 62, b: 1, d: 2, n: C2}      # Am   3rd
+      - {m: 62, b: 3, d: 2, n: C#2}     # A7   3rd
+      - {m: 63, b: 1, d: 4, n: C#2}
+      - {m: 64, b: 1, d: 4, n: D2}
+      - {m: 65, b: 1, d: 4, n: D2}
+      - {m: 66, b: 1, d: 2, n: D#2}     # B major 3rd (V arrives)
+      - {m: 66, b: 3, d: 2, n: D2}      # Bm   3rd
+      - {m: 67, b: 1, d: 4, n: D#2}
+      - {m: 68, b: 1, d: 2, n: E1}      # C    3rd
+      - {m: 68, b: 3, d: 2, n: D#1}     # Cdim 3rd (Eb)
+      - {m: 69, b: 1, d: 2, n: E1}
+      - {m: 69, b: 3, d: 1.95, n: E1}   # seam release
+
+  - name: bass_drive
+    tier: 1
+    opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
+    mt32_patch: 30               # MT-32 Syn Bass 2 (drive color vs sub's 29)
+    gm_program: 40               # GM Synth Bass 2
+    pan: center
+    volume: 70                   # pump under the sustains, never over them
+    velocity: 84
+    events:
+      # quarter-note root pump; pitch = active slot root (see sub_bass)
+      - {m: 1, b: 1, d: 0.4, n: F#1}
+      - {m: 1, b: 2, d: 0.4, n: F#1}
+      - {m: 1, b: 3, d: 0.4, n: F1}
+      - {m: 1, b: 4, d: 0.4, n: F1}
+      - {m: 2, b: 1, d: 0.4, n: D1}
+      - {m: 2, b: 2, d: 0.4, n: D1}
+      - {m: 2, b: 3, d: 0.4, n: G#1}
+      - {m: 2, b: 4, d: 0.4, n: G#1}
+      - {m: 3, b: 1, d: 0.4, n: E1}
+      - {m: 3, b: 2, d: 0.4, n: E1}
+      - {m: 3, b: 3, d: 0.4, n: B1}
+      - {m: 3, b: 4, d: 0.4, n: B1}
+      - {m: 4, b: 1, d: 0.4, n: E1}
+      - {m: 4, b: 2, d: 0.4, n: E1}
+      - {m: 4, b: 3, d: 0.4, n: D1}
+      - {m: 4, b: 4, d: 0.4, n: D1}
+      - {m: 5, b: 1, d: 0.4, n: E1}
+      - {m: 5, b: 2, d: 0.4, n: E1}
+      - {m: 5, b: 3, d: 0.4, n: B1}
+      - {m: 5, b: 4, d: 0.4, n: B1}
+      - {m: 6, b: 1, d: 0.4, n: E1}
+      - {m: 6, b: 2, d: 0.4, n: E1}
+      - {m: 6, b: 3, d: 0.4, n: A#1}
+      - {m: 6, b: 4, d: 0.4, n: A#1}
+      - {m: 7, b: 1, d: 0.4, n: E1}
+      - {m: 7, b: 2, d: 0.4, n: E1}
+      - {m: 7, b: 3, d: 0.4, n: B1}
+      - {m: 7, b: 4, d: 0.4, n: B1}
+      - {m: 8, b: 1, d: 0.4, n: B1}
+      - {m: 8, b: 2, d: 0.4, n: B1}
+      - {m: 8, b: 3, d: 0.4, n: A#1}
+      - {m: 8, b: 4, d: 0.4, n: A#1}
+      - {m: 9, b: 1, d: 0.4, n: E1}
+      - {m: 9, b: 2, d: 0.4, n: E1}
+      - {m: 9, b: 3, d: 0.4, n: B1}
+      - {m: 9, b: 4, d: 0.4, n: B1}
+      - {m: 10, b: 1, d: 0.4, n: B1}
+      - {m: 10, b: 2, d: 0.4, n: B1}
+      - {m: 10, b: 3, d: 0.4, n: A#1}
+      - {m: 10, b: 4, d: 0.4, n: A#1}
+      - {m: 11, b: 1, d: 0.4, n: B1}
+      - {m: 11, b: 2, d: 0.4, n: B1}
+      - {m: 11, b: 3, d: 0.4, n: B1}
+      - {m: 11, b: 4, d: 0.4, n: B1}
+      - {m: 12, b: 1, d: 0.4, n: B1}
+      - {m: 12, b: 2, d: 0.4, n: B1}
+      - {m: 12, b: 3, d: 0.4, n: B1}
+      - {m: 12, b: 4, d: 0.4, n: B1}
+      - {m: 13, b: 1, d: 0.4, n: F1}
+      - {m: 13, b: 2, d: 0.4, n: F1}
+      - {m: 13, b: 3, d: 0.4, n: C1}
+      - {m: 13, b: 4, d: 0.4, n: C1}
+      - {m: 14, b: 1, d: 0.4, n: C1}
+      - {m: 14, b: 2, d: 0.4, n: C1}
+      - {m: 14, b: 3, d: 0.4, n: C1}
+      - {m: 14, b: 4, d: 0.4, n: C1}
+      - {m: 15, b: 1, d: 0.4, n: B1}
+      - {m: 15, b: 2, d: 0.4, n: B1}
+      - {m: 15, b: 3, d: 0.4, n: B1}
+      - {m: 15, b: 4, d: 0.4, n: B1}
+      - {m: 16, b: 1, d: 0.4, n: B1}
+      - {m: 16, b: 2, d: 0.4, n: B1}
+      - {m: 16, b: 3, d: 0.4, n: B1}
+      - {m: 16, b: 4, d: 0.4, n: B1}
+      - {m: 17, b: 1, d: 0.4, n: D1}
+      - {m: 17, b: 2, d: 0.4, n: D1}
+      - {m: 17, b: 3, d: 0.4, n: A1}
+      - {m: 17, b: 4, d: 0.4, n: A1}
+      - {m: 18, b: 1, d: 0.4, n: B1}
+      - {m: 18, b: 2, d: 0.4, n: B1}
+      - {m: 18, b: 3, d: 0.4, n: A1}
+      - {m: 18, b: 4, d: 0.4, n: A1}
+      - {m: 19, b: 1, d: 0.4, n: G1}
+      - {m: 19, b: 2, d: 0.4, n: G1}
+      - {m: 19, b: 3, d: 0.4, n: G1}
+      - {m: 19, b: 4, d: 0.4, n: G1}
+      - {m: 20, b: 1, d: 0.4, n: G1}
+      - {m: 20, b: 2, d: 0.4, n: G1}
+      - {m: 20, b: 3, d: 0.4, n: G1}
+      - {m: 20, b: 4, d: 0.4, n: G1}
+      - {m: 21, b: 1, d: 0.4, n: A1}
+      - {m: 21, b: 2, d: 0.4, n: A1}
+      - {m: 21, b: 3, d: 0.4, n: A1}
+      - {m: 21, b: 4, d: 0.4, n: A1}
+      - {m: 22, b: 1, d: 0.4, n: A1}
+      - {m: 22, b: 2, d: 0.4, n: A1}
+      - {m: 22, b: 3, d: 0.4, n: A1}
+      - {m: 22, b: 4, d: 0.4, n: A1}
+      - {m: 23, b: 1, d: 0.4, n: G1}
+      - {m: 23, b: 2, d: 0.4, n: G1}
+      - {m: 23, b: 3, d: 0.4, n: G1}
+      - {m: 23, b: 4, d: 0.4, n: G1}
+      - {m: 24, b: 1, d: 0.4, n: E1}
+      - {m: 24, b: 2, d: 0.4, n: E1}
+      - {m: 24, b: 3, d: 0.4, n: G1}
+      - {m: 24, b: 4, d: 0.4, n: G1}
+      - {m: 25, b: 1, d: 0.4, n: A1}
+      - {m: 25, b: 2, d: 0.4, n: A1}
+      - {m: 25, b: 3, d: 0.4, n: A1}
+      - {m: 25, b: 4, d: 0.4, n: A1}
+      - {m: 26, b: 1, d: 0.4, n: A1}
+      - {m: 26, b: 2, d: 0.4, n: A1}
+      - {m: 26, b: 3, d: 0.4, n: A1}
+      - {m: 26, b: 4, d: 0.4, n: A1}
+      - {m: 27, b: 1, d: 0.4, n: B1}
+      - {m: 27, b: 2, d: 0.4, n: B1}
+      - {m: 27, b: 3, d: 0.4, n: B1}
+      - {m: 27, b: 4, d: 0.4, n: B1}
+      - {m: 28, b: 1, d: 0.4, n: B1}
+      - {m: 28, b: 2, d: 0.4, n: B1}
+      - {m: 28, b: 3, d: 0.4, n: D1}
+      - {m: 28, b: 4, d: 0.4, n: D1}
+      - {m: 29, b: 1, d: 0.4, n: C1}
+      - {m: 29, b: 2, d: 0.4, n: C1}
+      - {m: 29, b: 3, d: 0.4, n: C1}
+      - {m: 29, b: 4, d: 0.4, n: C1}
+      - {m: 30, b: 1, d: 0.4, n: C1}
+      - {m: 30, b: 2, d: 0.4, n: C1}
+      - {m: 30, b: 3, d: 0.4, n: D#1}
+      - {m: 30, b: 4, d: 0.4, n: D#1}
+      - {m: 31, b: 1, d: 0.4, n: C#1}
+      - {m: 31, b: 2, d: 0.4, n: C#1}
+      - {m: 31, b: 3, d: 0.4, n: C#1}
+      - {m: 31, b: 4, d: 0.4, n: C#1}
+      - {m: 32, b: 1, d: 0.4, n: C#1}
+      - {m: 32, b: 2, d: 0.4, n: C#1}
+      - {m: 32, b: 3, d: 0.4, n: E1}
+      - {m: 32, b: 4, d: 0.4, n: E1}
+      - {m: 33, b: 1, d: 0.4, n: D1}
+      - {m: 33, b: 2, d: 0.4, n: D1}
+      - {m: 33, b: 3, d: 0.4, n: D1}
+      - {m: 33, b: 4, d: 0.4, n: D1}
+      - {m: 34, b: 1, d: 0.4, n: D1}
+      - {m: 34, b: 2, d: 0.4, n: D1}
+      - {m: 34, b: 3, d: 0.4, n: E1}
+      - {m: 34, b: 4, d: 0.4, n: E1}
+      - {m: 35, b: 1, d: 0.4, n: D1}
+      - {m: 35, b: 2, d: 0.4, n: D1}
+      - {m: 35, b: 3, d: 0.4, n: C1}
+      - {m: 35, b: 4, d: 0.4, n: C1}
+      - {m: 36, b: 1, d: 0.4, n: C1}
+      - {m: 36, b: 2, d: 0.4, n: C1}
+      - {m: 36, b: 3, d: 0.4, n: B1}
+      - {m: 36, b: 4, d: 0.4, n: B1}
+      - {m: 37, b: 1, d: 0.4, n: B1}
+      - {m: 37, b: 2, d: 0.4, n: B1}
+      - {m: 37, b: 3, d: 0.4, n: D1}
+      - {m: 37, b: 4, d: 0.4, n: D1}
+      - {m: 38, b: 1, d: 0.4, n: A#1}
+      - {m: 38, b: 2, d: 0.4, n: A#1}
+      - {m: 38, b: 3, d: 0.4, n: A#1}
+      - {m: 38, b: 4, d: 0.4, n: A#1}
+      - {m: 39, b: 1, d: 0.4, n: G1}
+      - {m: 39, b: 2, d: 0.4, n: G1}
+      - {m: 39, b: 3, d: 0.4, n: G1}
+      - {m: 39, b: 4, d: 0.4, n: G1}
+      - {m: 40, b: 1, d: 0.4, n: E1}
+      - {m: 40, b: 2, d: 0.4, n: E1}
+      - {m: 40, b: 3, d: 0.4, n: E1}
+      - {m: 40, b: 4, d: 0.4, n: E1}
+      - {m: 41, b: 1, d: 0.4, n: E1}
+      - {m: 41, b: 2, d: 0.4, n: E1}
+      - {m: 41, b: 3, d: 0.4, n: E1}
+      - {m: 41, b: 4, d: 0.4, n: E1}
+      - {m: 42, b: 1, d: 0.4, n: A1}
+      - {m: 42, b: 2, d: 0.4, n: A1}
+      - {m: 42, b: 3, d: 0.4, n: A1}
+      - {m: 42, b: 4, d: 0.4, n: A1}
+      - {m: 43, b: 1, d: 0.4, n: A1}
+      - {m: 43, b: 2, d: 0.4, n: A1}
+      - {m: 43, b: 3, d: 0.4, n: A1}
+      - {m: 43, b: 4, d: 0.4, n: A1}
+      - {m: 44, b: 1, d: 0.4, n: A#1}
+      - {m: 44, b: 2, d: 0.4, n: A#1}
+      - {m: 44, b: 3, d: 0.4, n: A#1}
+      - {m: 44, b: 4, d: 0.4, n: A#1}
+      - {m: 45, b: 1, d: 0.4, n: A#1}
+      - {m: 45, b: 2, d: 0.4, n: A#1}
+      - {m: 45, b: 3, d: 0.4, n: A#1}
+      - {m: 45, b: 4, d: 0.4, n: A#1}
+      - {m: 46, b: 1, d: 0.4, n: A1}
+      - {m: 46, b: 2, d: 0.4, n: A1}
+      - {m: 46, b: 3, d: 0.4, n: A1}
+      - {m: 46, b: 4, d: 0.4, n: A1}
+      - {m: 47, b: 1, d: 0.4, n: A1}
+      - {m: 47, b: 2, d: 0.4, n: A1}
+      - {m: 47, b: 3, d: 0.4, n: A1}
+      - {m: 47, b: 4, d: 0.4, n: A1}
+      - {m: 48, b: 1, d: 0.4, n: A#1}
+      - {m: 48, b: 2, d: 0.4, n: A#1}
+      - {m: 48, b: 3, d: 0.4, n: A#1}
+      - {m: 48, b: 4, d: 0.4, n: A#1}
+      - {m: 49, b: 1, d: 0.4, n: G1}
+      - {m: 49, b: 2, d: 0.4, n: G1}
+      - {m: 49, b: 3, d: 0.4, n: A#1}
+      - {m: 49, b: 4, d: 0.4, n: A#1}
+      - {m: 50, b: 1, d: 0.4, n: A#1}
+      - {m: 50, b: 2, d: 0.4, n: A#1}
+      - {m: 50, b: 3, d: 0.4, n: A#1}
+      - {m: 50, b: 4, d: 0.4, n: A#1}
+      - {m: 51, b: 1, d: 0.4, n: C1}
+      - {m: 51, b: 2, d: 0.4, n: C1}
+      - {m: 51, b: 3, d: 0.4, n: C1}
+      - {m: 51, b: 4, d: 0.4, n: C1}
+      - {m: 52, b: 1, d: 0.4, n: A#1}
+      - {m: 52, b: 2, d: 0.4, n: A#1}
+      - {m: 52, b: 3, d: 0.4, n: A#1}
+      - {m: 52, b: 4, d: 0.4, n: A#1}
+      - {m: 53, b: 1, d: 0.4, n: E1}
+      - {m: 53, b: 2, d: 0.4, n: E1}
+      - {m: 53, b: 3, d: 0.4, n: C1}
+      - {m: 53, b: 4, d: 0.4, n: C1}
+      - {m: 54, b: 1, d: 0.4, n: A#1}
+      - {m: 54, b: 2, d: 0.4, n: A#1}
+      - {m: 54, b: 3, d: 0.4, n: A#1}
+      - {m: 54, b: 4, d: 0.4, n: A#1}
+      - {m: 55, b: 1, d: 0.4, n: A#1}
+      - {m: 55, b: 2, d: 0.4, n: A#1}
+      - {m: 55, b: 3, d: 0.4, n: C1}
+      - {m: 55, b: 4, d: 0.4, n: C1}
+      - {m: 56, b: 1, d: 0.4, n: G1}
+      - {m: 56, b: 2, d: 0.4, n: G1}
+      - {m: 56, b: 3, d: 0.4, n: E1}
+      - {m: 56, b: 4, d: 0.4, n: E1}
+      - {m: 57, b: 1, d: 0.4, n: A#1}
+      - {m: 57, b: 2, d: 0.4, n: A#1}
+      - {m: 57, b: 3, d: 0.4, n: G1}
+      - {m: 57, b: 4, d: 0.4, n: G1}
+      - {m: 58, b: 1, d: 0.4, n: E1}
+      - {m: 58, b: 2, d: 0.4, n: E1}
+      - {m: 58, b: 3, d: 0.4, n: E1}
+      - {m: 58, b: 4, d: 0.4, n: E1}
+      - {m: 59, b: 1, d: 0.4, n: A1}
+      - {m: 59, b: 2, d: 0.4, n: A1}
+      - {m: 59, b: 3, d: 0.4, n: A1}
+      - {m: 59, b: 4, d: 0.4, n: A1}
+      - {m: 60, b: 1, d: 0.4, n: A1}
+      - {m: 60, b: 2, d: 0.4, n: A1}
+      - {m: 60, b: 3, d: 0.4, n: A1}
+      - {m: 60, b: 4, d: 0.4, n: A1}
+      - {m: 61, b: 1, d: 0.4, n: E1}
+      - {m: 61, b: 2, d: 0.4, n: E1}
+      - {m: 61, b: 3, d: 0.4, n: A1}
+      - {m: 61, b: 4, d: 0.4, n: A1}
+      - {m: 62, b: 1, d: 0.4, n: A1}
+      - {m: 62, b: 2, d: 0.4, n: A1}
+      - {m: 62, b: 3, d: 0.4, n: A1}
+      - {m: 62, b: 4, d: 0.4, n: A1}
+      - {m: 63, b: 1, d: 0.4, n: A1}
+      - {m: 63, b: 2, d: 0.4, n: A1}
+      - {m: 63, b: 3, d: 0.4, n: A1}
+      - {m: 63, b: 4, d: 0.4, n: A1}
+      - {m: 64, b: 1, d: 0.4, n: A#1}
+      - {m: 64, b: 2, d: 0.4, n: A#1}
+      - {m: 64, b: 3, d: 0.4, n: A#1}
+      - {m: 64, b: 4, d: 0.4, n: A#1}
+      - {m: 65, b: 1, d: 0.4, n: A#1}
+      - {m: 65, b: 2, d: 0.4, n: A#1}
+      - {m: 65, b: 3, d: 0.4, n: A#1}
+      - {m: 65, b: 4, d: 0.4, n: A#1}
+      - {m: 66, b: 1, d: 0.4, n: B1}
+      - {m: 66, b: 2, d: 0.4, n: B1}
+      - {m: 66, b: 3, d: 0.4, n: B1}
+      - {m: 66, b: 4, d: 0.4, n: B1}
+      - {m: 67, b: 1, d: 0.4, n: B1}
+      - {m: 67, b: 2, d: 0.4, n: B1}
+      - {m: 67, b: 3, d: 0.4, n: B1}
+      - {m: 67, b: 4, d: 0.4, n: B1}
+      - {m: 68, b: 1, d: 0.4, n: C1}
+      - {m: 68, b: 2, d: 0.4, n: C1}
+      - {m: 68, b: 3, d: 0.4, n: C1}
+      - {m: 68, b: 4, d: 0.4, n: C1}
+      - {m: 69, b: 1, d: 0.4, n: C1}
+      - {m: 69, b: 2, d: 0.4, n: C1}
+      - {m: 69, b: 3, d: 0.4, n: C1}      # b4 omitted: seam breath
+
+  - name: rock_kit
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 88
+    events:
+      - {at: 11, pattern: kit_bar}        # kit enters with the loop body
+      - {at: 12, pattern: kit_bar}
+      - {at: 13, pattern: kit_bar}
+      - {at: 14, pattern: kit_bar}
+      - {at: 15, pattern: kit_bar}
+      - {at: 16, pattern: kit_bar}
+      - {at: 17, pattern: kit_bar}
+      - {at: 18, pattern: kit_bar}
+      - {at: 19, pattern: kit_bar}
+      - {at: 20, pattern: kit_bar}
+      - {at: 21, pattern: kit_bar}
+      - {at: 22, pattern: kit_bar}
+      - {at: 23, pattern: kit_bar}
+      - {at: 24, pattern: kit_bar}
+      - {at: 25, pattern: kit_bar}
+      - {at: 26, pattern: kit_bar}
+      - {at: 27, pattern: kit_bar}
+      - {at: 28, pattern: kit_bar}
+      - {at: 29, pattern: kit_bar}
+      - {at: 30, pattern: kit_bar}
+      - {at: 31, pattern: kit_bar}
+      - {at: 32, pattern: kit_bar}
+      - {at: 33, pattern: kit_bar}
+      - {at: 34, pattern: kit_bar}
+      - {at: 35, pattern: kit_bar}
+      - {at: 36, pattern: kit_bar}
+      - {at: 37, pattern: kit_bar}
+      - {at: 38, pattern: kit_bar}
+      - {at: 39, pattern: kit_bar}
+      - {at: 40, pattern: kit_bar}
+      - {at: 41, pattern: kit_bar}
+      - {at: 42, pattern: kit_bar}
+      - {at: 43, pattern: kit_bar}
+      - {at: 44, pattern: kit_bar}
+      - {at: 45, pattern: kit_bar}
+      - {at: 46, pattern: kit_bar}
+      - {at: 47, pattern: kit_bar}
+      - {at: 48, pattern: kit_bar}
+      - {at: 49, pattern: kit_bar}
+      - {at: 50, pattern: kit_bar}
+      - {at: 51, pattern: kit_bar}
+      - {at: 52, pattern: kit_bar}
+      - {at: 53, pattern: kit_bar}
+      - {at: 54, pattern: kit_bar}
+      - {at: 55, pattern: kit_bar}
+      - {at: 56, pattern: kit_bar}
+      - {at: 57, pattern: kit_bar}
+      - {at: 58, pattern: kit_bar}
+      - {at: 59, pattern: kit_bar}
+      - {at: 60, pattern: kit_bar}
+      - {at: 61, pattern: kit_bar}
+      - {at: 62, pattern: kit_bar}
+      - {at: 63, pattern: kit_bar}
+      - {at: 64, pattern: kit_bar}
+      - {at: 65, pattern: kit_bar}
+      - {at: 66, pattern: kit_bar}
+      - {at: 67, pattern: kit_bar}
+      - {at: 68, pattern: kit_bar}
+      - {at: 69, pattern: kit_tail}       # no b4 snare: seam breath
+      - {m: 11, b: 1, d: 0.4, n: 49, v: 110}   # crash: body entry
+      - {m: 19, b: 1, d: 0.4, n: 49, v: 100}   # crash: G-section
+      - {m: 27, b: 1, d: 0.4, n: 49, v: 100}   # crash: sequence drive
+      - {m: 40, b: 1, d: 0.4, n: 49, v: 104}   # crash: E arrival
+      - {m: 42, b: 1, d: 0.4, n: 49, v: 100}   # crash: Am section
+      - {m: 44, b: 1, d: 0.4, n: 49, v: 100}   # crash: A# section
+      - {m: 59, b: 1, d: 0.4, n: 49, v: 104}   # crash: final ascent
+      - {m: 66, b: 1, d: 0.4, n: 49, v: 112}   # crash: V arrival (loudest)
+
+  - name: rock_hat
+    tier: 2
+    rhythm: true
+    pan: center
+    volume: 62
+    events:
+      - {at: 1, pattern: hat_bar}         # hat ticks through the intro
+      - {at: 2, pattern: hat_bar}
+      - {at: 3, pattern: hat_bar}
+      - {at: 4, pattern: hat_bar}
+      - {at: 5, pattern: hat_bar}
+      - {at: 6, pattern: hat_bar}
+      - {at: 7, pattern: hat_bar}
+      - {at: 8, pattern: hat_bar}
+      - {at: 9, pattern: hat_bar}
+      - {at: 10, pattern: hat_bar}
+      - {at: 11, pattern: hat_bar}
+      - {at: 12, pattern: hat_bar}
+      - {at: 13, pattern: hat_bar}
+      - {at: 14, pattern: hat_bar}
+      - {at: 15, pattern: hat_bar}
+      - {at: 16, pattern: hat_bar}
+      - {at: 17, pattern: hat_bar}
+      - {at: 18, pattern: hat_bar}
+      - {at: 19, pattern: hat_bar}
+      - {at: 20, pattern: hat_bar}
+      - {at: 21, pattern: hat_bar}
+      - {at: 22, pattern: hat_bar}
+      - {at: 23, pattern: hat_bar}
+      - {at: 24, pattern: hat_bar}
+      - {at: 25, pattern: hat_bar}
+      - {at: 26, pattern: hat_bar}
+      - {at: 27, pattern: hat_bar}
+      - {at: 28, pattern: hat_bar}
+      - {at: 29, pattern: hat_bar}
+      - {at: 30, pattern: hat_bar}
+      - {at: 31, pattern: hat_bar}
+      - {at: 32, pattern: hat_bar}
+      - {at: 33, pattern: hat_bar}
+      - {at: 34, pattern: hat_bar}
+      - {at: 35, pattern: hat_bar}
+      - {at: 36, pattern: hat_bar}
+      - {at: 37, pattern: hat_bar}
+      - {at: 38, pattern: hat_bar}
+      - {at: 39, pattern: hat_bar}
+      - {at: 40, pattern: hat_bar}
+      - {at: 41, pattern: hat_bar}
+      - {at: 42, pattern: hat_bar}
+      - {at: 43, pattern: hat_bar}
+      - {at: 44, pattern: hat_bar}
+      - {at: 45, pattern: hat_bar}
+      - {at: 46, pattern: hat_bar}
+      - {at: 47, pattern: hat_bar}
+      - {at: 48, pattern: hat_bar}
+      - {at: 49, pattern: hat_bar}
+      - {at: 50, pattern: hat_bar}
+      - {at: 51, pattern: hat_bar}
+      - {at: 52, pattern: hat_bar}
+      - {at: 53, pattern: hat_bar}
+      - {at: 54, pattern: hat_bar}
+      - {at: 55, pattern: hat_bar}
+      - {at: 56, pattern: hat_bar}
+      - {at: 57, pattern: hat_bar}
+      - {at: 58, pattern: hat_bar}
+      - {at: 59, pattern: hat_bar}
+      - {at: 60, pattern: hat_bar}
+      - {at: 61, pattern: hat_bar}
+      - {at: 62, pattern: hat_bar}
+      - {at: 63, pattern: hat_bar}
+      - {at: 64, pattern: hat_bar}
+      - {at: 65, pattern: hat_bar}
+      - {at: 66, pattern: hat_bar}
+      - {at: 67, pattern: hat_bar}
+      - {at: 68, pattern: hat_bar}
+      - {at: 69, pattern: hat_tail}
+
+  - name: war_timpani
+    tier: 3
+    mt32_patch: 113              # MT-32 Timpani (factory, novel use on this project)
+    gm_program: 48               # GM Timpani (pitched-percussion exemption)
+    pan: center
+    volume: 80
+    velocity: 90
+    events:
+      - {m: 11, b: 1, d: 4, n: B2}      # body entry under the crash
+      - {m: 15, b: 1, d: 4, n: B2}
+      - {m: 19, b: 1, d: 4, n: G2}      # G-section
+      - {m: 21, b: 1, d: 4, n: A2}      # A-section
+      - {m: 27, b: 1, d: 4, n: B2}
+      - {m: 33, b: 1, d: 4, n: D2}      # ascending sequence
+      - {m: 40, b: 1, d: 8, n: E2}      # E arrival, mm40-41
+      - {m: 42, b: 1, d: 8, n: A2}      # Am section, mm42-43
+      - {m: 44, b: 1, d: 8, n: A#2}     # A# section, mm44-45
+      - {m: 46, b: 1, d: 8, n: A2}      # Am repeat, mm46-47
+      - {m: 59, b: 1, d: 4, n: A2}      # final ascent
+      - {m: 63, b: 1, d: 4, n: A2}
+      - {m: 65, b: 1, d: 0.2, n: A#2}   # roll into the V arrival
+      - {m: 65, b: 1.5, d: 0.2, n: A#2}
+      - {m: 65, b: 2, d: 0.2, n: A#2}
+      - {m: 65, b: 2.5, d: 0.2, n: A#2}
+      - {m: 65, b: 3, d: 0.2, n: A#2}
+      - {m: 65, b: 3.5, d: 0.2, n: A#2}
+      - {m: 65, b: 4, d: 0.2, n: A#2}
+      - {m: 65, b: 4.5, d: 0.2, n: A#2}
+      - {m: 66, b: 1, d: 8, n: B2}      # V arrival, mm66-67 (loudest joint)
+      - {m: 68, b: 1, d: 7.9, n: C2}    # deceptive close, releases pre-seam
+
+patterns:
+  kit_bar:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 0.4, n: 36}     # kick 1 + 3
+      - {m: 1, b: 3, d: 0.4, n: 36}
+      - {m: 1, b: 2, d: 0.4, n: 38}     # snare 2 + 4
+      - {m: 1, b: 4, d: 0.4, n: 38}
+  kit_tail:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 0.4, n: 36}
+      - {m: 1, b: 3, d: 0.4, n: 36}
+      - {m: 1, b: 2, d: 0.4, n: 38}     # no b4: seam breath
+  hat_bar:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 0.2, n: 42}
+      - {m: 1, b: 1.5, d: 0.2, n: 42}
+      - {m: 1, b: 2, d: 0.2, n: 42}
+      - {m: 1, b: 2.5, d: 0.2, n: 42}
+      - {m: 1, b: 3, d: 0.2, n: 42}
+      - {m: 1, b: 3.5, d: 0.2, n: 42}
+      - {m: 1, b: 4, d: 0.2, n: 42}
+      - {m: 1, b: 4.5, d: 0.2, n: 42}
+  hat_tail:
+    measures: 1
+    events:
+      - {m: 1, b: 1, d: 0.2, n: 42}
+      - {m: 1, b: 1.5, d: 0.2, n: 42}
+      - {m: 1, b: 2, d: 0.2, n: 42}
+      - {m: 1, b: 2.5, d: 0.2, n: 42}
+      - {m: 1, b: 3, d: 0.2, n: 42}
+      - {m: 1, b: 3.5, d: 0.2, n: 42}   # nothing past the loop end

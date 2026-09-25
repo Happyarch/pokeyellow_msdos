@@ -1,0 +1,41 @@
+# Music_Credits — per-song MIDI overrides (see README.md for schema).
+#
+# End Credits: A-major unlooping 98-second finale (56 measures, loop: null,
+# end frame 5880), 3 channels, no noise. Score description:
+# docs/references/pokemon_score_transcriptions/descriptions/end_credits.md —
+# nostalgic amalgam of established motives (Title Screen overture-finale
+# pairing, road rhythm, I–bVII everywhere), closing on tonic-A unisons.
+#
+# Registers from simulate_song: ch1 lyrical inner pulse (213 notes, B3..E5,
+# rests m24-25/m28-29); ch2 the hymn-like MELODY (178 notes, B3..A5, long
+# tones, sparse octave-3/4 dialogue mm22-53, A5 coda mm54-56); ch3 busy
+# 8th-note wave arps (411 notes, D4..B4). No GB voice below B3 — the tier-1
+# enhancement layer (sub bass + low pad) grounds it.
+#
+# Default 80/80/38 (two saxes + synth bass on MT-32) is the wrong family for
+# a nostalgic finale. Ch2 becomes a trumpet so the hymn carries over cello +
+# harp + the tier-1 string pad (TitleScreen/Cities2-proven bright lead in
+# major); ch1 is a cello bowing the inner line under it (Cities2 precedent
+# for a lyrical inner line); ch3 is a harp so the 8th-note wave figures stay
+# plucked and articulate instead of washing (Cities2 precedent). No switches:
+# one-shot form, constant texture throughout. No drums: key (noise id 1..7
+# never sounds — only Ch1-3 headers exist), so no drums map.
+channels:
+  1:
+    mt32_program: "Cello 1"     # lyrical inner line in B3..E5; bows under
+                                # the trumpet, sings the mm24-29 duets
+    gm_program: "Cello"
+    volume: 92                  # under the lead
+    pan: 48                     # inner line left, melody right
+  2:
+    mt32_program: "Trumpet 1"   # the hymn melody; noble long tones carry
+                                # over cello + harp + tier-1 pad
+    gm_program: "Trumpet"
+    volume: 100                 # foreground; eased so tier-3 celesta pings read
+    pan: 80
+  3:
+    mt32_program: "Harp 1"      # plucked glue for the 8th-note wave arps;
+                                # short decay keeps figures articulate
+    gm_program: "Orchestral Harp"
+    volume: 72
+    pan: 64

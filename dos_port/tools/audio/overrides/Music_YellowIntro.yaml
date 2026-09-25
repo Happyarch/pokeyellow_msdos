@@ -1,0 +1,39 @@
+# Music_YellowIntro — per-song MIDI overrides (see README.md for schema).
+#
+# Yellow's cinematic intro-movie theme (audio bank $1F). E major one-shot,
+# 15 measures, three GB channels, NO noise (header lists ch1/2/3 only), so
+# no `drums:` key. Frame-exact roles from audio/music/yellowintro.asm and
+# analysis/Music_YellowIntro.yaml (melody ch2, arch A4–C#6):
+#
+# ch1 (duty 3 = 50%, GB-oct3–4) is the inner countermelody — rocking
+#   pedal figures, chromatic-neighbor cells (C#–C–C#, G#–G–G#, F#–F–F#,
+#   B–A#–B), the m9–m10 descending line, final B pedal. Stays 8-bit-sharp
+#   so the half-step neighbor motion keeps its edge.
+# ch2 (duty 2, B4–C#6) is the lyrical arch melody with GB vibrato,
+#   peaking at the whole-measure m5 C#6 and ending on the tonic E. A
+#   clean-attack wind lead serves the fast m14 32nd descent (B–A–G#–F#)
+#   better than a slow-attack string patch, which would smear it.
+# ch3 (wave, GB-oct3–5) is the continuous broken-chord 8th-note motor
+#   (E–G#–B / F#–A–C# / B–E–G# ...), tacet in m15 after an ascending
+#   scale. A plucked harp keeps the 8ths articulate — a long-decay bell
+#   would smear the motor (OaksLab precedent).
+#
+# The 80/80/38 defaults (two saxes + bell) are the wrong family for a
+# cinematic cue: identical sax timbres would collapse ch1/ch2 wherever
+# they move in thirds, and the bell would wash out the wave motor.
+channels:
+  1:
+    mt32_program: "Square Wave"   # inner line stays 8-bit-sharp
+    gm_program: "Lead 1 (square)"
+    volume: 92                    # under the flute lead
+    pan: 40                       # inner voice left, melody right
+  2:
+    mt32_program: "Flute 1"       # lyrical arch melody, foreground
+    gm_program: "Flute"
+    volume: 106
+    pan: 84
+  3:
+    mt32_program: "Harp 1"        # plucked broken-chord motor, articulate
+    gm_program: "Orchestral Harp"
+    volume: 84                    # motor present, under the lead
+    pan: 64

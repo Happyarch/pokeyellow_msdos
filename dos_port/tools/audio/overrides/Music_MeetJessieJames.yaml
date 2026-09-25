@@ -1,0 +1,15 @@
+# overrides/Music_MeetJessieJames.yaml - bassoon motto for Jessie & James.
+#
+# ch2 is the melody (analysis melody_channel: 2): the C#-D motto chatter
+# + D#4-F4 episodes, GB o2-4 (floor A2 m4b3). Bassoon reads comic-menace —
+# the bumbling-villain reed — and differentiates this cue from Evil's
+# darker Oboe ch2 within the villain family. ch1 untouched: the sq3
+# stabs + whole-bar D4 need their 8-bit bite. ch3 untouched: the wave
+# D-A/D#-A# ostinato stays chip. One base-voice change (Rival/ProfOak
+# restraint). GM Bassoon to match per-target. No noise channel, no drums:.
+channels:
+  2:
+    mt32_program: "Bassoon"   # comic-menace motto reed (Evil's Oboe stays darker)
+    gm_program: "Bassoon"
+    volume: 102               # melody carries
+    pan: 64
