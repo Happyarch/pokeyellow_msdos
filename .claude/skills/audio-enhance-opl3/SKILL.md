@@ -190,7 +190,7 @@ song. Then run `python3 dos_port/tools/audio/test_switches.py` to green.
 | examples/ | Hand-crafted worked example (when available) | Before writing your first arrangement — see what good output looks like |
 | music-theory skill | All theory references | Always read first |
 
-## Auditioning music (listen to a track — do NOT tailspin into rebuilds)
+## Checking a track renders (agents verify signal; humans audition by ear — do NOT tailspin into rebuilds)
 
 Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
 `audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.

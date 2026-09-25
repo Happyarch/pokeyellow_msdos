@@ -301,9 +301,13 @@ character does not imply a channel boundary.
 | music-theory skill | All theory references | Always read first |
 | audio-enhance-opl3 skill | Tier-1 constraints and approach | To understand what you're building on top of |
 
-## Auditioning (how to actually hear it)
+## Verifying a mapping renders (agents) — auditioning (humans) hears it
 
-The listen loop is documented in the **`audio-enhance-opl3`** skill ("Auditioning music").
+Agents cannot listen. What an agent checks after writing voices: batch-render
+the track and confirm it produces signal (nonzero stats, no crash). That proves
+the map resolves and plays — nothing about whether it sounds good. Voice choice,
+balance, and timbre are human ear judgments in the dgad GUI.
+The listen loop is documented in the **`audio-enhance-opl3`** skill.
 Short form: `dgad --headless --track <Song> --device mt32 --out take.wav`
 (fuzzy match like `--track celadon`; `--device mt32` is the default;
 `--device imfc` renders the IMFC path, `--device gm`/`opl3`/`gbapu` the rest).
