@@ -82,6 +82,7 @@ channels:
     opl_patch: sub_bass        # sine carrier — foundation, not a pulse
     mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
     gm_program: 39             # GM Synth Bass 1
+    imfc_voice: "EBass"        # IMFC E.Bass (bass family; PalletTown precedent; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 60
     velocity: 80
@@ -100,6 +101,7 @@ channels:
     tier: 2                   # premium body — dropped before tier 1, after tier 3
     mt32_patch: 50            # MT-32 Str Sect 2
     gm_program: 49            # GM String Ensemble 1
+    imfc_voice: "String2"     # IMFC String2 (Bank 4 orchestral; Cities2 precedent for Str Sect 2; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 52                # felt, not heard
     velocity: 64
@@ -133,6 +135,7 @@ channels:
     tier: 3                   # color — dropped first under polyphony
     mt32_patch: 123           # MT-32 Orche Hit (factory idx 122, 1-based 123)
     gm_program: 56            # GM Orchestra Hit
+    imfc_voice: "Orchest"     # IMFC Orchest (Bank 4 orchestral stab; closest Orche-Hit map; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 70
     velocity: 90

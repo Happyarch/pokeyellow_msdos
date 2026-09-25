@@ -55,6 +55,7 @@ channels:
     tier: 2
     mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
     gm_program: 39             # GM Synth Bass 1
+    imfc_voice: "EBass"        # IMFC E.Bass
     pan: center
     volume: 62
     velocity: 84
@@ -72,6 +73,7 @@ channels:
     tier: 2
     mt32_patch: 50             # MT-32 Str Sect 2
     gm_program: 49             # GM String Ensemble 1
+    imfc_voice: "String2"      # IMFC orchestral strings (bank 4)
     pan: center
     volume: 54
     velocity: 66
@@ -90,6 +92,7 @@ channels:
     tier: 2                   # premium body — dropped after tier 3
     mt32_patch: 57            # MT-32 Contrabass (bowed low-string weight)
     gm_program: 44            # GM Contrabass
+    imfc_voice: "WodBass"     # IMFC wood/acoustic bass (bowed family)
     pan: center
     volume: 50                # felt, not heard
     velocity: 60
@@ -107,6 +110,7 @@ channels:
     tier: 3                   # color — dropped first under polyphony
     mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
     gm_program: 73            # GM Piccolo
+    imfc_voice: "Piccolo"     # IMFC Piccolo
     pan: center
     volume: 70
     velocity: 85

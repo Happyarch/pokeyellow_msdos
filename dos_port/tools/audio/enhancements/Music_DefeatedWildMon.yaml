@@ -62,6 +62,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass (bass precedent: PalletTown sub_bass)
     pan: center
     volume: 72
     velocity: 80
@@ -73,6 +74,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
+    imfc_voice: "Strings"        # IMFC Strings (strings precedent: PalletTown low_pad)
     pan: center
     volume: 64                   # under the bass — reinforcement, not a lead
     velocity: 76

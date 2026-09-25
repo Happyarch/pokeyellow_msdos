@@ -30,6 +30,7 @@ channels:
     percussion: true
     mt32_patch: "NightWind"
     gm_program: 79
+    imfc_voice: "Winds"       # IMFC Winds (atmosphere family; legacy volume covers IMFC level)
     pan: left
     volume: 95                # audible ambient atmospheric bed
     velocity: 85

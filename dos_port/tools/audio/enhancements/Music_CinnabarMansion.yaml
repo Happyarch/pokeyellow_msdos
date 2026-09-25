@@ -19,6 +19,7 @@ channels:
     opl_patch: sub_bass       # pure sine — depth, not timbre
     mt32_patch: 57            # Contrabass (its true register this time)
     gm_program: 44            # Contrabass
+    imfc_voice: "EBass"       # IMFC E.Bass (bass family; legacy volume covers IMFC level)
     pan: center
     volume: 52                # felt more than heard
     velocity: 70

@@ -51,6 +51,7 @@ channels:
     tier: 2
     mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
     gm_program: 39             # GM Synth Bass 1
+    imfc_voice: "EBass"        # IMFC E.Bass (bass family; PalletTown precedent; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 62
     velocity: 84
@@ -71,6 +72,7 @@ channels:
     tier: 2
     mt32_patch: 50             # MT-32 Str Sect 2
     gm_program: 49             # GM String Ensemble 1
+    imfc_voice: "String2"      # IMFC String2 (Bank 4 orchestral; Cities2 precedent for Str Sect 2; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 54
     velocity: 66
@@ -90,6 +92,7 @@ channels:
     tier: 2                   # premium body — body only (intro cut for partials); dropped after tier 3
     mt32_patch: 57            # MT-32 Contrabass (bowed low-string weight)
     gm_program: 44            # GM Contrabass
+    imfc_voice: "Cello1"      # IMFC Cello1 (Bank 4 orchestral; Routes3/Routes4 precedent for Contrabass; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 50                # felt, not heard
     velocity: 60
@@ -105,6 +108,7 @@ channels:
     tier: 3                   # color — dropped first under polyphony
     mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
     gm_program: 73            # GM Piccolo
+    imfc_voice: "Piccolo"     # IMFC Piccolo (Bank 2 ROM1; exact piccolo-family match; IMFC level follows legacy volume by fallback)
     pan: center
     volume: 70
     velocity: 85

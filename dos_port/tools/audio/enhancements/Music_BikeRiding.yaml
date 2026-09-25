@@ -62,6 +62,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # SynBass1 (round, sustaining)
     gm_program: 39               # Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass
     pan: center
     volume: 62
     velocity: 80
@@ -78,6 +79,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not strings
     mt32_patch: 49               # Str Sect 1 — cascades as real strings on MT-32
     gm_program: 90               # Pad 2 (warm)
+    imfc_voice: "Strings"        # IMFC Strings
     pan: center
     volume: 58
     velocity: 76
@@ -97,6 +99,7 @@ channels:
     tier: 2
     mt32_patch: 93               # Fr Horn 1
     gm_program: 61               # French Horn
+    imfc_voice: "Horn"           # IMFC Horn
     pan: left
     volume: 52
     velocity: 72
@@ -109,6 +112,7 @@ channels:
     tier: 3
     mt32_patch: 58               # Harp 1
     gm_program: 47               # Orchestral Harp
+    imfc_voice: "Harp"           # IMFC Harp
     pan: right
     volume: 56
     velocity: 78
