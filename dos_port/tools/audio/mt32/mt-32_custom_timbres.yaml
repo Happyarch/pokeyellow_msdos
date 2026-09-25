@@ -120,6 +120,21 @@ system:
 #    tva_env_time5 70 ~1.8s release) allowing continuous polyphonic crossfading.
 #    Staged at Patch #126 (0-based PC byte 125, replacing factory demo loop preset "One Note Jam").
 #    GM counterpart for track use: "Breath Noise" (program 122).
+#
+# 5. "FluoroHum" (2026-09-25, for Music_SilphCo): fluorescent-ballast hum +
+#    HVAC rumble bed — the building itself. Two fixed-pitch (keyfollow 0,
+#    NightWind pattern) partials under the exposition only:
+#    Partial 1: HVAC rumble — SAW at coarse 16 (E2 tonic, matching the
+#    notated E2 whole notes) with slow air-movement LFO (rate 15, depth 10)
+#    and dark lowpass (cutoff 48, reso 12) so it sits UNDER the tenor.
+#    Partial 2: ballast buzz — narrow pulse (width 22) at coarse 23 (B2,
+#    the dominant fifth above the tonic, matching the piece's E/B pedal
+#    vocabulary) with brighter edge (cutoff 62, reso 18) for the sterile
+#    fluorescent sheen. Both partials breathe (attack ~1.2s, release ~1.3s)
+#    so back-to-back whole notes crossfade seamlessly. 2 partials — same
+#    cost as NightWind, the other ambient bed. Staged at Patch #127
+#    (factory Water Bells, effects block — expendable like NightWind's
+#    One Note Jam slot). GM counterpart for track use: "FX 8 (sci-fi)".
 timbres:
   - name: "JigglyVox"
     patch: 28
@@ -291,6 +306,57 @@ timbres:
         tva_env_time3: 50
         tva_env_time5: 70
         tva_env_level1: 90
+        tva_env_level2: 75
+        tva_env_sus_level: 70
+  - name: "FluoroHum"
+    patch: 127
+    partial_mute: 3
+    partials:
+      - wg_waveform: 1
+        wg_pitch_coarse: 16
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 0
+        wg_pitch_bender_sw: 0
+        plfo_rate: 15
+        plfo_depth: 10
+        plfo_mod_sens: 20
+        tvf_cutoff: 48
+        tvf_resonance: 12
+        tvf_keyfollow: 0
+        tvf_env_depth: 8
+        tvf_env_time1: 60
+        tvf_env_time2: 50
+        tvf_env_time5: 65
+        tvf_env_level1: 65
+        tvf_env_sus_level: 45
+        tva_level: 88
+        tva_env_time1: 60
+        tva_env_time2: 50
+        tva_env_time3: 50
+        tva_env_time5: 65
+        tva_env_level1: 90
+        tva_env_level2: 80
+        tva_env_sus_level: 75
+      - wg_waveform: 0
+        wg_pulse_width: 22
+        wg_pitch_coarse: 23
+        wg_pitch_fine: 50
+        wg_pitch_keyfollow: 0
+        wg_pitch_bender_sw: 0
+        tvf_cutoff: 62
+        tvf_resonance: 18
+        tvf_keyfollow: 0
+        tvf_env_depth: 6
+        tvf_env_time1: 60
+        tvf_env_time5: 65
+        tvf_env_level1: 60
+        tvf_env_sus_level: 50
+        tva_level: 70
+        tva_env_time1: 55
+        tva_env_time2: 50
+        tva_env_time3: 50
+        tva_env_time5: 65
+        tva_env_level1: 85
         tva_env_level2: 75
         tva_env_sus_level: 70
 
