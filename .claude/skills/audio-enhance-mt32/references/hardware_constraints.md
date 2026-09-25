@@ -87,7 +87,7 @@ The MT-32 and GM patch maps are **different** — always give both fields:
 | Bell/chime | 23 Celesta 1, 103 Tube Bell, 39 Warm Bell | 9 Celesta, 15 Tubular Bells | Accent use |
 
 ### Using custom timbres
-`tools/audio/mt32/timbres.yaml` defines custom synthesis timbres uploaded
+`tools/audio/mt32/mt-32_custom_timbres.yaml` (symlinked as `timbres.yaml`) defines custom synthesis timbres uploaded
 into MT-32 User Timbre RAM (`08 00 00`..`08 7E 00`) via SysEx at game init.
 Up to 64 custom timbres can reside in Timbre RAM. Use custom timbres when:
 - You need a specific partial configuration (e.g. analog saw, authentic vocal vowel)
@@ -97,8 +97,9 @@ Up to 64 custom timbres can reside in Timbre RAM. Use custom timbres when:
 **On-the-fly dynamic patch pointer remapping & eager restore**:
 Rather than permanently overwriting factory patch memory at boot (which would
 destroy factory presets like #12 `Elec Org 4` or #27 `Syn Brass 1` for all other
-tracks), custom timbres are assigned a target patch slot in `timbres.yaml`
+tracks), custom timbres are assigned a target patch slot in `mt-32_custom_timbres.yaml`
 (`patch: <1-128>`) and remapped on the fly:
+
 1. **Declare by name**: In track YAMLs (`overrides/*.yaml` or
    `enhancements/*.yaml`), specify the timbre by name as a string:
    `mt32_program: "Theremin"` or `mt32_patch: "NightWind"`.

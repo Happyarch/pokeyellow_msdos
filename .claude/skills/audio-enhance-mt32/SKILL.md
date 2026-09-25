@@ -53,24 +53,28 @@ voices play on GM too (GM has no partial limits, just 16 channels /
 polyphony varies by synth — assume 24-note polyphony minimum).
 
 ### Patch fields required
-Tier 2–3 entries carry MT-32 and GM fields only (no `opl_patch` — these
+Tier 2–3 entries carry MT-32 and GM fields, plus optional IMFC voice (no `opl_patch` — these
 never play on OPL3):
 ```yaml
 mt32_patch: <MT-32 patch number or custom timbre name>
 gm_program: <GM program number>
+imfc_voice: <optional IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
 mt32_volume: <0-127, optional, default 96>
 gm_volume: <0-127, optional, default 96>
+imfc_volume: <0-127, optional, default 96>
 ```
-Device-scoped keys (`mt32_volume`, `gm_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings.
-Custom timbre names defined in `tools/audio/mt32/timbres.yaml` can be used as strings
+Device-scoped keys (`mt32_volume`, `gm_volume`, `imfc_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings. Mixing `volume` with device-scoped keys is an error.
+Custom timbre names defined in `tools/audio/mt32/mt-32_custom_timbres.yaml` (symlinked as `timbres.yaml`) can be used as strings
 (e.g. `mt32_patch: "NightWind"` or `mt32_program: "Theremin"`). The build pipeline
 compiles on-the-fly setup SysEx (pointing the patch slot to the custom timbre) and
 cleanup SysEx (eagerly restoring the patch slot to factory parameters on track
 stop/unload, keeping all 128 factory presets intact).
+Custom IMFC voices defined in `tools/audio/imfc/imfc_custom_voices.yaml` or factory presets from `imfc_presets.py` can similarly be referenced by name (e.g. `imfc_voice: "HarpsiLead"` or `imfc_voice: "SoloVio"`).
 
 `yaml_lint.py` enforces: tier 2–3 entries must NOT have `opl_patch`,
 and must have both `mt32_patch` and `gm_program`. It also runs the same
 range, polyphony, and unison-doubling checks as tier 1. **Percussion
+
 channels are exempt from the pitched-voice rules** (unison-doubling,
 in-channel note overlap, and pitch range): a channel counts as percussion
 when it sets `rhythm: true` (GM/MT-32 drum part on MIDI ch 10 — the note
@@ -154,14 +158,15 @@ other tier 2–3 voices.
 
 ---
 
-## Timed program switches (MT-32/GM only)
+## Timed program switches (MT-32 / GM / IMFC)
 
 A channel can change its patch mid-song: a per-channel `switches:` list in
 `overrides/*.yaml` (GB voices) and `enhancements/*.yaml` (added voices)
-emits a program change on that channel's MIDI stream. **MIDI-path-only:
+emits a program change on that channel's stream. **MIDI/IMFC-path-only:
 OPL3 FM voices are fixed-patch per voice — switches NEVER apply to tier-1
-`opl_patch`.** (Tier-1 voices keep all three patch fields and cascade up;
-a switch rides the MT-32/GM pair only.)
+`opl_patch`.** (Tier-1 voices keep their baseline patch fields and cascade up;
+a switch rides `mt32_program`, `gm_program`, and optional `imfc_program`.)
+
 
 ### Placement law — between notes only
 
@@ -224,16 +229,16 @@ auto-fixes.**
 
 ### Programs, tiers, and names
 
-Each switch carries the same per-target pair as the channel:
-`mt32_program` + `gm_program` — the two maps do not align, so give both
-every time. **Ship preset NAMES, not numbers**: integer programs are
-0-BASED in overrides files but 1-BASED in enhancements files, and a bare
-number is ambiguous across the two. Names sidestep the trap; the full
-numbering detail lives in
+Each switch carries per-target programs: `mt32_program`, `gm_program`, and optional `imfc_program`.
+The maps do not align across devices, so specify each target's program when re-voicing.
+**Ship preset NAMES, not numbers**: integer programs are 0-BASED in overrides files but 1-BASED
+in enhancements files, and a bare number is ambiguous across the two. Names sidestep the trap;
+the full numbering detail lives in
 [hardware_constraints.md](references/hardware_constraints.md#timed-program-switches-midi-path).
 Tier is per-channel: a switch never changes a channel's tier, and if the
 compiler drops a whole layer (highest tier number first), that layer's
 switches vanish with it.
+
 
 ### Say it in voices, verify it in channels
 

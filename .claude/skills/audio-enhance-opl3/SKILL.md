@@ -55,19 +55,19 @@ Timed mid-song program switches are MT-32/GM-only (see the
 voice; switches never apply to tier-1 `opl_patch`.
 
 ### Patch fields required
-Every tier-1 enhancement channel must specify all three patch fields:
+Every tier-1 enhancement channel must specify all three baseline patch fields (plus optional IMFC voice):
 ```yaml
 opl_patch: <name from tools/audio/opl/patches.yaml>
-mt32_patch: <MT-32 patch number>
+mt32_patch: <MT-32 patch number or custom timbre name>
 gm_program: <GM program number>
+imfc_voice: <optional IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
 ```
-The compiler uses the appropriate field per target. `yaml_lint.py`
-enforces that all three are present for tier 1.
+The compiler uses the appropriate field per target. `yaml_lint.py` enforces that `opl_patch`, `mt32_patch`, and `gm_program` are present for tier 1. If `imfc_voice` is omitted, the compiler falls back to a Bank 2 ROM preset based on the channel or GM program.
 
 ### Volume control & Base Channel Overrides
-Specify `opl_volume: <0-127>` for OPL3 level (maps to carrier total-level).
-Device-scoped keys (`opl_volume`, `mt32_volume`, `gm_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings.
+Specify device-scoped volumes (`opl_volume`, `mt32_volume`, `gm_volume`, `imfc_volume`: `<0-127>`). For OPL3, `opl_volume` maps to carrier total-level. Device-scoped keys are preferred; legacy `volume` is deprecated and produces lint warnings.
 To override the base GB channels on OPL for a song, specify `opl_base_channels:` at the root of the enhancement YAML (e.g. `opl_base_channels: { ch1: duty_clean, ch2: duty_clean }`).
+
 
 ---
 
