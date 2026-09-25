@@ -1,0 +1,13 @@
+schema: 1
+sfx: SFX_CRY_07
+playback: soft_apu
+channels:
+  5:
+    patch: pulse_soft
+    volume: 100
+  6:
+    patch: pulse_soft
+    volume: 100
+  8:
+    patch: noise_soft_whoosh
+    volume: 90

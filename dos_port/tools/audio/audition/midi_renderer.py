@@ -297,7 +297,13 @@ class MidiSession:
                     self.enh_events.setdefault(sw.frame, []).append(
                         bytes((0xC0 | mc, sprog)))
                 self.enh_timelines[mc] = build_program_timeline(prog, sw_list)
-            self.enh_init_msgs.append(bytes((0xB0 | mc, 7, c.volume)))
+            if self.target == "mt32":
+                vol = getattr(c, "mt32_volume", c.volume)
+            elif self.target == "gm":
+                vol = getattr(c, "gm_volume", c.volume)
+            else:
+                vol = c.volume
+            self.enh_init_msgs.append(bytes((0xB0 | mc, 7, vol)))
             self.enh_init_msgs.append(bytes((0xB0 | mc, 10, PAN_CC.get(c.pan, 64))))
 
             for n in c.notes:

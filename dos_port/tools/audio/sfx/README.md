@@ -8,26 +8,33 @@ These files are **human-owned Tier-2 configuration sources** — never wiped by 
 
 One file per sound effect named after its constant in `assets/audio_constants.inc` (without the `SFX_` prefix, case-insensitive, e.g. `Go_Outside.yaml` or `SFX_Go_Outside.yaml`).
 
-## Excluded: Pokémon Cries
+## Pokémon Cries (`SFX_CRY_*`)
 
-**No YAML profiles should ever be created for Pokémon cries (`SFX_CRY_*`).**
+All 38 canonical base Pokémon cries (`SFX_CRY_00` .. `SFX_CRY_25`) are defined as YAML profiles in this directory.
 
-Cries in Generation 1 are not static single-channel sound effects. They are dynamic 3-channel Game Boy APU routines utilizing rapid 60 Hz duty-cycle modulation, 11-bit frequency overflow, and chaotic 7-bit/15-bit LFSR scrambling. They cannot be represented by static OPL FM patch overrides.
-
-Instead, Pokémon cries route through the dedicated cry engine (Sound Blaster DSP direct mode/DMA, Covox/DSS DAC, GUS DRAM, or native SID pulse-width modulation). `tools/audio/gen_sfx_data.py` will reject any attempt to define a cry profile in this directory.
+Cries in Generation 1 are dynamic Game Boy APU routines utilizing rapid duty-cycle modulation, pitch sweeps, and noise scrambling.
+- **Default Playback (`playback: soft_apu`)**: When Sound Blaster hardware is available, cries synthesize APU audio to 8-bit unsigned PCM at 22,050 Hz and stream directly via 8237 single-cycle DMA in the background (`src/home/pokemon.asm:PlayCry` -> `sb_cry_play`).
+- **FM Fallback (`channels:`)**: For users on cards without PCM DAC hardware (such as standalone AdLib / OPL2) or when `/NO_SB` is specified, `PlayCry` jumps to its fallback path (`GetCryData` -> `PlaySound`), which plays the cry through the OPL FM synthesizer. The patches defined under `channels:` (e.g. `pulse_soft`, `noise_soft_whoosh`) customize the FM voices for these systems, eliminating harsh high-frequency noise bursts.
 
 ## Schema
 
 ```yaml
 schema: 1
 sfx: SFX_GO_OUTSIDE             # Constant from assets/audio_constants.inc
+playback: soft_apu              # Optional: 'soft_apu' routes via Sound Blaster DMA PCM; defaults to 'fm'
 
 # Channel overrides (keyed by GB software channel id: 5=pulse1, 6=pulse2, 7=wave, 8=noise)
+# For 'soft_apu', channels serves as the FM fallback profile for AdLib / OPL2 systems.
 channels:
   8:
-    patch: noise_soft_whoosh    # Patch name from gen_opl_patches.py PATCHES
+    patch: noise_soft_whoosh    # Patch name from tools/audio/opl/patches.yaml
     volume: 90                  # Volume scaling (0-127, default: 100)
 ```
+
+### Playback Routing (`playback:`)
+
+- `fm` (default): Sound effect plays via 2-operator FM synthesis on the OPL3/OPL2 chip using the specified patch overrides.
+- `soft_apu`: When Sound Blaster DMA is available, the SFX bytecode is synthesized to 8-bit unsigned PCM at 22,050 Hz via the virtual APU core (`cry_synth.asm:sfx_render_clip`) and streamed asynchronously via 8237 single-cycle DMA in the background (`sb_pcm.asm:sb_sfx_dma_play`). If Sound Blaster is absent or busy, it seamlessly falls back to the FM profile defined in `channels:`.
 
 ## Available Patches
 

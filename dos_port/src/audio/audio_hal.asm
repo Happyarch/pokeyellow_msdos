@@ -75,6 +75,7 @@ extern enh_seq_stop               ; src/audio/opl_enh.asm
 extern mpu_detect                 ; src/audio/mpu401.asm
 extern sb_dma_init                ; src/audio/sb_pcm.asm
 extern sb_dma_shutdown            ; src/audio/sb_pcm.asm
+extern sb_dma_poll_completion     ; src/audio/sb_pcm.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
 extern midi_seq_stop              ; src/audio/mpu401.asm
@@ -127,6 +128,7 @@ FORCE_PAS    equ (1 << DEV_PAS)
 audio_tick:
     cmp byte [g_audio_engine_online], 0
     jz .off
+    call sb_dma_poll_completion
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic

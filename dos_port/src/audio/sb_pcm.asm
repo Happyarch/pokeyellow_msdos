@@ -26,6 +26,8 @@ global sb_cry_play
 global sb_dma_init
 global sb_dma_shutdown
 global sb_dma_play
+global sb_sfx_dma_play
+global sb_dma_poll_completion
 global g_sb_nodma
 global g_sb_dma_active
 
@@ -57,6 +59,8 @@ extern cry_synth_set_rate         ; src/audio/cry_synth.asm
 extern cry_pcm_buffer             ; src/audio/cry_synth.asm
 extern cry_render_species         ; src/audio/cry_synth.asm
 extern g_cry_frames_rendered      ; src/audio/cry_synth.asm
+extern sfx_render_clip            ; src/audio/cry_synth.asm
+extern SfxSoftApuMask             ; assets/sfx_data.inc
 extern tick_count                 ; boot/timing.asm
 
 PIT_CMD_PORT    equ 0x43
@@ -405,6 +409,87 @@ sb_dma_play:
     pop ebx
     ret
 
+; ===========================================================================
+; sb_sfx_dma_play — render and start single-cycle DMA playback for soft APU SFX.
+; In:  AL  = sound ID (e.g. SFX_GO_INSIDE, SFX_GO_OUTSIDE)
+;      EBP = GB memory base
+; Out: CF clear on success (DMA started), CF set if fallback needed.
+; Preserves EBP, AL, EBX.
+; Clobbers: ECX, EDX, ESI, EDI.
+; ===========================================================================
+sb_sfx_dma_play:
+    ; 1. Check if this sound ID is configured for soft APU playback
+    push edx
+    movzx edx, al
+    bt [SfxSoftApuMask], edx
+    pop edx
+    jnc .notSoftApu
+
+    ; 2. Check if Sound Blaster and DMA are available
+    cmp byte [g_sb_present], 0
+    jz .fallback
+    cmp byte [dma_ready], 0
+    jz .fallback
+    cmp byte [g_sb_nodma], 0
+    jnz .fallback
+    cmp byte [g_sb_dma_active], 0
+    jnz .fallback               ; DMA busy (e.g. cry or previous SFX still playing)
+
+    ; 3. Render SFX into DMA buffer using soft APU synth
+    push eax
+    mov edi, [dma_flat]
+    mov ecx, 16384
+    call sfx_render_clip        ; renders bytecode to completion into [dma_flat]
+    test eax, eax
+    jz .renderFailed
+
+    ; 4. Start background single-cycle DMA at 22,050 Hz
+    mov ecx, eax                ; sample count
+    mov edx, 22050              ; 22,050 Hz
+    call sb_dma_play
+    jc .renderFailed
+
+    pop eax
+    clc
+    ret
+
+.renderFailed:
+    pop eax
+.fallback:
+.notSoftApu:
+    stc
+    ret
+
+; ===========================================================================
+; sb_dma_poll_completion — check if 8237 DMA count has wrapped to 0xFFFF.
+; Clears g_sb_dma_active and acknowledges DSP interrupt.
+; Called every audio tick from audio_tick.
+; ===========================================================================
+sb_dma_poll_completion:
+    cmp byte [g_sb_dma_active], 0
+    jz .done
+    movzx edx, byte [g_sb_dma]
+    lea edx, [edx * 2 + 1]        ; port 0x03 for Channel 1
+    xor al, al
+    out 0x0C, al                  ; clear flip-flop
+    in al, dx
+    mov ah, al
+    in al, dx
+    xchg al, ah                   ; AX = count
+    cmp ax, 0xFFFF
+    jne .done
+
+    ; Hardware DMA reached end of buffer: acknowledge DSP
+    movzx edx, word [g_sb_base]
+    test edx, edx
+    jz .clearFlag
+    add edx, 0x0E
+    in al, dx
+.clearFlag:
+    mov byte [g_sb_dma_active], 0
+.done:
+    ret
+
 ; ---------------------------------------------------------------------------
 ; sb_pcm_play — play a clip on the DSP, blocking, interrupts off (Direct Mode).
 ; In:  ESI = flat ptr to 8-bit unsigned samples
@@ -672,6 +757,13 @@ sb_dma_init:
 sb_dma_shutdown:
 sb_dma_play:
     xor eax, eax
+    ret
+
+sb_sfx_dma_play:
+    stc
+    ret
+
+sb_dma_poll_completion:
     ret
 
 %endif

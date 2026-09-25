@@ -26,155 +26,102 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+import re
+import sys
+import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "assets" / "opl_patches.inc"
+HERE = Path(__file__).resolve().parent
+PATCHES_YAML = HERE / "opl" / "patches.yaml"
+ENHANCE_DIR = HERE / "enhancements"
+OVERRIDE_DIR = HERE / "overrides"
+CONST_INC = ROOT / "assets" / "audio_constants.inc"
 
-# EG constants shared by all patches: attack=15 (instant), decay=0,
-# sustain level=0 (loudest), release=7 (quick, clickless).
-AD = 0xF0
-# Eased attack for the pulse voices (user audition 2026-07-07: "let off the
-# attack some"): rate 12 = a few ms of onset ramp, declicking each key-on
-# without smearing fast 16th-note figures. Wave keeps AD (long held notes,
-# already ear-signed-off); noise keeps AD (drum hits must stay instant).
-AD_PULSE = 0xC0
-SR = 0x07
-SUS = 0x20  # reg 0x20 bit 5: sustaining envelope (hold at sustain level)
-# Carrier Key Scale Level, reg x40 bits 6-7. Value 2 (0x80) = 1.5 dB/oct —
-# the gentle treble shelf a real GB speaker imposes; tames the piercing
-# top-octave notes (user audition 2026-07-07, Lavender C6-B6 melody:
-# "eardrum destroyers on good tweeters"). NB the OPL bit values are
-# swapped vs intuition: 1 = 3.0 dB/oct, 2 = 1.5 dB/oct (YMF262 doc).
-KSL = 0x80
 
-# name -> 11-byte patch. Pulse duty variants map the GB's 4 duty cycles onto
-# increasing FM brightness (more modulator level / feedback = buzzier).
-# GB duty 75% is aurally identical to 25% (inverted waveform), so it shares
-# the 25% timbre.
-#
-# Pulse softening pass (user audition 2026-07-07, Lavender Town: "very
-# grating on almost all channels") — same reasoning as the wave fix below:
-# the GB speaker's low-pass is part of the intended sound and clean FM has
-# no equivalent, so tame the high-harmonic sources while preserving the
-# duty-cycle brightness ORDERING (125 buzziest > 25/75 > 50 roundest):
-#   - feedback halved across the pulses (6/5/3 -> 3/2/1) — feedback
-#     self-brightening was the dominant edge, as it was on the wave
-#   - modulator TL backed off ~7.5 dB (m40 +0x0A) — sidebands stay, whistle
-#     goes
-PATCHES = {
-    #                m20        m40   m60  m80  mE0   c20        c40   c60  c80  cE0   C0
-    "duty_125": [SUS | 0x01, 0x16, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x06],
-    "duty_25":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x04],
-    "duty_50":  [SUS | 0x02, 0x1E, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x02],
-    "duty_75":  [SUS | 0x01, 0x1A, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x00, AD_PULSE, SR, 0x00, 0x04],
-    # Wave channel: soft, rounded bass/counter-melody voice. The GB wave is
-    # harsh at the source too, but the console's tiny speaker low-passes the
-    # highs away; clean FM has nothing rolling them off, so we emulate that by
-    # stripping the patch's high-harmonic sources (user audition 2026-07-07):
-    #   - sine carrier (cE0 0x00, was half-sine 0x01) — half-sine is bright
-    #   - no feedback (C0 0x00, was 0x04 = fb 2) — feedback self-brightens the
-    #     modulator, the biggest edge; gone now
-    #   - gentler modulator (m40 0x28, was 0x18) — keeps a little FM warmth;
-    #     0x28 is the "just a hair softer" final nudge (user audition 2026-07-07)
-    # Carrier base TL 0x06 (~4.5 dB): the wave holds a flat NR32 level while the
-    # pulses decay via their envelopes, so at parity it read as too loud.
-    "wave":     [SUS | 0x01, 0x28,  AD,  SR, 0x00, SUS | 0x01, 0x06,  AD,  SR, 0x00, 0x00],
-    # Noise channel: high-multiple modulator at full level with max feedback
-    # produces dense inharmonic hash — the closest 2-op non-rhythm-mode noise.
-    "noise":    [SUS | 0x0F, 0x00, 0xF0, 0x06, 0x00, SUS | 0x01, 0x00, 0xF0, 0x06, 0x00, 0x0E],
-    # --- Tier-1 enhancement patches (Phase E) ------------------------------
-    # Indices 6+; the APU shim only ever loads 0-5, the enh stream player
-    # (opl_enh.asm) loads these by the index gen_enh_streams.py bakes in.
-    # A timbral family deliberately *unlike* the buzzy pulse variants above:
-    # clean sines, so added voices sit under the shim's pulses, not fight them.
-    #
-    # Sub-bass reinforcement: pure carrier sine (modulator fully attenuated ->
-    # no FM sidebands), the deep low end the GB deliberately omitted (small
-    # speaker; see the Pallet Town score note). Carrier TL is the player's
-    # per-note volume slot.
-    "sub_bass": [SUS | 0x01, 0x3F,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
-    # Soft pad: sine carrier with a gentle 1:1 modulator (TL 0x18) for a hair
-    # of warmth — organ-like, not string-like (FM can't do bowed strings).
-    # Instant-attack/full-sustain like every patch here; the held note length
-    # comes from the YAML, the volume from the player. Warm, never buzzy.
-    "soft_pad": [SUS | 0x01, 0x18,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
-    # --- Clearer tier-1 variants (demo, 2026-09-11: Cities2's low end read
-    # as muffled on OPL3 audition) --------------------------------------
-    # Same voices, a touch more upper-harmonic definition. New names (not
-    # retunes) so the ~14 songs on sub_bass/soft_pad are untouched; a song
-    # opts in per-channel in its enhancement YAML. If these win everywhere,
-    # promote them (rename back) in a separate pass with wide audition.
-    #
-    # Sub-bass with pitch definition: carrier sine, modulator at MULT 2
-    # (octave-up sideband) at low level (TL 0x26 ≈ 28 dB down) — the
-    # fundamental still dominates, but the octave harmonic gives the ear
-    # something to track pitch by on small speakers. No feedback (feedback
-    # self-brightens harshly; the MULT-2 sideband stays round).
-    "sub_bass_clear": [SUS | 0x02, 0x26,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
-    # Clear pad: soft_pad with the 1:1 modulator opened 0x18 -> 0x12
-    # (~4.5 dB more upper sideband) — presence without buzz. Still no
-    # feedback, still KSL-free like its sibling.
-    "soft_pad_clear": [SUS | 0x01, 0x12,  AD,  SR, 0x00, SUS | 0x01, 0x00,  AD,  SR, 0x00, 0x00],
-    # Clean base-channel voice for songs where two duty-cycle pulse channels
-    # form a chord and the FM buzz (feedback + modulator sidebands) reads as
-    # a mistuned clash rather than a blend — Mt. Moon Cave's augmented-triad
-    # ch1/ch2 arpeggio (user audition 2026-07-07: "trying to make chords and
-    # failing" / "plucking an untuned guitar"). Pure carrier sine (modulator
-    # silent), no feedback, instant attack: closest FM equivalent of the
-    # thin, low-harmonic real GB square wave, so simultaneous dissonant
-    # chords stay in tune even when they don't stay consonant (by design —
-    # the augmented harmony IS the point). Carrier keeps the KSL treble
-    # shelf like the other base-channel voices.
-    "duty_clean": [SUS | 0x01, 0x3F, AD, SR, 0x00, SUS | 0x01, KSL | 0x00, AD, SR, 0x00, 0x00],
-    # --- SFX sound-design patches -----------------------------------------
-    # Specialized timbres for sound effects (channel 8 noise + pulse sweeps)
-    # to replace the generic screeching static with pleasant, authentic sounds.
-    #
-    # Soft whoosh (doors, footsteps, ledges, running):
-    # Gentle modulator depth and moderate feedback give a soft, breathy rush of
-    # air rather than high-frequency metallic hash.
-    "noise_soft_whoosh": [SUS | 0x03, 0x22, AD, 0x06, 0x00, SUS | 0x01, KSL | 0x04, AD, 0x06, 0x00, 0x06],
-    # Heavy thud (Tackle, Mega Kick, faint thud, super-effective hit):
-    # Low 1:1 modulator/carrier ratio with snappy envelope creates a solid,
-    # acoustic bass impact / 808-style thump instead of an abrasive buzz.
-    "noise_heavy_thud":  [0x01, 0x0C, 0xF2, 0x07, 0x00, 0x01, 0x00, 0xF4, 0x07, 0x00, 0x08],
-    # Crunch (neutral combat damage impact):
-    # Crisp mid-range bite with controlled feedback for a satisfying physical hit.
-    "noise_crunch":      [0x04, 0x14, 0xF1, 0x07, 0x00, 0x01, 0x02, 0xF3, 0x07, 0x00, 0x08],
-    # Crisp click (menu open, button clicks):
-    # Ultra-short transient snick with rapid decay for tactile UI feedback.
-    "noise_click":       [0x08, 0x18, 0xF0, 0x08, 0x00, 0x01, 0x00, 0xF1, 0x08, 0x00, 0x04],
-    # Scratchy poof (pokeball opening / smoke):
-    # Inharmonic noise hash with bite, controlled feedback, and sustained envelope.
-    "noise_poof":        [SUS | 0x0B, 0x08, 0xF0, 0x06, 0x00, SUS | 0x01, 0x00, 0xF0, 0x06, 0x00, 0x0C],
-    # Soft pulse (high sweeps like psychic):
-    # Rounded waveform with reduced feedback to eliminate piercing treble whistle.
-    "pulse_soft":        [SUS | 0x01, 0x2C, AD_PULSE, SR, 0x00, SUS | 0x01, KSL | 0x04, AD_PULSE, SR, 0x00, 0x02],
-    # Tilted square pulse for high-frequency SFX (Poké Ball toss, beam):
-    # Additive 2-op synthesis combining OPL3 Waveform 6 (50% square) with an
-    # in-phase feedback-skewed sine wave (FB=5) to reproduce the analog RC high-pass
-    # decay curve and left-leaning fin shape of the Game Boy APU, with no KSL treble roll-off.
-    "square_sfx":        [SUS | 0x01, 0x0C, AD, SR, 0x00, SUS | 0x01, 0x02, AD, SR, 0x06, 0x0B],
-}
+def load_patches() -> tuple[dict[str, list[int]], list[str]]:
+    """Load OPL patches from tools/audio/opl/patches.yaml."""
+    if not PATCHES_YAML.exists():
+        print(f"Error: {PATCHES_YAML} not found", file=sys.stderr)
+        sys.exit(1)
+    with open(PATCHES_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    patches_dict: dict[str, list[int]] = {}
+    patch_order: list[str] = []
+    for name, entry in (data.get("patches") or {}).items():
+        if isinstance(entry, dict) and "bytes" in entry:
+            patches_dict[name] = [int(b) for b in entry["bytes"]]
+        elif isinstance(entry, list):
+            patches_dict[name] = [int(b) for b in entry]
+        patch_order.append(name)
+    return patches_dict, patch_order
 
-PATCH_ORDER = ["duty_125", "duty_25", "duty_50", "duty_75", "wave", "noise",
-               "sub_bass", "soft_pad", "duty_clean",
-               "noise_soft_whoosh", "noise_heavy_thud", "noise_crunch",
-               "noise_click", "noise_poof", "pulse_soft", "square_sfx",
-               "sub_bass_clear", "soft_pad_clear"]
 
-# Per-song OPL patch overrides for the BASE channels (tier 0). Normally a
-# base channel's FM patch is picked purely from the GB duty-cycle value
-# (NRx1 bits 7-6), shared across every song using that duty — see
-# opl_shim.asm's voice_keyon/opl_pass. Some songs need a channel-specific
-# bespoke patch instead of the shared duty_* voice without disturbing every
-# other song that shares it. Keyed by the numeric music id (see
-# assets/audio_constants.inc's MUSIC_* equ values); each row is
-# (ch1, ch2, ch3, ch4), entries either a patch name or None (no override,
-# fall back to the duty-based default).
-SONG_OPL_OVERRIDES = {
-    0xE7: ("duty_clean", "duty_clean", None, None),  # MUSIC_DUNGEON3 (Mt. Moon Cave)
-}
+def load_music_constants() -> dict[str, int]:
+    """Parse audio_constants.inc for MUSIC_* equ values."""
+    constants = {}
+    pattern = re.compile(r"^([A-Za-z0-9_]+)\s+equ\s+(0x[0-9A-Fa-f]+|\d+)")
+    if CONST_INC.exists():
+        with open(CONST_INC, "r", encoding="utf-8") as f:
+            for line in f:
+                m = pattern.match(line.strip())
+                if m:
+                    name = m.group(1).upper()
+                    val_str = m.group(2)
+                    constants[name] = int(val_str, 16) if val_str.startswith("0x") else int(val_str)
+    return constants
+
+
+def load_song_overrides(music_constants: dict[str, int]) -> dict[int, tuple[str | None, str | None, str | None, str | None]]:
+    """Scan enhancements/*.yaml and overrides/*.yaml for opl_base_channels overrides."""
+    overrides: dict[int, tuple[str | None, str | None, str | None, str | None]] = {}
+    yaml_paths = []
+    if ENHANCE_DIR.exists():
+        yaml_paths.extend(ENHANCE_DIR.glob("*.yaml"))
+    if OVERRIDE_DIR.exists():
+        yaml_paths.extend(OVERRIDE_DIR.glob("*.yaml"))
+
+    for ypath in sorted(yaml_paths):
+        try:
+            with open(ypath, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+        except Exception:
+            continue
+        if not isinstance(data, dict):
+            continue
+        opl_base = data.get("opl_base_channels")
+        if not opl_base or not isinstance(opl_base, dict):
+            continue
+        song_name = data.get("song")
+        if not song_name:
+            continue
+
+        norm_song = song_name.upper().replace("_", "")
+        if not norm_song.startswith("MUSIC"):
+            norm_song = "MUSIC" + norm_song
+
+        matched_id = None
+        for cname, cid in music_constants.items():
+            if cname.upper().replace("_", "") == norm_song:
+                matched_id = cid
+                break
+
+        if matched_id is not None:
+            ch1 = opl_base.get("ch1")
+            ch2 = opl_base.get("ch2")
+            ch3 = opl_base.get("ch3")
+            ch4 = opl_base.get("ch4")
+            overrides[matched_id] = (ch1, ch2, ch3, ch4)
+
+    # Fallback default if constants were missing or not scanned
+    if 0xE7 not in overrides:
+        overrides[0xE7] = ("duty_clean", "duty_clean", None, None)
+
+    return overrides
+
+
+PATCHES, PATCH_ORDER = load_patches()
+SONG_OPL_OVERRIDES = load_song_overrides(load_music_constants())
 
 
 def att_units(ratio: float) -> int:

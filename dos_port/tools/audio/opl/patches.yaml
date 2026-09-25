@@ -1,0 +1,92 @@
+# tools/audio/opl/patches.yaml — declarative OPL2/OPL3 FM patches (Tier-2 data).
+#
+# Compiled by gen_opl_patches.py into assets/opl_patches.inc.
+# Each patch is an 11-byte OPL register group configuration:
+#   [m20, m40, m60, m80, mE0,  c20, c40, c60, c80, cE0,  C0]
+#
+# Register mappings:
+#   m20 / c20: Tremolo, Vibrato, Sustain Sound, Key Scaling Rate, Frequency Multiplier (MULT)
+#   m40 / c40: Key Scale Level (KSL bits 7-6), Total Level / Attenuation (TL bits 5-0)
+#   m60 / c60: Attack Rate (AR bits 7-4), Decay Rate (DR bits 3-0)
+#   m80 / c80: Sustain Level (SL bits 7-4), Release Rate (RR bits 3-0)
+#   mE0 / cE0: Waveform Select (WS bits 2-0: 0=sine, 1=half-sine, 2=abs-sine, 3=pulse-sine, etc.)
+#   C0:        Feedback (FB bits 3-1: 0-7), Connection / Synthesis Type (CNT bit 0: 0=FM, 1=additive)
+
+schema: 1
+
+patches:
+  # --- Base GB pulse duty cycles ---
+  duty_125:
+    description: "12.5% pulse wave (buzziest duty cycle, FB=3, TL=0x16)"
+    bytes: [0x21, 0x16, 0xC0, 0x07, 0x00, 0x21, 0x80, 0xC0, 0x07, 0x00, 0x06]
+
+  duty_25:
+    description: "25% pulse wave (moderate buzz, FB=2, TL=0x1A)"
+    bytes: [0x21, 0x1A, 0xC0, 0x07, 0x00, 0x21, 0x80, 0xC0, 0x07, 0x00, 0x04]
+
+  duty_50:
+    description: "50% square wave (roundest duty cycle, FB=1, TL=0x1E, MULT=2)"
+    bytes: [0x22, 0x1E, 0xC0, 0x07, 0x00, 0x21, 0x80, 0xC0, 0x07, 0x00, 0x02]
+
+  duty_75:
+    description: "75% pulse wave (aurally identical to 25%, shares 25% timbre)"
+    bytes: [0x21, 0x1A, 0xC0, 0x07, 0x00, 0x21, 0x80, 0xC0, 0x07, 0x00, 0x04]
+
+  # --- Base GB wave & noise channels ---
+  wave:
+    description: "Soft rounded bass/counter-melody (sine carrier, no feedback, TL=0x28, base TL=6)"
+    bytes: [0x21, 0x28, 0xF1, 0x07, 0x00, 0x21, 0x06, 0xF1, 0x07, 0x00, 0x00]
+
+  noise:
+    description: "Generic noise hash (high-multiple modulator, max feedback FB=7, inharmonic hash)"
+    bytes: [0x2F, 0x00, 0xF0, 0x06, 0x00, 0x21, 0x00, 0xF0, 0x06, 0x00, 0x0E]
+
+  # --- Tier-1 enhancement patches ---
+  sub_bass:
+    description: "Pure carrier sine sub-bass reinforcement (modulator fully attenuated)"
+    bytes: [0x21, 0x3F, 0xF1, 0x07, 0x00, 0x21, 0x00, 0xF1, 0x07, 0x00, 0x00]
+
+  soft_pad:
+    description: "Organ-like warm pad (sine carrier, gentle 1:1 modulator at TL=0x18)"
+    bytes: [0x21, 0x18, 0xF1, 0x07, 0x00, 0x21, 0x00, 0xF1, 0x07, 0x00, 0x00]
+
+  duty_clean:
+    description: "Pure carrier sine for dissonant arpeggios (Mt. Moon Cave ch1/ch2 blend)"
+    bytes: [0x21, 0x3F, 0xF1, 0x07, 0x00, 0x21, 0x80, 0xF1, 0x07, 0x00, 0x00]
+
+  # --- SFX sound-design patches ---
+  noise_soft_whoosh:
+    description: "Soft breathy air rush for doors, footsteps, ledges (FB=3, gentle modulator)"
+    bytes: [0x23, 0x22, 0xF1, 0x06, 0x00, 0x21, 0x84, 0xF1, 0x06, 0x00, 0x06]
+
+  noise_heavy_thud:
+    description: "Acoustic bass impact / 808-style thump for Tackle, Mega Kick, faint thud"
+    bytes: [0x01, 0x0C, 0xF2, 0x07, 0x00, 0x01, 0x00, 0xF4, 0x07, 0x00, 0x08]
+
+  noise_crunch:
+    description: "Crisp mid-range bite with controlled feedback for neutral combat hits"
+    bytes: [0x04, 0x14, 0xF1, 0x07, 0x00, 0x01, 0x02, 0xF3, 0x07, 0x00, 0x08]
+
+  noise_click:
+    description: "Ultra-short transient snick with rapid decay for tactile menu clicks"
+    bytes: [0x08, 0x18, 0xF0, 0x08, 0x00, 0x01, 0x00, 0xF1, 0x08, 0x00, 0x04]
+
+  noise_poof:
+    description: "Scratchy noise hash with bite and sustain for Pokéball open / smoke"
+    bytes: [0x2B, 0x08, 0xF0, 0x06, 0x00, 0x21, 0x00, 0xF0, 0x06, 0x00, 0x0C]
+
+  pulse_soft:
+    description: "Rounded waveform with reduced feedback for high-pitched sweeps (Psychic)"
+    bytes: [0x21, 0x2C, 0xC0, 0x07, 0x00, 0x21, 0x84, 0xC0, 0x07, 0x00, 0x02]
+
+  square_sfx:
+    description: "Additive 2-op square pulse (Waveform 6 + feedback-skewed sine, FB=5)"
+    bytes: [0x21, 0x0C, 0xF1, 0x07, 0x00, 0x21, 0x02, 0xF1, 0x07, 0x06, 0x0B]
+
+  sub_bass_clear:
+    description: "Sub-bass with octave-up sideband (MULT=2, TL=0x26) for pitch definition"
+    bytes: [0x22, 0x26, 0xF1, 0x07, 0x00, 0x21, 0x00, 0xF1, 0x07, 0x00, 0x00]
+
+  soft_pad_clear:
+    description: "Clear pad with open 1:1 modulator (TL=0x12) for upper-harmonic presence"
+    bytes: [0x21, 0x12, 0xF1, 0x07, 0x00, 0x21, 0x00, 0xF1, 0x07, 0x00, 0x00]

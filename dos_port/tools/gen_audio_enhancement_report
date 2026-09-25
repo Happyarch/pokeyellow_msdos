@@ -65,6 +65,7 @@ import gen_audio_data  # noqa: E402
 
 _ASSIGNMENT_RE = re.compile(r"^([^=]+)=([01])$")
 TIMBRES_PATH = AUDIO_DIR / "mt32" / "timbres.yaml"
+OPL_PATCHES_PATH = AUDIO_DIR / "opl" / "patches.yaml"
 
 
 def _norm_name(name) -> str:
@@ -89,6 +90,15 @@ def load_custom_timbre_names() -> dict[str, str]:
     return out
 
 
+def load_opl_patches() -> dict[str, dict]:
+    """{patch_name: patch_info} for every patch defined in tools/audio/opl/patches.yaml."""
+    try:
+        data = yaml.safe_load(OPL_PATCHES_PATH.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    return data.get("patches", {}) or {}
+
+
 def fmt_mt32(value, custom_names):
     """Format one MT-32 patch/program value, starring custom timbres.
 
@@ -101,6 +111,59 @@ def fmt_mt32(value, custom_names):
     if isinstance(value, str) and _norm_name(value) in custom_names:
         return f"{custom_names[_norm_name(value)]}*"
     return value
+
+
+def fmt_opl_patch(value, opl_patches: dict[str, dict]):
+    """Format one OPL3 patch name, validating it against patches.yaml."""
+    if not value or value == "—":
+        return "—"
+    if value in opl_patches:
+        return value
+    return f"{value} (unknown)"
+
+
+def get_opl_base_channels(enh, ovr):
+    """Extract root-level opl_base_channels dictionary from enh or ovr dict."""
+    base = None
+    if isinstance(enh, dict) and "opl_base_channels" in enh:
+        base = enh["opl_base_channels"]
+    elif isinstance(ovr, dict) and "opl_base_channels" in ovr:
+        base = ovr["opl_base_channels"]
+    if not isinstance(base, dict):
+        return None
+    return base
+
+
+def fmt_opl_base(base, opl_patches: dict[str, dict]):
+    """Format opl_base_channels for the summary table."""
+    if not base:
+        return "—"
+    parts = []
+    for k in ("ch1", "ch2", "ch3", "ch4", 1, 2, 3, 4):
+        if k in base:
+            val = base[k]
+            ch_num = str(k).replace("ch", "")
+            if val in opl_patches:
+                parts.append(f"ch{ch_num}:{val}")
+            else:
+                parts.append(f"ch{ch_num}:{val}(unknown)")
+    return ", ".join(parts) if parts else "—"
+
+
+def fmt_volume(ch_dict, default=None):
+    """Format volume, supporting device-cleaved keys (opl_volume, mt32_volume, gm_volume)."""
+    parts = []
+    if "opl_volume" in ch_dict:
+        parts.append(f"opl:{ch_dict['opl_volume']}")
+    if "mt32_volume" in ch_dict:
+        parts.append(f"mt32:{ch_dict['mt32_volume']}")
+    if "gm_volume" in ch_dict:
+        parts.append(f"gm:{ch_dict['gm_volume']}")
+    if parts:
+        return " / ".join(parts)
+    if "volume" in ch_dict:
+        return str(ch_dict["volume"])
+    return str(default) if default is not None else "—"
 
 
 def _load_audition():
@@ -152,15 +215,19 @@ def tiers_of(enh_data):
     return sorted(tiers)
 
 
-def patches_of_sfx(sfx_data):
+def patches_of_sfx(sfx_data, opl_patches=None):
     if not sfx_data or "channels" not in sfx_data:
         return "—"
     chans = sfx_data.get("channels", {})
     parts = []
+    opl_patches = opl_patches or {}
     for ch in sorted(chans, key=lambda x: int(x) if str(x).isdigit() else str(x)):
         cfg = chans[ch]
         patch = cfg.get("patch", "—") if isinstance(cfg, dict) else "—"
-        parts.append(f"ch{ch}: {patch}")
+        if patch != "—" and opl_patches and patch not in opl_patches:
+            parts.append(f"ch{ch}: {patch} (unknown)")
+        else:
+            parts.append(f"ch{ch}: {patch}")
     return ", ".join(parts) if parts else "—"
 
 
@@ -283,6 +350,7 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
     ovr_files = load_yaml_dir(OVR_DIR)
     sfx_files = load_yaml_dir(SFX_DIR)
     custom_names = load_custom_timbre_names()
+    opl_patches = load_opl_patches()
 
     label_set_m = set(label_to_const_m)
     enh_by_label = {s: d for s, d in enh_files.items() if s in label_set_m}
@@ -313,11 +381,14 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
     total_m = len(canonical_music)
     n_enh = len(enh_by_label)
     n_ovr = len(ovr_by_label)
+    n_opl_base = sum(1 for label in label_set_m
+                     if get_opl_base_channels(enh_by_label.get(label), ovr_by_label.get(label)))
     approved_m = [c for c in approvals if c in const_to_label_m and approvals[c].get("approved")]
     n_approved_m = len(approved_m)
 
     total_s = len(canonical_sfx_list)
     n_sfx_tuned = len(sfx_by_const)
+    n_sfx_soft_apu = sum(1 for _, d in sfx_by_const.values() if d.get("playback") == "soft_apu")
     approved_s = [c for c in approvals if c in const_to_label_s and approvals[c].get("approved")]
     n_approved_s = len(approved_s)
 
@@ -341,11 +412,13 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
         md_table(['metric', 'count', 'of 49'], [
             ['has enhancements/*.yaml', n_enh, f'{n_enh}/{total_m}'],
             ['has overrides/*.yaml', n_ovr, f'{n_ovr}/{total_m}'],
+            ['has opl_base_channels', n_opl_base, f'{n_opl_base}/{total_m}'],
             ['approved (signed off)', n_approved_m, f'{n_approved_m}/{total_m}'],
         ]), '',
         '### Sound Effects (SFX)', '',
-        md_table(['metric', 'count', 'of 167'], [
-            ['has sfx/*.yaml (tuned profile)', n_sfx_tuned, f'{n_sfx_tuned}/{total_s}'],
+        md_table([f'metric', 'count', f'of {total_s}'], [
+            ['has sfx/*.yaml (profile)', n_sfx_tuned, f'{n_sfx_tuned}/{total_s}'],
+            ['routed via PCM (Soft APU)*', n_sfx_soft_apu, f'{n_sfx_soft_apu}/{total_s}'],
             ['approved (signed off)', n_approved_s, f'{n_approved_s}/{total_s}'],
         ]), '',
     ]
@@ -357,16 +430,18 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
         enh = enh_by_label.get(label)
         ovr = ovr_by_label.get(label)
         tiers = tiers_of(enh)
+        base_ch = get_opl_base_channels(enh, ovr)
         approval = approvals.get(const)
         rows_m.append([
             label,
             'yes' if enh else '—',
             ','.join(str(t) for t in tiers) if tiers else '—',
             'yes' if ovr else '—',
+            fmt_opl_base(base_ch, opl_patches),
             switches_summary(ovr, enh),
             f'\u2713 {approval["date"]}' if approval else '—',
         ])
-    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'Switches', 'Approved'], rows_m), '']
+    lines += [md_table(['Song', 'Enhancement', 'Tiers', 'Override', 'OPL Base', 'Switches', 'Approved'], rows_m), '']
 
     # ── Per-song detail ──────────────────────────────────────────────────
     detail_labels = sorted(set(enh_by_label) | set(ovr_by_label))
@@ -378,16 +453,29 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
             const = label_to_const_m[label]
             lines += [f'### {label} (`{const}`)', '']
             enh = enh_by_label.get(label)
+            ovr = ovr_by_label.get(label)
+            base_ch = get_opl_base_channels(enh, ovr)
+            if base_ch:
+                lines += ['**OPL base channel overrides** (replaces default GB APU FM patches):', '']
+                base_rows = []
+                for k in ("ch1", "ch2", "ch3", "ch4", 1, 2, 3, 4):
+                    if k in base_ch:
+                        val = base_ch[k]
+                        ch_num = str(k).replace("ch", "")
+                        desc = opl_patches.get(val, {}).get("description", "")
+                        valid_mark = "" if val in opl_patches else " *(unknown patch)*"
+                        base_rows.append([f"GB ch{ch_num}", f"`{val}`{valid_mark}", desc or "—"])
+                lines += [md_table(['Channel', 'OPL Patch', 'Description'], base_rows), '']
             if enh:
                 lines += ['**Enhancement channels** — OPL3-specific patch is'
                           ' `opl_patch` (tier 1 only); MT-32/GM patches are'
                           ' `mt32_patch`/`gm_program` on every tier:', '']
                 ch_rows = [[
                     c.get('name', '?'), c.get('tier', '?'),
-                    c.get('opl_patch', '—'),
+                    fmt_opl_patch(c.get('opl_patch', '—'), opl_patches),
                     fmt_mt32(c.get('mt32_patch', '—'), custom_names),
                     c.get('gm_program', '—'), c.get('pan', 'center'),
-                    c.get('volume', 96),
+                    fmt_volume(c, default=96),
                 ] for c in enh.get('channels', [])]
                 lines += [md_table(
                     ['Channel', 'Tier', 'OPL Patch', 'MT-32 Patch',
@@ -399,7 +487,6 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                         lines += [f"Switches on `{c.get('name', '?')}` "
                                   f"(timed mid-song program changes): "
                                   + "; ".join(sl) + ".", '']
-            ovr = ovr_by_label.get(label)
             if ovr:
                 lines += ['**MT-32/MIDI overrides** (base 4 GB channels'
                           ' 1-3; drums = channel 4/noise):', '']
@@ -411,7 +498,7 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                         fmt_mt32(c.get('mt32_program', '—'), custom_names),
                         c.get('gm_program', '—'),
                         fmt_mt32(c.get('program', '—'), custom_names),
-                        c.get('volume', '—'), c.get('pan', '—'),
+                        fmt_volume(c, default=None), c.get('pan', '—'),
                     ])
                 if ch_rows:
                     lines += [md_table(
@@ -435,27 +522,40 @@ def build_report(canonical_music, const_to_label_m, label_to_const_m,
                       ' `tools/audio/mt32/timbres.yaml` (uploaded to User Timbre'
                       ' RAM at boot; selected per song via its staged patch slot).'
                       ' Raw program numbers are factory presets._', '']
+        lines += ['_OPL3 patches are defined in `tools/audio/opl/patches.yaml`'
+                  ' (18 canonical FM instruments). Root-level `opl_base_channels:`'
+                  ' overrides base GB APU channel timbres for OPL3._', '']
 
     # ── Sound Effects (SFX) status ───────────────────────────────────────
     lines += ['## Sound Effects (SFX) status', '',
               '_Sound effects in Pokémon Yellow have no arrangement enhancement tiers; '
-              'each sound effect is either tuned with an authentic OPL3 FM profile in `tools/audio/sfx/` '
+              'each sound effect is either tuned with an authentic OPL3 FM profile in `tools/audio/sfx/`, '
+              'routed via Soft APU PCM on Sound Blaster with FM fallback, '
               'or uses default hardware emulation._', '']
     rows_s = []
     for const, label in canonical_sfx_list:
         sfx_entry = sfx_by_const.get(const)
         has_profile = 'yes' if sfx_entry else '—'
-        patches_str = patches_of_sfx(sfx_entry[1]) if sfx_entry else '—'
+        playback_str = '—'
+        if sfx_entry:
+            pb = sfx_entry[1].get('playback', 'fm')
+            playback_str = 'PCM (Soft APU)*' if pb == 'soft_apu' else 'FM'
+        patches_str = patches_of_sfx(sfx_entry[1], opl_patches) if sfx_entry else '—'
         appr = approvals.get(const)
         approved_str = f'\u2713 {appr["date"]}' if appr else '—'
         rows_s.append([
             label,
             const,
             has_profile,
+            playback_str,
             patches_str,
             approved_str,
         ])
-    lines += [md_table(['Sound Effect', 'Constant', 'Tuned Profile', 'Patches', 'Approved'], rows_s), '']
+    lines += [md_table(['Sound Effect', 'Constant', 'Profile', 'Playback', 'FM Fallback Patches', 'Approved'], rows_s), '']
+    lines += ['_\\* **PCM (Soft APU)**: Synthesized to 8-bit unsigned PCM via the virtual APU core '
+              'and streamed asynchronously in the background via Sound Blaster single-cycle DMA. '
+              'Automatically falls back to the defined FM profile on sound cards without PCM hardware (e.g. AdLib / OPL2) '
+              'or when `/NO_SB` is specified._', '']
 
     # ── Orphan files ─────────────────────────────────────────────────────
     orphans = ([(f'enhancements/{s}.yaml', d) for s, d in sorted(enh_orphans.items())]

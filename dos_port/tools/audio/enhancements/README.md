@@ -121,7 +121,11 @@ patterns:
 | `channels[].mt32_patch` | int or string | Required. Int = **1-based** preset number (Program Change byte is value − 1); string = custom timbre name defined in `mt32/timbres.yaml`. Custom timbres are dynamically mapped on track load and eagerly restored to factory presets on track unload. |
 | `channels[].gm_program` | int | Required. **1-based** GM program. GM and MT-32 numbering do **not** align — pick independently. |
 | `channels[].pan` | enum | `left`/`center`/`right`. MIDI CC10 (0/64/127); OPL3 register C0h bits 4–5. |
-| `channels[].volume` | int 0–127 | CC7 once at song start; OPL player maps to carrier total-level. Default 96. |
+| `channels[].volume` | int 0–127 | **Deprecated**; emits lint warning. Use device-scoped volume keys instead. Cannot be mixed with device keys on the same channel. |
+| `channels[].opl_volume` | int 0–127 | OPL3 volume (Tier 1 only). Maps to carrier total-level. Default 96. |
+| `channels[].mt32_volume` | int 0–127 | MT-32 volume (CC7). Default 96. |
+| `channels[].gm_volume` | int 0–127 | General MIDI volume (CC7). Default 96. |
+| `opl_base_channels` | dict | Root-level map overriding base GB channels on OPL (e.g. `ch1: duty_clean, ch2: duty_clean`). |
 | `channels[].velocity` | int 1–127 | Default note velocity (OPL quantizes coarsely). Default 96. |
 | `channels[].transpose` | int | Semitones, whole channel. Default 0. |
 | `events[]` note | `{m, b, d, n, v?}` | `m`/`b` 1-based (b fractional ok), `d` in beats > 0, `n` = note name or list (chord). |

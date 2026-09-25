@@ -58,7 +58,10 @@ never play on OPL3):
 ```yaml
 mt32_patch: <MT-32 patch number or custom timbre name>
 gm_program: <GM program number>
+mt32_volume: <0-127, optional, default 96>
+gm_volume: <0-127, optional, default 96>
 ```
+Device-scoped keys (`mt32_volume`, `gm_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings.
 Custom timbre names defined in `tools/audio/mt32/timbres.yaml` can be used as strings
 (e.g. `mt32_patch: "NightWind"` or `mt32_program: "Theremin"`). The build pipeline
 compiles on-the-fly setup SysEx (pointing the patch slot to the custom timbre) and

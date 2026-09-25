@@ -51,6 +51,7 @@ extern Audio2_InitSFXVariables    ; src/audio/engine_2.asm
 extern Audio2_StopAllAudio        ; src/audio/engine_2.asm
 extern AudioRom                   ; src/data/audio_data.asm
 extern WaitForSoundToFinish       ; src/home/delay.asm
+extern sb_sfx_dma_play            ; src/audio/sb_pcm.asm
 
 section .text
 
@@ -260,6 +261,9 @@ PlaySound:
     xor al, al
     mov [ebp + wNewSoundID], al
     call DetermineAudioFunction
+    ; DEVIATION{class=HAL; pret=home/audio.asm:PlaySound; behavior=if Sound Blaster DMA is available and the requested SFX is designated for soft APU playback in SfxSoftApuMask, the SFX is synthesized via soft APU into DMA memory and streamed via background DMA (sb_sfx_dma_play), falling back to pret virtual APU / FM playback on failure or without SB DMA; evidence=FM synthesis struggles with complex Game Boy noise SFX like door transitions, and asynchronous DMA PCM accurately reproduces noise while keeping 60 FPS gameplay uninterrupted; lifetime=permanent hardware routing}
+    mov al, bh
+    call sb_sfx_dma_play
     jmp .done
 
 .fadeOut:

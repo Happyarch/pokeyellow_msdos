@@ -29,9 +29,13 @@ global cry_synth_render_samples
 global cry_synth_frame
 global cry_render_clip
 global cry_render_species
+global sfx_render_clip
+global sfx_render_id
 global cry_synth_init_c
 global cry_synth_reset_c
 global cry_synth_frame_c
+global sfx_render_clip_c
+global sfx_render_id_c
 global g_cry_synth_rate
 global cry_state
 global cry_master
@@ -826,6 +830,138 @@ cry_render_species:
     ret
 
 ; ===========================================================================
+; sfx_render_clip — render an active virtual APU SFX to completion into [EDI].
+; Advances SFX bytecode frame-by-frame via Audio1_UpdateMusic, synthesizing
+; samples into [EDI] at 22,050 Hz until all SFX channels finish or buffer space runs out.
+;
+; In:  EDI = destination buffer (flat 32-bit pointer, e.g. [dma_flat])
+;      ECX = max buffer size in bytes (samples)
+;      EBP = GB memory base
+; Out: EDI = advanced past written samples
+;      EAX = total samples synthesized
+; Preserves EBP. Clobbers EBX, ECX, EDX, ESI.
+; ===========================================================================
+sfx_render_clip:
+    push ebp
+    mov [clip_dest], edi
+    mov [clip_max], ecx
+    mov dword [clip_tot_samples], 0
+    mov dword [g_cry_frames_rendered], 0
+    mov word [clip_carry], 0
+
+    ; Configure synthesis rate to 22,050 Hz for Sound Blaster DMA
+    mov eax, 22050
+    call cry_synth_set_rate
+    call cry_synth_reset
+
+    ; Ensure terminal routing and master volume are active
+    mov al, [ebp + rAUDTERM]
+    mov [clip_saved_term], al
+    mov byte [ebp + rAUDTERM], 0xFF
+    mov al, [ebp + rAUDVOL]
+    mov [clip_saved_vol], al
+    test al, al
+    jnz .volOk
+    mov byte [ebp + rAUDVOL], 0x77
+.volOk:
+
+    ; Temporarily pause background music (CHAN1-CHAN4) so UpdateMusic only advances SFX
+    mov al, [ebp + wMuteAudioAndPauseMusic]
+    mov [clip_saved_mute], al
+    or byte [ebp + wMuteAudioAndPauseMusic], 1 << BIT_MUTE_AUDIO
+
+    ; Safety frame limit: max 300 frames (~5.0s)
+    mov dword [clip_frame_limit], 300
+
+.frameLoop:
+    ; 1. Advance audio engine bytecode by 1 frame
+    call Audio1_UpdateMusic
+
+    ; 2. Check if ANY SFX channel is active (Pulse 1=CHAN5, Pulse 2=CHAN6, Wave=CHAN7, Noise=CHAN8)
+    mov al, [ebp + wChannelSoundIDs + CHAN5]
+    or al, [ebp + wChannelSoundIDs + CHAN6]
+    or al, [ebp + wChannelSoundIDs + CHAN7]
+    or al, [ebp + wChannelSoundIDs + CHAN8]
+    test al, al
+    jz .sfxDone
+
+    ; 3. Calculate samples for this frame: (rate + carry) / 60
+    movzx eax, word [clip_carry]
+    add eax, [g_cry_synth_rate]
+    xor edx, edx
+    mov ecx, 60
+    div ecx                       ; EAX = samples, EDX = remainder
+    mov [clip_carry], dx
+    mov ecx, eax                  ; ECX = samples to render
+
+    ; 4. Check buffer space
+    mov eax, [clip_max]
+    sub eax, [clip_tot_samples]
+    jbe .sfxDone
+    cmp ecx, eax
+    jbe .spaceOk
+    mov ecx, eax
+.spaceOk:
+    ; 5. Synthesize frame
+    mov edi, [clip_dest]
+    call cry_synth_frame
+    mov [clip_dest], edi
+    add [clip_tot_samples], eax
+    inc dword [g_cry_frames_rendered]
+
+    dec dword [clip_frame_limit]
+    jnz .frameLoop
+
+.sfxDone:
+    ; Restore background music pause/mute state and hardware registers
+    mov al, [clip_saved_mute]
+    mov [ebp + wMuteAudioAndPauseMusic], al
+    mov al, [clip_saved_term]
+    mov [ebp + rAUDTERM], al
+    mov al, [clip_saved_vol]
+    mov [ebp + rAUDVOL], al
+
+    ; Clear restart bits so subsequent frame won't re-trigger FM voices
+    and byte [ebp + rAUD1HIGH], 0x7F
+    and byte [ebp + rAUD2HIGH], 0x7F
+    and byte [ebp + rAUD3HIGH], 0x7F
+    and byte [ebp + rAUD4GO], 0x7F
+
+    mov edi, [clip_dest]
+    mov eax, [clip_tot_samples]
+    pop ebp
+    ret
+
+; ===========================================================================
+; sfx_render_id — arm an SFX by ID and render it to completion at 22,050 Hz.
+; In:  AL  = sound ID (e.g. SFX_GO_INSIDE, SFX_GO_OUTSIDE)
+;      EDI = destination buffer
+;      ECX = max buffer size in bytes
+;      EBP = GB memory base
+; Out: EDI = advanced past written samples
+;      EAX = total samples synthesized
+; ===========================================================================
+sfx_render_id:
+    push ebx
+    push ecx
+    push edx
+    push esi
+
+    push ecx
+    push edi
+    call PlaySound                ; arms CHAN5-CHAN8
+    pop edi
+    pop ecx
+
+    call sfx_render_clip
+
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
+; ===========================================================================
 ; C calling convention wrappers (cdecl) for host / test harness integration:
 ; ===========================================================================
 cry_synth_init_c:
@@ -844,6 +980,37 @@ cry_synth_frame_c:
     mov ecx, [esp + 24]           ; num_samples
     mov ebp, [esp + 28]           ; gb_mem base
     call cry_synth_frame
+    pop esi
+    pop ebx
+    pop edi
+    pop ebp
+    ret
+
+sfx_render_clip_c:
+    push ebp
+    push edi
+    push ebx
+    push esi
+    mov edi, [esp + 20]           ; dest buffer
+    mov ecx, [esp + 24]           ; max size
+    mov ebp, [esp + 28]           ; gb_mem base
+    call sfx_render_clip
+    pop esi
+    pop ebx
+    pop edi
+    pop ebp
+    ret
+
+sfx_render_id_c:
+    push ebp
+    push edi
+    push ebx
+    push esi
+    mov eax, [esp + 20]           ; sfx_id (AL)
+    mov edi, [esp + 24]           ; dest buffer
+    mov ecx, [esp + 28]           ; max size
+    mov ebp, [esp + 32]           ; gb_mem base
+    call sfx_render_id
     pop esi
     pop ebx
     pop edi
@@ -875,6 +1042,8 @@ s_master:           resb 1        ; latched master volume (0-7)
 cry_master:         resb 1        ; exported alias for master volume
 s_nr51:             resb 1        ; latched NR51 routing
 clip_saved_mute:    resb 1
+clip_saved_term:    resb 1
+clip_saved_vol:     resb 1
 alignb 4
 g_cry_frames_rendered: resd 1     ; frames rendered during last cry_render_clip
 cry_pcm_buffer:     resb 65536    ; 64 KB PCM render scratch buffer

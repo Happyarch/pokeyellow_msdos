@@ -1,6 +1,10 @@
 schema: 1
 song: Music_Dungeon3
 
+opl_base_channels:
+  ch1: duty_clean
+  ch2: duty_clean
+
 # Mt. Moon Cave / Rock Tunnel / Victory Road. E-centered but tonally
 # evasive: augmented triads on B/E/F, whole-tone melody, shifting meters,
 # a tempo-ramp chromatic ascent, and a climactic I+/V+ layering from

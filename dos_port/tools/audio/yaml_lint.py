@@ -121,6 +121,9 @@ class ResolvedChannel:
     is_percussion: bool = False
     notes: list[ResolvedNote] = field(default_factory=list)
     switches: list[ResolvedSwitch] = field(default_factory=list)
+    opl_volume: int = 96
+    mt32_volume: int = 96
+    gm_volume: int = 96
 
 
 @dataclass
@@ -567,6 +570,20 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         rep.err("patterns: must be a mapping")
         patterns = {}
 
+    opl_base = doc.get("opl_base_channels")
+    if opl_base is not None:
+        if not isinstance(opl_base, dict):
+            rep.err("opl_base_channels: must be a mapping")
+        else:
+            allowed_chans = {"ch1", "ch2", "ch3", "ch4"}
+            unknown_chs = set(opl_base) - allowed_chans
+            if unknown_chs:
+                rep.err(f"opl_base_channels: unknown channel keys {sorted(unknown_chs)} (allowed: {sorted(allowed_chans)})")
+            for ch_key, p_name in opl_base.items():
+                if ch_key in allowed_chans and p_name is not None:
+                    if p_name not in PATCHES:
+                        rep.err(f"opl_base_channels.{ch_key}: patch {p_name!r} not in OPL patches ({sorted(PATCHES)})")
+
     timbre_names = load_timbre_names()
     chans_in = doc.get("channels")
     if not isinstance(chans_in, list) or not chans_in:
@@ -623,9 +640,31 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         pan = ch.get("pan", "center")
         if pan not in PANS:
             rep.err(f"{ctx}: pan must be one of {sorted(PANS)}")
-        volume = ch.get("volume", 96)
-        if not isinstance(volume, int) or not 0 <= volume <= 127:
-            rep.err(f"{ctx}: volume must be 0-127")
+
+        vol = ch.get("volume")
+        opl_vol = ch.get("opl_volume")
+        mt32_vol = ch.get("mt32_volume")
+        gm_vol = ch.get("gm_volume")
+
+        # Mutual exclusivity: cannot mix legacy 'volume' with device-scoped keys
+        has_device_vol = (opl_vol is not None) or (mt32_vol is not None) or (gm_vol is not None)
+        if vol is not None and has_device_vol:
+            rep.err(f"{ctx}: cannot mix legacy 'volume' with device-scoped volume keys (opl_volume, mt32_volume, gm_volume)")
+        elif vol is not None:
+            rep.warn(f"{ctx}: 'volume' is deprecated in favor of device-scoped volume keys (opl_volume, mt32_volume, gm_volume)")
+
+        if opl_vol is not None and tier != 1:
+            rep.err(f"{ctx}: opl_volume is tier-1-only and meaningless on tier {tier}")
+
+        for vname, vval in (("volume", vol), ("opl_volume", opl_vol), ("mt32_volume", mt32_vol), ("gm_volume", gm_vol)):
+            if vval is not None:
+                if not isinstance(vval, int) or isinstance(vval, bool) or not 0 <= vval <= 127:
+                    rep.err(f"{ctx}: {vname} must be an integer 0-127 (got {vval!r})")
+
+        effective_vol = vol if vol is not None else 96
+        eff_opl = opl_vol if opl_vol is not None else effective_vol
+        eff_mt32 = mt32_vol if mt32_vol is not None else effective_vol
+        eff_gm = gm_vol if gm_vol is not None else effective_vol
         velocity = ch.get("velocity", 96)
         transpose = ch.get("transpose", 0)
         if not isinstance(transpose, int):
@@ -810,9 +849,12 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                     entry.get("program")) for f, entry in sw_resolved]
 
         resolved.append(ResolvedChannel(name, tier, opl if tier == 1 else
-                                        None, mt32, gm, pan, volume,
+                                        None, mt32, gm, pan, effective_vol,
                                         is_rhythm, is_percussion, notes,
-                                        stored_switches))
+                                        stored_switches,
+                                        opl_volume=eff_opl,
+                                        mt32_volume=eff_mt32,
+                                        gm_volume=eff_gm))
 
     # base song (for §6 polyphony and §7 unison doubling)
     amap = build_addr_map(rom)

@@ -603,17 +603,26 @@ def run_interactive_sfx_audition(
             raise SystemExit("aplay not found — install alsa-utils or pass --out <file.wav>")
 
     print(f"\n🔊 [SFX Audition] {sess.canonical_name} ({sess.header_label})")
-    print(f"   Duration: {sess.sfx_frames} frames ({sess.sfx_frames/60:.2f}s) | Replay Delay: {sess.delay_seconds:.1f}s")
-    if sess.yaml_path and sess.yaml_path.exists():
+    if getattr(sess, "is_soft_apu", False):
+        print(f"   Playback: Soft APU (Sound Blaster DMA) [Config: {sess.yaml_path.name}]")
+        print(f"   FM Fallback: AdLib / OPL2")
+        for ch, cfg in sess.slot_a_profile.items():
+            print(f"     - Fallback Channel {ch}: patch={cfg.get('patch')}, vol={cfg.get('volume', 100)}%")
+    elif sess.yaml_path and sess.yaml_path.exists():
         print(f"   Tuned YAML: {sess.yaml_path.name}")
         for ch, cfg in sess.profile.items():
             print(f"     - Channel {ch}: patch={cfg.get('patch')}, vol={cfg.get('volume', 100)}%")
     else:
         print("   Tuned YAML: (None on disk yet — playing raw default)")
 
-    print("\nControls: [Tab] A/B Toggle (Point A: Tuned ↔ Point B: Raw)   [X] Auto-Alternate A↔B")
-    print("          [G] GB Mode On/Off   [Space] Retrigger immediately   [ [ ] / [ ] ] Replay Delay ±0.5s")
-    print("          [P] Pause / Resume   [Q] Quit\n")
+    if getattr(sess, "is_soft_apu", False):
+        print("\nControls: [Tab] A/B Toggle (Point A: Soft APU (SB DMA) ↔ Point B: FM Fallback)   [X] Auto-Alternate A↔B")
+        print("          [G] Toggle Soft APU / FM Fallback   [Space] Retrigger immediately   [ [ ] / [ ] ] Replay Delay ±0.5s")
+        print("          [P] Pause / Resume   [Q] Quit\n")
+    else:
+        print("\nControls: [Tab] A/B Toggle (Point A: Tuned ↔ Point B: Raw)   [X] Auto-Alternate A↔B")
+        print("          [G] GB Mode On/Off   [Space] Retrigger immediately   [ [ ] / [ ] ] Replay Delay ±0.5s")
+        print("          [P] Pause / Resume   [Q] Quit\n")
 
     total_frames = 0
     max_frames = int(seconds * 60) if seconds else None
@@ -658,7 +667,11 @@ def run_interactive_sfx_audition(
                         status_timer = 90
                     elif key in ("g", "G"):
                         is_gb = sess.toggle_gb_sound()
-                        status_msg = f"⚡ GB Mode: {'ON (Real Game Boy APU)' if is_gb else 'OFF (OPL3 FM)'}"
+                        if getattr(sess, "is_soft_apu", False):
+                            label = "Soft APU (SB DMA)" if is_gb else "FM Fallback (AdLib)"
+                            status_msg = f"⚡ Playback Mode: {label}"
+                        else:
+                            status_msg = f"⚡ GB Mode: {'ON (Real Game Boy APU)' if is_gb else 'OFF (OPL3 FM)'}"
                         status_timer = 90
                     elif key.upper() == "X":
                         auto_alt = sess.toggle_auto_alternate()

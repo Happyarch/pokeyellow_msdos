@@ -658,8 +658,9 @@ class SongSession:
         for ci, ch in enumerate(tier1):
             patch = ch.opl_patch or "soft_pad"
             pan = ch.pan
+            vol = getattr(ch, "opl_volume", ch.volume)
             for n in ch.notes:
-                notes.append((n.frame, n.dur, n.key, n.vel, ch.volume, patch, pan, ci))
+                notes.append((n.frame, n.dur, n.key, n.vel, vol, patch, pan, ci))
         notes.sort()
 
         # Pool allocation (voices 4..13)
@@ -979,6 +980,8 @@ class SfxSession:
         self.gb_sound = False  # False = A (Tuned OPL3), True = B (Real Game Boy)
         self.auto_alternate = False
         self.is_raw = False
+        self.playback = "fm"
+        self.is_soft_apu = False
         self.profile = {}
         self.current_frame = 0
         self.paused = False
@@ -1045,9 +1048,21 @@ class SfxSession:
             data = yaml.safe_load(path_or_content.read_text(encoding="utf-8")) or {}
         else:
             data = yaml.safe_load(path_or_content) or {}
+        self.playback = data.get("playback", "fm")
+        self.is_soft_apu = (self.playback == "soft_apu")
         self.slot_a_profile = data.get("channels", {})
-        if self.active_slot == "A":
+        if self.is_soft_apu:
+            self.slot_a_label = "Soft APU (SB DMA)"
+            self.slot_b_label = "FM Fallback"
+            self.gb_sound = (self.active_slot == "A")
             self.profile = self.slot_a_profile
+        else:
+            self.slot_a_label = self.yaml_path.name if self.yaml_path else "Tuned Default"
+            self.slot_b_label = "Raw Default"
+            if self.active_slot == "A":
+                self.profile = self.slot_a_profile
+            else:
+                self.profile = self.slot_b_profile
 
     def set_delay(self, seconds: float):
         self.delay_seconds = max(0.2, min(30.0, float(seconds)))
@@ -1055,9 +1070,13 @@ class SfxSession:
         self.total_cycle_frames = self.sfx_frames + self.delay_frames
 
     def toggle_slot(self) -> str:
-        """Toggles between Point A (Tuned) and Point B (Raw Default) for Tab A/B testing."""
+        """Toggles between Point A and Point B for Tab A/B testing."""
         self.active_slot = "B" if self.active_slot == "A" else "A"
-        self.profile = self.slot_a_profile if self.active_slot == "A" else self.slot_b_profile
+        if getattr(self, "is_soft_apu", False):
+            self.gb_sound = (self.active_slot == "A")
+            self.profile = self.slot_a_profile
+        else:
+            self.profile = self.slot_a_profile if self.active_slot == "A" else self.slot_b_profile
         self.retrigger()
         return self.active_slot
 
@@ -1067,6 +1086,8 @@ class SfxSession:
     def toggle_gb_sound(self) -> bool:
         """Toggles between OPL3 FM synthesis and authentic Real Game Boy sound chip."""
         self.gb_sound = not self.gb_sound
+        if getattr(self, "is_soft_apu", False):
+            self.active_slot = "A" if self.gb_sound else "B"
         if self.gb_sound and self.gb_pcm is None and self.gb_engine is None:
             self.gb_engine = GbApuEngine(samplerate=self.engine.samplerate)
         self.retrigger()
@@ -1151,7 +1172,7 @@ class SfxSession:
                         elif ev_type == "square":
                             freq, duty, vol, fade_p, fade_d = ev[3]
                             if v in (0, 1):
-                                self.gb_engine.trigger_pulse(v, freq, duty=duty, vol=vol, fade_period=fade_p, fade_dir=fade_dir)
+                                self.gb_engine.trigger_pulse(v, freq, duty=duty, vol=vol, fade_period=fade_p, fade_dir=fade_d)
                             elif v == 2:
                                 self.gb_engine.trigger_wave(freq, vol_code=1)
                         elif ev_type == "sweep":

@@ -57,12 +57,17 @@ voice; switches never apply to tier-1 `opl_patch`.
 ### Patch fields required
 Every tier-1 enhancement channel must specify all three patch fields:
 ```yaml
-opl_patch: <name from gen_opl_patches.py palette>
+opl_patch: <name from tools/audio/opl/patches.yaml>
 mt32_patch: <MT-32 patch number>
 gm_program: <GM program number>
 ```
 The compiler uses the appropriate field per target. `yaml_lint.py`
 enforces that all three are present for tier 1.
+
+### Volume control & Base Channel Overrides
+Specify `opl_volume: <0-127>` for OPL3 level (maps to carrier total-level).
+Device-scoped keys (`opl_volume`, `mt32_volume`, `gm_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings.
+To override the base GB channels on OPL for a song, specify `opl_base_channels:` at the root of the enhancement YAML (e.g. `opl_base_channels: { ch1: duty_clean, ch2: duty_clean }`).
 
 ---
 

@@ -90,7 +90,8 @@ def compile_song(resolved, analysis, warn) -> tuple[bytes, int] | None:
                 warn(f"note at frame {n.frame} crosses the loop start "
                      f"({loop_start}) — shorten it or move it; song skipped")
                 return None
-            lvl = carrier_level(ch.opl_patch, n.vel, ch.volume)
+            opl_vol = getattr(ch, "opl_volume", ch.volume)
+            lvl = carrier_level(ch.opl_patch, n.vel, opl_vol)
             notes.append((n.frame, n.dur, n.key, patch_idx, c0, lvl, ci))
     if not notes:
         return None

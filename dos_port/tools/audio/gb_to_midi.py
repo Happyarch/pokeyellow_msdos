@@ -805,8 +805,9 @@ def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
                     sw.prog, None, target,
                     f"enh {c.name} switch", one_based=True)
                 evs.append((sw.frame, 1, bytes((0xC0 | mc, sprog))))
+        vol = (c.mt32_volume if target == "mt32" else c.gm_volume) if hasattr(c, "mt32_volume") else c.volume
         evs.extend([
-            (0, 1, bytes((0xB0 | mc, 7, c.volume))),
+            (0, 1, bytes((0xB0 | mc, 7, vol))),
             (0, 1, bytes((0xB0 | mc, 10, PAN_CC[c.pan]))),
         ])
         for n in c.notes:

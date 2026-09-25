@@ -60,6 +60,7 @@ extern g_sb_base
 extern g_sb_dsp_ver
 extern g_sb_irq
 extern g_sb_dma
+extern g_sb_dma_active
 
 %ifndef ENABLE_AUDIO_OPL
 %define ENABLE_AUDIO_OPL 1
@@ -792,6 +793,12 @@ voice_volume:
     shl ah, cl
     test [nr51_snap], ah
     jz .mute
+    ; Sound Blaster DMA active: mute FM noise voice (voice 3) so DMA noise SFX plays cleanly
+    cmp byte [g_sb_dma_active], 0
+    jz .checkMidi
+    cmp ebx, 3
+    je .mute
+.checkMidi:
     ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
     ; only voices on FM while an SFX owns it (wChannelSoundIDs CHAN5-8)
     cmp byte [g_midi_music], 0
@@ -895,8 +902,6 @@ section .data
 g_opl_present:  db 0
 g_opl3:         db 0
 
-%include "assets/sfx_data.inc"
-
 section .bss
 
 voice_state:    resb 4 * VS_SIZE
@@ -933,4 +938,5 @@ OplRegGroups:
     db 0x20, 0x40, 0x60, 0x80, 0xE0
 
 %include "assets/opl_patches.inc"
+%include "assets/sfx_data.inc"
 
