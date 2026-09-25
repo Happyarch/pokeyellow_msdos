@@ -83,6 +83,7 @@ channels:
     opl_patch: sub_bass          # pure sine; no FM sidebands muddying the low end
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining — same as Pallet Town)
     gm_program: 39               # GM Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass (bass family; IMFC level follows legacy volume 95 by fallback)
     pan: center
     volume: 95                   # slightly hotter than Pallet Town sub_bass (track needs it)
     velocity: 105
@@ -152,6 +153,7 @@ channels:
     tier: 2
     mt32_patch: 5                # MT-32 E.Piano1 (warm Rhodes-style decay attack)
     gm_program: 5                # GM Electric Piano 1
+    imfc_voice: "EPiano1"        # IMFC EPiano1, Bank 3 (keys family; IMFC level follows legacy volume 72 by fallback)
     pan: center
     volume: 72                   # lighter than the bass; fills without dominating
     velocity: 80
@@ -261,6 +263,7 @@ channels:
     tier: 3
     mt32_patch: 12               # MT-32 Vibraphone (metallic, jazzy resonance)
     gm_program: 12               # GM Vibraphone
+    imfc_voice: "Vibes"          # IMFC Vibes, Bank 2 (mallet family per GM/channel intent; IMFC level follows legacy volume 64 by fallback)
     pan: center
     volume: 64
     velocity: 72

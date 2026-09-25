@@ -35,6 +35,7 @@ channels:
     tier: 2
     mt32_patch: 38         # MT-32 Atmosphere: slow, reverb-friendly LA color
     gm_program: 100        # GM FX 4 (Atmosphere)
+    imfc_voice: "Fantasy"  # IMFC Fantasy (ROM5 synth pad; airy Atmosphere map)
     pan: center
     volume: 40
     velocity: 56
@@ -47,6 +48,7 @@ channels:
     tier: 2
     mt32_patch: "Theremin"       # custom RCA-theremin timbre, timbres.yaml
     gm_program: 86               # GM Lead 6 (voice), 1-based (Tower fallback)
+    imfc_voice: "Theremin"       # IMFC custom Theremin (bank 0; 1:1 custom-timbre map)
     pan: center
     volume: 46                   # background bed under the ch2 lead; ear will set final level
     velocity: 62

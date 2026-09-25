@@ -64,6 +64,7 @@ channels:
     opl_patch: sub_bass_clear   # defined low end; sits under the pulse shim
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass (bass family; PalletTown precedent for SynBass1)
     pan: center
     volume: 64                   # route level; the ch4 motor is busy here
     velocity: 76
@@ -119,6 +120,7 @@ channels:
     opl_patch: soft_pad_clear   # presence without buzz, not a second pulse
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
+    imfc_voice: "Strings"        # IMFC Strings (PalletTown precedent for Str Sect 1)
     pan: center
     volume: 70                   # under the squares, over the bass
     velocity: 80
@@ -187,6 +189,7 @@ channels:
     mt32_patch: 55               # MT-32 Cello 1 — celli under the violins
                                  # (tier-1 pad cascades as Str Sect 1)
     gm_program: 43               # GM Cello
+    imfc_voice: "Cello1"         # IMFC Cello 1 (Bank 4 orchestral; exact cello-family match)
     pan: center
     volume: 60                   # a section behind the squares, with the pad
     velocity: 70
@@ -258,6 +261,7 @@ channels:
     tier: 3
     mt32_patch: 103              # MT-32 Tube Bell — deep, sparse, no shimmer
     gm_program: 15               # GM Tubular Bells
+    imfc_voice: "TubeBe1"        # IMFC Tube Bell 1 (Bank 5 bells family)
     pan: right
     volume: 56                   # an accent, not a voice
     velocity: 84
