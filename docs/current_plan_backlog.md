@@ -12,11 +12,11 @@
 >
 > **What that does NOT mean.** A class sitting at baseline is not sanctioned —
 > it is unfixed debt that merely has not gotten worse. `dos_port/tools/lint_pret_labels`
-> **must exit 0**; it does not today — a small number of known, unsanctioned
-> findings remain (`aux_misplaced` under plain `lint_pret_labels`;
-> `--strict-claims` can add `hand_encoded_text` / `local_shadow` on top). None
-> of those was ever approved by the maintainer, and the counts move as agents
-> clear debt — **run `dos_port/tools/lint_pret_labels --no-scan` and
+> **must exit 0**, and as of 2026-08-04 it does: zero findings tree-wide in both
+> modes (plain and `--strict-claims`) with the `static_gate` baseline empty
+> (`{}`), closed when `MapHeaderPointers` relocated (item 19 below). That is a
+> dated measurement, not an invariant — the counts move as agents add and clear
+> debt, so **run `dos_port/tools/lint_pret_labels --no-scan` and
 > `--no-scan --strict-claims` yourself** rather than trusting a number written
 > here. Do not cite "at baseline" as permission to leave a class non-zero, and
 > do not rewrite the rule to match the breakage.
@@ -207,7 +207,7 @@ violating exactly its own condition.
 ~~**Residual, and it is item 4's problem, not this one's: nothing runs this
 pytest suite automatically either.**~~ **CORRECTED 2026-08-02 — that residual is
 no longer true and has not been for a while.** `dos_port/tools/static_gate` runs
-`pytest tools/test_label_db.py` as step **4 of 5** (`static_gate:198-205`), and
+`pytest tools/test_label_db.py` as step **4 of 8** (`static_gate:200-208`), and
 `.githooks/pre-commit` invokes the gate, so the suite now runs on every commit
 that stages anything under `dos_port/`. Measured this session: 81 passed, 53
 subtests. The historical point stands and is worth keeping: it went red for an
@@ -1062,3 +1062,19 @@ done without also moving MT-32/GM — on a just-approved track. Tolerated
 for now. Future tooling change: add an OPL3-only level trim (or
 per-target volume/velocity) to the enhancement schema + lint + renderers,
 so FM balance can be tuned without voiding the MT-32 audition.
+
+### 39. `SramStoreImage` torn-write guard — APPROVED, not implemented
+Filed 2026-09-24. The archived `docs/plans/sram_pc_storage.md` stage-7 flag
+resolved on 2026-08-02: the maintainer OVERTURNED C6's "accepted as-is" and
+**approved** a write-temp + atomic-rename guard (INT 21h `AH=56h`) at the
+measured ≈8.7 ms/save, because a torn write is detectable (header checksum fails
+→ the `SramLoadImage` corrupt-save branch) but NOT recoverable — the save reads
+as a fresh cartridge, silently destroying the playthrough. It is a deliberate
+divergence in the player's favour and must carry a `DEVIATION{class=HAL; ...}`
+recording that pret/hardware has no counterpart. This is NEW work on
+`SramStoreImage` (`src/save/dsv_io.asm`), NOT a reopened stage.
+Acceptance: the four save goldens (`save_real_load`, `save_boxes_load`,
+`bills_pc_ops`, `box_change_roundtrip`) stay green AND the interrupted-write
+case gets its own scenario — none of those four exercises a torn write, so they
+cannot witness this change. `g_sram_store_failed` stays unsurfaced (the
+maintainer chose the guard alone, not the "tell the player" variant).

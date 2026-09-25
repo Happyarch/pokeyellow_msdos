@@ -150,7 +150,9 @@ AIEnemyTrainerChooseMoves:
     mov esi, TrainerClassMoveChoiceModifications
     movzx ebx, byte [ebp + wTrainerClass]   ; b = wTrainerClass
 .loopTrainerClasses:
-    dec ebx
+    dec bl              ; pret `dec b` — 8-BIT counter. Widening to dec ebx made a
+                        ; zero class wrap to ~4G iterations instead of 256
+                        ; (asm-translation "Preserve Counter WIDTH").
     jz .readTrainerClassData
 .loopTrainerClassData:
     mov al, [esi]       ; scan (flat table)

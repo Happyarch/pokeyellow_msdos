@@ -635,10 +635,14 @@ ScrollTextUpOneLine:
     mov al, TILE_SPC
     mov ecx, MSG_BOX_WIDTH
     rep stosb
-    ; Sync to window layer then delay so the scroll is visible
+    ; Sync to window layer, then wait pret's FIVE frames so the scroll is visible.
+    ; pret home/text.asm:308-312 is `ld b, 5 / .WaitFrame: call DelayFrame / dec b /
+    ; jr nz, .WaitFrame`; the port's DelayFrames is that loop (BL = count). The two
+    ; bare DelayFrames here were a 2-frame under-wait, so the scroll-up cadence was
+    ; 2/5 of pret's.
     call sync_dialog_window
-    call DelayFrame
-    call DelayFrame
+    mov bl, 5
+    call DelayFrames
     popad
     ret
 
@@ -1408,17 +1412,31 @@ TextCommand_PROMPT_BUTTON:
     ; canvas (msgbox_centered, no window, box drawn straight into wTileMap) it
     ; put the arrow in a buffer nothing on screen reads and opened the overworld
     ; dialog window over the battle. That is the same defect text_pause's own
-    ; header records; it was fixed for <PROMPT>/<CONT>/<PARA> and this command
-    ; was missed. MEASURED 2026-08-14: with PrintBeginningBattleText wired,
+    ; header records; it was fixed for <PROMPT>/<CONT>/<PARA>, and TX_WAIT_BUTTON
+    ; — the label a LINK battle reaches through this fallthrough — was missed
+    ; (fixed 2026-09-24, see the TX_WAIT_BUTTON comment below). MEASURED 2026-08-14:
+    ; with PrintBeginningBattleText wired,
     ; battle_intro's LAST divergence was exactly the ▼ cell at GB (18,16),
     ; want $EE got $7F.
     call text_pause                     ; shows ▼, blinks it, waits for A/B, erases it
     jmp NextTextCommand
 
-; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref: TextCommand_WAIT_BUTTON. ---
+; --- TX_WAIT_BUTTON ($0D): wait for A/B, NO arrow. Pret ref:
+;     home/text.asm:TextCommand_WAIT_BUTTON — `push bc / call ManualTextScroll /
+;     pop bc / pop hl / jp NextTextCommand`. ---
+; DISPATCH FIX (2026-09-24): this used to call dialog_window_scroll directly — the
+; overworld-only window hijack. Every sibling prompt command (<PROMPT>/<CONT>/
+; <PARA>) dispatches through text_pause/[text_prompt_hook]; this one was missed, so
+; it opened the overworld dialog window over the battle canvas. TX_PROMPT_BUTTON in
+; a LINK battle jumps straight to this label (home/text.asm:445), which is exactly
+; the case the note above records. text_pause routes to the active msgbox hook
+; (BattlePromptWait in battle, whose own wLinkState==LINK_STATE_BATTLING branch is
+; pret ManualTextScroll's 65-frame no-arrow path); mts_hide_arrow=1 keeps the ▼
+; suppressed on the overworld hook.
 TextCommand_WAIT_BUTTON:
     mov byte [mts_hide_arrow], 1        ; suppress the ▼ for this wait
-    call dialog_window_scroll
+    call text_pause                     ; hook-dispatched wait (pret: ManualTextScroll)
+    mov byte [mts_hide_arrow], 0        ; re-arm: BattlePromptWait does not consume the flag
     jmp NextTextCommand
 
 ; --- TX_PAUSE ($0A): if A or B is already held, continue immediately; otherwise

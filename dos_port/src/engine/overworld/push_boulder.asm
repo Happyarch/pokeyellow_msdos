@@ -169,7 +169,7 @@ DoBoulderDustAnimation:
     mov al, [ebp + wStatusFlags5]
     test al, (1 << BIT_SCRIPTED_NPC_MOVEMENT)
     jnz .ret                                   ; ret nz: scripted NPC movement in progress
-    call AnimateBoulderDust                    ; pret: callfar (banking elided; OW-4.3 unported)
+    call AnimateBoulderDust                    ; pret: callfar (banking elided; real: engine/overworld/dust_smoke.asm)
     call DiscardButtonPresses                  ; returns AL = 0
     mov [ebp + wJoyIgnore], al               ; ld [wJoyIgnore], a  (a = 0)
     call ResetBoulderPushFlags                 ; leaves ESI = wMiscFlags (pret leaves hl)

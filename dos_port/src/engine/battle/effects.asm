@@ -145,8 +145,9 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; UnportedMoveEffect
-; Shared no-op stub for every effect not yet translated to x86. Returns
-; without altering any state. Wave 2 replaces table entries as handlers land.
+; Shared no-op stand-in, reached ONLY by the 7 NULL-in-pret effects listed at the
+; top of this file: pret has no handler body for them, so there is nothing left
+; to translate and nothing to replace. Returns without altering any state.
 ; ---------------------------------------------------------------------------
 global UnportedMoveEffect
 JumpMoveEffect:

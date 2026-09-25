@@ -165,8 +165,8 @@ start:
     xor eax, eax
     rep stosd
 
-    ; DEVIATION{class=HAL; pret=engine/menus/save.asm:TryLoadSaveFile; behavior=boot loads the raw resident SRAM image through a DOS HAL seam before any save routine reads sPlayerName or sGameData; evidence=current_plan_sram_pc_storage stage 4 seam contract names SramLoadImage and stage 5 owns the disk body; lifetime=until the disk boundary is implemented and this remains the permanent HAL call site}
-    call SramLoadImage      ; stage 5 body overlays bank 0 plus banks 1-3, stub returns now
+    ; DEVIATION{class=HAL; pret=engine/menus/save.asm:TryLoadSaveFile; behavior=boot loads the raw resident SRAM image through a DOS HAL seam before any save routine reads sPlayerName or sGameData; evidence=current_plan_sram_pc_storage stage 5 implemented the disk body in src/save/dsv_io.asm, so no ret-stub remains and this is the permanent HAL call site; lifetime=permanent DOS storage HAL boundary}
+    call SramLoadImage      ; loads POKEMON.DSV into bank 0 plus banks 1-3 (src/save/dsv_io.asm)
 
     call video_init          ; set VGA mode 13h
     call pit_init            ; reprogram PIT to ~60 Hz, install tick ISR

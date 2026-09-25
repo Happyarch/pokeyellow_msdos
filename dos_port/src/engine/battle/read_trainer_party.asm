@@ -99,7 +99,9 @@ ReadTrainer:
     movzx ebx, byte [ebp + wTrainerNo]   ; b = trainerNo
 
 .CheckNextTrainer:
-    dec ebx
+    dec bl              ; pret `dec b` — 8-BIT counter. Widening to dec ebx made a
+                        ; zero trainer number wrap to ~4G iterations instead of
+                        ; 256 (asm-translation "Preserve Counter WIDTH").
     jz .IterateTrainer
 .SkipTrainer:
     mov al, [esi]

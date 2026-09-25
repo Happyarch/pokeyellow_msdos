@@ -1,7 +1,5 @@
 {
-  "hHalveItemPrices": "0xFFA8",
   "hLCDCPointer": "0xFFC2",
-  "hRLEByteValue": "0xFF81",
   "wEndBattleLoseTextPointer": "0xF464",
   "wEndBattleTextRomBank": "0xF468",
   "wEndBattleWinTextPointer": "0xF460",

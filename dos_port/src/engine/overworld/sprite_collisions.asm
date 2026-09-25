@@ -46,8 +46,8 @@ extern DoScriptedNPCMovement     ; src/engine/overworld/movement.asm
 
 ; Wave-9 Pikachu-follower FSM — pret home/pikachu.asm:SpawnPikachu.
 ; _UpdateSprites dispatches slot 15 (hCurrentSpriteOffset == $f0) here, faithful to
-; pret engine/overworld/sprite_collisions.asm:_UpdateSprites. Root must supply a link
-; stub until Wave 9 lands (sprite_collisions.asm is a LIVE/linked source).
+; pret engine/overworld/sprite_collisions.asm:_UpdateSprites. No link stub is owed:
+; SpawnPikachu is translated and linked (OW-7.2).
 extern SpawnPikachu              ; home/pikachu.asm — real follower FSM (linked OW-7.2; was an overworld_stubs ret-stub)
 
 section .text
@@ -81,7 +81,7 @@ _UpdateSprites:
     ; itself: InitSprites fills slots 1..wNumSprites, and no map in the game has 15
     ; or more object_events (measured s16 over all 224 data/maps/objects/*.asm; the
     ; maximum is 14, in SaffronCity and PowerPlant). Slot 15 is reserved for Pikachu
-    ; exactly as pret intends, and only the unported Pikachu spawn path would fill it.
+    ; exactly as pret intends, and only the Pikachu spawn path would fill it.
     cmp esi, 0xF0
     je .pikachu
     call UpdateNonPlayerSprite

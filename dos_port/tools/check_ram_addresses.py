@@ -17,8 +17,8 @@ diff a gate instead of a lucky afternoon.
 
 RATCHET, NOT A WALL. The port DELIBERATELY relocates buffers that do not fit the GB
 layout — wOverworldMap grown for MAP_BORDER=7, wLYOverrides and the wAnimatedObject*
-block moved into free echo RAM, HRAM scratch assigned to free bytes, `flat-adapted:
-4 bytes` pointer widenings. Those live in the baseline with the address they use.
+block carried by the prefix-sum WRAM expansion, `flat-adapted: 4 bytes` pointer
+widenings. Those live in the baseline with the address they use.
 The gate fails on a NEW divergence, or on a baselined symbol whose address MOVES.
 
 Baseline entries are reviewed port relocations. Do NOT add one to make your own

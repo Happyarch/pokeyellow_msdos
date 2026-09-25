@@ -103,7 +103,7 @@ extern ReadTrainerHeaderInfo          ; src/home/trainers.asm (C.2 sel 6)
 ; Constants
 ; ---------------------------------------------------------------------------
 TILE_SPC        equ 0x7F               ; blank/space tile (shared with text.asm)
-NPC_SLOTS_MAX   equ 15                  ; max NPC slots (sizes wMapSpriteExtraData)
+NPC_SLOTS_MAX   equ 15                  ; max NPC slots the loader fills (1-15; slot 15 = Pikachu)
 
 ; ---------------------------------------------------------------------------
 ; BSS — per-map sprite deduplication table (reset at each InitMapSprites call)
@@ -113,9 +113,19 @@ section .bss
 ; the faithful loader uses wSpriteSet (WRAM) + the SpriteSheetPointerTable instead.
 h_vram_slot:          resb 1                 ; pret hVRAMSlot (HRAM loop temp): current VRAM tile-pattern slot
 w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTable (set by EnterMap)
-; TODO-GLOBAL-EVENTS: npc_beaten_flags resets per InitMapSprites (per map load).
-; Replace with a persistent global wEventFlags bit array when the event system is
-; implemented so trainers stay beaten across map warps.
+; npc_beaten_flags is the bespoke UNWIRED-MAP fallback's beaten cache and resets
+; on every map reload, so a sight-defeated trainer re-engages after a warp/continue.
+; The HEADER-DRIVEN path is already persistent: CheckForEngagingTrainers (and
+; TalkToTrainer) test/set the real wEventFlags bit through TrainerFlagAction
+; (home/trainers.asm), driven by the generated trainer headers, on the 17 maps
+; wired to TrainerMapScript (measured 2026-09-24: grep -c 'dd TrainerMapScript'
+; assets/map_scripts.inc). This array therefore only affects the maps still
+; running the port-only CheckTrainerSight/TrainerEncounterFlow fallback, and it
+; cannot be routed through TrainerFlagAction from here: the fallback scans SLOTS
+; while TrainerFlagAction needs the slot's HEADER, and there is no slot->header map.
+; It retires with the fallback when Stage 5a wiring completes
+; (docs/current_plan_overworld_realign.md Stage J); see the temporary DEVIATION at
+; home/overworld.asm:1862 and the follow-up note in src/home/trainers.asm.
 global npc_beaten_flags
 npc_beaten_flags:     resw 1   ; bit N-1 = NPC slot N beaten; cleared in InitMapSprites
 w_trainer_enc_slot:   resb 1   ; engaging trainer slot byte-offset (0xFF = none)
@@ -143,7 +153,7 @@ w_check_npc_slot_tmp: resb 1   ; C.2: slot offset for beaten-trainer dispatch (C
 ; but must still read it FLAT.
 global map_sprite_extra_data
 map_sprite_extra_data:
-wMapSpriteExtraData:  resb NPC_SLOTS_MAX * 2
+wMapSpriteExtraData:  resb MAX_OBJECT_EVENTS * 2   ; pret ram/wram.asm: MAX_OBJECT_EVENTS*2 (not NPC_SLOTS_MAX*2)
 
 ; wMapSpriteData — pret wMapSpriteData (home/overworld.asm:LoadSprite).  Two bytes per
 ; slot: [movement byte 2 (dir constraint), masked text id].  Index for slot N (1-15) =
@@ -879,13 +889,32 @@ npc_dialog_wait_impl:
 ; Sets w_trainer_enc_slot to the matching slot's byte offset if found.
 ; Out: CF=1 if a trainer spotted the player, CF=0 otherwise.
 ; All registers preserved (pushad/popad; CF set after popad).
+;
+; The distance is a hardcoded 4, not the trainer header's view byte. This routine
+; scans SLOTS, and the view byte lives in the map's trainer-HEADER table, which is
+; walked by CheckForEngagingTrainers (home/trainers.asm) by header index — there is
+; no slot→header mapping to read it from here. The faithful path already uses the
+; header's `view<<4` via wTrainerEngageDistance (CheckForEngagingTrainers ->
+; TrainerEngage -> CheckSpriteCanSeePlayer). This bespoke scan runs only on maps
+; not yet wired to TrainerMapScript (the gate at home/overworld.asm:1862) and is
+; deleted with that gate at Stage 5a wiring; its 4 matches the common default
+; view byte. Do not grow this routine — wire the map instead.
 ; ---------------------------------------------------------------------------
 CheckTrainerSight:
     pushad
 
-    ; Player block coords: SPRITESTATEDATA2 slot 0 MAPY/MAPX
-    movzx ebx, byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]   ; BL = player_mapy
-    movzx ecx, byte [ebp + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]   ; CL = player_mapx
+    ; Player block coords. Do NOT read wSpriteStateData2 slot 0 MAPY/MAPX: nothing
+    ; in the port ever writes them (ResetPlayerSpriteData zeroes slot 0 and only
+    ; NPC slots 1-15 are populated), so that read pinned the "player" at (0,0) and
+    ; the sight test could only ever fire at map column 0. The live player position
+    ; is wYCoord/wXCoord (the raw map block; _AdvancePlayerSprite writes them every
+    ; completed step). Sprite MAPY/MAPX carry a +4 bias over the raw map block
+    ; (gen_map_headers emits object_event y+4/x+4; auto_movement.asm stores
+    ; map_block+4), so +4 puts the player in the same space the trainer slots use.
+    movzx ebx, byte [ebp + wYCoord]
+    add ebx, 4                             ; BL = player_mapy in sprite-MAPY space
+    movzx ecx, byte [ebp + wXCoord]
+    add ecx, 4                             ; CL = player_mapx in sprite-MAPY space
 
     mov esi, 0x10                          ; start at NPC slot 1
 .cts_loop:

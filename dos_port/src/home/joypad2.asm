@@ -63,6 +63,7 @@ extern WaitForSoundToFinish           ; src/home/delay.asm
 extern PlaySound                      ; src/home/audio.asm — AL = sound id
 extern CableClub_Run                  ; src/engine/link/cable_club.asm — pret predef (Stage 3)
 extern Joypad                         ; src/home/joypad.asm — pret Joypad wrapper
+extern TownMapSpriteBlinkingAnimation ; src/engine/items/town_map.asm — pret engine/items/town_map.asm
 
 section .text
 
@@ -137,6 +138,15 @@ JoypadLowSensitivity:
 ; body attributes to the pret label (the scanners assign a body to the label
 ; immediately preceding it; the old order read WaitForTextScrollButtonPress as
 ; empty and reported its whole call set DROPPED).
+;
+; The town-map animation is pret's too (home/joypad2.asm:65-74): every iteration
+; tests wTownMapSpriteBlinkingEnabled and, when set, callfars
+; TownMapSpriteBlinkingAnimation to blink the cursor/nest sprites. That gate and
+; call were DROPPED in the port, so the live LoadTownMap_Nest wait (town_map.asm)
+; showed frozen nest sprites. Restored below; the animation body ends in DelayFrame
+; (engine/items/town_map.asm), so on the enabled path it is this iteration's frame
+; pump and the explicit DelayFrame is skipped — the non-town-map callers keep the
+; original blink-then-DelayFrame cadence unchanged.
 WaitForAPress:
 WaitForTextScrollButtonPress:
     mov al, [ebp + H_DOWN_ARROW_COUNT1]
@@ -150,9 +160,22 @@ WaitForTextScrollButtonPress:
     jne .wait
     mov byte [ebp + H_DOWN_ARROW_COUNT1], ARROW_ON_FRAMES
 .wait:
+    mov al, [ebp + wTownMapSpriteBlinkingEnabled]  ; pret: ld a,[wTownMapSpriteBlinkingEnabled]
+    and al, al                                      ; pret: and a
+    jz .skipAnimation                               ; pret: jr z, .skipAnimation
+    push edx                                        ; pret: push de
+    push ebx                                        ; pret: push bc (EBX is a caller register here)
+    call TownMapSpriteBlinkingAnimation             ; pret: callfar TownMapSpriteBlinkingAnimation
+    pop ebx
+    pop edx
+    mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
+    call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
+    jmp .afterBlink
+.skipAnimation:
     mov esi, [wtsbp_arrow_pos]                  ; pret: hlcoord 18,16 (projected)
     call HandleDownArrowBlinkTiming              ; blinks only a pre-existing ▼ (COUNT1==0 guard)
     call DelayFrame
+.afterBlink:
     call JoypadLowSensitivity                   ; pret: call JoypadLowSensitivity
     call CableClub_Run
     test byte [ebp + hJoy5], PAD_A | PAD_B      ; pret: ldh a, [hJoy5] / and PAD_A | PAD_B

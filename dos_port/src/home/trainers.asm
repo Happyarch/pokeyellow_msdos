@@ -53,9 +53,15 @@
 ; (a 16-bit BSS reset every InitMapSprites => NON-persistent: trainers un-beat on every
 ; map reload).  This engine's persistent `TrainerFlagAction` is the faithful replacement:
 ; it drives the home global `FlagAction` against the header's flag_ptr => wEventFlags
-; (persistent across warps).  ROOT FOLLOW-UP: once trainer-header DATA exists, delete
-; npc_beaten_flags and route map_sprites.asm's CheckTrainerSight / TrainerEncounterFlow
-; beaten-gate through TrainerFlagAction(FLAG_TEST/FLAG_SET).
+; (persistent across warps), and it is already the live path wherever a map is wired to
+; TrainerMapScript (CheckForEngagingTrainers and TalkToTrainer both use it).
+; ROOT FOLLOW-UP (premise now MET, convergence still pending): the trainer-header DATA
+; exists (assets/trainer_headers.inc, generated), so the remaining item is Stage 5a
+; wiring the rest of the trainer maps, at which point map_sprites.asm's
+; CheckTrainerSight / TrainerEncounterFlow and their npc_beaten_flags fallback are
+; deleted rather than rerouted. The fallback scans SLOTS, so it cannot call
+; TrainerFlagAction as-is — that needs a slot->header mapping it does not have.
+; Owned by docs/current_plan_overworld_realign.md Stage J.
 ;
 ; ----------------------------------------------------------------------------
 ; BATTLE ENTRY — StartTrainerBattle does NOT run the battle (Stage 1b).
@@ -649,8 +655,9 @@ SaveEndBattleTextPointers:
 ; map_sprites.asm exports alongside the pret name at the same address; the writer
 ; (LoadSprite, overworld.asm) and the other reader (TrainerEncounterFlow) both index
 ; the flat array too.
-; NOTE: wMapSpriteExtraData is populated by InitMapSprites (M8.1) from the map
-;       object binary's trainer class/set pairs.
+; NOTE: wMapSpriteExtraData is populated by LoadSprite (home/overworld.asm, called
+;       from InitSprites during LoadMapHeader) from the map object binary's trainer
+;       class/set pairs — not by InitMapSprites, which only loads tile patterns.
 ; ----------------------------------------------------------------------------
 EngageMapTrainer:
     movzx eax, byte [ebp + wSpriteIndex]

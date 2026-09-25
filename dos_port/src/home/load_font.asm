@@ -2,7 +2,9 @@
 ; also copy the 2bpp extra-char / box-drawing tiles to vChars2+$60.
 ;
 ; LoadFontTilePatterns — source: home/load_font.asm.
-; Mirrors home/copy2.asm:FarCopyDataDouble (1bpp → 2bpp expansion).
+; Expands the same 1bpp→2bpp data as home/copy2.asm:FarCopyDataDouble, but
+; INLINES the expansion here (it does not call FarCopyDataDouble, so faithdiff
+; reports that call DROPPED for LoadFontTilePatterns).
 ; The font art (gfx/font/font.png) is embedded as NASM data via
 ; assets/font_1bpp.inc (tools/generators/gen_font_inc.py). With LCDC_DEFAULT ($8800
 ; signed addressing), char code C ('A'=$80) maps to tile at $8800+(C-$80)*16.

@@ -97,11 +97,11 @@ or `scripts/` lands in `status = port_only` *by elimination*. The viewer resolve
 that against the names-only `aux_labels` / `script_labels` provenance tables and
 shows those nodes as **`pret-unmodeled`** (its own colour, filter and legend
 entry), with `aux_pret_file` / `aux_pret_dir` naming the real pret origin.
-Measured 2026-07-27: 90 `pret-unmodeled` against 337 genuinely port-only.
+Measured 2026-09-24: 216 `pret-unmodeled` against 560 genuinely port-only.
 
 > A node is genuinely port-only only when `display_status == "port_only"` **and**
 > `aux_pret_file` is null. Treating raw `status == "port_only"` as "bespoke port
-> code" overstates the port's divergence by ~90 labels.
+> code" overstates the port's divergence by ~216 labels.
 
 Provenance is names-only: `pret-unmodeled` nodes still carry no status and no
 call-graph edges, so an absent edge on one of them means nothing.

@@ -307,9 +307,9 @@ CalcStat:
 ; The flat model has no bank to switch, so the tail jump passes CF through
 ; untouched and the body's ret returns straight to our caller.
 ;
-; pret's one call site is engine/link/cable_club.asm:821 (trade completion), which
-; the port has not reached yet, so this wrapper is currently unlinked. It is here
-; because the pret label exists, not because a caller demanded it.
+; pret's one call site is engine/link/cable_club.asm:821 (trade completion); the
+; port's TradeCenter_Trade calls it (src/engine/link/cable_club.asm:1120), so the
+; wrapper is linked and live — not a stub kept only to resolve the label.
 ; ---------------------------------------------------------------------------
 AddEnemyMonToPlayerParty:
     jmp _AddEnemyMonToPlayerParty            ; pret: homecall_sf _AddEnemyMonToPlayerParty

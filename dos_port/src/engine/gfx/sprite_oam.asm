@@ -9,9 +9,9 @@
 ; (vblank.asm DelayFrame) then DMA-copies wShadowOAM into OAM ($FE00) before
 ; render_sprites composites it.
 ;
-; Only the player slot (0) is populated for now (see overworld.asm), but the
-; loop, priority handling, and tile/VRAM-offset logic are the real engine, so
-; NPC slots will render as soon as InitMapSprites fills them in.
+; All 16 sprite slots are live: slot 0 is the player and InitSprites
+; (src/home/overworld.asm, reached from LoadMapHeader) populates slots 1-15 from
+; the map object binary, with InitMapSprites loading their tile patterns.
 ;
 ; Sprite state layout (per $10-byte slot):
 ;   data1+0 picture ID (0 = unused)   data1+2 image index (facing+anim, $ff=hidden)
@@ -20,7 +20,7 @@
 ;
 ; Pret refs: engine/gfx/sprite_oam.asm, data/sprites/facings.asm.
 ;
-; Build: nasm -f coff -I include/ -I . -o sprite_oam.o src/gfx/sprite_oam.asm
+; Build: nasm -f coff -I include/ -I . -o sprite_oam.o src/engine/gfx/sprite_oam.asm
 
 bits 32
 

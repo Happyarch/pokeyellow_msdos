@@ -163,7 +163,7 @@ def main():
     db_args = []
     if not args.no_scan:
         where = 'in place' if args.write_db else 'to a temp DB'
-        print(f'{BOLD}[1/6] update_label_db{OFF} {DIM}({where}){OFF}')
+        print(f'{BOLD}[1/8] update_label_db{OFF} {DIM}({where}){OFF}')
         cmd = ['tools/update_label_db']
         if not args.write_db:
             tmpdir = tempfile.TemporaryDirectory(prefix='gate-db.')
@@ -184,7 +184,7 @@ def main():
             [('lint', [], 'lint_pret_labels'),
              ('strict', ['--strict-claims'], 'lint_pret_labels --strict-claims')],
             start=2):
-        print(f'{BOLD}[{idx}/6] {title}{OFF}')
+        print(f'{BOLD}[{idx}/8] {title}{OFF}')
         r = run(['tools/lint_pret_labels', '--no-scan'] + db_args + extra)
         seen[key] = parse_classes(r.stdout)
         ok, notes = compare(title, seen[key], base.get(key, {}),
@@ -198,7 +198,7 @@ def main():
         steps.append(title)
 
     # ── 4. the label-DB suite ──────────────────────────────────────────────
-    print(f'{BOLD}[4/6] pytest tools/test_label_db.py{OFF}')
+    print(f'{BOLD}[4/8] pytest tools/test_label_db.py{OFF}')
     r = run([sys.executable, '-m', 'pytest', 'tools/test_label_db.py', '-q'])
     tail = [ln for ln in r.stdout.strip().split('\n') if ln.strip()][-1:]
     print('  ' + (tail[0] if tail else '(no output)'))
@@ -208,7 +208,7 @@ def main():
     steps.append('test_label_db.py')
 
     # ── 5. scenario manifest <-> generated registry ────────────────────────
-    print(f'{BOLD}[5/6] validate_scenarios.py{OFF}')
+    print(f'{BOLD}[5/8] validate_scenarios.py{OFF}')
     r = run([sys.executable, 'tools/validate_scenarios.py'])
     print('  ' + r.stdout.strip().replace('\n', '\n  '))
     if r.returncode != 0:

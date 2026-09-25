@@ -53,7 +53,7 @@ global tile_pal
 ; bytes = 384 tiles of 16 bytes. Each is pre-decoded once to 8bpp (64 bytes)
 ; so render_bg copies rows instead of bit-decoding per pixel every frame.
 ; Stores the RAW 2-bit GB color (0-3), NOT a BGP-mapped shade — the VGA DAC
-; does palette mapping (see commit_palette in video.asm), so the cache depends
+; does palette mapping (see commit_palette in boot/video.asm), so the cache depends
 ; only on VRAM tile data and is rebuilt only on g_tilecache_dirty (a palette
 ; change is just a DAC reprogram, no rebuild).
 TILE_CACHE_TILES  equ 384
@@ -1431,15 +1431,19 @@ rebuild_tile_cache:
 ; and the 10-sprites-per-scanline limit is not enforced. 8×16 OBJ size (LCDC
 ; bit 2) is not handled — Pokémon overworld/menus use 8×8.
 ;
-; OBJ are NOT suppressed on a whiteout screen. They used to be (a blanket
-; `g_bg_whiteout != 0 → skip`), back when the sprite layer was overworld-only and
-; a menu could not own OAM; the party mon icons were drawn as BG tiles precisely
-; because of that. The contract now is "whoever owns the canvas owns OAM": a
-; flat-canvas/menu screen that wants no OBJ says so by publishing spr_oam_valid = 0,
-; which ClearSprites/HideSprites (home/clear_sprites.asm) do for it — matching the GB,
-; where a cleared shadow OAM + the unconditional VBlank DMA means nothing is drawn.
-; A screen that wants its own OBJ writes them (PrepareStaticOAM, the mon-icon
-; writers). See docs/plans/party_icons_oam.md.
+; OBJ suppression on a whiteout screen is the CALLER's decision, not this
+; routine's: render_sprites draws whatever PrepareOAMData published. Under the
+; default window-over-sprites order, home/vblank.asm:245-248 skips the call
+; entirely when g_bg_whiteout != 0, so a full-screen takeover menu (Trainer Card,
+; Options, Pokedex, Bag) does not leak overworld NPCs from the widescreen margins
+; around its centered window. A screen whose window IS the screen and whose OBJ
+; belong on top of it (the party menu's mon icons; the naming screen's) sets
+; g_obj_over_window, which takes the GB order and bypasses that skip. A screen
+; that wants no OBJ at all publishes spr_oam_valid = 0 via ClearSprites/HideSprites
+; (home/clear_sprites.asm), matching the GB, where a cleared shadow OAM plus the
+; unconditional VBlank DMA means nothing is drawn. A screen that wants its own OBJ
+; writes them (PrepareStaticOAM, the mon-icon writers). See
+; docs/plans/party_icons_oam.md.
 ;
 ; In:  EBP = GB memory base. All registers preserved.
 ; ---------------------------------------------------------------------------
@@ -1457,7 +1461,7 @@ render_sprites:
 .cache_ok:
 
     ; No OBP unpack: sprite pixels are written as raw palette-indexed values
-    ; (4 + color for OBP0, 8 + color for OBP1). commit_palette (video.asm) sets
+    ; (4 + color for OBP0, 8 + color for OBP1). commit_palette (boot/video.asm) sets
     ; DAC entries 4-7 / 8-11 to the OBP0/OBP1-mapped DMG shades.
 
     ; Non-default OBJ clip rectangle? Only the horizontal bounds affect the

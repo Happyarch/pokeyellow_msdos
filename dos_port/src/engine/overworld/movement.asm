@@ -290,18 +290,11 @@ UpdateNPCSprite:
     jmp .notYetMoving
 
 .randomMovement:
-    ; DIVERGENCE (OW-A.7, port-only scaffold): pret has NO MAPY/MAPX clamp here — it
-    ; relies on CanWalkOntoTile + CheckSpriteAvailability to reject bad destinations.
-    ; This clamp guards GetTileSpriteStandsOn below from reading OOB wTileMap tiles when
-    ; an NPC is near a map edge (same root cause as the enlarged-viewport OOB scaffold in
-    ; CLAUDE.md). On clamp-fail, forced $D0-$D3 facing is still applied via
-    ; .clampedOutOfWindow (only the tile read / walk attempt is guarded; stigmergy key:
-    ; regression-overworld-facing-clamp-band). KNOWN TENSION: these bounds
-    ; ([wYCoord-3,+6], [wXCoord-7,+10]) are NARROWER than CheckSpriteAvailability's
-    ; edge-visible zone, so an NPC that IS visible at the screen edge can be blocked from
-    ; random-walking (mild: it just idles a beat).
-    ; Reconcile with CheckSpriteAvailability's bounds — or delete this clamp entirely — once
-    ; the map-data extension removes the OOB region (then GetTileSpriteStandsOn is always safe).
+    ; DEVIATION{class=projection; pret=engine/overworld/movement.asm:UpdateNPCSprite; behavior=a port-only clamp on WALK/STAY random movement to MAPY in [wYCoord-3, wYCoord+6] and MAPX in [wXCoord-7, wXCoord+10], so a random NPC that is visible in the southern or eastern margin idles instead of walking; evidence=GetTileSpriteStandsOn addresses wTileMap at row (MAPY-wYCoord)*2+9 and col (MAPX-wXCoord)*2+16, and each direction handler reads the destination at that pointer plus or minus 2 by one block, so the destination read stays inside the port 40x25 wTileMap only while the current MAPY-wYCoord is in [-3,6] (base rows 3..21, destination reads 1..23) and MAPX-wXCoord is in [-7,10] (base cols 2..36, destination reads 0..38). The visible zone is wider ([-2,9]/[-6,13]), so a random NPC whose current MAPY-wYCoord is 7..9 (south margin) or MAPX-wXCoord is 11..13 (east margin) is visible but is not read at all and idles instead of walking. The map-data extension that would have covered it was permanently rejected 2026-08-16. Widening further needs a clamped tile index, which would make the NPC test a tile up to 5 rows from its true position; lifetime=permanent while the wTileMap is 40x25 with the player at row 17}
+    ; pret has NO MAPY/MAPX clamp here — it relies on CanWalkOntoTile +
+    ; CheckSpriteAvailability to reject bad destinations. On clamp-fail, forced
+    ; $D0-$D3 facing is still applied via .clampedOutOfWindow (only the tile read /
+    ; walk attempt is guarded; stigmergy key: regression-overworld-facing-clamp-band).
     ; Movement-safe bounds: destination accesses ±2 tile rows/cols from current EBX.
     ; .moveDown: EBX+2*40 → needs row+2 ≤ 24 → MAPY ≤ wYCoord+6.
     ; .moveUp:   EBX-2*40 → needs row-2 ≥ 0  → MAPY ≥ wYCoord-3.
@@ -524,21 +517,30 @@ CanWalkOntoTile:
     inc al                              ; 0xFF+1=0 (ZF)
     jz .impassable
 
-    ; OW-A.7: off-screen pixel bound (pret movement.asm:581-590) — was silently dropped,
-    ; leaving WALK/STAY NPCs with NO east/south wander limit (they could walk off-screen
-    ; into the OOB region; the YDISPLACEMENT/XDISPLACEMENT bounds below only cap north/west).
-    ; Destination pixel must stay on-screen: YPIXELS+4+Ydelta <= $80, XPIXELS+Xdelta <= $90
-    ; (>$80/$90 also catches $FF underflow when stepping past the top/left edge).
-    ; DH = Y step delta, DL = X step delta (EDX preserved; only AL touched here).
-    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YPIXELS]
-    add al, 4                           ; pret: add $4 (Y pos is always 4px block-offset)
-    add al, dh                          ; + Y delta
-    cmp al, 0x80
-    jae .impassable                     ; pret: cp $80 / jr nc — off screen
-    mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_XPIXELS]
-    add al, dl                          ; + X delta
-    cmp al, 0x90
-    jae .impassable                     ; pret: cp $90 / jr nc — off screen
+    ; DEVIATION{class=projection; pret=engine/overworld/movement.asm:CanWalkOntoTile; behavior=the off-screen bound tests the destination block delta against the port 320x200-visible zone, MAPY-wYCoord in [-2,9] and MAPX-wXCoord in [-6,13], instead of pret GB pixel-edge literals $80/$90; evidence=pret tests delta16+4 < 128 (Y) and delta16 < 144 (X), i.e. keep the 16px sprite on the 160x144 GB screen, and those literals treat every negative delta as a byte >= $80 and block it, which froze NPCs north and west of the player inside the port larger viewport. The port visible zone is defined in CheckSpriteAvailability (dos_base = delta16+32 Y and delta16+96 X over the 320x200 canvas), which is exactly those deltas; lifetime=permanent while the viewport is the 320x200 projection}
+    ; Destination block delta: (MAPY + dh) - wYCoord and (MAPX + dl) - wXCoord.
+    ; Sprite MAPY/MAPX are map_block+4 (gen_map_headers emits object_event y+4/x+4)
+    ; and wYCoord/wXCoord are the player's raw block, so this delta is the same
+    ; [-2,9]/[-6,13] quantity CheckSpriteAvailability uses. EAX/ECX are scratch
+    ; (EDX holds the live DH/DL step and must survive).
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]
+    movzx ecx, byte [ebp + wYCoord]
+    sub eax, ecx
+    movsx ecx, dh                       ; signed Y step (-1/0/+1)
+    add eax, ecx
+    cmp eax, -2
+    jl .impassable                      ; destination above the visible zone
+    cmp eax, 9
+    jg .impassable                      ; destination below the visible zone
+    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]
+    movzx ecx, byte [ebp + wXCoord]
+    sub eax, ecx
+    movsx ecx, dl                       ; signed X step (-1/0/+1)
+    add eax, ecx
+    cmp eax, -6
+    jl .impassable                      ; destination left of the visible zone
+    cmp eax, 13
+    jg .impassable                      ; destination right of the visible zone
 
     ; Y displacement bounds — prevents unlimited north/west roaming from start position.
     ; YDISPLACEMENT starts at 8 (set in InitializeSpriteStatus).

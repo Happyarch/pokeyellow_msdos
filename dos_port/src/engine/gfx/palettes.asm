@@ -364,7 +364,7 @@ set_pal_attr_table:
     db 3 | SET_PAL_ATTR_CANVAS              ; 12 SET_PAL_GAME_FREAK_INTRO → GameFreakIntro (canvas)
     db 4 | SET_PAL_ATTR_CANVAS              ; 13 SET_PAL_TRAINER_CARD  → TrainerCard (stride-20 scratch)
     db 0                                    ; 14 SET_PAL_SURFING_PIKACHU_TITLE → WholeScreen (= the flood)
-    db 0                                    ; 15 SET_PAL_SURFING_PIKACHU_MINIGAME → WholeScreen (= the flood)
+    db 1                                    ; 15 SET_PAL_SURFING_PIKACHU_MINIGAME → Unknown1 (SetPal_PikachusBeachTitle → UnknownPacket_72751 → c=1)
 SET_PAL_ATTR_TABLE_LEN equ $ - set_pal_attr_table
 section .text
 
@@ -557,7 +557,7 @@ SetPal_Overworld:
     cmp al, CERULEAN_CAVE_1F + 1
     jb .cave
     cmp al, LORELEIS_ROOM
-    je .route
+    je .Lorelei
     cmp al, BRUNOS_ROOM
     je .cave
     cmp al, TRADE_CENTER
@@ -568,8 +568,10 @@ SetPal_Overworld:
     mov al, [ebp + wLastMap]
 .townOrRoute:
     cmp al, NUM_CITY_MAPS
-    jae .route
-    inc al                         ; city map id -> PAL_PALLET..PAL_SAFFRON
+    jb .town
+    mov al, PAL_ROUTE - 1
+.town:
+    inc al                         ; a town's palette ID is its map ID + 1
     jmp .apply
 .gray:
     mov al, PAL_GRAYMON
@@ -577,8 +579,9 @@ SetPal_Overworld:
 .cave:
     mov al, PAL_CAVE
     jmp .apply
-.route:
-    mov al, PAL_ROUTE
+.Lorelei:
+    xor al, al                     ; xor a ; PAL_PALLET - 1
+    jmp .town
 .apply:
     mov dword [g_bg_attr_table], 0   ; the overworld has no attribute plane
     ; pret: CopyData(PalPacket_Empty -> wPalPacket), then `ld hl, wPalPacket + 1 /
@@ -669,8 +672,35 @@ SetPal_StatusScreen:
     mov [obj_slot_pal + 1], al
     mov byte [g_pal_dirty], 1
     ret
-SetPal_Pokedex:                 mov al, SET_PAL_POKEDEX
-                                jmp SetPal_Screen
+; ---------------------------------------------------------------------------
+; SetPal_Pokedex — pret engine/gfx/palettes.asm:101. Like SetPal_StatusScreen, NOT
+; a plain screen command: pret copies PalPacket_Pokedex into wPalPacket and then
+; overwrites entry 1 (wPalPacket + 3) with
+; DeterminePaletteIDOutOfBattle(wCurPartySpecies), so the dex-entry mon icon uses
+; the mon's OWN colours.
+;
+; The port used to be `mov al, SET_PAL_POKEDEX / jmp SetPal_Screen` — the static
+; row only — so entry 1 kept PalPacket_Pokedex's PAL_ROUTE and the dex-entry icon
+; rendered in PAL_ROUTE. SetPal_Screen still runs first: it loads the static row
+; into both slot tables AND installs the command's per-cell attribute plane
+; (pret's BlkPacket_Pokedex). Only entry 1 is then overridden, matching pret's
+; packet exactly. SetPal_Screen ends in popad/ret and already arms g_pal_dirty.
+;
+; pret's SetPal_Pokedex has NO range check on wCurPartySpecies (unlike
+; SetPal_StatusScreen's NUM_POKEMON_INDEXES guard), so the raw id goes straight to
+; DeterminePaletteIDOutOfBattle, exactly as pret writes it.
+;
+; DEVIATION{class=projection; pret=engine/gfx/palettes.asm:SetPal_Pokedex; behavior=builds the species palette id directly into bg_slot_pal and obj_slot_pal after SetPal_Screen instead of copying PalPacket_Pokedex into wPalPacket and returning HL-DE for the SGB-packet path, so faithdiff shows DROPPED CopyData and ADDED SetPal_Screen; evidence=the port has no wPalPacket-plus-SendSGBPackets stage at all - SetPal_Screen IS the port's realization of a PAL_SET packet plus its BlkPacket attribute plane, and every other SetPal_ command in this file already goes through it, so a wPalPacket copy would write a buffer nothing reads; lifetime=permanent, the port's palette-command boundary}
+; ---------------------------------------------------------------------------
+SetPal_Pokedex:
+    mov al, SET_PAL_POKEDEX
+    call SetPal_Screen                  ; static row + attribute plane
+    mov al, [ebp + wCurPartySpecies]    ; ld a, [wCurPartySpecies]
+    call DeterminePaletteIDOutOfBattle  ; pret's A-holds-the-species entry
+    mov [bg_slot_pal + 1], al           ; entry 1 = the mon's palette
+    mov [obj_slot_pal + 1], al
+    mov byte [g_pal_dirty], 1
+    ret
 SetPal_Slots:                   mov al, SET_PAL_SLOTS
                                 jmp SetPal_Screen
 SetPal_TitleScreen:             mov al, SET_PAL_TITLE_SCREEN
@@ -679,12 +709,15 @@ SetPal_NidorinoIntro:           mov al, SET_PAL_NIDORINO_INTRO
                                 jmp SetPal_Screen
 SetPal_Generic:                 mov al, SET_PAL_GENERIC
                                 jmp SetPal_Screen
-; SetPal_PartyMenu applies the STATIC row only. pret returns PalPacket_PartyMenu
-; AND wPartyMenuBlkPacket, the second of which carries the per-row HP-bar
-; colours. Same defect shape SetPal_StatusScreen had before eda16b214 fixed it;
-; this one cannot be fixed the same way until the bars have palette-able tile
-; ids. See _RunPaletteCommand's banner and docs/current_plan_backlog.md item 10b.
-; DEVIATION{class=HAL; pret=engine/gfx/palettes.asm:SetPal_PartyMenu; behavior=applies only the static party-menu palette row and never the per-row HP-bar packet pret pairs with it; evidence=pret returns wPartyMenuBlkPacket alongside PalPacket_PartyMenu and SendSGBPackets feeds both to InitCGBPalettes on colour hardware while this port has no packet path and its per-tile-id tile_pal cannot colour six rows that share tile ids; lifetime=until backlog item 10b gives the party menu palette-able HP-bar tile ids}
+; SetPal_PartyMenu goes through the generic SetPal_Screen boundary, like the
+; other one-liner command handlers. That path is now complete:
+; set_pal_attr_table[10] = 5 loads BGMapAttributes_PartyMenu AND dispatches packet
+; 5 to the real HandlePartyHPBarAttributes (engine/gfx/bg_map_attributes.asm),
+; which reads back the per-row colours UpdatePartyMenuBlkPacket wrote. Those are
+; the port's realization of pret's two packets — PalPacket_PartyMenu plus the
+; wPartyMenuBlkPacket it returns. See _RunPaletteCommand's banner.
+; (The retired annotation here used to claim the per-row HP-bar packet was never
+; applied; that stopped being true when backlog item 10b landed 2026-08-14.)
 SetPal_PartyMenu:               mov al, SET_PAL_PARTY_MENU
                                 jmp SetPal_Screen
 ; ---------------------------------------------------------------------------

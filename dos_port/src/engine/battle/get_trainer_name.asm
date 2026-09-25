@@ -29,7 +29,8 @@ GetTrainerName_:
     mov byte [ebp + wNameListIndex], al
     mov al, TRAINER_NAME
     mov byte [ebp + wNameListType], al
-    mov al, 0 ; BANK(TrainerNames) stub
+    mov al, 0 ; flat model: no bank — TrainerNames is in the program image, so
+              ; pret's BANK(TrainerNames) has no port equivalent and this byte is 0
     mov byte [ebp + wPredefBank], al
     call GetName
     mov esi, wNameBuffer

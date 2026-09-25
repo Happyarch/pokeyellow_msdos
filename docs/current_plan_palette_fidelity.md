@@ -11,7 +11,8 @@ on them (`PALETTE_GATING = False`). This file is the work needed to flip that to
 
 ## RE-MEASURED 2026-08-23 (the plan's own last box)
 
-`fidelity-full`, 90 scenarios, current HEAD: **525 divergences across 45 scenarios**
+`fidelity-full` (90 scenarios at that run; the full registry is 105 now — from
+`tools/generators/gen_scenario_registry.py --names full`), current HEAD: **525 divergences across 45 scenarios**
 (the 2026-08-11 snapshot this file is written against was 523 across 42). The headline
 has not moved, but the DISTRIBUTION has, and one family is closed:
 

@@ -492,7 +492,7 @@ grep -rn '; PROJ' dos_port/src
 | overworld-ui (bag USE/TOSS) | (13, 10)| 7×5   | anchor=top-right, X+20, Y+0 | 271 | 80 | 56  | 120 | bag_menu.asm (USETOSS_*) |
 | overworld-ui (bag YES/NO)   | (14, 7) | 6×5   | anchor=top-right, X+20, Y+0 | 279 | 56 | 48  | 96  | bag_menu.asm (YESNO_*) |
 | overworld-ui (bag quantity) | (15, 9) | 5×3   | anchor=top-right, X+20, Y+0 | 287 | 72 | 40  | 96  | bag_menu.asm (QTY_*) |
-| overworld-ui (dialog)       | (0, 17) | 20×6  | center, X+10, Y+0           | 87  | 152| 160 | 200 | text.asm (PrintText) |
+| overworld-ui (dialog)       | (0, 19) | 20×6  | center, X+10, Y+0           | 87  | 152| 160 | 200 | text.asm (PrintText) |
 | overworld-ui (START menu)   | (0, 0)  | 10×N  | anchor=top-right, X+20, Y+0 | 247 | 0  | 80  | rows*8 | start_menu.asm (.draw_full) |
 | overworld-ui (party)        | (0, ~3) | 20×N  | center, X+10                | 87  | .. | 160 | ..  | party_menu.asm |
 | overworld-ui (home YES/NO)  | (14, 7) | 6×5   | anchor=top-right, X+20, Y+0 | 279 | 56 | 48  | 96  | yes_no.asm (YesNoChoice, mode 0; = bag YES/NO) |

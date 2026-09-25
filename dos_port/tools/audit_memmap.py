@@ -2,7 +2,7 @@
 """Blast-radius audit of the emulated GB address space.
 
 Motivation (2026-07-10): growing MAP_BORDER 6->7 and repacking the ROM window
-moved/greW several port-invented regions, and each collision was found one
+moved/grew several port-invented regions, and each collision was found one
 user-visible crash at a time (wTileMapBackup2 clobber, header blob over the
 indoor .blk slot AND over VRAM). This tool makes that class of bug a check:
 
@@ -57,7 +57,6 @@ CURATED_SIZES = {
     "NPC_DIALOG_BUF":      256,       # ShowTextStream bounds copies to <256 B
     "GB_VRAM0":            0x2000,    # $8000-$9FFF hardware VRAM
     "GB_OAM":              160,
-    "wShadowOAMBackup":    160,     # port-only 40 sprites * 4 B [0xF3C0, 0xF460)
 }
 
 EXTENDED_SRAM_START = 0x22000

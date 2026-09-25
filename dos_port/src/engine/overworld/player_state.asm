@@ -9,12 +9,11 @@
 ; NOW HELD HERE (arrived in the s16 mirror repair from a src/engine/overworld/
 ; warp_check.asm that is now deleted):
 ;   IsPlayerFacingEdgeOfMap    function 1 of pret's ExtraWarpCheck dispatch
-;   IsWarpTileInFrontOfPlayer  function 2. Its SS_ANNE_BOW special case is
-;                                 intentionally omitted (SS Anne not yet in the
-;                                 port's map set); see
-;                                 IsSSAnneBowWarpTileInFrontOfPlayer
-;                                 below for the standalone equivalent pret ships
-;                                 as a fallthrough target of that routine.
+;   IsWarpTileInFrontOfPlayer  function 2, including pret's SS_ANNE_BOW dispatch
+;                                 to IsSSAnneBowWarpTileInFrontOfPlayer below.
+;                                 SS_ANNE_BOW (0x63) is a live port map
+;                                 (assets/map_dims.inc, map_scripts.inc,
+;                                 map_songs.inc, map_headers.inc all carry it).
 ;   GetTileInFrontOfPlayer     -> DELETED 2026-07-27. It was a port-only forked
 ;                                 name carrying a simplified copy of
 ;                                 _GetTileAndCoordsInFrontOfPlayer's tile-read half
@@ -303,17 +302,18 @@ IsPlayerFacingEdgeOfMap:
 ; pre-populate wTileInFrontOfPlayer, restore the pret _GetTileAndCoordsInFrontOfPlayer
 ; prime here first.
 ;
-; ; DIVERGENCE: the SS_ANNE_BOW special case is omitted. pret branches to
-; IsSSAnneBowWarpTileInFrontOfPlayer when wCurMap == SS_ANNE_BOW, which treats tile
-; $15 as the (single) warp tile → CF (any other tile → no carry), bypassing the
-; per-facing WarpTileListPointers scan entirely. SS Anne is not in the port's map
-; set yet, so the branch is unreachable and dropped.
-; ; TODO(SS-Anne): when MAP_SS_ANNE_BOW lands, add `cmp [wCurMap], SS_ANNE_BOW / je`
-; at entry dispatching to a ported IsSSAnneBowWarpTileInFrontOfPlayer (tile $15 → CF).
+; pret's SS_ANNE_BOW dispatch is restored: when wCurMap == SS_ANNE_BOW we branch to
+; IsSSAnneBowWarpTileInFrontOfPlayer, which treats tile $15 as the single warp tile
+; (CF, any other tile -> no carry), bypassing the per-facing WarpTileListPointers
+; scan. SS_ANNE_BOW is a live port map, so the branch is reachable (the S.S. Anne
+; arc is complete); its earlier "not in the port's map set / unreachable" note was
+; false and has been deleted.
 ;
 ; Out: CF=1 if the faced tile is a warp-carpet tile, else CF=0.
 ; ---------------------------------------------------------------------------
 IsWarpTileInFrontOfPlayer:
+    cmp byte [ebp + wCurMap], SS_ANNE_BOW
+    je IsSSAnneBowWarpTileInFrontOfPlayer               ; pret: jr z, IsSSAnneBowWarpTileInFrontOfPlayer
     movzx eax, byte [ebp + W_SPRITE_PLAYER_FACING_DIR]  ; 0,4,8,12
     shr eax, 2                                          ; → 0,1,2,3 (down/up/left/right)
     mov esi, [WarpTileListPointers + eax*4]             ; flat list pointer
@@ -329,13 +329,11 @@ IsWarpTileInFrontOfPlayer:
 ; a fallthrough target reached from IsWarpTileInFrontOfPlayer (when wCurMap ==
 ; SS_ANNE_BOW) and it finishes by jumping into IsWarpTileInFrontOfPlayer.done
 ; (a shared pop-hl/de/bc + ret epilogue). The port's IsWarpTileInFrontOfPlayer
-; (now above in this file) has no such epilogue — it tail-calls
-; IsInArray directly and its SS_ANNE_BOW branch is intentionally omitted there
-; (SS Anne is not yet in the port's map set). So this is a standalone routine
-; with the same CF contract (CF=1 iff the tile in front of the player is the
-; SS Anne bow's warp tile $15) rather than a shared-epilogue jump target.
-; Presently unreachable: nothing calls it yet — wire the SS_ANNE_BOW dispatch
-; into this file's IsWarpTileInFrontOfPlayer when SS Anne is implemented.
+; (above in this file) has no such epilogue — it tail-calls IsInArray directly
+; — so this is a standalone routine with the same CF contract (CF=1 iff the
+; tile in front of the player is the SS Anne bow's warp tile $15) rather than a
+; shared-epilogue jump target. It IS reached: IsWarpTileInFrontOfPlayer now
+; dispatches here on wCurMap == SS_ANNE_BOW.
 ; ---------------------------------------------------------------------------
 IsSSAnneBowWarpTileInFrontOfPlayer:
     cmp byte [ebp + wTileInFrontOfPlayer], 0x15

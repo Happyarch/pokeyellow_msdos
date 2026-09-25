@@ -1,4 +1,4 @@
-; dos_port/home/compare.asm
+; dos_port/src/home/compare.asm — mirror of pret home/compare.asm (StringCmp).
 global StringCmp
 
 section .text

@@ -11,12 +11,15 @@
 ; as in pret (single-colon labels there). No routine here falls through into the
 ; next — every body is ret/jmp-terminated, matching pret.
 ;
-; STATUS: LINKED (M8.2 promotion, 2026-07-24 — moved from HOME_CHECK_SRCS to
-; the linked list with the full home/trainers.asm mirror). Nothing reaches these
-; at runtime until the trainer-header data generator lands: linked, not
-; executed. The pret home/trainers.asm bank trampolines (GetSpritePosition1/2,
-; SetSpritePosition1/2, TrainerWalkUpToPlayer_Bank0) live with the rest of the
-; home/trainers.asm material in src/home/trainers.asm and jmp here.
+; STATUS: LINKED AND EXECUTED on the trainer maps. The trainer-header data
+; generator landed (tools/generators/gen_trainer_headers.py -> assets/
+; trainer_headers.inc) and CheckForEngagingTrainers (src/home/trainers.asm)
+; drives TrainerEngage/ReadTrainerScreenPosition/CheckSpriteCanSeePlayer on the
+; maps wired to TrainerMapScript (measure with
+; `grep -c 'dd TrainerMapScript' dos_port/assets/map_scripts.inc`). The pret
+; home/trainers.asm bank trampolines (GetSpritePosition1/2, SetSpritePosition1/2,
+; TrainerWalkUpToPlayer_Bank0) live with the rest of the home/trainers.asm
+; material in src/home/trainers.asm and jmp here.
 ;
 ; Register map (CLAUDE.md): A=AL, BC=BX, DE=DX, HL=ESI, EBP = GB base.
 ;

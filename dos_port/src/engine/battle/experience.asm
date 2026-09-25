@@ -6,12 +6,12 @@
 ; AUDIT (2026-06-27): Full native-validation audit. The swarm draft had six bugs
 ; beyond the already-noted sbc→sbb and CX→BX stride fixes:
 ;   1. `hExperience` used but undefined (→ hExperience, the correct alias).
-;   2. `wPlayerID` used but not in gb_memmap.inc (→ local define, 0xD358;
-;      orchestrator must add to gb_memmap.inc).
-;   3. `wCalculateWhoseStats` used but not in gb_memmap.inc (→ local alias for
-;      wTempByteValue; orchestrator must add to gb_memmap.inc).
-;   4. `PIKAHAPPY_LEVELUP` undefined (→ 1; from pikachu_emotion_constants.asm).
-;   5. `LEVEL_UP_STATS_BOX` undefined (→ 1; from menu_constants.asm).
+;   2. `wPlayerID` used but not in the includes at the time (now in
+;      gb_memmap.inc, 0xE126).
+;   3. `wCalculateWhoseStats` used but not in the includes at the time (now in
+;      gb_memmap.inc, 0xDEEB = wTempByteValue union).
+;   4. `PIKAHAPPY_LEVELUP` undefined (now in gb_constants.inc = 1).
+;   5. `LEVEL_UP_STATS_BOX` undefined (now in gb_constants.inc = 1).
 ;   6. `call FlagActionPredef` called without predef-WRAM setup: GetPredefRegisters
 ;      clobbers ESI from wPredefHL (garbage). All four call sites changed to
 ;      `call FlagAction` with ESI set directly — FlagAction does not invoke
@@ -21,26 +21,17 @@
 ;   8. CopyData called with EDI as destination, but copy.asm uses EDX (dx).
 ;      Both CopyData calls (wBattleMonLevel, wPlayerMonUnmodifiedLevel) fixed.
 ;   9. `call BattleCore` inside CallBattleCore: BattleCore not defined or extern'd.
-;      In the flat model, CallBattleCore dispatches via ESI (call esi); deferred.
+;      In the flat model, CallBattleCore dispatches via ESI (call esi) and is live.
 ;  10. Missing extern declarations for all called routines (NASM allows implicit
 ;      externals in COFF but explicit declarations are required for correctness).
 ;
-; WAVE-1 SCOPE — headless math only:
-;   KEEP + native-validate: stat-exp accumulation (0xFFFF cap), exp-award Multiply/
-;   Divide/3-byte-add chain, BoostExp ×1.5 (trade/trainer), DivideExpDataBy
-;   NumMonsGainingExp (set-bit count + per-stat divide), level-up CalcStats
-;   recompute + HP delta.
-;   DEFERRED (extern stubs, Wave 2): PrintText, GetPartyMonName, LoadMonData,
-;   ModifyPikachuHappiness, PrintStatsBox, WaitForTextScrollButtonPress,
-;   SaveScreenTilesToBuffer1, LoadScreenTilesFromBuffer1, PrintEmptyString,
-;   LearnMoveFromLevelUp, CalculateModifiedStats, ApplyBurnAndParalysisPenalties
-;   ToPlayer, ApplyBadgeStatBoosts, DrawPlayerHUDAndHPBar.
-;   CallBattleCore is implemented as `call esi` (flat model; deferred integration).
-;
-; This file assembles clean; it will NOT link into PKMN.EXE until Wave 2 adds it
-; to LINK_SRCS (same pattern as all other BATTLE_SRCS files).
-;
-; Build: nasm -f coff -I dos_port/include/ -o experience.o experience.asm
+; STATUS: LINKED and live. GainExperience is in LINK_SRCS (Makefile
+; FRONTEND_SRCS) and runs from the battle victory → EXP path; every extern below
+; has a real provider, and the constants this header once called "not yet in
+; shared includes" live in gb_memmap.inc / gb_constants.inc now. CallBattleCore
+; is `call esi` (flat-model indirect dispatch). The Wave-1/Wave-2 deferral
+; scaffolding this header used to carry is deleted — it was false in both
+; directions (the file WAS linked, and the "deferred" externs had all landed).
 
 bits 32
 
@@ -48,16 +39,6 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_text.inc"                  ; text_far / text_asm stream macros
-
-; ---------------------------------------------------------------------------
-; Local defines — constants/aliases not yet in the shared include files.
-; Orchestrator must add these to gb_memmap.inc / gb_constants.inc to keep the
-; includes authoritative.
-; ---------------------------------------------------------------------------
-%ifndef PIKAHAPPY_LEVELUP
-%endif
-%ifndef LEVEL_UP_STATS_BOX
-%endif
 
 ; ---------------------------------------------------------------------------
 ; Extern declarations
@@ -77,9 +58,7 @@ extern GetMonHeader             ; src/home/pokemon.asm
 extern FlagAction               ; src/engine/flag_action.asm (not the predef variant)
 
 ; ---------------------------------------------------------------------------
-; DEFERRED externs (Wave 2 — battle front end / UI subsystem).
-; These symbols are NOT provided in the current link; the file assembles to
-; COFF for type-checking but stays out of LINK_SRCS until Wave 2 wires them.
+; Battle front end / UI subsystem externs — all real providers in the live link.
 ; ---------------------------------------------------------------------------
 ; Text / display
 ; The port's bare PrintText is the stride-20 OVERWORLD renderer (opens an
@@ -99,17 +78,17 @@ extern FlagAction               ; src/engine/flag_action.asm (not the predef var
 ; carry the whole message, prompt included, so no separate WaitForAPress call
 ; is needed at the call sites below.
 extern PrintBattleText          ; engine/battle/core.asm — pret PrintText, battle variant
-extern GetPartyMonName          ; deferred: party name lookup
-extern LoadMonData              ; deferred: load party/box mon into wLoadedMon
+extern GetPartyMonName          ; src/home/pokemon.asm — party name lookup
+extern LoadMonData              ; src/home/pokemon.asm — load party/box mon into wLoadedMon
 extern ModifyPikachuHappiness   ; engine/events/pikachu_happiness.asm (pret mirror; DH = PIKAHAPPY_*)
-extern PrintStatsBox            ; deferred: level-up stats overlay
+extern PrintStatsBox            ; src/engine/pokemon/status_screen.asm — level-up stats overlay
 extern WaitForTextScrollButtonPress  ; src/home/joypad2.asm — A-press wait
 extern SaveScreenTilesToBuffer1      ; src/home/tilemap.asm
 extern LoadScreenTilesFromBuffer1    ; src/home/tilemap.asm
 extern PrintEmptyString              ; engine/battle/core.asm — redraws the battle message box
-extern LearnMoveFromLevelUp          ; deferred: move-learn flow
+extern LearnMoveFromLevelUp          ; src/engine/pokemon/evos_moves.asm — move-learn flow
 
-; Battle core dispatch targets (passed via ESI to CallBattleCore; Wave 2)
+; Battle core dispatch targets (passed via ESI to CallBattleCore)
 extern CalculateModifiedStats
 extern ApplyBurnAndParalysisPenaltiesToPlayer ; engine/battle/core.asm
 extern ApplyBadgeStatBoosts           ; engine/battle/core.asm
@@ -487,8 +466,8 @@ GainExperience:
     call SaveScreenTilesToBuffer1
 
 .printGrewLevelText:
-    ; Deferred: Pikachu happiness + level-up display + move learning (Wave 2).
-    ; PIKAHAPPY_LEVELUP = 1 (pikachu_emotion_constants.asm). The reason code
+    ; Level-up tail: Pikachu happiness (real call below), level-up text, and move
+    ; learning. PIKAHAPPY_LEVELUP = 1 (gb_constants.inc). The reason code
     ; goes in D, not A: macros/farcall.asm's farcall_ModifyPikachuHappiness
     ; expands to `ld d, \1`, and the routine's first instruction is `ld a, d`.
     mov dh, PIKAHAPPY_LEVELUP       ; farcall_ModifyPikachuHappiness: ld d, kind

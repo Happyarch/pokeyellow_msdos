@@ -11,10 +11,9 @@
 ;    16-bit wSpriteInputPtr contract; banks 1-3 live at $22000, $24000, $26000.
 ;    rRAMB/rRAMG/rBMODE writes are annotated no-ops, and any copy touching the
 ;    extended banks uses SramCopyData32 rather than widening pret CopyData.
-;  * The stage-5 disk boundary is deliberately only a seam here: boot calls
-;    SramLoadImage, and SaveGameData/ClearAllSRAMBanks call SramStoreImage after
-;    updating resident memory. The ret-stubs live in src/save/save_stubs.asm and
-;    dsv_io.asm is left untouched for the maintainers.
+;  * The disk boundary is real, not a seam: boot calls SramLoadImage, and
+;    SaveGameData/ClearAllSRAMBanks/TradeCenter_Trade call SramStoreImage after
+;    updating resident memory. The body is src/save/dsv_io.asm (no ret-stubs).
 ;  * Checksums are faithful SRAM checksums: sMainDataCheckSum covers sGameData,
 ;    box-bank all-box checksums cover the six box payloads in that bank, and the
 ;    individual checksum arrays hold one checksum per box.
@@ -744,7 +743,7 @@ SavePartyAndDexData:
 
 ; ---------------------------------------------------------------------------
 ; SaveGameData — pret ref: engine/menus/save.asm:SaveGameData.
-; DEVIATION{class=HAL; pret=engine/menus/save.asm:SaveGameData; behavior=after faithfully updating resident SRAM call SramStoreImage as the DOS disk-boundary seam instead of writing the disk from the pret-labeled slice routines; evidence=current_plan_sram_pc_storage stage 4 seam contract assigns SramStoreImage to the save-commit point and forbids editing dsv_io.asm; lifetime=until stage 5 supplies the raw SRAM image writer behind this seam}
+; DEVIATION{class=HAL; pret=engine/menus/save.asm:SaveGameData; behavior=after faithfully updating resident SRAM call SramStoreImage as the DOS disk-boundary seam instead of writing the disk from the pret-labeled slice routines; evidence=current_plan_sram_pc_storage stage 5 implemented the raw SRAM image writer as SramStoreImage in src/save/dsv_io.asm, so the seam is permanent and the pret-labeled slices stay untouched; lifetime=permanent DOS storage HAL boundary}
 ; ---------------------------------------------------------------------------
 SaveGameData:
     ; ld a,2 / ld [wSaveFileStatus],a
@@ -1378,7 +1377,7 @@ HallOfFame_Copy:
 ; ClearAllSRAMBanks — pret ref: engine/menus/save.asm:ClearAllSRAMBanks.
 ; Fill all four SRAM banks with $ff, then call the stage-5 store seam so a real
 ; disk body can persist the erase.
-; DEVIATION{class=HAL; pret=engine/menus/save.asm:ClearAllSRAMBanks; behavior=after erasing resident SRAM call SramStoreImage as the DOS disk-boundary seam; evidence=current_plan_sram_pc_storage stage 4 owns in-memory SRAM and stage 5 owns raw image persistence; lifetime=until stage 5 supplies the raw SRAM image writer behind this seam}
+; DEVIATION{class=HAL; pret=engine/menus/save.asm:ClearAllSRAMBanks; behavior=after erasing resident SRAM call SramStoreImage as the DOS disk-boundary seam; evidence=current_plan_sram_pc_storage stage 5 implemented the raw image writer in src/save/dsv_io.asm, so the seam is permanent; lifetime=permanent DOS storage HAL boundary}
 ; ---------------------------------------------------------------------------
 ClearAllSRAMBanks:
     call EnableSRAM

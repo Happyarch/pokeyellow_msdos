@@ -1,7 +1,7 @@
 ; reload_sprites.asm — ReloadMapSpriteTilePatterns translated from SM83 to x86.
 ;
 ; Source: home/reload_sprites.asm:ReloadMapSpriteTilePatterns (pret/pokeyellow).
-; Intended path: dos_port/src/engine/overworld/reload_sprites.asm
+; Path: dos_port/src/home/reload_sprites.asm (the pret home/ mirror).
 ;
 ; Copies the current map's sprites' tile patterns back to VRAM after they were
 ; overwritten by other tile patterns (e.g. after a menu / battle / animation).

@@ -175,10 +175,10 @@ section .text
 ; ---------------------------------------------------------------------------
 ; SoftReset — the warm-boot entry (pret home/init.asm:SoftReset). Stops all
 ; sounds, whites the palettes out, waits 32 frames, then falls into Init.
-; Nothing calls it yet in the live build — pret's caller is TrySoftReset in the
-; joypad handler, which sits behind the port-input-model deviation (the title
-; screen's own UP+SELECT+B check routes through jmp Init directly, as pret's
-; title does) — but the entry is faithful and ready for that wiring.
+; LIVE: pret's caller is TrySoftReset in the joypad handler (engine/joypad.asm,
+; `dec byte [hSoftReset] / jz SoftReset`), which the port links and reaches. The
+; title screen's own UP+SELECT+B check still routes through jmp Init directly, as
+; pret's title does.
 ; ---------------------------------------------------------------------------
 global SoftReset
 SoftReset:

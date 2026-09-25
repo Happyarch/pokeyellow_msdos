@@ -135,7 +135,7 @@ Pass as `make FLAG=1` or `make FLAG=value`. All NASM flags are passed via
 | Flag | Default | Effect |
 |------|---------|--------|
 | `SKIP_TITLE=1` | off | Boot straight to overworld, skipping title screen |
-| `BUG_FIX_LEVEL=N` | `0` | `0` = original bugs, `1` = critical fixes only (`/FIXCRIT`), `2` = all fixes (`/FIXALL`) |
+| `BUG_FIX_LEVEL=N` | `0` | `0` = original bugs, `1` = critical fixes only, `2` = all fixes. Build-time only — the old runtime `/FIXCRIT`/`/FIXALL` flags were removed 2026-08-16 |
 | `TIMING=MODE` | `SGB` | Frame rate (PIT divisor). `SGB` = 61.1685 Hz (Super Game Boy, ~+2.4%); `DMG` = 59.7275 Hz (real handheld); `PC` = 60 Hz |
 | `TIMING_HZ=H` | — | Custom refresh rate in Hz (overrides `TIMING`), e.g. `TIMING_HZ=62` |
 | `TIMING_DIVISOR=N` | — | Raw PIT channel-0 divisor (overrides `TIMING`/`TIMING_HZ`), 1..65535 |

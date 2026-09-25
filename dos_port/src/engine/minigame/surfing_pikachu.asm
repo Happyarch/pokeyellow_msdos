@@ -730,7 +730,7 @@ SurfingMinigame_ResetMusicTempo:
 ; ---------------------------------------------------------------------------
 ; CopySurfingPikachuAnimatedObjectData — PORT-ONLY helper (no pret counterpart).
 ; Copies the Frames, OAM, and Spawn tables from flat program memory to their
-; contiguous GB echo RAM staging area at W_SURF_ANIM_DATA (0xFB00), modeled on
+; contiguous port-only GB staging area at W_SURF_ANIM_DATA (0xF100), modeled on
 ; CopyYellowIntroAnimatedObjectData (intro_yellow.asm).
 ; ---------------------------------------------------------------------------
 CopySurfingPikachuAnimatedObjectData:
@@ -759,7 +759,7 @@ SurfingPikachuMinigame_LoadGFXAndLayout:
     mov bx, wSurfingMinigameDataEnd - wSurfingMinigameData
     xor al, al
     call FillMemory
-    ; DEVIATION{class=data-model; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=clear the two LY-override buffers as two 0x100 fills instead of pret's single wLYOverridesBufferEnd - wLYOverrides span; evidence=pret's buffers are ADJACENT at 0xC700 and 0xC800 so that span is 0x200, but the port relocates them apart to 0xF500 and 0xF9A0 where the same expression is 0x5A0 and would zero the wAnimatedObject block and the Yellow-intro scene state between them; lifetime=until the two buffers are made contiguous again}
+    ; DEVIATION{class=data-model; pret=engine/minigame/surfing_pikachu.asm:SurfingPikachuMinigame_LoadGFXAndLayout; behavior=clear the two LY-override buffers as two 0x100 fills instead of pret's single wLYOverridesBufferEnd - wLYOverrides span; evidence=pret's buffers are adjacent at 0xC700/0xC800, the port's prefix-sum addresses are 0xCE62/0xCF62, still contiguous, so wLYOverridesBufferEnd - wLYOverrides is still 0x200 and both forms zero the SAME bytes — the two-fill split is structural only; lifetime=permanent while the two buffers stay contiguous}
     mov esi, wLYOverrides
     mov bx, wLYOverridesEnd - wLYOverrides          ; 0x100, was (BufferEnd - wLYOverrides)
     xor al, al

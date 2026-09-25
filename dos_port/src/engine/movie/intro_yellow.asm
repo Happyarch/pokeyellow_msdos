@@ -500,14 +500,14 @@ YellowIntroScene10:
 ; In: ESI = wTileMap dest offset, EDI = flat src, BH = rows, BL = cols.
 .FillBGMapBox:
 .fill_row:
-    movzx ecx, bl                                  ; c = cols (fresh each row)
+    movzx ecx, bl                                  ; c = cols (fresh each row; dec cl below keeps pret's 8-bit bound)
     push esi                                       ; push hl  (dest row start)
 .fill_col:
     mov al, [edi]                                  ; ld a, [de]  (flat src)
     inc edi
     mov [ebp + esi], al                            ; ld [hli], a
     inc esi
-    dec ecx                                        ; dec c
+    dec cl                                         ; dec c — 8-bit, as on the GB (movzx reloads per row)
     jnz .fill_col
     pop esi                                        ; pop hl
     add esi, SCREEN_TILES_W                        ; ld bc,$20 / add hl,bc  (port stride 40)

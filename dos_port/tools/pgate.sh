@@ -2,12 +2,12 @@
 # pgate — run golden scenarios in parallel against tmpfs shadow copies.
 #
 # Wall clock becomes ~= the SLOWEST SINGLE SCENARIO instead of the sum of all of
-# them. Measured on this host (96 threads): the 17-scenario battery drops from
-# ~20 min serial to the length of trainer_battle_route alone.
+# them. Measured on this host (96 threads): the core battery drops from ~20 min
+# serial to the length of trainer_battle_route alone.
 #
 # WHY THIS IS SAFE
 #   * goldencheck.sh has no external path dependencies — no `../`, no absolute
-#     paths, no reference to the pret-golden worktree — and all 57 goldens are
+#     paths, no reference to the pret-golden worktree — and every golden is
 #     committed under dos_port/tests/goldens, so a copy is self-contained.
 #   * It invokes plain `dosbox-x` from PATH, NOT the tools/dosbox-x-mcp fork.
 #   * DOSBox at `cycles=fixed 23880` emulates time rather than racing wall clock,
@@ -28,8 +28,9 @@
 #                                       scenario has distinct DEBUG_* flags, and
 #                                       the .nasmflags stamp forces a full
 #                                       rebuild regardless
-# That takes the base from 1.1G to ~97M, so 17 copies cost ~1.6G instead of
-# ~19G, and the full 57-scenario registry would cost only ~5.5G.
+# That takes the base from 1.1G to ~97M, so a copy costs ~97M instead of ~1.1G.
+# Scenario counts are the registry's business — query
+# `tools/generators/gen_scenario_registry.py --names core|full`; do not hardcode.
 #
 # ASSETS: deliberately INCLUDED and NOT regenerated. goldencheck runs `make
 # image`, never `make assets`, so the generated assets/*.inc are inherited by
@@ -42,15 +43,15 @@
 #
 # CONCURRENCY IS BOUNDED (added 2026-08-12). The original fanned out EVERY
 # scenario at once (`for sc in $SCENARIOS; do (...) & done; wait`). That was fine
-# for the 17-scenario battery but is not for the full 66-scenario registry: each
+# for the core battery but is not for the full registry: each
 # worker runs a complete `make image` (a multi-file nasm build) AND a dosbox-x,
-# so 66 at once oversubscribes even a 96-thread host — and this file's own header
+# so the full tier at once oversubscribes even a 96-thread host — and this file's own header
 # names oversubscription as THE way parallelism can change results, by pushing a
 # run into goldencheck's `timeout -s KILL`. Default is nproc/6 clamped to [4,24];
 # override with PGATE_JOBS.
 #
 # Copies are now made INSIDE the worker and removed after, so peak disk is
-# JOBS copies (~2.3G at 24) rather than one per scenario (~6.4G at 66).
+# JOBS copies rather than one per scenario.
 #
 # Usage: tools/pgate.sh <outdir> [scenario ...]
 #          outdir MUST be a path (absolute, or containing a '/').

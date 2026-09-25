@@ -3240,14 +3240,14 @@ LoadTileBlockMap:
     mov esi, wOverworldMap
 
     ; hMapWidth = wCurMapWidth; hMapStride = width + MAP_BORDER*2
-    movzx ecx, byte [ebp + wCurMapWidth]       ; ECX = width (= 10)
+    movzx ecx, byte [ebp + wCurMapWidth]       ; ECX = wCurMapWidth (map-specific, e.g. 10)
     mov byte [ebp + hMapWidth], cl
-    add cl, MAP_BORDER * 2                         ; CL = stride (= 16)
+    add cl, MAP_BORDER * 2                         ; CL = stride = width + 2*MAP_BORDER (24 at MAP_BORDER=7, width 10)
     mov byte [ebp + hMapStride], cl
 
     ; Skip MAP_BORDER rows: ESI += stride * MAP_BORDER
     movzx eax, cl                                  ; EAX = stride
-    imul eax, MAP_BORDER                           ; EAX = stride * 3
+    imul eax, MAP_BORDER                           ; EAX = stride * MAP_BORDER (7)
     add esi, eax                                   ; ESI = row MAP_BORDER start
 
     ; Skip MAP_BORDER cols: ESI += MAP_BORDER
@@ -3350,7 +3350,7 @@ LoadTileBlockMap:
 ; LoadNorthSouthConnectionsTileMap — faithful translation.
 ; Pret ref: home/overworld.asm:LoadNorthSouthConnectionsTileMap
 ;
-; Copies MAP_BORDER (3) rows of the connected map's edge into the wOverworldMap
+; Copies MAP_BORDER (7) rows of the connected map's edge into the wOverworldMap
 ; border. Each row copies hNorthSouthConnectionStripWidth (=hMapStride) bytes;
 ; src advances by hNorthSouthConnectedMapWidth (=hMapWidth), dest by the
 ; wOverworldMap stride (wCurMapWidth + 2*MAP_BORDER).
@@ -3360,7 +3360,7 @@ LoadTileBlockMap:
 ; Clobbers: EAX, EBX, ECX, ESI, EDX.
 ; ---------------------------------------------------------------------------
 LoadNorthSouthConnectionsTileMap:
-    mov ecx, MAP_BORDER                  ; C = 3 rows
+    mov ecx, MAP_BORDER                  ; C = MAP_BORDER rows
 .row:
     push esi
     push edx
@@ -3387,8 +3387,8 @@ LoadNorthSouthConnectionsTileMap:
 ; LoadEastWestConnectionsTileMap — faithful translation.
 ; Pret ref: home/overworld.asm:LoadEastWestConnectionsTileMap
 ;
-; Copies MAP_BORDER (3) columns of the connected map's edge into the
-; wOverworldMap border, for B (strip length) rows. Each row copies 3 bytes; src
+; Copies MAP_BORDER (7) columns of the connected map's edge into the
+; wOverworldMap border, for B (strip length) rows. Each row copies MAP_BORDER bytes; src
 ; advances by hEastWestConnectedMapWidth (=hMapWidth), dest by the wOverworldMap
 ; stride. (Pallet Town has no E/W connection, but kept faithful for completeness.)
 ;
@@ -3400,7 +3400,7 @@ LoadEastWestConnectionsTileMap:
 .row:
     push esi
     push edx
-    mov ecx, MAP_BORDER                  ; 3 columns
+    mov ecx, MAP_BORDER                  ; MAP_BORDER columns
 .inner:
     mov al, [ebp + esi]
     mov [ebp + edx], al
@@ -3842,7 +3842,7 @@ LoadCurrentMapView:
     ; Advance block-map pointer to next row
     pop edx                                        ; restore row-start of block map
     movzx eax, byte [ebp + wCurMapWidth]
-    add al, MAP_BORDER * 2                         ; stride = width + 6
+    add al, MAP_BORDER * 2                         ; stride = width + 2*MAP_BORDER
     add edx, eax                                   ; EDX += stride (next block-map row)
 
     ; Advance wSurroundingTiles pointer to next block row (4 tile rows down)
@@ -4834,7 +4834,7 @@ CopySignData:
     inc esi
     mov [ebx], al
     inc ebx
-    dec ecx
+    dec cl                              ; pret: dec a — 8-bit counter, so wNumSigns==0 runs 256 (not 4e9)
     jnz .loop
     pop edi
     pop ecx

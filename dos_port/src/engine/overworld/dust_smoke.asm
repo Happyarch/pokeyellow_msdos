@@ -61,7 +61,7 @@ AnimateBoulderDust:
     mov byte [ebp + IO_OBP1], 0xE4              ; %11100100
     call UpdateCGBPal_OBP1
     call LoadSmokeTileFourTimes
-    call WriteCutOrBoulderDustAnimationOAMBlock ; pret: farcall (banking elided; OW-3.4 unported)
+    call WriteCutOrBoulderDustAnimationOAMBlock ; pret: farcall (banking elided; real: src/engine/overworld/cut.asm)
     mov cl, 8                                   ; number of steps in animation
 .loop:
     push ecx                                    ; save step counter (pret: push bc)

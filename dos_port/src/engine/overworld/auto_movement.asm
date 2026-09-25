@@ -19,9 +19,9 @@
 ; wNPCMovementScriptSpriteOffset / hCurrentSpriteOffset (= slot<<4).
 ;
 ; LINKED (GAME_SRCS, since OW-7.2). The per-map movement-script pointer tables here
-; are dispatched by RunNPCMovementScript, but the machinery stays inert until a map
-; script sets wNPCMovementScriptPointerTableNum nonzero (OW-2.5 Oak cutscene wires
-; the first one) — HideObject is likewise an unported predef (extern).
+; are dispatched by RunNPCMovementScript; a map script arms them by setting
+; wNPCMovementScriptPointerTableNum nonzero (OW-2.5 wired the Oak cutscene).
+; HideObject is translated (src/engine/overworld/toggleable_objects.asm).
 ;
 ; pret's PlayerStepOutFromDoor is the first routine in this file and lives here.
 ;
@@ -230,7 +230,7 @@ PalletMovementScript_Done:
     cmp byte [ebp + wSimulatedJoypadStatesIndex], 0
     jnz .ret
     mov byte [ebp + wToggleableObjectIndex], TOGGLE_PALLET_TOWN_OAK
-    call HideObject                            ; pret: predef (banking elided; HideObject unported)
+    call HideObject                            ; pret: predef HideObject (real: toggleable_objects.asm; banking elided)
     and byte [ebp + wStatusFlags5], (~(1 << BIT_SCRIPTED_MOVEMENT_STATE)) & 0xFF
     and byte [ebp + wStatusFlags4], (~(1 << BIT_INIT_SCRIPTED_MOVEMENT)) & 0xFF
     jmp EndNPCMovementScript

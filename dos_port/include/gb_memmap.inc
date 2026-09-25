@@ -878,10 +878,10 @@
 ; here — the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
 ; wTileMap spans 0xC3A0-0xC787 and SWALLOWS 0xC508. At pret's address the town map's
 ; OAM backup wrote raw sprite bytes straight into tilemap rows 9-12 (visible as a band
-; of garbage glyphs across the map). It goes in the Echo region instead, with the other
-; buffers that outgrew their pret slots (wSurroundingTiles, wOverworldMap,
-; wTileMapBackup2 — which ends at 0xF4E8).
-; DEVIATION{class=data-model; pret=ram/wram.asm:wShadowOAMBackup; behavior=relocate wShadowOAMBackup from pret 0xC508 UNION (port 0xC788 via wTileMap +640) to port-only expanded WRAM 0xF3C0; evidence=0xC788 aliases wTileMapBackup/wSurroundingTiles 0xC788 0x6C0 and wAnimatedObjectsData 0xC788 0xCA — TownMapSpriteBlinkingAnimation 36*4 backup→shadow at wAnimCounter 50 then publishes surrounding-map tiles >=$60 <160 as ghost sprites left of TOWNMAP_X_PX 80, blinking with cursor, measured 2026-09-01; prefix-sum port_addr=pret_addr+Σ(growths<addr) puts pret WRAM end 0xDFFF→0xEDCB, staging 0x2A0+0x2C0→0xF32B, so port-only 0xF3C0 (after W_SURF 0xF100→0xF3C0) is derived not asserted, headroom 0x9A0 to GB_OAM 0xFE00; lifetime=permanent while wTileMap 40×25 swallows 0xC508}
+; of garbage glyphs across the map). It goes in port-only staging space above the
+; expanded WRAM (pret WRAM end-exclusive 0xE000 -> port 0xEDCE), after the intro/surf
+; animated-object regions; see the prefix-sum derivation in the DEVIATION below.
+; DEVIATION{class=data-model; pret=ram/wram.asm:wShadowOAMBackup; behavior=relocate wShadowOAMBackup from pret 0xC508 UNION (port 0xC788 via wTileMap +640) to port-only expanded WRAM 0xF3C0; evidence=0xC788 aliases wTileMapBackup/wSurroundingTiles 0xC788 0x6C0 and wAnimatedObjectsData 0xC788 0xCA — TownMapSpriteBlinkingAnimation 36*4 backup→shadow at wAnimCounter 50 then publishes surrounding-map tiles >=$60 <160 as ghost sprites left of TOWNMAP_X_PX 80, blinking with cursor, measured 2026-09-01; prefix-sum port_addr=pret_addr+Σ(growths<addr) puts pret WRAM end 0xE000→0xEDCE, and the intro/surf staging regions occupy 0xEE00-0xF3C0, so port-only 0xF3C0 (immediately after W_SURF 0xF100..0xF3C0) is derived not asserted, headroom 0x9A0 to GB_OAM 0xFE00; lifetime=permanent while wTileMap 40×25 swallows 0xC508}
 %define wShadowOAMBackup             0xF3C0   ; port-only 160 B, 0xF3C0→0xF460 (expanded WRAM, was 0xC788 UNION)
 %define wShadowOAMBackup_SIZE        0xA0
 %define wTownMapSpriteBlinkingEnabled 0xDE68
@@ -927,7 +927,7 @@
 ; RETIRED AS A CONCEPT (2026-08-19). This was never echo RAM in any meaningful
 ; sense -- the port does not implement the $E000-$FDFF mirror, and calling the
 ; region "free echo RAM" is what let two authors each believe they owned 0xF500.
-; It is simply MORE WRAM: the port is a Game Boy whose WRAM runs to 0xEDCB, with
+; It is simply MORE WRAM: the port is a Game Boy whose WRAM runs to 0xEDCE, with
 ; port-only staging above that. See docs/current_plan_wram_expansion.md.
 %define GB_WRAM_EXPANDED_END         0xEDCE   ; end-exclusive; pret 0xDFFF + 3532
 %define GB_ECHO                      0xE000   ; legacy name, no longer a mirror
@@ -1290,9 +1290,10 @@
 ; RELOCATED (port-only): pret places this WRAM0 union branch at 0xC508 (the
 ; "OAM Buffer"/"Tilemap" union, 4th NEXTU: wAnimatedObjectsData). The port's
 ; wTileMap is 40x25 = 1000 bytes and SWALLOWS 0xC508 (wTileMap spans
-; 0xC3A0-0xC787), so — exactly as wShadowOAMBackup did — the block goes to free
-; echo RAM instead. It is intro-cinematic-only and never live at the same time
-; as the overworld buffers below it. 200 bytes: 0xF600-0xF6C7.
+; 0xC3A0-0xC787), so — exactly as wShadowOAMBackup did — the block moves up to
+; the port's inflated union base 0xC788 (= wTileMap + 1000), where it aliases
+; wTileMapBackup/wSurroundingTiles. It is intro-cinematic-only and never live at
+; the same time as the overworld buffers. 202 bytes: 0xC788-0xC851.
 ;   Struct (16 B x 10, wAnimatedObject0..9), byte offsets used as raw literals in
 ;   the engine (pret does the same): 0 Index, 1 FramesetID, 2 AnimSeqID(callback),
 ;   3 TileID(VTileOffset), 4 XCoord, 5 YCoord, 6 XOffset, 7 YOffset, 8 Duration,
@@ -1313,7 +1314,7 @@
 ; runtime scratch, not Gen-1 save/party data (the byte-identical rule is scoped
 ; to mon structs).
 %define wAnimatedObjectsData         0xC788   ; wAnimatedObjectsData (block base)
-%define W_ANIMATED_OBJECTS_DATA_SIZE 0xCA   ; 202 B, ends 0xF6CA (wAnimatedObjectsDataEnd)
+%define W_ANIMATED_OBJECTS_DATA_SIZE 0xCA   ; 202 B, ends 0xC852 (wAnimatedObjectsDataEnd)
 %define wAnimatedObjectStartTileOffsets 0xC788   ; ds 10*2 (20 B)
 %define wAnimatedObjectDataStructs   0xC79C   ; wAnimatedObject0 (10 x 16 = 160 B)
 %define wNumLoadedAnimatedObjects    0xC83C   ; db — running spawn counter → struct Index
@@ -1340,8 +1341,8 @@
 %define wYellowIntroCurrentScene     0xC8B6   ; db
 %define wYellowIntroSceneTimer       0xC8B7   ; db
 ; saved struct base of the scene's current animated object (2 bytes; RELOCATED
-; with the rest of the intro scene state). Free echo gap 0xF6CC-0xF6FF (before
-; the anim-data blob at 0xF700).
+; with the rest of the intro scene state). Port-only space at 0xC8B8, after the
+; animated-object block (ends 0xC852); the intro anim-data blob starts 0xEE00.
 %define wYellowIntroAnimatedObjectStructPointer 0xC8B8   ; dw
 
 ; --- Yellow-intro animated-object DATA region (menu-intro B1) ---
@@ -1355,23 +1356,24 @@
 ; ($fa0ea-$fa35a), spawn appended after. Each data mirror carries a `times`
 ; static assert that its assembled size matches these region deltas, so the
 ; fixed bases cannot silently drift from the tables. 657 B total; reserved
-; 0x2A0. Intro-cinematic-only, echo RAM, never live with the overworld buffers.
+; 0x2A0. Intro-cinematic-only, port-only staging space above the expanded WRAM,
+; never live with the overworld buffers.
 %define W_INTRO_ANIM_DATA            0xEE00   ; whole-region base (= W_INTRO_FRAMES_DATA)
-%define W_INTRO_ANIM_DATA_SIZE       0x2A0   ; reservation (actual 0x291), ends <= 0xF9A0
-%define W_INTRO_FRAMES_DATA          (W_INTRO_ANIM_DATA)   ; 0xF700, size 0x53 (src/data/sprite_anims/intro_frames.asm)
-%define W_INTRO_OAM_DATA             (W_INTRO_ANIM_DATA + 0x53)   ; 0xF753, size 0x21D (src/data/sprite_anims/intro_oam.asm)
-%define W_INTRO_SPAWN_DATA           (W_INTRO_OAM_DATA + 0x21D)   ; 0xF970 (engine/movie/intro_yellow.asm spawn table)
-%define W_INTRO_SPAWN_DATA_SIZE      0x21   ; staged image ends 0xF991, inside the 0x2A0 reservation
+%define W_INTRO_ANIM_DATA_SIZE       0x2A0   ; reservation (actual 0x291), ends 0xF0A0
+%define W_INTRO_FRAMES_DATA          (W_INTRO_ANIM_DATA)   ; 0xEE00, size 0x53 (src/data/sprite_anims/intro_frames.asm)
+%define W_INTRO_OAM_DATA             (W_INTRO_ANIM_DATA + 0x53)   ; 0xEE53, size 0x21D (src/data/sprite_anims/intro_oam.asm)
+%define W_INTRO_SPAWN_DATA           (W_INTRO_OAM_DATA + 0x21D)   ; 0xF070 (engine/movie/intro_yellow.asm spawn table)
+%define W_INTRO_SPAWN_DATA_SIZE      0x21   ; staged image ends 0xF091, inside the 0x2A0 reservation
 ; wLYOverrides / wLYOverridesBuffer — the intro's LY-override staging buffers (surfing wobble).
-; Located in free echo RAM: wLYOverrides at 0xF500-0xF600, wLYOverridesBuffer at 0xF9A0-0xFAA0.
-; The port does NOT emulate per-scanline LY overrides, but VBlankCopy transfers the data
-; faithfully between them on Request7TileTransferFromC810ToC710.
+; Placed at the port's prefix-sum addresses 0xCE62/0xCF62 (pret 0xC700/0xC800; the pair stays
+; contiguous). The port does NOT emulate per-scanline LY overrides, but VBlankCopy transfers
+; the data faithfully between them on Request7TileTransferFromC810ToC710.
 %define wLYOverrides                 0xCE62   ; wLYOverrides (ds 0x100)
-%define W_LY_OVERRIDES_SIZE          0x100   ; 256 B, ends 0xF600 (< wAnimatedObjectsData 0xF600)
-%define wLYOverridesEnd              (wLYOverrides + 0x100)   ; 0xF600
+%define W_LY_OVERRIDES_SIZE          0x100   ; 256 B, ends 0xCF62 (= wLYOverridesBuffer)
+%define wLYOverridesEnd              (wLYOverrides + 0x100)   ; 0xCF62
 %define wLYOverridesBuffer           0xCF62   ; wLYOverridesBuffer (ds 0x100)
-%define W_LY_OVERRIDES_BUFFER_SIZE   0x100   ; 256 B, ends 0xFAA0 (< W_SURF_ANIM_DATA 0xFB00)
-%define wLYOverridesBufferEnd        (wLYOverridesBuffer + 0x100)   ; 0xFAA0
+%define W_LY_OVERRIDES_BUFFER_SIZE   0x100   ; 256 B, ends 0xD062
+%define wLYOverridesBufferEnd        (wLYOverridesBuffer + 0x100)   ; 0xD062
 
 ; --- Surfing-Pikachu animated-object DATA region (Chunk 1) ---
 ; The Frames and OAM tables (pret data/sprite_anims/surfing_pikachu_frames.asm +
@@ -1379,12 +1381,12 @@
 ; they stay 16-bit GB pointers, assembled flat with GB-base-relative internal
 ; pointers (its W_SURF_* base + offset) and copied flat->GB at minigame init,
 ; composed back-to-back (frames then OAM, 258 + 446 = 704 bytes).
-; Located in free echo RAM at 0xFB00 (after wLYOverridesBuffer 0xFA00-0xFB00,
-; before GB_OAM 0xFE00).
+; Located at the port's prefix-sum address 0xF100 (port-only staging space above
+; the expanded WRAM), before wShadowOAMBackup 0xF3C0 and GB_OAM 0xFE00.
 %define W_SURF_ANIM_DATA             0xF100   ; whole-region base (= W_SURF_FRAMES_DATA)
-%define W_SURF_ANIM_DATA_SIZE        0x2C0   ; 704 bytes (0x102 frames + 0x1BE OAM), ends 0xFDCE <= 0xFE00
-%define W_SURF_FRAMES_DATA           (W_SURF_ANIM_DATA)   ; 0xFB00, size 0x102 (src/data/sprite_anims/surfing_pikachu_frames.asm)
-%define W_SURF_OAM_DATA              (W_SURF_ANIM_DATA + 0x102)   ; 0xFC02, size 0x1BE (src/data/sprite_anims/surfing_pikachu_oam.asm)
+%define W_SURF_ANIM_DATA_SIZE        0x2C0   ; 704 bytes (0x102 frames + 0x1BE OAM), ends 0xF3C0 (= wShadowOAMBackup)
+%define W_SURF_FRAMES_DATA           (W_SURF_ANIM_DATA)   ; 0xF100, size 0x102 (src/data/sprite_anims/surfing_pikachu_frames.asm)
+%define W_SURF_OAM_DATA              (W_SURF_ANIM_DATA + 0x102)   ; 0xF202, size 0x1BE (src/data/sprite_anims/surfing_pikachu_oam.asm)
 
 
 ; Overworld map block buffer (2304 bytes). Worst case is Route 17 / Route 23 (10x72):
@@ -1952,11 +1954,9 @@
 ; RELOCATED (port-only): pret puts wTempPic at $C6E8. It cannot live there here —
 ; the port's wTileMap is 40x25 = 1000 bytes (the GB's is 20x18 = 360), so
 ; wTileMap spans 0xC3A0-0xC787 and SWALLOWS 0xC6E8, exactly as it swallows
-; 0xC508 (wShadowOAMBackup / wAnimatedObjectsData above). Unlike those two it does
-; NOT fit in echo RAM: 784 bytes are needed and the largest remaining echo gap is
-; 768 (0xFB00-0xFDFF, after wLYOverridesBuffer). It goes in the unused 1536-byte
-; gap between the back buffer (ends 0x21A00) and the emulated SRAM banks
-; (0x22000) instead — still inside the single DPMI allocation and still
+; 0xC508 (wShadowOAMBackup / wAnimatedObjectsData above). It goes in the unused
+; 1536-byte gap between the back buffer (ends 0x21A00) and the emulated SRAM
+; banks (0x22000) instead — still inside the single DPMI allocation and still
 ; EBP-relative, so FillMemory and every [ebp+esi] write address it unchanged.
 ; Its only consumers are the battle-animation mon-pic routines
 ; (AnimationMinimizeMon, AnimationSlideMonDownAndHide, CopyTempPicToMonPic and
@@ -2087,7 +2087,7 @@
 ; ---------------------------------------------------------------------------
 %define hJoyLast                     0xFFB1   ; hJoyLast (also mapped locally in joypad.asm)
 %define hJoyReleased                 0xFFB2   ; hJoyReleased (shared: joypad.asm + simulate_joypad.asm)
-%define hRLEByteValue                0xFF81   ; hRLEByteValue (union base)
+%define hRLEByteValue                0xFF8B   ; hRLEByteValue — pret ram/hram.asm union member (pokeyellow.sym 00:ff8b) with hBaseTileID/hROMBankTemp/hDexWeight/hOAMTile/hPreviousTileset. Was 0xFF81, which is INSIDE pret's hDMARoutine/hSoftReset region (hDMARoutine 0xFF80, hSoftReset 0xFF8A), not the union base.
 %define hStartTileID                 0xFFE1   ; hStartTileID — first tile id CopyUncompressedPicToTilemap places
 %define hDividend2                   0xFFE5   ; hDividend2
 %define hDivisor2                    0xFFE6   ; hDivisor2
@@ -2193,7 +2193,7 @@
 ; — those are hSerialReceivedNewData / hSerialConnectionStatus, and 0xFFA6-A7 are
 ; inside hDivideBCDBuffer's extent, so neither was free. Declaration gaps are not
 ; free space: check EXTENTS, and derive from pokeyellow.sym.
-%define hHalveItemPrices             0xFFA8   ; list_menu priced path
+%define hHalveItemPrices             0xFF8E   ; hHalveItemPrices — pret ram/hram.asm union member (pokeyellow.sym 00:ff8e) with hFourTileSpriteCount. Was 0xFFA8, a declaration gap inside hDivideBCDBuffer's extent just below hSerialReceivedNewData (0xFFA9), not a free byte.
 %define hSwapItemID                  0xFF95   ; item-list SELECT swap scratch
 %define hSwapItemQuantity            0xFF96   ; item-list SELECT swap scratch
 ; ---------------------------------------------------------------------------

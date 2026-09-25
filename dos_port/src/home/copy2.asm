@@ -31,8 +31,11 @@
 ; VBLANK STAGING: pret stages these through hVBlankCopy* HRAM + DelayFrame
 ; (c/8 frames). The port performs the copy IMMEDIATELY to VRAM (as load_font /
 ; player_gfx do) and arms g_tilecache_dirty; the render pipeline picks it up on
-; the next DelayFrame. DIVERGENCE: the per-8-tile frame cadence is dropped. All
-; current callers (town_map graphics setup) are static loads, so this is safe.
+; the next DelayFrame. DIVERGENCE: the per-8-tile frame cadence is dropped. Every
+; current caller is a synchronous graphics/VRAM load — CopyVideoDataDouble from
+; town_map, ledges and printer2, FarCopyDataDouble from town_map, CopyVideoData
+; from the overworld/battle/movie loaders — and none depends on the intermediate
+; frames.
 ;
 ; Register map: HL→ESI, DE→EDX, BC→BX (B=BH, C=BL), A→AL.
 ;
@@ -119,18 +122,31 @@ CopyVideoDataDouble:
     push esi
     push edi
     mov byte [g_tilecache_dirty], 1
-    movzx ecx, bl                    ; tile count
-    imul ecx, ecx, TILE_1BPP_SIZE    ; source bytes = tiles * 8
     lea edi, [ebp + esi]             ; dest = EBP + GB VRAM offset
     mov esi, edx                     ; src = flat pointer
-.loop:
-    lodsb                            ; al = [esi], esi++
+    ; COUNTER WIDTH: pret expands CL (C) 1bpp tiles, 8 source bytes → 16 dest bytes
+    ; each. Its c=0 path is NOT a wrap: `cp 8 / jr nc` fails, so the routine arms
+    ; hVBlankCopyDoubleSize = 0 and VBlankCopyDouble's own `and a / ret z`
+    ; (home/vcopy.asm:232-234) copies nothing — 0 tiles, not 256. Keep CL 8-bit
+    ; (`dec cl`) and dispatch c=0 to .done to reproduce that for EVERY input.
+    ; `movzx ecx, bl` + `imul ecx,16` + `dec ecx` wrapped 0 → ~4.29e9 and walked
+    ; EDI off the DPMI allocation.
+    mov cl, bl                       ; ld c, b — tile count (8-bit)
+    test cl, cl
+    jz .done                         ; pret: c=0 → hVBlankCopyDoubleSize 0 → 0 tiles
+.tileLoop:
+    mov ch, TILE_1BPP_SIZE           ; 8 source bytes per 1bpp tile
+.expandLoop:
+    lodsb                            ; ld a, [de] / inc de
     mov ah, al
     mov [edi], al                    ; low bitplane
     mov [edi + 1], ah                ; high bitplane (duplicate)
     add edi, 2
-    dec ecx
-    jnz .loop
+    dec ch
+    jnz .expandLoop
+    dec cl                           ; dec c — 8-bit tile counter (pret's bound)
+    jnz .tileLoop
+.done:
     pop edi
     pop esi
     pop ecx
@@ -145,7 +161,7 @@ CopyVideoDataDouble:
 ;
 ; In:  ESI = source FLAT pointer (1bpp data)
 ;      EDX = destination GB VRAM offset (EBP-relative)
-;      BX  = source byte count (output = 2 * BX bytes)
+;      BX  = source byte count (output = 2 * BX bytes; BC is a 16-bit count)
 ;      AL  = source bank (NO-OP)
 ; Out: g_tilecache_dirty armed. Caller registers preserved.
 ; ---------------------------------------------------------------------------
@@ -155,17 +171,37 @@ FarCopyDataDouble:
     push esi
     push edi
     mov byte [g_tilecache_dirty], 1
-    movzx ecx, bx                    ; source byte count
     lea edi, [ebp + edx]             ; dest = EBP + GB VRAM offset
     ; esi already = source flat pointer
-.loop:
-    lodsb                            ; al = [esi], esi++
+    ; COUNTER WIDTH: pret's loop is TWO 8-bit counters (`dec c` inner, `dec b`
+    ; outer) with a normalization pass that makes BX a true 16-bit byte count:
+    ;   b==0            → inc b        (so b=0,c=0 copies 256 — pret's own answer)
+    ;   b!=0 and c==0   → do NOT inc b (the first `dec c` underflows to 256)
+    ;   otherwise       → inc b
+    ; `movzx ecx, bx` + `dec ecx` wrapped BX=0 to ~4.29e9 and walked EDI off the
+    ; DPMI allocation. Reproduced exactly, including the c-underflow re-entry.
+    mov cl, bl                       ; ld c, b   (low byte  = inner count)
+    mov ch, bh                       ; ld b, b   (high byte = outer count)
+    test ch, ch
+    jnz .bNonzero
+    inc ch                           ; pret: b==0 → inc b
+    jmp .expandLoop
+.bNonzero:
+    test cl, cl
+    jnz .incB                        ; b!=0, c!=0 → pret falls into .eightbitcopyamount
+    jmp .expandLoop                  ; b!=0, c==0 → skip inc b (do not underflow early)
+.incB:
+    inc ch
+.expandLoop:
+    lodsb                            ; pret: ld a, [de] / inc de  (pret swaps hl/de)
     mov ah, al
-    mov [edi], al
-    mov [edi + 1], ah
+    mov [edi], al                    ; ld [hli], a
+    mov [edi + 1], ah                ; ld [hli], a
     add edi, 2
-    dec ecx
-    jnz .loop
+    dec cl                           ; dec c — 8-bit inner
+    jnz .expandLoop
+    dec ch                           ; dec b — 8-bit outer
+    jnz .expandLoop                  ; pret: jr nz, .expandloop (c underflowed to 256)
     pop edi
     pop esi
     pop ecx
@@ -250,11 +286,11 @@ ClearScreenArea:
     ; 256 rows and stops. `dec edx` on the movzx'd value runs ~4 billion times
     ; and walks EDI off the allocation. `dec dl` IS pret's bound, reproduced
     ; exactly, so nothing diverges and no annotation is owed.
-    ; (The WIDTH counter below is a separate question, recorded in
-    ; audit-counter-width-remediation-staging rather than changed here: `rep
-    ; stosb` with ECX=0 writes NOTHING where pret's `dec c` writes 256. That is
-    ; a real difference, but converting it needs pret's inner-loop shape, not a
-    ; register narrowing.)
+    ; (The WIDTH counter is a separate, still-open divergence: `rep stosb` with
+    ; ECX=0 writes NOTHING where pret's inner `dec c` writes 256. It needs pret's
+    ; inner-loop shape, not a register narrowing. Every observed ClearScreenArea
+    ; call site in the tree passes a literal nonzero width, so the c=0 case is
+    ; latent rather than currently reached.)
     dec dl
     jnz .rowLoop
     pop edi

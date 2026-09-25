@@ -117,8 +117,8 @@ runtime evidence.
 `home/` + `engine/` (`tier='core'`) and, since 2026-08-20, pret `scripts/`
 (`tier='script'`). A faithful pret label from `audio/`, `data/`, `gfx/` or `ram/`
 is still recorded `port_only` *by elimination* — nobody determined it was
-bespoke. Measured 2026-08-20: **212 of 584** `port_only` rows are real pret
-labels (data 169, audio 22, gfx 19, ram 2); the other 372 are genuinely port-only.
+bespoke. Measured 2026-09-24: **216 of 776** `port_only` rows are real pret
+labels (data 172, audio 22, gfx 20, ram 2); the other 560 are genuinely port-only.
 audio includes `PlayPikachuSoundClip`, which the upstream pret merge 46b8e169
 moved out of `engine/pikachu/` into `audio/`. Cite the `aux_labels` provenance
 table, or the dependency graph's `display_status` (`pret-unmodeled`) and
@@ -257,8 +257,9 @@ box UI is the faithful pret mirror (`src/engine/pokemon/bills_pc.asm`), and the
 whole tier is golden-gated: `bills_pc_ops` (deposit/withdraw/release through
 the real UI on both sides) and `box_change_roundtrip` (the change-box round
 trip — the only runtime path into SRAM banks 2/3). The sram plan is archived
-at `docs/plans/sram_pc_storage.md`; its one open flag is the torn-write-guard
-acceptance awaiting maintainer sign-off (stage 7).
+at `docs/plans/sram_pc_storage.md`; its torn-write-guard flag was RESOLVED on
+2026-08-02 (verdict: IMPLEMENT the guard — new open work tracked as backlog
+item 39 in `docs/current_plan_backlog.md`).
 
 Phase 2 so far: `Init`/`ClearVram`/`StopAllSounds` (`src/home/init.asm`),
 supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,
@@ -266,8 +267,8 @@ supporting home routines (`src/home/copy.asm`, `src/home/lcd.asm`,
 `src/home/clear_sprites.asm`), and a text/font engine
 (`src/home/load_font.asm` 1bpp→2bpp expansion from `gfx/font/font.png`,
 `src/home/text.asm` PlaceString/TextBoxBorder). The overworld map loader/renderer
-(pret mirror `src/home/overworld.asm`; `src/engine/overworld/overworld.asm` keeps
-the port-only glue and the embedded asset blobs) renders correctly in DOSBox-X: `SKIP_TITLE=1`
+(`src/home/overworld.asm` plus the embedded map data in `src/data/maps/*`)
+renders correctly in DOSBox-X: `SKIP_TITLE=1`
 boots straight into a fully drawn Pallet Town (Oak's Lab, tree border, sign) in the
 map's real CGB palette. `SKIP_TITLE=1` bypasses the title screen when a scenario
 wants to boot straight to the map.

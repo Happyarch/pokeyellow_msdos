@@ -105,13 +105,12 @@ PERF_MISC     equ 8    ; everything else (joypad, RNG, play clock, quit check)
 global DelayFrame
 
 ; ---------------------------------------------------------------------------
-; Symbol not yet in gb_memmap.inc. Defined %ifndef-safe with its sym-verified
-; address (see SUMMARY.md) so this file assembles standalone; when root promotes
-; it to the canonical memmap that definition wins.
+; wDisableVBlankWYUpdate is defined canonically in include/gb_memmap.inc
+; (0xDE6D; see the screen-shake scratch block there). This file used to carry a
+; local `%ifndef W_DISABLE_VBLANK_WY_UPDATE` equ claiming the symbol was "not yet
+; in gb_memmap.inc"; that was stale — the canonical definition exists, so use it
+; directly and keep the pret name.
 ; ---------------------------------------------------------------------------
-%ifndef W_DISABLE_VBLANK_WY_UPDATE
-W_DISABLE_VBLANK_WY_UPDATE   equ 0xDE6D   ; wDisableVBlankWYUpdate — nonzero = skip WY commit
-%endif
 
 section .text
 
@@ -351,7 +350,7 @@ commit_shadow_regs:
     mov [ebp + IO_SCY], al
     ; WY commit gated on wDisableVBlankWYUpdate (pret VBlank: skip rWY update when
     ; nonzero). Default/unset (0) → commit exactly as before — byte-identical.
-    cmp byte [ebp + W_DISABLE_VBLANK_WY_UPDATE], 0
+    cmp byte [ebp + wDisableVBlankWYUpdate], 0
     jne .skipWY
     mov al, [ebp + hWY]
     mov [ebp + IO_WY], al

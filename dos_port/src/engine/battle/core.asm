@@ -235,8 +235,8 @@ extern yn_box_col                      ; home/yes_no.asm — two-option box top-
 extern yn_box_row                      ; home/yes_no.asm — two-option box top-left, GB Y
 extern yn_proj_mode                    ; home/yes_no.asm — 0 = overworld anchor, 1 = battle
 extern PlaceUnfilledArrowMenuCursor    ; src/home/window.asm
-extern StatusScreen                    ; engine/menus/status_screen.asm — predef
-extern StatusScreen2                   ; engine/menus/status_screen.asm — predef
+extern StatusScreen                    ; engine/pokemon/status_screen.asm — predef
+extern StatusScreen2                   ; engine/pokemon/status_screen.asm — predef
 extern AnimationSubstitute             ; engine/battle/animations.asm
 extern AnimationMinimizeMon            ; engine/battle/animations.asm
 extern LoadMonFrontSprite              ; src/home/pics.asm — EDX = VRAM dest
@@ -286,11 +286,9 @@ extern battlecheck_marks               ; src/engine/link/cable_club_npc.asm (har
 ; --- PrintMenuItem's helpers (pret core.asm:3010) ---
 extern CopyData                        ; home/copy.asm — ESI→EDX, BX bytes
 extern PrintNumber                     ; home/print_num.asm — ESI dest, EDX src, BH flags/bytes, BL digits
-extern GetMaxPP                        ; engine/items/get_max_pp.asm — → wMaxPP (PP Ups incl.)
+extern GetMaxPP                        ; src/engine/items/item_effects.asm — → wMaxPP (PP Ups incl.)
 extern PrintMoveType                   ; engine/battle/print_type.asm — pret predef PrintMoveType
 extern Delay3                          ; src/home/palettes.asm
-
-; --- deferred in-battle sub-UIs (bag / party-switch) — call faithfully, body deferred ---
 
 ; --- move-execution backend (already-faithful, in other files) ---
 extern AddNTimes                       ; home/array.asm — ESI += BX * AL (party index)
@@ -299,7 +297,7 @@ extern JumpMoveEffect                  ; effects.asm — MoveEffectPointerTable 
 extern CopyToStringBuffer              ; src/home/copy_string.asm — EDX=src → wStringBuffer
 extern IsInArray                       ; home/array2.asm — AL in [ESI] ($FF-term, stride EDX) → CF
 ; DEVIATION{class=data-model; pret=engine/battle/core.asm:BattleCore; behavior=port has no BattleCore anchor label, the five INCLUDEd effect tables are separate flat objects at dos_port/src/data/battle/*.asm rather than contiguous bytes after an anchor; evidence=pret BattleCore is a label at core.asm:1 whose only purpose is to INCLUDE five data files contiguously, the port's linker emits each table as its own .data object with its own symbol (ResidualEffects1 etc) and no flat contiguity is required; lifetime=permanent data-model divergence}
-extern ResidualEffects1                ; battle_data.asm — effect-category arrays
+extern ResidualEffects1                ; src/data/battle/residual_effects_1.asm — effect-category arrays
 extern PrintSafariZoneBattleText       ; engine/battle/safari_zone.asm — Safari bait/angry line
 extern SpecialEffectsCont
 extern SetDamageEffects
@@ -329,9 +327,9 @@ extern Multiply                        ; home/math.asm
 extern Divide                          ; home/math.asm
 extern Random                          ; home/random.asm
 extern CalcStat                        ; home/move_mon.asm — single stat from base+DV+EV
-extern TypeEffects                     ; battle_data.asm — type-matchup table
-extern HighCriticalMoves               ; battle_data.asm — high-crit move list
-extern StatModifierRatios              ; battle_data.asm — stat-stage numerator/denominator
+extern TypeEffects                     ; src/data/types/type_matchups.asm — type-matchup table
+extern HighCriticalMoves               ; src/data/battle/critical_hit_moves.asm — high-crit move list
+extern StatModifierRatios              ; src/data/battle/stat_modifiers.asm — stat-stage numerator/denominator
 extern CheckTargetSubstitute           ; substitute.asm
 
 ; --- pulled in with the unit-C faint/send-out cluster ---
@@ -2633,9 +2631,14 @@ HandleIfEnemyMoveMissed:                ; pret 5726 — Bide continuation
 GetEnemyAnimationType:                  ; pret 5737 — Trapping continuation / multi-hit loop
     mov al, [ebp + wEnemyMoveEffect]
     and al, al
-    mov al, ANIMATIONTYPE_BLINK_ENEMY_MON_SPRITE
+    ; pret core.asm:5740/5742 — the ENEMY-side arms of pret's split table: no
+    ; side effect → SHAKE_SCREEN_VERTICALLY (1), side effect →
+    ; SHAKE_SCREEN_HORIZONTALLY_HEAVY (2). The port had the PLAYER-side arms
+    ; (BLINK=4 / LIGHT=5) pasted here, which is visible: the wrong animation
+    ; played on every damaging enemy move.
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_VERTICALLY
     jz  PlayEnemyMoveAnimation
-    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_LIGHT
+    mov al, ANIMATIONTYPE_SHAKE_SCREEN_HORIZONTALLY_HEAVY
     jmp PlayEnemyMoveAnimation          ; pret `jr PlayEnemyMoveAnimation` — the
                                         ; explosion-miss arm now sits between
                                         ; these two, so this can no longer fall
@@ -6133,9 +6136,12 @@ EnemySendOutFirstMon:
     ret
 
 ; ===========================================================================
-; ReplaceFaintedEnemyMon — pret core.asm:901. Palette/pokéball redraw (stubbed),
-; then send out the next mon and reset the enemy move/AI bookkeeping. Returns ZF=0
-; (single-player never "runs"; the ZF=1 → EnemyRan path is link-only).
+; ReplaceFaintedEnemyMon — pret core.asm:901. The palette refresh is real
+; (GetBattleHealthBarColor plus the OBP writes below); the ONLY HAL gap in this
+; routine is DrawEnemyPokeballs, which is present-but-unwired for the OAM-publish
+; reason its DEVIATION carries at the call site below. Then send out the next mon
+; and reset the enemy move/AI bookkeeping. Returns ZF=0 (single-player never
+; "runs"; the ZF=1 → EnemyRan path is link-only).
 ; ===========================================================================
 ReplaceFaintedEnemyMon:
     ; pret :902-904 — refresh the ENEMY bar's colour for the incoming mon at a
@@ -7740,6 +7746,14 @@ TryRunningFromBattle:
     mov [ebp + hEnemySpeed], al
     mov al, [ebp + edx + 1]             ; inc de / ld a,[de]
     mov [ebp + hEnemySpeed + 1], al
+    ; pret core.asm:1561 — restore the clean screen on the WILD path, before the
+    ; odds math. pret has this call in BOTH this routine and its
+    ; BattleMenu_RunWasSelected caller (pret core.asm:2553), so the wild path
+    ; restores twice; that duplication is pret's own behaviour, not a port
+    ; addition. Its ABSENCE here alone was the bug: DoUseNextMonDialogue's
+    ; "NO, run" arm (above) tail-jumps in with no restore of its own, so the
+    ; yes/no box remnants were left on screen.
+    call LoadScreenTilesFromBuffer1
     ; player speed >= enemy speed → guaranteed escape (pret StringCmp + jr nc)
     movzx eax, byte [ebp + esi]
     shl eax, 8

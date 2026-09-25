@@ -33,8 +33,10 @@ produced, and what a reader should expect to find as a result:
   with an empty `disabled_scenarios` list.
 - **Structured annotations replaced free-form ones** — `DEVIATION` / `BUG` /
   `GLITCH` / `STUB` in the machine-parsed `{class=…; pret=…; …}` form.
-- **Lint debt driven down to a single documented `aux_misplaced` finding**
-  (commits `a3804828`, `3fad3249`, 2026-08-02).
+- **Lint debt CLEARED** — `lint_pret_labels` and `--strict-claims` report zero
+  findings tree-wide and the `static_gate` baseline is empty (`{}`), closed
+  2026-08-04; the 2026-08-02 commits (`a3804828`, `3fad3249`) were the steps
+  that took it down to the last `aux_misplaced`.
 
 The freeze is over; feature work on finishing the port resumes.
 
@@ -76,8 +78,9 @@ checksum 2) followed by the raw 32768-byte SRAM image, bank 0 first.
 PC box UI is a faithful pret mirror
 (`dos_port/src/engine/pokemon/bills_pc.asm`) and the tier is golden-gated by the
 `bills_pc_ops` and `box_change_roundtrip` scenarios. Plan archived at
-`docs/plans/sram_pc_storage.md`; its one open flag is the torn-write-guard
-acceptance awaiting maintainer sign-off.
+`docs/plans/sram_pc_storage.md`; its torn-write-guard flag was RESOLVED
+2026-08-02 (verdict: IMPLEMENT the guard — tracked as backlog item 39 in
+`docs/current_plan_backlog.md`).
 
 Acceptance criteria:
 - GB memory model live: 160 KiB flat DPMI allocation (`0x28000`), EBP-relative access working
@@ -152,8 +155,9 @@ archived under `docs/plans/`.
 
 **Status.** The sound HAL landed as `dos_port/src/audio/audio_hal.asm` (a `.asm`,
 not an `.inc`) with the per-device shims beside it: `opl_shim.asm`,
-`tandy_shim.asm`, `spk_shim.asm`, `mpu401.asm`, `sb_pcm.asm` (plus `spk_pcm.asm`
-and the `opl_enh.asm` enhancement layer). The pret audio engine is translated and
+`tandy_shim.asm`, `spk_shim.asm`, `mpu401.asm`, `sb_pcm.asm`, `cms_shim.asm`,
+`covox_shim.asm`, `innova_shim.asm`, `pas_shim.asm`, `cry_synth.asm` (plus
+`spk_pcm.asm` and the `opl_enh.asm` enhancement layer). The pret audio engine is translated and
 live in the build (`engine_1..4.asm`, `low_health_alarm.asm`, `poke_flute.asm`,
 `play_battle_music.asm`, `pikachu_pcm.asm`, `alternate_tempo.asm`,
 `pokedex_rating_sfx.asm`). Per `docs/plans/audio.md`, phases A–E are
@@ -162,7 +166,7 @@ speaker SFX + polish) both completed 2026-07-07**, and Phase B's MIDI/MT-32
 infrastructure is complete with only by-ear tuning outstanding.
 
 Device selection at runtime is via `PKMN.EXE` flags (see `dos_port/boot/entry.asm`
-`parse_cmdline`): `/NOSOUND /MT32 /GM /TANDY /SPK /NOENH`.
+`parse_cmdline`): `/NOSOUND /MT32 /GM /TANDY /INNOVA /COVOX /GB /PAS /SPK /NOENH /LOOP /NODMA`.
 
 | Driver | Notes |
 |--------|-------|
@@ -287,8 +291,8 @@ Acceptance criteria:
       `GLITCH{…}` / `DEVIATION{…}` / `STUB{…}`). **The old free-form
       `; BUG(level):` syntax is dead — do not write it.** Tagging is well under
       way: `dos_port/src` currently carries 52 `BUG{`, 11
-      `GLITCH{`, 735 `DEVIATION{` and 0 `STUB{` annotations (all stubs
-      retired).
+      `GLITCH{`, 743 `DEVIATION{` and 0 `STUB{` annotations (all stubs
+      retired). Counts are a dated measurement — re-grep rather than quote.
 - [x] Bug-fix level selected at build time: `make BUG_FIX_LEVEL=N` gating
       `%if BUG_FIX_LEVEL >= N` blocks (`dos_port/include/gb_macros.inc`)
 - [ ] Startup warning emitted when running with critical glitches enabled on bare

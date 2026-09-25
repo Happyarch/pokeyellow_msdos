@@ -10,7 +10,9 @@
 ;   SramLoadImage  — POKEMON.DSV -> SRAM banks. Called once at boot
 ;                    (boot/entry.asm), before anything reads sPlayerName.
 ;   SramStoreImage — SRAM banks -> POKEMON.DSV. Called at every save-commit
-;                    point (SaveGameData, ClearAllSRAMBanks).
+;                    point (SaveGameData, ClearAllSRAMBanks, and
+;                    TradeCenter_Trade in engine/link/cable_club.asm after a
+;                    link trade's SavePartyAndDexData).
 ;
 ; A corrupt or absent file leaves the banks exactly as they were (zeroed at
 ; boot), which is what pret sees in a fresh cartridge: CheckForPlayerNameInSRAM
