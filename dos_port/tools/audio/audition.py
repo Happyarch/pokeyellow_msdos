@@ -582,9 +582,19 @@ def run_interactive_sfx_audition(
     delay_seconds: float = 2.5,
     seconds: float | None = None,
     out_wav: Path | None = None,
+    no_dma: bool = False,
 ):
     import opl_renderer
     sess = opl_renderer.SfxSession(sfx_query, delay_seconds=delay_seconds)
+    if no_dma:
+        if getattr(sess, "is_soft_apu", False):
+            sess.active_slot = "B"
+            sess.gb_sound = False
+            sess.profile = sess.slot_a_profile
+            sess.retrigger()
+        else:
+            sess.gb_sound = False
+            sess.retrigger()
     rate = sess.engine.samplerate
     wav_file = None
     aplay_proc = None
@@ -1154,6 +1164,12 @@ def main():
     )
     ap.add_argument("--no-enh", action="store_true", help="start with enhancements disabled")
     ap.add_argument("--solo-enh", action="store_true", help="start in solo-enhancements mode")
+    ap.add_argument(
+        "--no-dma", "--no-pcm", "--fm",
+        dest="no_dma",
+        action="store_true",
+        help="disable Sound Blaster DMA PCM playback for SFX; test FM fallback (AdLib)",
+    )
     ap.add_argument("--compare", type=Path, help="alternate YAML file to compare against via [Tab]")
     ap.add_argument("--seconds", type=float, help="stop playback after N seconds (headless/testing)")
     ap.add_argument("--out", type=Path, help="render output to WAV file instead of playing to speakers")
@@ -1199,6 +1215,7 @@ def main():
             delay_seconds=args.delay,
             seconds=args.seconds,
             out_wav=args.out,
+            no_dma=args.no_dma,
         )
     else:
         run_interactive_audition(

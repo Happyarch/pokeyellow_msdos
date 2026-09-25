@@ -53,6 +53,7 @@ extern g_opl_present
 extern g_shim_device              ; src/audio/audio_hal.asm
 extern g_cfg_noenh                ; src/audio/audio_hal.asm — /NOENH
 extern g_midi_music               ; src/audio/mpu401.asm
+extern g_imfc_music               ; src/audio/imfc.asm
 
 OPL_PATCH_SIZE_E equ 11           ; keep in sync with assets/opl_patches.inc
 
@@ -241,6 +242,8 @@ enh_seq_start:
     jne .done                     ; OPL shim not the active device
     cmp byte [g_midi_music], 0
     jnz .done                     ; MIDI stream carries the full arrangement
+    cmp byte [g_imfc_music], 0
+    jnz .done                     ; IMFC stream carries the full arrangement
     movzx eax, byte [esp + 28]    ; original AL (pushad: EAX at ESP+28)
     mov cl, [ebp + wAudioROMBank]
     mov esi, EnhStreamTable_Bank1

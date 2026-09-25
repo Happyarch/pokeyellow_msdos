@@ -79,12 +79,19 @@ extern sb_dma_poll_completion     ; src/audio/sb_pcm.asm
 extern mt32_upload                ; src/audio/mpu401.asm
 extern midi_seq_tick              ; src/audio/mpu401.asm
 extern midi_seq_stop              ; src/audio/mpu401.asm
+extern imfc_detect                ; src/audio/imfc.asm
+extern imfc_upload                ; src/audio/imfc.asm
+extern imfc_seq_tick              ; src/audio/imfc.asm
+extern imfc_seq_stop              ; src/audio/imfc.asm
+extern g_imfc_music               ; src/audio/imfc.asm
+extern g_cfg_imfc                 ; src/audio/imfc.asm
 global g_audio_devices
 global g_audio_devices2
 global g_audio_forced
 global g_tick_shim
 global g_tick_enh
 global g_tick_midi
+global g_tick_imfc
 extern g_midi_music               ; src/audio/mpu401.asm — 1 once mpu_detect IDs a UART
 extern g_cfg_midi                 ; src/audio/mpu401.asm — set by /MT32 or /GM
 extern g_cfg_audio_device         ; src/input/input_cfg.asm — POKEMON.CFG [audio] device request byte
@@ -109,6 +116,7 @@ DEV_DISNEY equ 6
 DEV_SB     equ 7
 DEV_CMS    equ 8
 DEV_PAS    equ 10
+DEV_IMFC   equ 11
 ; Role bits within a nibble (P S M E, high to low bit)
 ROLE_EN    equ 1
 ROLE_MUSIC equ 2
@@ -116,7 +124,8 @@ ROLE_SFX   equ 4
 ROLE_PCM   equ 8
 ; g_audio_forced bit positions (bit N = /FLAG demanded device N; bits 8-31
 ; held nothing before the CMS change — the tree only ever set bits 0, 2, 3,
-; 4, 5 — so bit 8 was free for FORCE_CMS, and bit 10 is free for FORCE_PAS)
+; 4, 5 — so bit 8 was free for FORCE_CMS, and bit 10 is free for FORCE_PAS,
+; bit 11 is free for FORCE_IMFC)
 FORCE_MIDI   equ (1 << DEV_MIDI)
 FORCE_TANDY  equ (1 << DEV_TANDY)
 FORCE_SPK    equ (1 << DEV_SPK)
@@ -124,6 +133,7 @@ FORCE_INNOVA equ (1 << DEV_INNOVA)
 FORCE_COVOX  equ (1 << DEV_COVOX)
 FORCE_CMS    equ (1 << DEV_CMS)
 FORCE_PAS    equ (1 << DEV_PAS)
+FORCE_IMFC   equ (1 << DEV_IMFC)
 
 audio_tick:
     cmp byte [g_audio_engine_online], 0
@@ -132,13 +142,14 @@ audio_tick:
     call FadeOutAudio
     call Music_DoLowHealthAlarm
     call Audio1_UpdateMusic
-    ; Solved dispatch: three init-resolved passes, zero per-tick compares.
-    ; Non-MIDI the winner voices music+SFX in its one pass; under MIDI the
-    ; winner's pass self-mutes to SFX (g_midi_music gate inside each shim)
-    ; and the MIDI slot carries the music. Unused slots are tick_noop.
+    ; Solved dispatch: init-resolved passes, zero per-tick compares.
+    ; Non-MIDI/IMFC the winner voices music+SFX in its one pass; under MIDI/IMFC the
+    ; winner's pass self-mutes to SFX (g_midi_music / g_imfc_music gate inside each shim)
+    ; and the MIDI/IMFC slot carries the music. Unused slots are tick_noop.
     call [g_tick_shim]
     call [g_tick_enh]
     call [g_tick_midi]
+    call [g_tick_imfc]
 .off:
     ret
 
@@ -252,7 +263,7 @@ audio_init:
 .noEnh:
     mov dword [g_tick_midi], tick_noop
     cmp byte [g_cfg_midi], 0      ; /MT32 or /GM: probe the MPU-401 too
-    jz .buildWord
+    jz .checkImfc
     call mpu_detect               ; clears g_cfg_midi if nothing answers
     call mt32_upload              ; setup SysEx (no-op unless /MT32 + found)
     cmp byte [g_midi_music], 0
@@ -261,9 +272,27 @@ audio_init:
                                   ; hardware; explicit for the stub combo where
                                   ; mpu_detect is a ret-only no-op
     and dword [g_audio_forced], ~FORCE_MIDI
-    jmp .buildWord
+    jmp .checkImfc
 .midiLive:
     mov dword [g_tick_midi], midi_seq_tick
+
+.checkImfc:
+    mov dword [g_tick_imfc], tick_noop
+    cmp byte [g_cfg_imfc], 0      ; /IMFC: probe the IMFC card
+    jnz .probeImfc
+    test dword [g_audio_forced], FORCE_IMFC
+    jz .buildWord
+.probeImfc:
+    call imfc_detect              ; clears g_cfg_imfc if absent
+    call imfc_upload              ; setup SysEx
+    cmp byte [g_imfc_music], 0
+    jnz .imfcLive
+    mov byte [g_cfg_imfc], 0
+    and dword [g_audio_forced], ~FORCE_IMFC
+    jmp .buildWord
+.imfcLive:
+    mov dword [g_tick_imfc], imfc_seq_tick
+
 .buildWord:
     ; assemble the solved role word from the winner (EBX) and the probes
     xor eax, eax
@@ -301,9 +330,10 @@ audio_init:
 .noSbBit:
     mov [g_audio_devices], eax
     ; word 2: the CMS nibble (nibble 0 = music+SFX+en, never PCM — the SAA
-    ; has no DAC, so the speaker keeps its PCM field under a GB winner) and
+    ; has no DAC, so the speaker keeps its PCM field under a GB winner),
     ; the PAS nibble (nibble 2 = music+SFX+en, never PCM — the G1 tick has no
-    ; PCM path, so the speaker keeps its PCM field under a PAS winner too)
+    ; PCM path, so the speaker keeps its PCM field under a PAS winner too), and
+    ; the IMFC nibble (nibble 3 = music+en)
     mov dword [g_audio_devices2], 0
     cmp ebx, DEV_CMS
     jne .noCmsBit
@@ -313,6 +343,10 @@ audio_init:
     jne .noPasBit
     or dword [g_audio_devices2], (ROLE_MUSIC | ROLE_SFX | ROLE_EN) << 8
 .noPasBit:
+    cmp byte [g_imfc_music], 0
+    jz .noImfcBit
+    or dword [g_audio_devices2], (ROLE_MUSIC | ROLE_EN) << 12
+.noImfcBit:
     mov [g_shim_device], bl       ; legacy byte follows the solved winner
     mov byte [g_audio_engine_online], 1
     call StopAllSounds
@@ -323,6 +357,7 @@ audio_shutdown:
     mov byte [g_audio_engine_online], 0
     call sb_dma_shutdown          ; free DMA buffer & restore IRQ
     call midi_seq_stop            ; all-notes-off on the MIDI module
+    call imfc_seq_stop            ; all-notes-off on the IMFC card
     call enh_seq_stop             ; enhancement voices off before chip reset
     call opl_shutdown             ; leave the FM chip silent
     call tandy_shutdown           ; leave the PSG silent (no-op if inactive)
@@ -363,6 +398,7 @@ g_audio_forced:  dd 0             ; /FLAG demands, bit N = device N (bits 0-10);
 g_tick_shim:    dd tick_noop     ; the single shim pass (winner voices music+SFX)
 g_tick_enh:     dd tick_noop     ; tier-1 enhancement (OPL winner only)
 g_tick_midi:    dd tick_noop     ; MIDI music stream (MIDI nibble music only)
+g_tick_imfc:    dd tick_noop     ; IMFC music stream
 g_sb_base:      dw 0              ; BLASTER A field (e.g. 0x220); 0 = absent
 g_sb_irq:       db 0              ; BLASTER I field
 g_sb_dma:       db 0              ; BLASTER D field

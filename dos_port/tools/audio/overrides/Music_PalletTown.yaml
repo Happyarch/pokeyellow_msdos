@@ -7,14 +7,20 @@ channels:
   1:
     mt32_program: "Flute 1"     # gentle lyrical melody, home register
     gm_program: "Flute"
+    imfc_program: "Flute"
     volume: 100
+    imfc_volume: 100
     pan: 54
   2:
     mt32_program: "Str Sect 3"  # soft section shimmer up high (proved out
     gm_program: "String Ensemble 1"  # in this register on Lavender's ch2)
+    imfc_program: "Strings"
     volume: 92
+    imfc_volume: 92
     pan: 74
   3:
     mt32_program: "Harp 1"      # plucked warmth for the treble inner line
     gm_program: "Orchestral Harp"
+    imfc_program: "Harp"
     volume: 104                 # was 110 (default) — under the melody
+    imfc_volume: 104

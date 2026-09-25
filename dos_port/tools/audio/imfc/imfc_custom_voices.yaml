@@ -1,0 +1,353 @@
+# tools/audio/imfc/imfc_custom_voices.yaml — IMFC system configuration and custom voices.
+# Compiled by gen_imfc_custom_patches.py into assets/imfc_sysex.inc, uploaded at
+# init when /IMFC is active.
+#
+# Hardware / Architecture:
+#   Yamaha FB-01 / IBM Music Feature Card (YM2164 4-operator FM sound processor).
+#   - 8 polyphonic channels / instruments.
+#   - 240 ROM presets (ROM 1..5 in Banks 2..6, 48 voices each).
+#   - 96 User RAM voice slots (Bank 0: voices 1..48; Bank 1: voices 49..96).
+#   - Custom voices upload to RAM Bank 0 (Bank A) at boot in list order.
+#
+# Custom voice parameters:
+#   Global:
+#     name: 7-character ASCII voice name.
+#     algorithm: 0..7 (FB-01 / YM2164 algorithm routing).
+#     feedback: 0..7 (Self-feedback on Operator 4).
+#     lfo: speed (0..255), amd (0..127), pmd (0..127), waveform (0=saw, 1=square, 2=tri, 3=s&h), sync (0/1).
+#     transpose: -128..127 (semitone offset).
+#     pms: 0..7 (Pitch modulation sensitivity).
+#     ams: 0..3 (Amplitude modulation sensitivity).
+#   Operators (OP1..OP4):
+#     mult: frequency multiplier 0..15 (0=0.5x, 1=1x, 2=2x, ... 15=15x).
+#     tl: total level / attenuation 0..127 (0 = maximum volume / loudest, 127 = silence).
+#     ar: attack rate 0..31 (31 = fastest / instantaneous).
+#     d1r: decay 1 rate 0..31.
+#     d2r: decay 2 rate 0..31.
+#     sl: sustain level 0..15 (15 = loudest, 0 = lowest).
+#     rr: release rate 0..15 (15 = fastest).
+#     dt: detune 0..7.
+#     kls: keyboard level scaling 0..15.
+#     krs: keyboard rate scaling depth 0..3.
+
+system:
+  master_volume: 127
+  memory_protect: false
+
+# Default 8-instrument assignment (mapped 1:1 to MIDI channels 1..8)
+instruments:
+  - inst: 1
+    midi_channel: 1
+    notes: 1
+    bank: 2
+    program: 1      # Brass
+    level: 127
+    pan: 64         # Center
+  - inst: 2
+    midi_channel: 2
+    notes: 1
+    bank: 2
+    program: 1      # Brass
+    level: 127
+    pan: 64
+  - inst: 3
+    midi_channel: 3
+    notes: 1
+    bank: 2
+    program: 10     # EBass
+    level: 127
+    pan: 64
+  - inst: 4
+    midi_channel: 4
+    notes: 1
+    bank: 2
+    program: 5      # Strings
+    level: 127
+    pan: 64
+  - inst: 5
+    midi_channel: 5
+    notes: 1
+    bank: 2
+    program: 5      # Strings
+    level: 127
+    pan: 64
+  - inst: 6
+    midi_channel: 6
+    notes: 1
+    bank: 2
+    program: 20     # Glocken
+    level: 127
+    pan: 64
+  - inst: 7
+    midi_channel: 7
+    notes: 1
+    bank: 2
+    program: 25     # Clav
+    level: 127
+    pan: 64
+  - inst: 8
+    midi_channel: 8
+    notes: 1
+    bank: 2
+    program: 43     # SnareDr (Drums default)
+    level: 127
+    pan: 64
+
+custom_voices:
+  # 1. "JigglyVox" — Vocal formant timbre modeled on funny vox / vowel acoustics.
+  # Dual parallel 2-op stacks (Algorithm 3) generating F1 (~700 Hz) and F2 (~1200 Hz)
+  # formant sidebands with soft swell and expressive triangle LFO vibrato.
+  - name: "JigglyV"
+    full_name: "JigglyVox"
+    bank: 0
+    program: 1
+    algorithm: 3
+    feedback: 5
+    lfo:
+      speed: 62
+      amd: 10
+      pmd: 21
+      waveform: 2   # triangle
+      sync: 1
+    transpose: 0
+    pms: 3
+    ams: 1
+    operators:
+      # OP1: Carrier 1 (Formant F1)
+      - mult: 1
+        tl: 15
+        ar: 24
+        d1r: 6
+        d2r: 2
+        sl: 14
+        rr: 9
+        dt: 3
+        kls: 4
+        krs: 1
+      # OP2: Modulator 1
+      - mult: 1
+        tl: 32
+        ar: 26
+        d1r: 8
+        d2r: 4
+        sl: 12
+        rr: 8
+        dt: 3
+        kls: 6
+        krs: 1
+      # OP3: Carrier 2 (Formant F2)
+      - mult: 2
+        tl: 25
+        ar: 24
+        d1r: 6
+        d2r: 2
+        sl: 13
+        rr: 9
+        dt: 3
+        kls: 4
+        krs: 1
+      # OP4: Modulator 2 (Vocal buzz feedback)
+      - mult: 3
+        tl: 38
+        ar: 25
+        d1r: 10
+        d2r: 4
+        sl: 11
+        rr: 8
+        dt: 4
+        kls: 8
+        krs: 1
+
+  # 2. "Sawtooth" — Neutral concert-pitch SAW reference for chip-lead doubling.
+  # Dual parallel stacks in detuned unison (Algorithm 3) with OP4 feedback=7
+  # producing an authentic 1/n harmonic sawtooth ramp with gentle chorus bloom.
+  - name: "Sawtoot"
+    full_name: "Sawtooth"
+    bank: 0
+    program: 2
+    algorithm: 3
+    feedback: 7
+    lfo:
+      speed: 60
+      amd: 0
+      pmd: 9
+      waveform: 2   # triangle
+      sync: 1
+    transpose: 0
+    pms: 2
+    ams: 0
+    operators:
+      # OP1: Carrier stack A
+      - mult: 1
+        tl: 10
+        ar: 31
+        d1r: 0
+        d2r: 0
+        sl: 15
+        rr: 12
+        dt: 3
+        kls: 0
+        krs: 0
+      # OP2: Modulator stack A (Saw ramp generator)
+      - mult: 1
+        tl: 28
+        ar: 31
+        d1r: 0
+        d2r: 0
+        sl: 15
+        rr: 12
+        dt: 3
+        kls: 0
+        krs: 0
+      # OP3: Carrier stack B (Detuned twin)
+      - mult: 1
+        tl: 10
+        ar: 31
+        d1r: 0
+        d2r: 0
+        sl: 15
+        rr: 12
+        dt: 4
+        kls: 0
+        krs: 0
+      # OP4: Modulator stack B (Detuned saw ramp with FB=7)
+      - mult: 1
+        tl: 28
+        ar: 31
+        d1r: 0
+        d2r: 0
+        sl: 15
+        rr: 12
+        dt: 4
+        kls: 0
+        krs: 0
+
+  # 3. "Theremin" — Authentic 1929 RCA heterodyne 25% pulse wave model.
+  # Algorithm 1 (4-op cascade). Carrier:modulator 1:2 ratio creates the strong
+  # second harmonic of a 25% pulse wave. Modulator keyboard level scaling mimics
+  # the 1.8 kHz RCA 106 speaker formant filter cutoff. Clara Rockmore vibrato.
+  - name: "Theremn"
+    full_name: "Theremin"
+    bank: 0
+    program: 3
+    algorithm: 1
+    feedback: 2
+    lfo:
+      speed: 60
+      amd: 5
+      pmd: 16
+      waveform: 2   # triangle
+      sync: 0
+    transpose: 0
+    pms: 4
+    ams: 1
+    operators:
+      # OP1: Carrier
+      - mult: 1
+        tl: 12
+        ar: 20
+        d1r: 2
+        d2r: 0
+        sl: 15
+        rr: 8
+        dt: 3
+        kls: 2
+        krs: 0
+      # OP2: Main modulator (25% pulse 2nd harmonic)
+      - mult: 2
+        tl: 30
+        ar: 22
+        d1r: 4
+        d2r: 1
+        sl: 14
+        rr: 8
+        dt: 3
+        kls: 8
+        krs: 1
+      # OP3: Warmth / heterodyne sub-coloration
+      - mult: 1
+        tl: 48
+        ar: 22
+        d1r: 4
+        d2r: 2
+        sl: 12
+        rr: 8
+        dt: 3
+        kls: 10
+        krs: 1
+      # OP4: Top modulator
+      - mult: 1
+        tl: 56
+        ar: 24
+        d1r: 6
+        d2r: 2
+        sl: 10
+        rr: 8
+        dt: 3
+        kls: 10
+        krs: 1
+
+  # 4. "NightWind" — Aerodynamic wind turbulence & Helmholtz cavity resonator.
+  # Algorithm 4 with inharmonic operator ratios and Feedback=7 producing
+  # turbulent noise modulation. OP1 tuned to ~220 Hz cavity resonance.
+  # Keyfollow=0 for pitch independence; slow undulating gust LFO.
+  - name: "NgtWind"
+    full_name: "NightWind"
+    bank: 0
+    program: 4
+    algorithm: 4
+    feedback: 7
+    lfo:
+      speed: 18
+      amd: 25
+      pmd: 15
+      waveform: 2   # triangle
+      sync: 0
+    transpose: 0
+    pms: 5
+    ams: 2
+    operators:
+      # OP1: Helmholtz resonator cavity
+      - mult: 1
+        tl: 15
+        ar: 12
+        d1r: 3
+        d2r: 1
+        sl: 12
+        rr: 8
+        dt: 3
+        kls: 0
+        krs: 0
+      # OP2: Inharmonic turbulence operator A
+      - mult: 3
+        tl: 34
+        ar: 14
+        d1r: 4
+        d2r: 2
+        sl: 11
+        rr: 8
+        dt: 5
+        kls: 0
+        krs: 0
+      # OP3: Inharmonic turbulence operator B
+      - mult: 5
+        tl: 40
+        ar: 14
+        d1r: 4
+        d2r: 2
+        sl: 10
+        rr: 8
+        dt: 2
+        kls: 0
+        krs: 0
+      # OP4: Wideband noise generator (Feedback=7)
+      - mult: 7
+        tl: 38
+        ar: 16
+        d1r: 6
+        d2r: 3
+        sl: 9
+        rr: 8
+        dt: 6
+        kls: 0
+        krs: 0

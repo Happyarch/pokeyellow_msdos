@@ -578,6 +578,7 @@ AUDIO_SRCS := \
     src/audio/cms_shim.asm \
     src/audio/pas_shim.asm \
     src/audio/mpu401.asm \
+    src/audio/imfc.asm \
     src/audio/sb_pcm.asm \
     src/audio/spk_pcm.asm \
     src/audio/pikachu_pcm.asm \
@@ -4158,6 +4159,8 @@ src/audio/opl_enh.o: assets/enh_streams.inc assets/audio_constants.inc
 src/audio/tandy_shim.o: assets/tandy_tables.inc
 src/audio/mpu401.o: assets/music_streams.inc assets/mt32_sysex.inc \
                     assets/audio_constants.inc
+src/audio/imfc.o: assets/imfc_streams.inc assets/imfc_sysex.inc \
+                  assets/audio_constants.inc
 src/audio/pikachu_pcm.o: assets/pika_pcm.inc assets/pika_pcm.bin
 src/audio/covox_shim.o: assets/pika_pcm.inc
 
@@ -4168,10 +4171,16 @@ assets/pika_pcm.inc assets/pika_pcm.bin &: tools/audio/gen_pika_pcm.py \
 	python3 tools/audio/gen_pika_pcm.py
 
 # MT-32 setup SysEx (LCD greeting, reverb/partial reserves, custom timbres)
-# from the hand-editable tools/audio/mt32/timbres.yaml.
+# from the hand-editable tools/audio/mt32/mt-32_custom_timbres.yaml.
 assets/mt32_sysex.inc: tools/audio/gen_mt32_patches.py \
-                       tools/audio/mt32/timbres.yaml
+                       tools/audio/mt32/mt-32_custom_timbres.yaml
 	python3 tools/audio/gen_mt32_patches.py
+
+# IMFC setup SysEx (Memory Protect OFF, Master Vol, Instrument configurations, custom voices)
+# from the hand-editable tools/audio/imfc/imfc_custom_voices.yaml.
+assets/imfc_sysex.inc: tools/audio/gen_imfc_custom_patches.py \
+                       tools/audio/imfc/imfc_custom_voices.yaml
+	python3 tools/audio/gen_imfc_custom_patches.py
 assets/opl_patches.inc: tools/audio/gen_opl_patches.py
 	python3 tools/audio/gen_opl_patches.py
 assets/sfx_data.inc: tools/audio/gen_sfx_data.py $(wildcard tools/audio/sfx/*.yaml) assets/audio_constants.inc
@@ -4518,6 +4527,21 @@ assets/midi/.stamp-gm: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
 
 assets/music_streams.inc: assets/midi/.stamp-mt32 tools/audio/midi_to_stream.py
 	python3 tools/audio/midi_to_stream.py --target mt32
+
+# IMFC music streams (Phase B): engine simulation -> .mid per song -> flat 60 Hz
+# frame-delta streams for the IMFC driver.
+assets/midi/.stamp-imfc: tools/audio/gb_to_midi.py tools/audio/pret_audio.py \
+		tools/audio/gen_audio_data.py ../audio.asm \
+		../constants/music_constants.asm \
+		tools/audio/yaml_lint.py tools/audio/music_analysis.py \
+		tools/audio/imfc_presets.py tools/audio/imfc/imfc_drums.map \
+		$(wildcard tools/audio/overrides/*.yaml) \
+		$(wildcard tools/audio/enhancements/*.yaml)
+	python3 tools/audio/gb_to_midi.py --target imfc
+	@touch $@
+
+assets/imfc_streams.inc: assets/midi/.stamp-imfc tools/audio/midi_to_stream.py
+	python3 tools/audio/midi_to_stream.py --target imfc
 
 # Tier-1 OPL enhancement streams from the hand/LLM-authored (never
 # generated) enhancements/*.yaml, lint-gated per song.
@@ -5179,6 +5203,7 @@ assets: assets/pret_ram.inc assets/scenario_registry.inc assets/gb_charmap.txt \
         assets/bg_map_attributes.inc \
         assets/audio_rom.inc assets/audio_constants.inc assets/cry_data.inc \
         assets/opl_patches.inc assets/sfx_data.inc assets/music_streams.inc assets/mt32_sysex.inc \
+        assets/imfc_streams.inc assets/imfc_sysex.inc assets/midi/.stamp-imfc \
         assets/midi/.stamp-gb \
         assets/midi/.stamp-gm \
         assets/pika_pcm.inc assets/tandy_tables.inc assets/enh_streams.inc \

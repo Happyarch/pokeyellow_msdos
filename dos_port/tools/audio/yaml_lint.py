@@ -36,11 +36,15 @@ from gb_to_midi import (build_addr_map, simulate_song, songs_from_headers,  # no
 import music_analysis                                        # noqa: E402
 from gen_opl_patches import PATCHES                          # noqa: E402
 from mt32_presets import resolve_program                     # noqa: E402
+from imfc_presets import resolve_imfc_voice                  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 ENHANCE_DIR = HERE / "enhancements"
 ANALYSIS_DIR = HERE / "analysis"
-TIMBRES_YAML = HERE / "mt32" / "timbres.yaml"
+_MT32_YAML = HERE / "mt32" / "mt-32_custom_timbres.yaml"
+TIMBRES_YAML = _MT32_YAML if _MT32_YAML.exists() else (HERE / "mt32" / "timbres.yaml")
+_IMFC_YAML = HERE / "imfc" / "imfc_custom_voices.yaml"
+IMFC_VOICES_YAML = _IMFC_YAML if _IMFC_YAML.exists() else (HERE / "imfc" / "voices.yaml")
 
 SCHEMA_VERSION = 1
 PANS = {"left", "center", "right"}
@@ -106,6 +110,7 @@ class ResolvedSwitch:
     mt32: int | str | None         # raw switch values (resolution is per
     gm: int | str | None           # target, at merge time, 1-based ints here)
     prog: int | str | None = None  # entry-level `program` fallback (both)
+    imfc: int | str | dict | None = None
 
 
 @dataclass
@@ -124,6 +129,8 @@ class ResolvedChannel:
     opl_volume: int = 96
     mt32_volume: int = 96
     gm_volume: int = 96
+    imfc_volume: int = 96
+    imfc_voice: Any = None
 
 
 @dataclass
@@ -321,7 +328,7 @@ def first_body_notes(resolved: list[ResolvedChannel],
 # WARNs) live in _check_switches. Callers fold + pre-resolve per-target
 # programs between the two.
 # ---------------------------------------------------------------------------
-SWITCH_KEYS = {"m", "b", "mt32_program", "gm_program", "program"}
+SWITCH_KEYS = {"m", "b", "mt32_program", "gm_program", "program", "imfc_program"}
 
 
 def _norm_name(name: str) -> str:
@@ -415,6 +422,13 @@ def _resolve_switch_positions(raw, bm: BeatMap, ctx: str, rep: Report, *,
                         else:
                             rep.err(str(e))
                         ok = False
+        if entry.get("imfc_program") is not None:
+            imfc_val = entry["imfc_program"]
+            try:
+                resolve_imfc_voice(imfc_val, context=where)
+            except Exception as e:
+                rep.err(f"{where}: invalid imfc_program: {e}")
+                ok = False
         if not ok:
             continue
         f = int(round(bm.frame_at(bm.index_of(m, b))))
@@ -645,18 +659,19 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         opl_vol = ch.get("opl_volume")
         mt32_vol = ch.get("mt32_volume")
         gm_vol = ch.get("gm_volume")
+        imfc_vol = ch.get("imfc_volume")
 
         # Mutual exclusivity: cannot mix legacy 'volume' with device-scoped keys
-        has_device_vol = (opl_vol is not None) or (mt32_vol is not None) or (gm_vol is not None)
+        has_device_vol = (opl_vol is not None) or (mt32_vol is not None) or (gm_vol is not None) or (imfc_vol is not None)
         if vol is not None and has_device_vol:
-            rep.err(f"{ctx}: cannot mix legacy 'volume' with device-scoped volume keys (opl_volume, mt32_volume, gm_volume)")
+            rep.err(f"{ctx}: cannot mix legacy 'volume' with device-scoped volume keys (opl_volume, mt32_volume, gm_volume, imfc_volume)")
         elif vol is not None:
-            rep.warn(f"{ctx}: 'volume' is deprecated in favor of device-scoped volume keys (opl_volume, mt32_volume, gm_volume)")
+            rep.warn(f"{ctx}: 'volume' is deprecated in favor of device-scoped volume keys (opl_volume, mt32_volume, gm_volume, imfc_volume)")
 
         if opl_vol is not None and tier != 1:
             rep.err(f"{ctx}: opl_volume is tier-1-only and meaningless on tier {tier}")
 
-        for vname, vval in (("volume", vol), ("opl_volume", opl_vol), ("mt32_volume", mt32_vol), ("gm_volume", gm_vol)):
+        for vname, vval in (("volume", vol), ("opl_volume", opl_vol), ("mt32_volume", mt32_vol), ("gm_volume", gm_vol), ("imfc_volume", imfc_vol)):
             if vval is not None:
                 if not isinstance(vval, int) or isinstance(vval, bool) or not 0 <= vval <= 127:
                     rep.err(f"{ctx}: {vname} must be an integer 0-127 (got {vval!r})")
@@ -665,6 +680,14 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
         eff_opl = opl_vol if opl_vol is not None else effective_vol
         eff_mt32 = mt32_vol if mt32_vol is not None else effective_vol
         eff_gm = gm_vol if gm_vol is not None else effective_vol
+        eff_imfc = imfc_vol if imfc_vol is not None else effective_vol
+
+        imfc_v = ch.get("imfc_voice")
+        if imfc_v is not None:
+            try:
+                resolve_imfc_voice(imfc_v, context=ctx)
+            except Exception as e:
+                rep.err(f"{ctx}: invalid imfc_voice: {e}")
         velocity = ch.get("velocity", 96)
         transpose = ch.get("transpose", 0)
         if not isinstance(transpose, int):
@@ -846,7 +869,7 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
             if not is_rhythm:
                 stored_switches = [ResolvedSwitch(
                     f, entry.get("mt32_program"), entry.get("gm_program"),
-                    entry.get("program")) for f, entry in sw_resolved]
+                    entry.get("program"), entry.get("imfc_program")) for f, entry in sw_resolved]
 
         resolved.append(ResolvedChannel(name, tier, opl if tier == 1 else
                                         None, mt32, gm, pan, effective_vol,
@@ -854,7 +877,9 @@ def lint(path: Path) -> tuple[Report, list[ResolvedChannel], dict]:
                                         stored_switches,
                                         opl_volume=eff_opl,
                                         mt32_volume=eff_mt32,
-                                        gm_volume=eff_gm))
+                                        gm_volume=eff_gm,
+                                        imfc_volume=eff_imfc,
+                                        imfc_voice=imfc_v))
 
     # base song (for §6 polyphony and §7 unison doubling)
     amap = build_addr_map(rom)
@@ -945,9 +970,13 @@ def lint_overrides(path: Path) -> tuple[Report, dict]:
     if label not in songs:
         rep.err(f"unknown song label {label!r}")
         return rep, {}
-    unknown = set(doc) - {"channels", "drums"}
+    unknown = set(doc) - {"channels", "drums", "schema", "song", "imfc_overflow"}
     if unknown:
         rep.err(f"unknown top-level keys {sorted(unknown)}")
+    if "imfc_overflow" in doc:
+        iof = doc["imfc_overflow"]
+        if iof != "drop_rhythm" and not (isinstance(iof, str) and iof.startswith("drop:")):
+            rep.err(f"imfc_overflow must be 'drop_rhythm' or 'drop:<channel>' (got {iof!r})")
     chs = doc.get("channels", {})
     if chs is None:
         chs = {}
@@ -971,6 +1000,17 @@ def lint_overrides(path: Path) -> tuple[Report, dict]:
             rep.err("channels.4: the noise channel routes to the MIDI drum "
                     "part, which carries no programs — switches need "
                     "channels 1-3")
+        if isinstance(chs[key], dict):
+            imfc_p = chs[key].get("imfc_program", chs[key].get("imfc_voice"))
+            if imfc_p is not None:
+                try:
+                    resolve_imfc_voice(imfc_p, context=f"channels.{key}")
+                except Exception as e:
+                    rep.err(f"channels.{key}: invalid imfc_program/imfc_voice: {e}")
+            imfc_v = chs[key].get("imfc_volume")
+            if imfc_v is not None:
+                if not isinstance(imfc_v, int) or isinstance(imfc_v, bool) or not 0 <= imfc_v <= 127:
+                    rep.err(f"channels.{key}: imfc_volume must be an integer 0-127 (got {imfc_v!r})")
 
     analysis = load_analysis(label)
     frames = analysis["frames"]

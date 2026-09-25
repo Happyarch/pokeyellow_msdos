@@ -57,6 +57,7 @@ extern audio_shutdown    ; src/audio/audio_hal.asm
 extern SramLoadImage     ; src/save/dsv_io.asm — POKEMON.DSV -> SRAM banks at boot
 extern g_cfg_nosound     ; src/audio/audio_hal.asm — set by /NOSOUND
 extern g_cfg_midi        ; src/audio/mpu401.asm — /MT32 = 1, /GM = 2
+extern g_cfg_imfc        ; src/audio/imfc.asm — set by /IMFC
 extern g_cfg_shim        ; src/audio/audio_hal.asm — /TANDY = 2, /SPK = 3, /INNOVA = 4
 extern g_audio_forced    ; src/audio/audio_hal.asm — /FLAG demands, bit N = device N
 extern g_cfg_noenh       ; src/audio/audio_hal.asm — set by /NOENH
@@ -105,6 +106,7 @@ arg_covox:    db '/COVOX',   0
 arg_spk:      db '/SPK',     0
 arg_gb:       db '/GB',      0
 arg_pas:      db '/PAS',     0
+arg_imfc:     db '/IMFC',    0
 arg_noenh:    db '/NOENH',   0
 arg_loop:     db '/LOOP',    0
 arg_nodma:    db '/NODMA',   0
@@ -411,6 +413,13 @@ parse_cmdline:
     jnz .no_pas
     or dword [g_audio_forced], 1 << 10   ; FORCE_PAS (DEV_PAS = 10)
 .no_pas:
+
+    mov edi, arg_imfc
+    call find_token
+    jnz .no_imfc
+    mov byte [g_cfg_imfc], 1
+    or dword [g_audio_forced], 1 << 11   ; FORCE_IMFC (DEV_IMFC = 11)
+.no_imfc:
 
     cmp byte [g_cfg_shim], 0
     jnz .no_spk

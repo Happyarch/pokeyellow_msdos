@@ -19,6 +19,7 @@
 
 # rgbds extras
 *.map
+!dos_port/tools/audio/imfc/*.map
 *.sym
 
 # tool binaries (pret)

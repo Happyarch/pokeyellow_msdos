@@ -93,6 +93,7 @@ class TestVolumeCleaving(unittest.TestCase):
         self.assertEqual(rc.opl_volume, 80)
         self.assertEqual(rc.mt32_volume, 80)
         self.assertEqual(rc.gm_volume, 80)
+        self.assertEqual(rc.imfc_volume, 80)
 
     # -----------------------------------------------------------------------
     # 2. Mutual exclusivity
@@ -124,9 +125,18 @@ class TestVolumeCleaving(unittest.TestCase):
         mix_errs = [e for e in rep.errors if "cannot mix legacy 'volume'" in e]
         self.assertTrue(len(mix_errs) >= 1)
 
+    def test_mutual_exclusivity_volume_and_imfc_volume(self):
+        """Mixing `volume` and `imfc_volume` produces a hard error."""
+        ch = self._ch(volume=80, imfc_volume=65)
+        p = self._enh_path([ch])
+        rep, _, _ = lint(p)
+
+        mix_errs = [e for e in rep.errors if "cannot mix legacy 'volume'" in e]
+        self.assertTrue(len(mix_errs) >= 1)
+
     def test_mutual_exclusivity_all_volume_keys_mixed(self):
         """Mixing `volume` with all device-scoped keys produces a hard error."""
-        ch = self._ch(volume=80, opl_volume=70, mt32_volume=85, gm_volume=90)
+        ch = self._ch(volume=80, opl_volume=70, mt32_volume=85, gm_volume=90, imfc_volume=65)
         p = self._enh_path([ch])
         rep, _, _ = lint(p)
 
@@ -161,7 +171,7 @@ class TestVolumeCleaving(unittest.TestCase):
     # -----------------------------------------------------------------------
     def test_valid_device_scoped_volumes_tier1(self):
         """A channel with valid device-scoped volumes produces 0 errors and 0 deprecation warnings."""
-        ch = self._ch(tier=1, opl_volume=75, mt32_volume=85, gm_volume=95)
+        ch = self._ch(tier=1, opl_volume=75, mt32_volume=85, gm_volume=95, imfc_volume=65)
         p = self._enh_path([ch])
         rep, resolved, _ = lint(p)
 
@@ -174,11 +184,12 @@ class TestVolumeCleaving(unittest.TestCase):
         self.assertEqual(rc.opl_volume, 75)
         self.assertEqual(rc.mt32_volume, 85)
         self.assertEqual(rc.gm_volume, 95)
+        self.assertEqual(rc.imfc_volume, 65)
         self.assertEqual(rc.volume, 96)  # Default effective_vol when unstated
 
     def test_valid_device_scoped_volumes_tier2(self):
-        """A tier-2 channel with mt32_volume and gm_volume (no opl_volume) passes cleanly."""
-        ch = self._ch(tier=2, mt32_volume=85, gm_volume=95)
+        """A tier-2 channel with mt32_volume, gm_volume, and imfc_volume (no opl_volume) passes cleanly."""
+        ch = self._ch(tier=2, mt32_volume=85, gm_volume=95, imfc_volume=65)
         p = self._enh_path([ch])
         rep, resolved, _ = lint(p)
 
@@ -190,6 +201,7 @@ class TestVolumeCleaving(unittest.TestCase):
         rc = resolved[0]
         self.assertEqual(rc.mt32_volume, 85)
         self.assertEqual(rc.gm_volume, 95)
+        self.assertEqual(rc.imfc_volume, 65)
         self.assertEqual(rc.opl_volume, 96)
 
     def test_device_volume_fallback_defaults(self):
@@ -204,13 +216,14 @@ class TestVolumeCleaving(unittest.TestCase):
         self.assertEqual(rc.opl_volume, 64)
         self.assertEqual(rc.mt32_volume, 96)
         self.assertEqual(rc.gm_volume, 96)
+        self.assertEqual(rc.imfc_volume, 96)
 
     # -----------------------------------------------------------------------
     # 5. Volume bounds and type validation
     # -----------------------------------------------------------------------
     def test_volume_bounds_and_type_validation(self):
         """Volume values must be integers between 0 and 127; booleans/strings/out-of-bounds fail."""
-        for key in ("volume", "opl_volume", "mt32_volume", "gm_volume"):
+        for key in ("volume", "opl_volume", "mt32_volume", "gm_volume", "imfc_volume"):
             for bad_val in (-1, 128, "80", True, False):
                 ch = self._ch(**{key: bad_val})
                 p = self._enh_path([ch])

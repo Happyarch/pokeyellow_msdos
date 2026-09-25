@@ -434,6 +434,7 @@ extern enh_dbg_snapshot
 extern covox_dbg_snapshot
 extern cms_dbg_snapshot
 extern pas_dbg_snapshot
+extern imfc_dbg_snapshot
 extern g_cfg_musicloop            ; src/audio/audio_hal.asm — /LOOP
 global RunAudioTest
 %endif
@@ -2006,6 +2007,7 @@ RunAudioTest:
     call covox_dbg_snapshot                 ; Covox DAC state -> W_PORT_SCRATCH+0x81+
     call cms_dbg_snapshot                   ; CMS state -> W_PORT_SCRATCH+0x89+
     call pas_dbg_snapshot                   ; PAS state -> W_PORT_SCRATCH+0x8D+
+    call imfc_dbg_snapshot                  ; IMFC state -> W_PORT_SCRATCH+0x38+
     jmp DebugDumpMemory                     ; writes DUMP.BIN, exits
 .ticks:
     push edi

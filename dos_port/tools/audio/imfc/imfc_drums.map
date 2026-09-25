@@ -1,0 +1,50 @@
+# dos_port/tools/audio/imfc/imfc_drums.map — GM drum note to IMFC voice mapping
+# Maps GM drum note numbers (35..81) to Yamaha FB-01 / IMFC voice names or {bank, program}
+
+35: "Timpani"     # Acoustic Bass Drum
+36: "Timpani"     # Bass Drum 1
+37: "Metal"       # Side Stick
+38: "SnareDr"     # Acoustic Snare
+39: "Hand Dr"     # Hand Clap
+40: "SnareD2"     # Electric Snare
+41: "Tom Tom"     # Low Floor Tom
+42: "ZingPlp"     # Closed Hi-Hat
+43: "Tom Tom"     # High Floor Tom
+44: "Metal"       # Pedal Hi-Hat
+45: "Tom Tom"     # Low Tom
+46: "ZingPlp"     # Open Hi-Hat
+47: "SynTimp"     # Low-Mid Tom
+48: "SynTimp"     # Hi-Mid Tom
+49: "RD Cymb"     # Crash Cymbal 1
+50: "SynTimp"     # High Tom
+51: "RD Cymb"     # Ride Cymbal 1
+52: "RD Cymb"     # Chinese Cymbal
+53: "Windbel"     # Ride Bell
+54: "Windbel"     # Tambourine
+55: "RD Cymb"     # Splash Cymbal
+56: "Heifer"      # Cowbell
+57: "RD Cymb"     # Crash Cymbal 2
+58: "Heavy"       # Vibraslap
+59: "RD Cymb"     # Ride Cymbal 2
+60: "Mars to"     # Hi Bongo
+61: "Mars to"     # Low Bongo
+62: "Mars to"     # Mute Hi Conga
+63: "Mars to"     # Open Hi Conga
+64: "Mars to"     # Low Conga
+65: "Mars to"     # High Timbale
+66: "Mars to"     # Low Timbale
+67: "Bells"       # High Agogo
+68: "Bells"       # Low Agogo
+69: "Metal"       # Cabasa
+70: "Metal"       # Maracas
+71: "Whistle"     # Short Whistle
+72: "Whistle"     # Long Whistle
+73: "Metal"       # Short Guiro
+74: "Metal"       # Long Guiro
+75: "WoodPf"      # Claves
+76: "WoodPf"      # Hi Wood Block
+77: "WoodPf"      # Low Wood Block
+78: "Metal"       # Mute Cuica
+79: "Metal"       # Open Cuica
+80: "Metal"       # Mute Triangle
+81: "Metal"       # Open Triangle

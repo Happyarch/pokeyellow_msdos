@@ -33,7 +33,10 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
-DEFS = Path(__file__).resolve().parent / "mt32" / "timbres.yaml"
+_MT32_DIR = Path(__file__).resolve().parent / "mt32"
+DEFS = _MT32_DIR / "mt-32_custom_timbres.yaml"
+if not DEFS.exists():
+    DEFS = _MT32_DIR / "timbres.yaml"
 
 MFR_ROLAND, DEV_ID, MDL_MT32, CMD_DT1 = 0x41, 0x10, 0x16, 0x12
 CHUNK = 128                       # data bytes per DT1 (limit is 256 total)

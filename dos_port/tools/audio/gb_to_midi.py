@@ -49,6 +49,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pret_audio import AudioROM, ChannelTimer, Cmd, Label  # noqa: E402
 from gen_audio_data import parse_music_constants, sound_id  # noqa: E402
 from mt32_presets import resolve_program  # noqa: E402
+from imfc_presets import resolve_imfc_voice  # noqa: E402
+import yaml  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 MIDI_OUT = ROOT / "dos_port" / "assets" / "midi"
@@ -65,6 +67,27 @@ TEMPO_USEC = 1_000_000                 # → 1 tick = 1 frame = 1/60 s
 DEFAULT_PROGRAM = {1: 80, 2: 80, 3: 38}      # square lead ×2, synth bass
 DEFAULT_VOLUME = {1: 100, 2: 96, 3: 110}     # CC7
 DEFAULT_DRUM_VELOCITY = 100
+
+# IMFC defaults: (bank, program), 1-based program per imfc_presets.py
+DEFAULT_IMFC_PROGRAM = {1: (2, 3), 2: (2, 16), 3: (2, 10)}  # Trumpet, Flute, EBass
+DEFAULT_IMFC_DRUM = (2, 43)                                 # SnareDr
+
+
+def load_imfc_drum_map() -> dict[int, tuple[int, int]]:
+    path = Path(__file__).resolve().parent / "imfc" / "imfc_drums.map"
+    if not path.exists():
+        return {}
+    raw = yaml.safe_load(path.read_text()) or {}
+    res = {}
+    for k, v in raw.items():
+        try:
+            res[int(k)] = resolve_imfc_voice(v, context="imfc_drums.map")
+        except Exception:
+            pass
+    return res
+
+
+IMFC_DRUM_MAP = load_imfc_drum_map()
 
 # Noise-instrument id → GM drum note. First guess: pokeyellow's music drums
 # are triangle/snare-ish noise bursts; refine per song in overrides.
@@ -510,20 +533,22 @@ def drum_key(ov: dict, instrument: int) -> int:
 # (audition/midi_renderer.py) — never a third copy of this logic.
 def resolve_switch_program(sw_mt32, sw_gm, fb_mt32, fb_gm, fb_prog,
                            default_prog, target: str, context: str,
-                           *, one_based: bool) -> int:
-    """One timed switch entry -> 0-based program number for `target`.
+                           *, one_based: bool,
+                           sw_imfc=None, fb_imfc=None) -> int | tuple[int, int]:
+    """One timed switch entry -> 0-based program number for `target` (or (bank, prog) for IMFC).
 
     Chain per target: switch key -> channel base key -> `program` fallback
     -> default (exactly the tick-0 fallback chain). Ints are 1-based for
     enhancement files, 0-based for overrides; names resolve per target table
-    (MT-32 factory vs GM level 1). A string mt32 value won from the SWITCH
-    entry is ValueError: custom timbres are not wired into the switch path
-    (tick-0 warns and falls back to gm; switches ERROR instead — a mid-song
-    timbre swap that silently played the wrong instrument would be worse
-    than a loud failure). A string mt32 value won from the channel FALLBACK
-    (a custom-timbre base channel) mirrors tick-0 and resolves through the
-    gm side instead.
+    (MT-32 factory vs GM level 1 vs IMFC ROM).
     """
+    if target == "imfc":
+        vals = (sw_imfc, fb_imfc, fb_prog, default_prog)
+        val = next((v for v in vals if v is not None), None)
+        if val is None:
+            raise ValueError(f"{context}: no program for target {target!r} and no fallback")
+        return resolve_imfc_voice(val, context=context)
+
     if target == "mt32":
         vals = (sw_mt32, fb_mt32, fb_prog, default_prog)
     else:
@@ -646,6 +671,7 @@ def resolve_override_switch_frames(label: str, ov: dict,
                 continue
             if entry.get("mt32_program") is None \
                     and entry.get("gm_program") is None \
+                    and entry.get("imfc_program") is None \
                     and entry.get("program") is None:
                 continue
             pts.append((int(round(bm.frame_at(bm.index_of(m, b)))), entry))
@@ -661,14 +687,13 @@ def resolve_override_switch_frames(label: str, ov: dict,
 
 
 def override_switch_events(label: str, ov: dict, song: Song,
-                           target: str) -> dict[int, list[tuple[int, int]]]:
-    """{gb_chan: [(frame, 0-based prog)]} target-resolved timed program
-    changes. Shared by the SMF merge (write_midi) and audition re-sync
-    (midi_renderer): both render switches through here, so the .mid and the
-    live audition can never disagree on what a switch means. Channel 4
-    (drums) carries no programs — lint_overrides() ERRORs switches there;
-    the merge skips them."""
-    out: dict[int, list[tuple[int, int]]] = {}
+                           target: str) -> dict[int, list[tuple[int, int | tuple[int, int]]]]:
+    """{gb_chan: [(frame, prog)]} target-resolved timed program changes.
+
+    Shared by the SMF merge (write_midi) and audition re-sync.
+    For MT-32/GM prog is 0-based int; for IMFC prog is (bank, program) tuple.
+    """
+    out: dict[int, list[tuple[int, int | tuple[int, int]]]] = {}
     frames = resolve_override_switch_frames(label, ov, song)
     for gc, lst in frames.items():
         if gc == 4:
@@ -679,8 +704,11 @@ def override_switch_events(label: str, ov: dict, song: Song,
             evs.append((f, resolve_switch_program(
                 entry.get("mt32_program"), entry.get("gm_program"),
                 ch.get("mt32_program"), ch.get("gm_program"),
-                ch.get("program"), DEFAULT_PROGRAM[gc],
-                target, f"{label} ch{gc} switch", one_based=False)))
+                ch.get("program"),
+                DEFAULT_IMFC_PROGRAM.get(gc, (2, 1)) if target == "imfc" else DEFAULT_PROGRAM[gc],
+                target, f"{label} ch{gc} switch", one_based=False,
+                sw_imfc=entry.get("imfc_program"),
+                fb_imfc=ch.get("imfc_program", ch.get("imfc_voice")))))
         out[gc] = evs
     return out
 
@@ -755,63 +783,104 @@ def load_enhancement(label: str):
     return resolved
 
 
-def enhancement_tracks(resolved, song: Song, target: str) -> list[bytes]:
+def enhancement_tracks(resolved, song: Song, target: str, ov: dict = None) -> list[bytes]:
     """One SMF track per enhancement channel on the free melodic channels.
 
     Tier filter: stable-sorted by tier so when the added channels exceed
-    the 5 free MT-32 melodic parts, whole layers drop lowest-priority
-    (highest tier number) first — the plan's whole-layer drop, v1."""
+    the free melodic parts, whole layers drop lowest-priority
+    (highest tier number) first.
+    """
+    if ov is None:
+        ov = {}
     chans = sorted((c for c in resolved if c.notes), key=lambda c: c.tier)
+    if target == "imfc":
+        rhythm_used = any(c.is_rhythm for c in chans) or (4 in {n.chan for n in song.notes})
+        overflow = ov.get("imfc_overflow")
+        if overflow == "drop_rhythm":
+            rhythm_used = False
+            chans = [c for c in chans if not c.is_rhythm]
+        elif isinstance(overflow, str) and overflow.startswith("drop:"):
+            drop_target = overflow.split(":", 1)[1]
+            chans = [c for c in chans if c.name != drop_target]
+        free_melodic = [3, 4, 5, 6] if rhythm_used else [3, 4, 5, 6, 7]
+    else:
+        free_melodic = FREE_MELODIC_CH
+
     melodic_chans = [c for c in chans if not c.is_rhythm]
-    for c in melodic_chans[len(FREE_MELODIC_CH):]:
+    for c in melodic_chans[len(free_melodic):]:
         print(f"    ENHANCE: dropped {c.name!r} (tier {c.tier}) — only "
-              f"{len(FREE_MELODIC_CH)} free melodic parts")
-              
+              f"{len(free_melodic)} free melodic parts")
+
     tracks = []
     melodic_idx = 0
     for c in chans:
         if c.is_rhythm:
-            mc = 9
+            mc = 7 if target == "imfc" else 9
         else:
-            if melodic_idx >= len(FREE_MELODIC_CH):
+            if melodic_idx >= len(free_melodic):
                 continue
-            mc = FREE_MELODIC_CH[melodic_idx]
+            mc = free_melodic[melodic_idx]
             melodic_idx += 1
 
-        prog = c.gm_program - 1
-        if target == "mt32" and not c.is_rhythm:
-            if isinstance(c.mt32_patch, int):
-                prog = c.mt32_patch - 1
-            elif isinstance(c.mt32_patch, str):
-                try:
-                    prog = resolve_program(c.mt32_patch, "mt32", f"enh {c.name}")
-                except ValueError:
-                    print(f"    ENHANCE warn: {c.name!r} custom timbre "
-                          f"{c.mt32_patch!r} not wired into the merge yet — "
-                          "falling back to gm_program")
         evs: list[tuple[int, int, bytes]] = [
             (0, 1, meta(0x03, f"enh {c.name} tier{c.tier}".encode())),
         ]
         if not c.is_rhythm:
-            evs.append((0, 1, bytes((0xC0 | mc, prog))))
-            for sw in c.switches:
-                if sw.frame >= song.end:
-                    continue            # frame<end filtering, like the base
-                # 1-based ints (-1 rule); a string mt32 (custom timbre)
-                # raises here — switches ERROR where tick-0 warns (lint
-                # gates this first, so the raise only fires on bypass).
-                sprog = resolve_switch_program(
-                    sw.mt32, sw.gm, c.mt32_patch, c.gm_program,
-                    sw.prog, None, target,
-                    f"enh {c.name} switch", one_based=True)
-                evs.append((sw.frame, 1, bytes((0xC0 | mc, sprog))))
-        vol = (c.mt32_volume if target == "mt32" else c.gm_volume) if hasattr(c, "mt32_volume") else c.volume
+            if target == "imfc":
+                imfc_v = getattr(c, "imfc_voice", None)
+                if imfc_v is not None:
+                    bank, prog = resolve_imfc_voice(imfc_v, context=f"enh {c.name}")
+                else:
+                    bank, prog = (2, min(max(c.gm_program, 1), 48))
+                evs.append((0, 1, bytes((0xB0 | mc, 0, bank))))
+                evs.append((0, 1, bytes((0xC0 | mc, prog - 1))))
+                for sw in c.switches:
+                    if sw.frame >= song.end:
+                        continue
+                    if getattr(sw, "imfc", None) is not None:
+                        sbank, sprog = resolve_imfc_voice(sw.imfc, context=f"enh {c.name} switch")
+                        evs.append((sw.frame, 1, bytes((0xB0 | mc, 0, sbank))))
+                        evs.append((sw.frame, 1, bytes((0xC0 | mc, sprog - 1))))
+            else:
+                prog = c.gm_program - 1
+                if target == "mt32" and not c.is_rhythm:
+                    if isinstance(c.mt32_patch, int):
+                        prog = c.mt32_patch - 1
+                    elif isinstance(c.mt32_patch, str):
+                        try:
+                            prog = resolve_program(c.mt32_patch, "mt32", f"enh {c.name}")
+                        except ValueError:
+                            print(f"    ENHANCE warn: {c.name!r} custom timbre "
+                                  f"{c.mt32_patch!r} not wired into the merge yet — "
+                                  "falling back to gm_program")
+                evs.append((0, 1, bytes((0xC0 | mc, prog))))
+                for sw in c.switches:
+                    if sw.frame >= song.end:
+                        continue
+                    sprog = resolve_switch_program(
+                        sw.mt32, sw.gm, c.mt32_patch, c.gm_program,
+                        sw.prog, None, target,
+                        f"enh {c.name} switch", one_based=True)
+                    evs.append((sw.frame, 1, bytes((0xC0 | mc, sprog))))
+
+        if target == "mt32":
+            vol = getattr(c, "mt32_volume", c.volume)
+        elif target == "gm":
+            vol = getattr(c, "gm_volume", c.volume)
+        elif target == "imfc":
+            vol = getattr(c, "imfc_volume", c.volume)
+        else:
+            vol = c.volume
+
         evs.extend([
             (0, 1, bytes((0xB0 | mc, 7, vol))),
             (0, 1, bytes((0xB0 | mc, 10, PAN_CC[c.pan]))),
         ])
         for n in c.notes:
             off = min(n.frame + n.dur, song.end)
+            if c.is_rhythm and target == "imfc":
+                bank, prog = IMFC_DRUM_MAP.get(n.key, DEFAULT_IMFC_DRUM)
+                evs.append((n.frame, 1, bytes((0xC0 | mc, prog - 1))))
             evs.append((n.frame, 2, bytes((0x90 | mc, n.key, n.vel))))
             evs.append((off, 0, bytes((0x80 | mc, n.key, 64))))
         evs.sort(key=lambda e: (e[0], e[1]))
@@ -831,27 +900,52 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
     ev0.sort(key=lambda e: e[0])
     tracks.append(track_chunk(ev0))
 
-    prog_key = "mt32_program" if target == "mt32" else "gm_program"
+    if target == "mt32":
+        prog_key = "mt32_program"
+    elif target == "imfc":
+        prog_key = "imfc_program"
+    else:
+        prog_key = "gm_program"
     # Program resolution only knows the mt32/gm banks (the GB device ignores
     # Program Changes); resolve gb through the gm side.
     resolve_target = "gm" if target == "gb" else target
     sw_evs = override_switch_events(song.label, ov, song, resolve_target)
     for gc in used:
-        mc = 9 if gc == 4 else gc             # MIDI channel (0-based)
+        if target == "imfc":
+            mc = 7 if gc == 4 else (gc - 1)
+        else:
+            mc = 9 if gc == 4 else gc             # MIDI channel (0-based)
         evs: list[tuple[int, int, bytes]] = []  # (tick, order, bytes)
         evs.append((0, 1, meta(0x03, f"GB ch{gc}".encode())))
         if gc != 4:
-            prog = resolve_program(
-                chan_setting(ov, gc, prog_key,
-                             chan_setting(ov, gc, "program",
-                                          DEFAULT_PROGRAM[gc])),
-                resolve_target, f"{song.label} ch{gc} {prog_key}")
-            evs.append((0, 1, bytes((0xC0 | mc, prog))))
-            for f, sprog in sw_evs.get(gc, []):
-                # order 1: note-offs (0) sort before, note-ons (2) after —
-                # the off -> prog -> on ordering midi_to_stream relies on.
-                evs.append((f, 1, bytes((0xC0 | mc, sprog))))
-        vol = chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100))
+            if target == "imfc":
+                ch_conf = chan_setting(ov, gc, "imfc_program",
+                                       chan_setting(ov, gc, "imfc_voice",
+                                                    chan_setting(ov, gc, "program",
+                                                                 DEFAULT_IMFC_PROGRAM.get(gc, (2, 1)))))
+                bank, prog = resolve_imfc_voice(ch_conf, context=f"{song.label} ch{gc} imfc_program")
+                evs.append((0, 1, bytes((0xB0 | mc, 0, bank))))
+                evs.append((0, 1, bytes((0xC0 | mc, prog - 1))))
+                for f, sprog in sw_evs.get(gc, []):
+                    if isinstance(sprog, tuple):
+                        sbank, sp = sprog
+                        evs.append((f, 1, bytes((0xB0 | mc, 0, sbank))))
+                        evs.append((f, 1, bytes((0xC0 | mc, sp - 1))))
+                    else:
+                        evs.append((f, 1, bytes((0xC0 | mc, sprog))))
+            else:
+                prog = resolve_program(
+                    chan_setting(ov, gc, prog_key,
+                                 chan_setting(ov, gc, "program",
+                                              DEFAULT_PROGRAM[gc])),
+                    resolve_target, f"{song.label} ch{gc} {prog_key}")
+                evs.append((0, 1, bytes((0xC0 | mc, prog))))
+                for f, sprog in sw_evs.get(gc, []):
+                    # order 1: note-offs (0) sort before, note-ons (2) after —
+                    # the off -> prog -> on ordering midi_to_stream relies on.
+                    evs.append((f, 1, bytes((0xC0 | mc, sprog))))
+        vol_key = "imfc_volume" if target == "imfc" else "volume"
+        vol = chan_setting(ov, gc, vol_key, chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
         pan = chan_setting(ov, gc, "pan", 64)
         evs.append((0, 1, bytes((0xB0 | mc, 7, vol))))
         evs.append((0, 1, bytes((0xB0 | mc, 10, pan))))
@@ -866,6 +960,10 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
                 # Raw pret noise instrument id (see module docstring): the
                 # GB-APU device resolves it via DRUM_PARAMS, like audition.
                 key = n.key
+            elif gc == 4 and target == "imfc":
+                key = drum_key(ov, n.key)
+                bank, prog = IMFC_DRUM_MAP.get(key, DEFAULT_IMFC_DRUM)
+                evs.append((n.frame, 1, bytes((0xC0 | mc, prog - 1))))
             else:
                 key = drum_key(ov, n.key) if gc == 4 else n.key
             vel = drum_vel if gc == 4 else n.vel
@@ -878,7 +976,7 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
         tracks.append(track_chunk([(t, b) for t, _, b in evs]))
 
     if enhance:
-        tracks += enhancement_tracks(enhance, song, target)
+        tracks += enhancement_tracks(enhance, song, target, ov)
 
     hdr = b"MThd" + struct.pack(">IHHH", 6, 1, len(tracks), DIVISION)
     path.write_bytes(hdr + b"".join(tracks))
@@ -887,7 +985,7 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
 # ---------------------------------------------------------------------------
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--target", choices=("mt32", "gm", "gb"), default="mt32")
+    ap.add_argument("--target", choices=("mt32", "gm", "gb", "imfc"), default="mt32")
     ap.add_argument("--songs", help="substring filter on header labels")
     ap.add_argument("--no-enhance", action="store_true",
                     help="ignore enhancements/<Song>.yaml layers")

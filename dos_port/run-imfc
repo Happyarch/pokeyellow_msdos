@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# dos_port/run-imfc — like dos_port/run, but with IMFC music: launches with
+# /IMFC on the command line and enables DOSBox-X's built-in IMFC emulation.
+# SFX and cries stay on the emulated OPL3, exactly like a real IMFC + Sound Blaster rig.
+#
+# Args split like dos_port/run: '/...' tokens become extra PKMN.EXE flags
+# (on top of /IMFC), the rest go to make, e.g.:
+#   dos_port/run-imfc DEBUG_AUDIO=1 TRACK=MUSIC_PALLET_TOWN /LOOP
+set -e
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+make_args=()
+exe_args=()
+for a in "$@"; do
+    case "$a" in
+        /*) exe_args+=("$a") ;;
+        *)  make_args+=("$a") ;;
+    esac
+done
+
+# Same guard as dos_port/run: a live session holds PKMN.IMG mounted rw —
+# rebuilding/double-mounting under it corrupts the run (verified 2026-07-07).
+if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+    echo "run-imfc: PKMN.IMG is held open by a running DOSBox-X session —" >&2
+    echo "          close it before launching another run." >&2
+    exit 1
+fi
+
+make -C "$DOSPORT" image "${make_args[@]}"
+
+# Base conf with /IMFC added to the game invocation, plus the IMFC section.
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed "s|^PKMN.EXE\$|PKMN.EXE /IMFC ${exe_args[*]}|" "$DOSPORT/dosbox-x.conf" > "$CONF"
+cat >> "$CONF" <<EOF
+
+[imfc]
+imfc        = true
+imfc_base   = 2a20
+imfc_irq    = 3
+imfc_filter = on
+EOF
+
+exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"

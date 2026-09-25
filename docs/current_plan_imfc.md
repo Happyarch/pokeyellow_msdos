@@ -131,7 +131,7 @@ without new evidence; re-verify file:line anchors at build time (they drift).
 - [x] **0. Preconditions + research.** Remaster gate replaces the old approvals
   wording; `docs/sound/` IBM/FB-01 references mirrored (R1); R2–R6 findings above
   are the build inputs — re-verify file:line anchors at build time.
-- [ ] **1. Toolchain target `imfc`.** `gb_to_midi.py --target imfc` (channels
+- [x] **1. Toolchain target `imfc`.** `gb_to_midi.py --target imfc` (channels
   1-8, PC 0-47 + SysEx bank-select, note-count polyphony replacing the 32-partial
   model in `yaml_lint.py:53-57`); `gen_imfc_patches.py` + `tools/audio/imfc/`
   bank definition with slot discipline mirroring `mt32/timbres.yaml:35-42` →
@@ -140,7 +140,7 @@ without new evidence; re-verify file:line anchors at build time (they drift).
   → `assets/imfc_streams.inc` (op format at `midi_to_stream.py:9-16` reuses
   verbatim); `Makefile` `stamp-imfc` + `.inc` targets mirroring
   `Makefile:4130-4144,4450-4460`; `audition.py --target imfc` backend.
-- [ ] **2. DOS driver `src/audio/imfc.asm`** (new port-only HAL file, template:
+- [x] **2. DOS driver `src/audio/imfc.asm`** (new port-only HAL file, template:
   `src/audio/mpu401.asm`, 467 lines). `imfc_detect` (bounded polls, `mpu401.asm:97-100`
   fallback shape); `imfc_upload` (`mt32_upload` shape, `mpu401.asm:168-196`);
   `imfc_seq_start/stop/tick` + `imfc_all_notes_off` (ports of `mpu401.asm:205-369`,
@@ -148,7 +148,7 @@ without new evidence; re-verify file:line anchors at build time (they drift).
   past `mpu401.asm:415-429`; `DEVIATION{class=HAL; ...}` header per
   `mpu401.asm:3`. Wire: `audio_hal.asm:97-133` init + one `audio_tick` arm;
   `entry.asm:parse_cmdline` `/IMFC`; `run-imfc` script mirroring `run-mt32:1-52`.
-- [ ] **3. Pilot song.** One song (Pallet or Celadon) end-to-end through toolchain
+- [x] **3. Pilot song.** One song (Pallet or Celadon) end-to-end through toolchain
   + driver before batching: validates routing table (cf. the `timbres.yaml:19-32`
   do-not-"fix" lesson — verify in-game, not by spec), upload pacing, polyphony
   accounting. `yaml_lint` clean → host audition → `run-imfc DEBUG_AUDIO=1

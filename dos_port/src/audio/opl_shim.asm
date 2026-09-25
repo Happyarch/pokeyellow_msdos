@@ -55,6 +55,7 @@ global OplRegGroups
 global OplMasterAttTable
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
 extern g_sb_present               ; src/audio/audio_hal.asm (BLASTER/DSP probe)
 extern g_sb_base
 extern g_sb_dsp_ver
@@ -799,10 +800,13 @@ voice_volume:
     cmp ebx, 3
     je .mute
 .checkMidi:
-    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; MIDI/IMFC mode: the MT-32/GM/IMFC stream carries the music, so a GB channel
     ; only voices on FM while an SFX owns it (wChannelSoundIDs CHAN5-8)
     cmp byte [g_midi_music], 0
+    jnz .checkMidiMute
+    cmp byte [g_imfc_music], 0
     jz .clamp
+.checkMidiMute:
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .clamp
 .mute:
