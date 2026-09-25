@@ -16,22 +16,21 @@ channels:
   1:
     mt32_program: "Trombone 1"
     gm_program: "Trombone"
-    imfc_program: "Trombon"  # Bank4 low brass for the A-pedal tread
+    imfc_program: "Trombon"
     mt32_volume: 90
     gm_volume: 90
     imfc_volume: 90
   2:
     mt32_program: "Trumpet 1"
     gm_program: "Trumpet"
-    imfc_program: "Trumpet"  # Bank2 standard trumpet for the D-pedal lead
+    imfc_program: "Trumpet"
     mt32_volume: 96
     gm_volume: 96
     imfc_volume: 96
   3:
     mt32_program: "Warm Bell"
     gm_program: "Orchestral Harp"
-    imfc_program: "Harp"  # plucked Bank2 voice matches the GM harp for the bell
-                          # pings/pillars ("Bells" candidate — UNLISTENED)
+    imfc_program: "Harp"
     mt32_volume: 92
     gm_volume: 92
     imfc_volume: 92

@@ -22,22 +22,21 @@ channels:
   1:
     mt32_program: "Flute 1"
     gm_program: "Flute"
-    imfc_program: "Flute"  # breath-flute motor, same family
+    imfc_program: "Flute"
     mt32_volume: 94
     gm_volume: 94
     imfc_volume: 94
   2:
     mt32_program: "Oboe"
     gm_program: "Oboe"
-    imfc_program: "Oboe"  # reedy lead cuts through the churn, same family
+    imfc_program: "Oboe"
     mt32_volume: 96
     gm_volume: 96
     imfc_volume: 96
   3:
     mt32_program: "Warm Bell"
     gm_program: "Orchestral Harp"
-    imfc_program: "Harp"  # matches the GM harp for the bell pings ("Bells"
-                          # candidate — UNLISTENED)
+    imfc_program: "Harp"
     mt32_volume: 90
     gm_volume: 90
     imfc_volume: 90

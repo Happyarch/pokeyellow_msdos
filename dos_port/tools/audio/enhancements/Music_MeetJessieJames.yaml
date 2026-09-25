@@ -53,7 +53,7 @@ channels:
     tier: 2
     mt32_patch: 29             # MT-32 Syn Bass 1 (house family, cf. Male/Female)
     gm_program: 39             # GM Synth Bass 1
-    imfc_voice: "EBass"        # IMFC E.Bass (bass family, Male/Evil precedent)
+    imfc_voice: "EBass"
     pan: center
     mt32_volume: 62
     gm_volume: 62
@@ -77,7 +77,7 @@ channels:
     tier: 2                   # the identity — dropped after tier 3
     mt32_patch: "Theremin"    # custom RCA-theremin timbre, timbres.yaml
     gm_program: 86            # GM Lead 6 (voice), 1-based (Dungeon3 precedent)
-    imfc_voice: "Theremin"    # IMFC custom Theremin (bank 0, same timbre both devices)
+    imfc_voice: "Theremin"
     pan: center
     mt32_volume: 50                # felt wail under the motto, below the melody
     gm_volume: 50
@@ -97,7 +97,7 @@ channels:
     tier: 3                   # color — dropped first under polyphony
     mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
     gm_program: 73            # GM Piccolo
-    imfc_voice: "Piccolo"     # IMFC Piccolo (Male/Evil ping precedent)
+    imfc_voice: "Piccolo"
     pan: center
     mt32_volume: 70
     gm_volume: 70

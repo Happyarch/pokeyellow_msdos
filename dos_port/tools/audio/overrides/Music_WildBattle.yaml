@@ -46,7 +46,7 @@ channels:
   1:
     mt32_program: "Sawtooth"          # custom timbre (staged at Patch #27)
     gm_program: "Lead 2 (sawtooth)"
-    imfc_program: "Sawtooth"        # custom IMFC Sawtooth (bank0/prog2)
+    imfc_program: "Sawtooth"
     mt32_volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
     gm_volume: 92
     imfc_volume: 92

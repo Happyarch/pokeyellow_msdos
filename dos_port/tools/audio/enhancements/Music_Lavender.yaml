@@ -21,7 +21,7 @@ channels:
     opl_patch: sub_bass       # pure sine — complements, never fights, the pulses
     mt32_patch: 30            # Syn Bass 2 (dark, round)
     gm_program: 39            # Synth Bass 1
-    imfc_voice: "EBass"       # IMFC E.Bass (bass family; PalletTown precedent for synth bass)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 48                # a floor, not a voice (v1's 64 was too present)
     mt32_volume: 48
@@ -90,7 +90,7 @@ channels:
     tier: 2
     mt32_patch: 14            # Pipe Org 2
     gm_program: 20            # Church Organ
-    imfc_voice: "POrgan1"     # IMFC pipe organ (MT-32 Pipe Org 2 map)
+    imfc_voice: "POrgan1"
     pan: center
     mt32_volume: 44                # a wash behind the band, not a comping part
     gm_volume: 44

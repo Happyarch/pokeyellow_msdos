@@ -69,7 +69,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
-    imfc_voice: "EBass"          # IMFC E.Bass (bass precedent: PalletTown sub_bass)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 72
     mt32_volume: 72
@@ -100,7 +100,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
-    imfc_voice: "Strings"        # IMFC Strings (strings precedent: PalletTown low_pad)
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 64                   # under the bass — reinforcement, not a lead
     mt32_volume: 64
@@ -130,7 +130,7 @@ channels:
     tier: 2                   # color — dropped first under polyphony
     mt32_patch: 113           # MT-32 Timpani (factory idx 112, 1-based 113)
     gm_program: 48            # GM Timpani
-    imfc_voice: "Timpani"     # IMFC Timpani (Bank 2 ROM1, exact kettle-drum family match)
+    imfc_voice: "Timpani"
     pan: center
     mt32_volume: 72                # a downbeat stroke, not a section
     gm_volume: 72

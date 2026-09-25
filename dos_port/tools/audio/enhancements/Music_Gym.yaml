@@ -27,7 +27,7 @@ channels:
     opl_patch: sub_bass
     mt32_patch: 29        # Syn Bass 1 (precedent: GymLeader/IndigoPlateau)
     gm_program: 39        # GM Synth Bass 1
-    imfc_voice: "EBass"   # IMFC E.Bass (bass family; IMFC level follows legacy volume 58 by fallback)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 58
     mt32_volume: 58
@@ -77,7 +77,7 @@ channels:
     opl_patch: soft_pad
     mt32_patch: 49        # Str Sect 1 on the cascade
     gm_program: 90        # GM Pad 2 (warm)
-    imfc_voice: "Strings" # IMFC Strings (string family; IMFC level follows legacy volume 60 by fallback)
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 60
     mt32_volume: 60

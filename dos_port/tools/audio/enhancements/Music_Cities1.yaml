@@ -129,7 +129,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
-    imfc_voice: "EBass"          # IMFC E.Bass (bass family)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 64                   # Vermilion level; ch4 motor runs throughout
     mt32_volume: 64
@@ -144,7 +144,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
-    imfc_voice: "Strings"        # IMFC Strings (device volumes carry the level)
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 72                   # Pallet/Vermilion level; 3 busy GB lines + drums
     mt32_volume: 72
@@ -158,7 +158,7 @@ channels:
     tier: 2                      # MT-32/GM only — no opl_patch allowed
     mt32_patch: 50               # MT-32 Str Sect 2 (sister section to pad's 49)
     gm_program: 50               # GM String Ensemble 2
-    imfc_voice: "String1"        # IMFC orchestral strings, distinct from pad's Strings (device volumes carry the level)
+    imfc_voice: "String1"
     pan: center
     mt32_volume: 60                   # under the pad; violin register cuts on its own
     gm_volume: 60
@@ -171,7 +171,7 @@ channels:
     tier: 3                      # color/flourish — dropped first under pressure
     mt32_patch: 23               # MT-32 Celesta 1
     gm_program: 9                # GM Celesta
-    imfc_voice: "Celeste"        # IMFC Celeste (bells family)
+    imfc_voice: "Celeste"
     pan: center
     mt32_volume: 64
     gm_volume: 64

@@ -22,7 +22,7 @@ channels:
   1:
     mt32_program: "Sax 2"       # lower sister voice under the lead; same reed
     gm_program: "Tenor Sax"     # family, distinct preset — blends, not collapses
-    imfc_program: "Sax 2"       # lower sister (exact IMFC voice)
+    imfc_program: "Sax 2"
     mt32_volume: 92                  # under the lead
     gm_volume: 92
     imfc_volume: 92
@@ -30,7 +30,7 @@ channels:
   2:
     mt32_program: "Sax 3"       # the liked lead voice, kept as-was
     gm_program: "Alto Sax"
-    imfc_program: "Sax 1"       # distinguished reed sister (no Sax 3 on IMFC)
+    imfc_program: "Sax 1"
     mt32_volume: 100                 # foreground over sax 2 + pizz
     gm_volume: 100
     imfc_volume: 100
@@ -40,7 +40,7 @@ channels:
     gm_program: "Pizzicato Strings"  # Cities1/Vermilion cure for bell wash);
                                 # softer attack than the harp, kin to the pad
                                 # strings + choir halo
-    imfc_program: "Pizzic1"     # dry pluck, matches the MT-32 cure
+    imfc_program: "Pizzic1"
     mt32_volume: 76                  # motor audible but under both saxes
     gm_volume: 76
     imfc_volume: 76

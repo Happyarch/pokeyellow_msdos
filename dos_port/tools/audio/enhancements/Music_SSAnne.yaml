@@ -74,7 +74,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
-    imfc_voice: "EBass"          # IMFC E.Bass
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 58
     mt32_volume: 58
@@ -124,7 +124,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not strings
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
-    imfc_voice: "Strings"        # IMFC Strings
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 66
     mt32_volume: 66
@@ -171,7 +171,7 @@ channels:
     tier: 3                 # color/flourish — dropped first under polyphony
     mt32_patch: 23          # MT-32 Celesta 1
     gm_program: 9           # GM Celesta
-    imfc_voice: "Celeste"   # IMFC Celeste
+    imfc_voice: "Celeste"
     pan: right
     mt32_volume: 60
     gm_volume: 60

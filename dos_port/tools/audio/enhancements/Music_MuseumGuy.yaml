@@ -67,7 +67,7 @@ channels:
     opl_patch: sub_bass          # pure sine; no FM sidebands muddying the low end
     mt32_patch: 29               # MT-32 SynBass1 (same as casino_bass)
     gm_program: 39               # GM Synth Bass 1
-    imfc_voice: "EBass"          # IMFC E.Bass (bass -> EBass mapping)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 88                   # felt, not heard — a stroll, not a march
     mt32_volume: 88

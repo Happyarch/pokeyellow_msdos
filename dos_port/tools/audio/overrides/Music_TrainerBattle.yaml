@@ -17,21 +17,21 @@ channels:
   1:
     mt32_program: "Square Wave"
     gm_program: "Lead 1 (square)"
-    imfc_program: "SynLead"      # Bank5 synth lead (FinalBattle/WildBattle precedent)
+    imfc_program: "SynLead"
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100
   2:
     mt32_program: "Sawtooth"
     gm_program: "Lead 2 (sawtooth)"
-    imfc_program: "Sawtooth"     # custom 1:1 (bank 0; WildBattle precedent)
+    imfc_program: "Sawtooth"
     mt32_volume: 105
     gm_volume: 105
     imfc_volume: 105
   3:
     mt32_program: "Elec Bass 1"
     gm_program: "Electric Bass (finger)"
-    imfc_program: "EBass"        # bass family (Routes2/CinnabarMansion precedent)
+    imfc_program: "EBass"
     mt32_volume: 95
     gm_volume: 95
     imfc_volume: 95

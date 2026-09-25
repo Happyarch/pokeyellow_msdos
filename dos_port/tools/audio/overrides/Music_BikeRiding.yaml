@@ -12,7 +12,7 @@ channels:
   1:
     mt32_program: "Sax 2"        # blended sister under the Sax 3 lead (Pokecenter precedent): same reed
     gm_program: "Tenor Sax"      # family restores the GB two-squares texture instead of two soloists
-    imfc_program: "Sax 2"       # lower sister under the lead (GameCorner precedent)
+    imfc_program: "Sax 2"
     mt32_volume: 90                   # under the lead; the 106 lift belonged to the distinct-voice attempt
     gm_volume: 90
     imfc_volume: 90
@@ -20,7 +20,7 @@ channels:
   2:
     mt32_program: "Sax 3"        # the liked lead voice, kept as-was
     gm_program: "Alto Sax"
-    imfc_program: "Sax 1"       # distinguished reed sister (no Sax 3 on IMFC; GameCorner precedent)
+    imfc_program: "Sax 1"
     mt32_volume: 92                   # eased 96->92; melody still leads
     gm_volume: 92
     imfc_volume: 92
@@ -28,7 +28,7 @@ channels:
   3:
     mt32_program: "Warm Bell"
     gm_program: "Music Box"
-    imfc_program: "TubeBe1"     # tubular bell (Warm Bell precedent: MeetEvilTrainer)
+    imfc_program: "TubeBe1"
     mt32_volume: 90                   # was default 110, then 96; bell still sat over the mix
     gm_volume: 90
     imfc_volume: 90

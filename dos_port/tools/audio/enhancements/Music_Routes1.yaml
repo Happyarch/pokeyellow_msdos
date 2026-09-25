@@ -49,14 +49,11 @@ schema: 1
 song: Music_Routes1
 
 channels:
-# IMFC pass: imfc_voice added per channel below; imfc_volume intentionally
-# omitted — the merge falls back to legacy `volume`, and an explicit
-# imfc_volume beside `volume` is a yaml_lint ERROR (mixing rule).
   - name: sub_bass
     tier: 2
     mt32_patch: 29        # MT-32 Syn Bass 1 (round, sustaining)
     gm_program: 39        # GM Synth Bass 1
-    imfc_voice: "EBass"   # IMFC E.Bass (bass family; PalletTown precedent)
+    imfc_voice: "EBass"
     pan: center
     mt32_volume: 56
     gm_volume: 56
@@ -87,7 +84,7 @@ channels:
     tier: 2
     mt32_patch: 49        # MT-32 Str Sect1 (warm string pad)
     gm_program: 90        # GM Pad 2 (warm)
-    imfc_voice: "Strings" # IMFC Strings (PalletTown precedent)
+    imfc_voice: "Strings"
     pan: center
     mt32_volume: 70
     gm_volume: 70
@@ -108,7 +105,7 @@ channels:
     tier: 3               # color/flourish — dropped first under pressure
     mt32_patch: 23        # MT-32 Celesta 1
     gm_program: 9         # GM Celesta
-    imfc_voice: "Celeste" # IMFC Celeste (PalletTown precedent)
+    imfc_voice: "Celeste"
     pan: center
     mt32_volume: 64
     gm_volume: 64

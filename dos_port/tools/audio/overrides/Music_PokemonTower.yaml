@@ -26,7 +26,7 @@ channels:
   1:
     mt32_program: "Warm Bell"
     gm_program: "Celesta"
-    imfc_program: "TubeBe1"     # tubular bell (Warm Bell precedent: MeetEvilTrainer)
+    imfc_program: "TubeBe1"
     mt32_volume: 82
     gm_volume: 82
     imfc_volume: 82
@@ -34,7 +34,7 @@ channels:
   2:
     mt32_program: "Theremin"
     gm_program: "Lead 6 (voice)"
-    imfc_program: "Theremin"    # custom IMFC Theremin 1:1 (bank 0, prog 3)
+    imfc_program: "Theremin"
     mt32_volume: 104
     gm_volume: 104
     imfc_volume: 104
@@ -42,7 +42,7 @@ channels:
   3:
     mt32_program: "Echo Pan"
     gm_program: "FX 7 (echoes)"
-    imfc_program: "Pan Flt"     # pan-flute family for the ethereal texture
+    imfc_program: "Pan Flt"
     mt32_volume: 92
     gm_volume: 92
     imfc_volume: 92

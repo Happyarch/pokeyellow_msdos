@@ -14,7 +14,7 @@
 channels:
   1:
     mt32_program: "Square Wave"   # keep the chip-lead character on sq1
-    imfc_program: "Wave"          # raw-wave ROM voice, chip-lead character
+    imfc_program: "Wave"
     pan: 44                       # sq1 slightly left / sq2 slightly right
     switches:                     # DEMO paired with the ch2 swap: sq1 turns
                                   # lyrical at rehearsal 2 (sustained B-G-D-G
@@ -30,7 +30,7 @@ channels:
                                   # independent line (rehearsal 2) reads
                                   # as its own voice (kept per audition —
                                   # the trumpet swap was reverted)
-    imfc_program: "SynLead"       # resonant synth-lead ROM voice, same family
+    imfc_program: "SynLead"
     gm_program: "Lead 4 (chiff)"  # GM voice (was default square before the
                                   # switch work); chiff is the Dungeon2-
                                   # precedented match for Doctor Solo
@@ -54,7 +54,7 @@ channels:
     mt32_program: "Pizzicato"     # dry pluck for the eighth-note D pedal
                                   # and the treble crossing line; kills the
                                   # Warm Bell decay wash masking the squares
-    imfc_program: "Pizzic1"       # short-decay pluck, same family
+    imfc_program: "Pizzic1"
     mt32_volume: 60                    # user audition 2026-07-07: sit the pedal
     gm_volume: 60
                                   # well under the squares

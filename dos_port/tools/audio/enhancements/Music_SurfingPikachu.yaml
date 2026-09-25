@@ -57,7 +57,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 65               # Acou Bass 1: round plucked beach bounce
     gm_program: 33               # Acoustic Bass
-    imfc_voice: "EBass"          # IMFC E.Bass (bass family)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 62
     mt32_volume: 62
@@ -148,7 +148,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not strings
     mt32_patch: 49               # Str Sect 1: cascades as real strings
     gm_program: 90               # Pad 2 (warm)
-    imfc_voice: "Strings"        # IMFC Strings (string family)
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 56
     mt32_volume: 56
@@ -288,7 +288,7 @@ channels:
     tier: 3
     mt32_patch: 78               # Pan Pipes: breathy sun-on-water, novel
     gm_program: 76               # Pan Flute
-    imfc_voice: "Pan Flt"        # IMFC Pan Flute (wind family)
+    imfc_voice: "Pan Flt"
     pan: right
     mt32_volume: 48
     gm_volume: 48

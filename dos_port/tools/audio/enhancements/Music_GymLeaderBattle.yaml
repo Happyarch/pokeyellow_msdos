@@ -4133,7 +4133,7 @@ channels:
   opl_patch: sub_bass
   mt32_patch: 29
   gm_program: 39
-  imfc_voice: "EBass"  # IMFC E.Bass (bass family; PalletTown precedent for SynBass1)
+  imfc_voice: "EBass"
   pan: center
   opl_volume: 60
   mt32_volume: 60

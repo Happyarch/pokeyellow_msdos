@@ -17,7 +17,7 @@ channels:
     tier: 2
     mt32_patch: 38         # MT-32 Atmosphere: slow, reverb-friendly LA color
     gm_program: 100        # GM FX 4 (Atmosphere)
-    imfc_voice: "Fantasy"  # IMFC evolving pad (Bank 6 effects)
+    imfc_voice: "Fantasy"
     pan: center
     mt32_volume: 40
     gm_volume: 40

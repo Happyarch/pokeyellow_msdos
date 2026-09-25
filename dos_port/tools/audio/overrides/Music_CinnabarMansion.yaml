@@ -12,7 +12,7 @@ channels:
     mt32_program: "Fantasy"      # bell-pad shimmer on the haphazard leaps —
                                  # eerie, and its soft attack also blurs the
                                  # once-per-4.3-min phase-jump seam further
-    imfc_program: "Fantasy"     # 1:1 (IMFC ROM5 effects pad)
+    imfc_program: "Fantasy"
     mt32_volume: 92                   # busy + high; texture, not lead
     gm_volume: 92
     imfc_volume: 92
@@ -20,14 +20,14 @@ channels:
   2:
     mt32_program: "Engl Horn"    # dark plaintive reed, at home in D#4-B4 —
                                  # the chromatic line is the melodic basis
-    imfc_program: "Oboe"        # double-reed family (Oboe/Engl-Horn interchange: MeetEvilTrainer)
+    imfc_program: "Oboe"
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100
     pan: 84
   3:
     mt32_program: "Acou Bass 1"  # defined, steady low line (B2-G#3)
-    imfc_program: "EBass"       # bass family (same-song tier-1 precedent)
+    imfc_program: "EBass"
     mt32_volume: 102                  # default 110 swamps
     gm_volume: 102
     imfc_volume: 102

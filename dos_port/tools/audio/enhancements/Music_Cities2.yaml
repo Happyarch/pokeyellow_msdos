@@ -67,9 +67,6 @@ schema: 1
 song: Music_Cities2
 
 channels:
-# IMFC pass: imfc_voice added per channel below; imfc_volume intentionally
-# omitted — the merge falls back to legacy `volume`, and an explicit
-# imfc_volume beside `volume` is a yaml_lint ERROR (mixing rule).
   - name: sub_bass
     tier: 1
     opl_patch: sub_bass_clear   # DEMO (2026-09-11): clearer variant — octave-up
@@ -77,7 +74,7 @@ channels:
                                 # sub_bass if the low end loses weight
     mt32_patch: 29               # MT-32 SynBass1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
-    imfc_voice: "EBass"          # IMFC E.Bass (bass family)
+    imfc_voice: "EBass"
     pan: center
     opl_volume: 62                   # town level; no ch4 motor in this track
     mt32_volume: 62
@@ -120,7 +117,7 @@ channels:
                                 # if it starts fighting the pulses
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
-    imfc_voice: "Strings"        # IMFC Strings (string family)
+    imfc_voice: "Strings"
     pan: center
     opl_volume: 70                   # under cello + trumpet, over the bass
     mt32_volume: 70
@@ -173,7 +170,7 @@ channels:
                                  # override's Violin 1 — harmonizes with it)
     gm_program: 41               # GM Violin, 1-based (GM has no second violin;
                                  # same top voice, blends by register instead)
-    imfc_voice: "String2"        # IMFC String2 (string family; sister to Strings pad)
+    imfc_voice: "String2"
     pan: right                   # with the violin (override ch2 sits right)
     mt32_volume: 50                   # veil, not a third lead
     gm_volume: 50
@@ -203,7 +200,7 @@ channels:
                                  # exists in GM; Tinkle Bell 113 would flip
                                  # the channel percussive and fail lint).
     gm_program: 9                # GM Celesta, 1-based
-    imfc_voice: "Glocken"        # IMFC Glocken (bell family; glass ting)
+    imfc_voice: "Glocken"
     pan: center                  # arrivals marked neutrally, not staged
     mt32_volume: 70                   # lifted one step — pings read subtly at 64
     gm_volume: 70

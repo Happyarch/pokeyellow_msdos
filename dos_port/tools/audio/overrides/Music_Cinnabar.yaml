@@ -38,7 +38,7 @@ channels:
     mt32_program: "Violin 1"    # solo violin articulates the m8 echo gesture
                                 # honestly — short bowed decay, no wash
     gm_program: "Violin"
-    imfc_program: "SoloVio"     # IMFC solo violin (Gym precedent)
+    imfc_program: "SoloVio"
     mt32_volume: 96                  # descant just under the theme
     gm_volume: 96
     imfc_volume: 96
