@@ -195,43 +195,28 @@ song. Then run `python3 dos_port/tools/audio/test_switches.py` to green.
 Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
 `audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
 
-**1. Host-side (seconds, no DOS boot)** — `tools/audio/audition.py` provides a
-unified interactive TUI across **OPL3** (default: authentic 48 kHz FM via NukedOPL
-with software envelopes and authentic noise drums), **MT-32** (direct ALSA sequencer
-client to MUNT), and **General MIDI** (FluidSynth / hardware synth). All targets feature
-live file hot-reloading and position-locked A/B testing:
+**1. Host-side (seconds, no DOS boot)** — `dgad` (pkmn-audio-dbg) renders
+any device headless to WAV, or opens the interactive debugger GUI with no
+flags. `tools/audio/audition.py` is deprecated — do not document or use it.
 
 ```sh
-# OPL3 (default) — instant host FM synthesis, zero external synths needed:
-tools/audio/audition.py Music_PalletTown
-# Fuzzy song matching & track listing:
-tools/audio/audition.py palet                       # auto-resolves to Music_PalletTown
-tools/audio/audition.py --list                      # list all 49 tracks & enhancement tiers
+# OPL3 — instant host FM synthesis, zero external synths needed:
+dgad --headless --track Music_PalletTown --device opl3 --out pal.wav
+# Fuzzy song matching:
+dgad --headless --track palet --device opl3 --out pal.wav   # resolves to Music_PalletTown
 
-# MIDI targets (direct ALSA sequencer to MUNT / fluidsynth):
-mt32emu-qt &                                        # launch MUNT for --target mt32
-tools/audio/audition.py --target mt32 Music_Celadon
-tools/audio/audition.py --target gm Music_Celadon   # fluidsynth / any GM synth
-tools/audio/audition.py --port 128:0 Music_Celadon  # specify custom ALSA port
+# MIDI targets:
+dgad --headless --track Music_Celadon --device mt32 --out cel.wav
+dgad --headless --track Music_Celadon --device gm --out cel_gm.wav
+# IMFC path (all mapped tracks render-verified this way):
+dgad --headless --track Music_Celadon --device imfc --out cel_imfc.wav
 
-# Interactive controls (available in OPL3, MT-32, and General MIDI):
-#   [Tab]         A/B toggle: flips between working copy and previous revision/checkpoint
-#   [Space] / [E] Toggle enhancements On / Off (Pure GB vs. Enhanced)
-#   [M]           Solo enhancements (mutes base GB channels)
-#   [ [ ] / [ ] ] Step through disk revisions (.revisions/<Song>/)
-#   [U]           Revert YAML on disk to selected revision
-#   [C]           Save manual checkpoint
-#   [P]           Pause / resume playback
-#   [Left]/[Right]Seek -4s / +4s
-#   [Q]           Quit
+# Useful batch flags (see `dgad --help`):
+#   --frames N    render N 60 Hz frames (default: full track length)
+#   --no-enh      disable the enhancement layer (GB baseline only)
+#   --project-dir <path>  override the project root directory
 ```
-
-Revisions are stored on disk in `tools/audio/.revisions/<Song>/` (gitignored),
-so parallel agent commits in git cannot disrupt or lose your A/B iteration history.
-
-Edit `tools/audio/enhancements/<Song>.yaml` in your editor or have an LLM edit it →
-`audition.py` automatically hot-reloads the changes live → press `[Tab]` to hear the A/B diff.
-That's the whole loop. Never rebuild PKMN.EXE or boot DOSBox-X repeatedly to hear a YAML tweak.
+Batch renders print peak/nonzero stats — nonzero==0 means silence (broken map).
 
 **2. In-DOS (end-to-end, real drivers)** — only when verifying the actual
 driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
@@ -249,7 +234,7 @@ sequence (music + SFX + cry + PCM) then dumps audio state to `DUMP.BIN` and
 exits — that's the byte-verification mode, not the listening mode.
 
 **Enhancements on/off (A/B) — host-side vs in-DOS:**
-- **Host-side (`audition.py`)**:
+- **Host-side (`dgad`)**:
   - Works identically for **both OPL3 and MT-32/GM**: press `[Space]` to toggle
     enhancements On/Off or `[Tab]` to flip between working copy and previous
     revisions mid-playback without stopping or rebuilding anything.

@@ -6,7 +6,7 @@ description: >
   DOSBox-X, debugging emulated GB memory (DUMP.BIN / FRAME.BIN dumps, or the
   live dosbox-mcp screenshot / dump_frame tools), running the golden fidelity
   harness (mGBA ground truth vs DOSBox-X port), auditioning music (host-side
-  audition.py vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/
+  dgad vs in-DOS DEBUG_AUDIO TRACK= loop), or using a dos_port/tools/
   dev tool (colorize.py + colors/editor.py, map_editor/editor.py, ui_layout/editor.py,
   read_perf.py, read_seamlog.py, audit_memmap.py, unnamed.py, saveconv.py).
   Also holds the repo layout map and the key reference URLs. Triggers: "build the port",
@@ -17,7 +17,7 @@ description: >
   "golden scenario / scenario_manifest.json / mGBA harness / mgba-mcp",
   "run_headless.sh / headless run / PKMN.IMG / mcopy",
   "static_gate / pre-commit hook / CI", "audition / listen to / play <track> music",
-  "DEBUG_AUDIO / TRACK= / audition.py / MUNT", "where is <file> in the repo",
+  "DEBUG_AUDIO / TRACK= / dgad / MUNT", "where is <file> in the repo",
   "Pan Docs / DPMI spec / RBIL", "colorize.py / palette editor / repaint PNG",
   "map_editor / overworld map tool", "ui_layout editor / layout sidecar",
   "PERF.BIN / read_perf.py", "SEAMLOG.BIN / read_seamlog.py", "audit_memmap.py",
@@ -336,7 +336,7 @@ Detailed binary structure and checksum mechanics live in the `project-convention
 ## Auditioning Music
 
 The music and SFX audition workflow is documented in `audio-enhance-opl3` and `audio-enhance-mt32`:
-- **Host-side iteration**: `dos_port/tools/audio/audition.py <Song>` (instant FM/OPL3 via NukedOPL, MT-32 via MUNT, GM via FluidSynth, or Game Boy APU reference).
+- **Host-side iteration**: `dgad --headless --track <Song> --device <mt32|gm|opl3|gbapu|imfc> --out take.wav` (batch render; `audition.py` is deprecated).
 - **In-DOS verification**: `dos_port/run DEBUG_AUDIO=1 TRACK=<MUSIC_*> /LOOP`.
 
 ---
