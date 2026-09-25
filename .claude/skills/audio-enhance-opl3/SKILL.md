@@ -55,14 +55,17 @@ Timed mid-song program switches are MT-32/GM-only (see the
 voice; switches never apply to tier-1 `opl_patch`.
 
 ### Patch fields required
-Every tier-1 enhancement channel must specify all three baseline patch fields (plus optional IMFC voice):
+Every tier-1 enhancement channel must specify patch fields for all targeted synth backends:
 ```yaml
 opl_patch: <name from tools/audio/opl/patches.yaml>
-mt32_patch: <MT-32 patch number or custom timbre name>
-gm_program: <GM program number>
-imfc_voice: <optional IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
+mt32_patch: <MT-32 factory preset name or custom timbre name>
+gm_program: <GM program name or number>
+imfc_voice: <IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
 ```
-The compiler uses the appropriate field per target. `yaml_lint.py` enforces that `opl_patch`, `mt32_patch`, and `gm_program` are present for tier 1. If `imfc_voice` is omitted, the compiler falls back to a Bank 2 ROM preset based on the channel or GM program.
+**Always use real-word patch names rather than numbers**: Magic numbers are obscure, hard to review, and create numbering ambiguity between 0-based and 1-based tools. Use readable names everywhere (e.g. `mt32_patch: "Str Sect 1"`, `gm_program: "String Ensemble 1"`, `imfc_voice: "String1"`).
+
+`imfc_voice` is a standard target field and should be specified for all new and revised channels. Toolchain fallbacks to Bank 2 ROM presets exist solely as a transitional bridge for legacy files where IMFC patches have not yet been routed. `yaml_lint.py` currently enforces that `opl_patch`, `mt32_patch`, and `gm_program` are present for tier 1.
+
 
 ### Volume control & Base Channel Overrides
 Specify device-scoped volumes (`opl_volume`, `mt32_volume`, `gm_volume`, `imfc_volume`: `<0-127>`). For OPL3, `opl_volume` maps to carrier total-level. Device-scoped keys are preferred; legacy `volume` is deprecated and produces lint warnings.

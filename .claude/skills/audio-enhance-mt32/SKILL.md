@@ -53,16 +53,19 @@ voices play on GM too (GM has no partial limits, just 16 channels /
 polyphony varies by synth — assume 24-note polyphony minimum).
 
 ### Patch fields required
-Tier 2–3 entries carry MT-32 and GM fields, plus optional IMFC voice (no `opl_patch` — these
+Tier 2–3 entries carry MT-32, GM, and IMFC patch fields (no `opl_patch` — these
 never play on OPL3):
 ```yaml
-mt32_patch: <MT-32 patch number or custom timbre name>
-gm_program: <GM program number>
-imfc_voice: <optional IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
+mt32_patch: <MT-32 factory preset name or custom timbre name>
+gm_program: <GM program name or number>
+imfc_voice: <IMFC preset name from imfc_presets.py, custom voice, or {bank: B, program: P}>
 mt32_volume: <0-127, optional, default 96>
 gm_volume: <0-127, optional, default 96>
 imfc_volume: <0-127, optional, default 96>
 ```
+**Always use real-word patch names rather than numbers**: Magic numbers are obscure, hard to review, and create numbering ambiguity between 0-based and 1-based files. Use readable names everywhere (e.g. `mt32_patch: "Str Sect 1"`, `gm_program: "String Ensemble 1"`, `imfc_voice: "String1"`).
+
+`imfc_voice` is a standard target field and is required for all new arrangements. Toolchain fallbacks to Bank 2 ROM presets exist solely as a temporary transitional bridge until patches are routed for all tracks.
 Device-scoped keys (`mt32_volume`, `gm_volume`, `imfc_volume`) are preferred; legacy `volume` is deprecated and produces lint warnings. Mixing `volume` with device-scoped keys is an error.
 Custom timbre names defined in `tools/audio/mt32/mt-32_custom_timbres.yaml` (symlinked as `timbres.yaml`) can be used as strings
 (e.g. `mt32_patch: "NightWind"` or `mt32_program: "Theremin"`). The build pipeline
@@ -70,6 +73,7 @@ compiles on-the-fly setup SysEx (pointing the patch slot to the custom timbre) a
 cleanup SysEx (eagerly restoring the patch slot to factory parameters on track
 stop/unload, keeping all 128 factory presets intact).
 Custom IMFC voices defined in `tools/audio/imfc/imfc_custom_voices.yaml` or factory presets from `imfc_presets.py` can similarly be referenced by name (e.g. `imfc_voice: "HarpsiLead"` or `imfc_voice: "SoloVio"`).
+
 
 `yaml_lint.py` enforces: tier 2–3 entries must NOT have `opl_patch`,
 and must have both `mt32_patch` and `gm_program`. It also runs the same
@@ -229,8 +233,10 @@ auto-fixes.**
 
 ### Programs, tiers, and names
 
-Each switch carries per-target programs: `mt32_program`, `gm_program`, and optional `imfc_program`.
-The maps do not align across devices, so specify each target's program when re-voicing.
+Each switch carries per-target programs: `mt32_program`, `gm_program`, and `imfc_program`.
+IMFC is a full target alongside MT-32 and GM, not optional; toolchain switch fallbacks exist
+only as a transitional bridge until patches are routed for all tracks.
+The preset maps do not align across devices, so specify each target's program when re-voicing.
 **Ship preset NAMES, not numbers**: integer programs are 0-BASED in overrides files but 1-BASED
 in enhancements files, and a bare number is ambiguous across the two. Names sidestep the trap;
 the full numbering detail lives in
@@ -238,6 +244,7 @@ the full numbering detail lives in
 Tier is per-channel: a switch never changes a channel's tier, and if the
 compiler drops a whole layer (highest tier number first), that layer's
 switches vanish with it.
+
 
 
 ### Say it in voices, verify it in channels
