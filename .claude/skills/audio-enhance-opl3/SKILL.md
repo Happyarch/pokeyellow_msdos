@@ -196,8 +196,9 @@ Two paths, fastest first. The arranger skills (`audio-enhance-opl3` /
 `audio-enhance-mt32`) own *what* to write; this section owns *how to hear it*.
 
 **1. Host-side (seconds, no DOS boot)** — `dgad` (pkmn-audio-dbg) renders
-any device headless to WAV, or opens the interactive debugger GUI with no
-flags. `tools/audio/audition.py` is deprecated — do not document or use it.
+any device headless to WAV for verification. (Its interactive GUI is for
+human ear-checks, not agent workflows.) `tools/audio/audition.py` is
+deprecated — do not document or use it.
 
 ```sh
 # OPL3 — instant host FM synthesis, zero external synths needed:

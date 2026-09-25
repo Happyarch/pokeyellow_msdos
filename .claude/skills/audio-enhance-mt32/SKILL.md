@@ -311,8 +311,8 @@ Short form: `dgad --headless --track <Song> --device mt32 --out take.wav`
 Batch renders print peak/nonzero stats — nonzero==0 means silence (broken map).
 
 `dgad` (pkmn-audio-dbg) replaces `tools/audio/audition.py`, which is deprecated.
-Run `dgad` with no flags for the interactive debugger GUI; `dgad --help`
-lists the batch flags (`--frames`, `--no-enh`, `--replay`).
+Agents verify with batch renders + peak/nonzero stats; the interactive GUI
+is human territory (voice/timbre ear judgments). `dgad --help` lists all flags.
 
 End-to-end in-DOS verification via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
 The track is the `TRACK=` make variable — never edit the Makefile or
