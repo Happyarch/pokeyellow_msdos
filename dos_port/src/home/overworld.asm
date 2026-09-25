@@ -5427,6 +5427,24 @@ LoadDestinationWarpPosition:
     push ecx
     push esi
 
+    ; Arrival (Y, X) = the destination warp's entry in the destination map's
+    ; warp list. wWarpEntries already holds the DESTINATION map's warps here:
+    ; LoadMapHeader copies them (the `rep movsb` into wWarpEntries) BEFORE it
+    ; calls LoadTilesetHeader, whose tail this is. wDestinationWarpID is the
+    ; 0-based index into that list (pret's `warp_event` macro stores
+    ; `\4 - 1`, and WarpFound1 copies that stored byte verbatim).
+    ;
+    ; pret (home/overworld.asm:LoadDestinationWarpPosition) reads the same
+    ; arrival from the destination object data's trailing `warps_to` table
+    ; (`event_displacement`: dw viewptr + db Y, X — reached via the post-
+    ; InitSprites HL cursor through wPredefHL/GetPredefRegisters) and CopyData's
+    ; all 4 bytes to wCurrentTileBlockMapViewPointer/wYCoord/wXCoord. The port
+    ; has no `warps_to` table (gen_map_headers.py does not emit
+    ; `def_warps_to`), so it takes Y/X from the equivalent wWarpEntries row
+    ; and derives the view pointer below with the port's own MAP_BORDER-aware
+    ; formula instead of copying pret's stored pointer halves (pret's
+    ; MAP_BORDER is 3, the port's is 7, so the stored halves are not valid
+    ; port view pointers).
     movzx eax, byte [ebp + wDestinationWarpID]
     shl eax, 2                          ; * 4 bytes per warp entry
     lea esi, [ebp + wWarpEntries]

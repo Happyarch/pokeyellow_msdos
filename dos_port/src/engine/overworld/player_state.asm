@@ -375,7 +375,16 @@ IsPlayerStandingOnDoorTileOrWarpTile:
     mov edx, 1
     call IsInArray                          ; sets CF
     jnc .done
+    ; pret: `res BIT_STANDING_ON_WARP, [hl]` is FLAG-NEUTRAL (SM83 bit-res/set
+    ; never touch F), so the CF=1 IsInArray just returned MUST survive to the
+    ; `ret` — CheckWarpsNoCollision branches on it (`jc WarpFound1`). x86 `and`
+    ; clears CF, so bank the whole flag word across the clear. Same
+    ; pushf/and/popf idiom the three post-step sites in home/overworld.asm use
+    ; for this exact pret `res`. Without it every non-door ladder/stair/warp
+    ; carpet silently returns CF=0 and the warp never fires.
+    pushf
     and byte [ebp + wMovementFlags], ~(1 << BIT_STANDING_ON_WARP) & 0xFF
+    popf
 .done:
     ; POP does not affect CF (matches home/overworld.asm:ExtraWarpCheck's note).
     pop esi
