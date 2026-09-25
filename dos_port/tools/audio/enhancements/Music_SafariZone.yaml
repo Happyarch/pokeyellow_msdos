@@ -66,7 +66,10 @@ channels:
     gm_program: 39               # GM Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 78
     events:
       # Intro (first-time; split at the m5b3 seam exactly).
@@ -89,7 +92,9 @@ channels:
     gm_program: 90               # GM Pad 2 (warm)
     imfc_voice: "Strings"        # IMFC Strings
     pan: center
-    volume: 50
+    mt32_volume: 50
+    gm_volume: 50
+    imfc_volume: 50
     velocity: 68
     events:
       # Intro.
@@ -113,7 +118,9 @@ channels:
     gm_program: 50               # GM String Ensemble 2
     imfc_voice: "String1"        # IMFC orchestral strings (bank 4, violin arch)
     pan: left
-    volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 72
     events:
       # Rests the intro; half-note arch over the loop body only.
@@ -133,7 +140,9 @@ channels:
     gm_program: 9                # GM Celesta
     imfc_voice: "Celeste"        # IMFC Celeste
     pan: right
-    volume: 42
+    mt32_volume: 42
+    gm_volume: 42
+    imfc_volume: 42
     velocity: 62
     events:
       - {m: 5, b: 3, d: 0.5, n: E6}   # loop-head glint

@@ -18,15 +18,21 @@ channels:
   1:
     mt32_program: "Clarinet 1"
     gm_program: "Clarinet"
-    volume: 94
+    mt32_volume: 94
+    gm_volume: 94
+    imfc_volume: 94
     pan: 56
   2:
     mt32_program: "Flute 1"
     gm_program: "Flute"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
+    imfc_volume: 100
     pan: 64
   3:
     mt32_program: "Harp 1"
     gm_program: "Orchestral Harp"
-    volume: 92
+    mt32_volume: 92
+    gm_volume: 92
+    imfc_volume: 92
     pan: 72

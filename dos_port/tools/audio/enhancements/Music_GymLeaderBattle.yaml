@@ -4133,11 +4133,12 @@ channels:
   opl_patch: sub_bass
   mt32_patch: 29
   gm_program: 39
-  imfc_voice: "EBass"  # IMFC E.Bass (bass family; PalletTown precedent for
-                       # SynBass1) — IMFC vol falls back to volume: 60 (no
-                       # scoped imfc_volume: MIX-ERR with legacy volume)
+  imfc_voice: "EBass"  # IMFC E.Bass (bass family; PalletTown precedent for SynBass1)
   pan: center
-  volume: 60
+  opl_volume: 60
+  mt32_volume: 60
+  gm_volume: 60
+  imfc_volume: 60
   events:
   - pattern: bass_main
     at: 1
@@ -4145,7 +4146,9 @@ channels:
   tier: 2
   rhythm: true
   pan: center
-  volume: 80
+  mt32_volume: 80
+  gm_volume: 80
+  imfc_volume: 80
   events:
   - pattern: rock_beat_ks
     at: 1
@@ -4153,7 +4156,9 @@ channels:
   tier: 2
   rhythm: true
   pan: center
-  volume: 65
+  mt32_volume: 65
+  gm_volume: 65
+  imfc_volume: 65
   events:
   - pattern: rock_beat_hh
     at: 1

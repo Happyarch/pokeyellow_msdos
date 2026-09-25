@@ -25,17 +25,23 @@ channels:
     mt32_program: "Cello 1"     # lyrical inner line in B3..E5; bows under
                                 # the trumpet, sings the mm24-29 duets
     gm_program: "Cello"
-    volume: 92                  # under the lead
+    mt32_volume: 92                  # under the lead
+    gm_volume: 92
+    imfc_volume: 92
     pan: 48                     # inner line left, melody right
   2:
     mt32_program: "Trumpet 1"   # the hymn melody; noble long tones carry
                                 # over cello + harp + tier-1 pad
     gm_program: "Trumpet"
-    volume: 100                 # foreground; eased so tier-3 celesta pings read
+    mt32_volume: 100                 # foreground; eased so tier-3 celesta pings read
+    gm_volume: 100
+    imfc_volume: 100
     pan: 80
   3:
     mt32_program: "Harp 1"      # plucked glue for the 8th-note wave arps;
                                 # short decay keeps figures articulate
     gm_program: "Orchestral Harp"
-    volume: 72
+    mt32_volume: 72
+    gm_volume: 72
+    imfc_volume: 72
     pan: 64

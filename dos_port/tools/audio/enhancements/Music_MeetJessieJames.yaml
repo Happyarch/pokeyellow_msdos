@@ -54,7 +54,9 @@ channels:
     mt32_patch: 29             # MT-32 Syn Bass 1 (house family, cf. Male/Female)
     gm_program: 39             # GM Synth Bass 1
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 84
     events:
       - {m: 1, b: 1, d: 2, n: E2}    # intro: Em7 root (GB >= C3 here)
@@ -75,7 +77,9 @@ channels:
     mt32_patch: "Theremin"    # custom RCA-theremin timbre, timbres.yaml
     gm_program: 86            # GM Lead 6 (voice), 1-based (Dungeon3 precedent)
     pan: center
-    volume: 50                # felt wail under the motto, below the melody
+    mt32_volume: 50                # felt wail under the motto, below the melody
+    gm_volume: 50
+    imfc_volume: 50
     velocity: 64
     events:
       - {m: 1, b: 1, d: 2, n: B2}    # intro: Em7 fifth
@@ -92,7 +96,9 @@ channels:
     mt32_patch: 75            # MT-32 Piccolo 1 (the "!" made audible)
     gm_program: 73            # GM Piccolo
     pan: center
-    volume: 70
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 85
     events:
       - {m: 1, b: 1, d: 0.5, n: D6}   # song downbeat, over the descent start

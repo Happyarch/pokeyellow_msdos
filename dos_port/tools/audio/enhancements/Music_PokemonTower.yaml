@@ -32,7 +32,9 @@ channels:
     gm_program: 79
     imfc_voice: "Winds"       # IMFC Winds (atmosphere family; legacy volume covers IMFC level)
     pan: left
-    volume: 95                # audible ambient atmospheric bed
+    mt32_volume: 95                # audible ambient atmospheric bed
+    gm_volume: 95
+    imfc_volume: 95
     velocity: 85
     events:
       - {m: 1,  b: 1, d: 18,   n: D4}

@@ -25,7 +25,8 @@ channels:
                                 # Clarinet 2 is the swap candidate if this
                                 # one reads too dark/bright by ear
     imfc_program: "Clarine"     # Bank2 ROM1 reed, same family as Clarinet 1
-    volume: 92                  # under the sax lead
+    mt32_volume: 92                  # under the sax lead
+    gm_volume: 92
     imfc_volume: 92             # mirrors volume (PalletTown precedent)
     pan: 20                     # harmony left, melody right
   2:
@@ -37,7 +38,8 @@ channels:
                                 # GM lead (Cities1 precedent)
     imfc_program: "Sax 1"       # Bank4 ROM3 sax family keeps the reed-choir lead
                                 # on IMFC ("Sax 2"/"MonoSax" candidates — UNLISTENED)
-    volume: 100                 # the tune — foreground
+    mt32_volume: 100                 # the tune — foreground
+    gm_volume: 100
     imfc_volume: 100            # mirrors volume (PalletTown precedent)
     pan: 80
   3:
@@ -50,7 +52,8 @@ channels:
     imfc_program: "Reed"          # Bank4 ROM3 double-reed-ish voice for the motor
                                   # (EAR CHECK REQUIRED — Shakuhachi has no direct
                                   # IMFC equivalent; "Flute2"/"SlowFlt" fallbacks)
-    volume: 80                    # motor present between the spread lines,
+    mt32_volume: 80                    # motor present between the spread lines,
+    gm_volume: 80
                                   # under the sax lead
     imfc_volume: 80               # mirrors volume (PalletTown precedent)
     pan: 50                       # near-center motor under the spread duo

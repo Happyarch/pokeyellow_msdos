@@ -29,7 +29,8 @@ channels:
                                   # superseded untried)
     gm_program: "FX 7 (echoes)"
     imfc_program: "TubeBe1"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
     imfc_volume: 96
     pan: 56
   2:
@@ -37,7 +38,8 @@ channels:
                                   # lead on the stratospheric E6 melody
     gm_program: "Lead 2 (sawtooth)"
     imfc_program: "SynLead"
-    volume: 104                   # melody carries
+    mt32_volume: 104                   # melody carries
+    gm_volume: 104
     imfc_volume: 104
     pan: 72
   3:
@@ -45,5 +47,6 @@ channels:
                                   # tried 2026-09-10, too piping — reverted)
     gm_program: "Music Box"
     imfc_program: "Bells"
-    volume: 92                    # texture, below the melody
+    mt32_volume: 92                    # texture, below the melody
+    gm_volume: 92
     imfc_volume: 92

@@ -9,19 +9,22 @@ channels:
     mt32_program: "Flute 1"     # lyrical melody + arpeggiation
     gm_program: "Flute"
     imfc_program: "Flute"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
     imfc_volume: 100
     pan: 54
   2:
     mt32_program: "Violin 1"    # soaring lead voice
     gm_program: "Violin"
     imfc_program: "SoloVio"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
     imfc_volume: 96
     pan: 74
   3:
     mt32_program: "Acou Bass 1" # bouncy bass (E3-E2)
     gm_program: "Acoustic Bass"
     imfc_program: "EBass"
-    volume: 104
+    mt32_volume: 104
+    gm_volume: 104
     imfc_volume: 104

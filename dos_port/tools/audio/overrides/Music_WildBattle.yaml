@@ -47,7 +47,8 @@ channels:
     mt32_program: "Sawtooth"          # custom timbre (staged at Patch #27)
     gm_program: "Lead 2 (sawtooth)"
     imfc_program: "Sawtooth"        # custom IMFC Sawtooth (bank0/prog2)
-    volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
+    mt32_volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
+    gm_volume: 92
     imfc_volume: 92
     switches:
       - {m: 1, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
@@ -63,7 +64,8 @@ channels:
     mt32_program: "Square Wave"
     gm_program: "Lead 1 (square)"
     imfc_program: "SynLead"
-    volume: 90                  # lead balance (audition 2026-09-12)
+    mt32_volume: 90                  # lead balance (audition 2026-09-12)
+    gm_volume: 90
     imfc_volume: 90
     switches:
       - {m: 3, b: 1, mt32_program: "Clavi 2", gm_program: "Clavinet", imfc_program: "Clav"}
@@ -73,5 +75,6 @@ channels:
   3:
     mt32_program: "Atmosphere"
     imfc_program: "Fantasy"
-    volume: 85
+    mt32_volume: 85
+    gm_volume: 85
     imfc_volume: 85

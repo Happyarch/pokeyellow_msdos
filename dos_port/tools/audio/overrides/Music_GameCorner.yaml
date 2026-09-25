@@ -42,7 +42,8 @@ channels:
                                 # play out of tune (audition 2026-09-24); trumpet
                                 # carries the lead in tune (Cities1 precedent)
     imfc_program: "Sax 1"       # distinguished reed sister (no Sax 3 on IMFC)
-    volume: 100                 # foreground over the inner line + ticker
+    mt32_volume: 100                 # foreground over the inner line + ticker
+    gm_volume: 100
     imfc_volume: 100
     pan: 80                     # melody right, inner line left
   2:
@@ -51,13 +52,16 @@ channels:
                                 # (DefeatedTrainer/IndigoPlateau/Vermilion
                                 # precedent); same out-of-tune GM saxes avoided
     imfc_program: "Sax 2"       # lower sister under the lead
-    volume: 92                  # under the lead
+    mt32_volume: 92                  # under the lead
+    gm_volume: 92
     imfc_volume: 92
     pan: 48
   3:
     mt32_program: "Pizzicato"   # dry pluck for the 16th-note ticker arpeggio;
     gm_program: "Pizzicato Strings"  # kills the Warm Bell decay wash
     imfc_program: "Pizzic1"     # dry pluck, matches the MT-32 cure
-    volume: 70                  # dense 16ths sit well under both horns
+    mt32_volume: 70                  # dense 16ths sit well under both horns
+    gm_volume: 70
+    imfc_volume: 70
                                 # (cf. Celadon 60, Cities1 72, Pokecenter 76)
     pan: 64

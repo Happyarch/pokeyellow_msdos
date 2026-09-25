@@ -8,6 +8,8 @@ channels:
   2:
     mt32_program: "Flute 1"
     gm_program: "Flute"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
+    imfc_volume: 96
     pan: 64
 

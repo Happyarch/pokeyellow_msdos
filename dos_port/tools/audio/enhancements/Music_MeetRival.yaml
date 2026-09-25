@@ -21,7 +21,10 @@ channels:
     mt32_patch: 29        # Syn Bass 1 (house family)
     gm_program: 39        # GM Synth Bass 1
     pan: center
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 78
     events:
       - {m: 1, b: 1, d: 2, n: G#1}
@@ -75,7 +78,10 @@ channels:
     mt32_patch: 49        # Str Sect 1 on the cascade
     gm_program: 90        # GM Pad 2 (warm)
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 70
     events:
       - {m: 1, b: 1, d: 2, n: D#3}

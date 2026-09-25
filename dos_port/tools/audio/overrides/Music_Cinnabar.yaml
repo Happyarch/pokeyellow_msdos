@@ -30,7 +30,8 @@ channels:
     mt32_program: "Flute 1"     # the flowing theme; bows through the 6-beat
     gm_program: "Flute"         # holds where a piano would die with holes
     imfc_program: "Flute"
-    volume: 100                 # theme foreground
+    mt32_volume: 100                 # theme foreground
+    gm_volume: 100
     imfc_volume: 100
     pan: 48                     # theme left, descant right
   2:
@@ -38,14 +39,16 @@ channels:
                                 # honestly — short bowed decay, no wash
     gm_program: "Violin"
     imfc_program: "SoloVio"     # IMFC solo violin (Gym precedent)
-    volume: 96                  # descant just under the theme
+    mt32_volume: 96                  # descant just under the theme
+    gm_volume: 96
     imfc_volume: 96
     pan: 80
   3:
     mt32_program: "Harp 1"      # dry pluck keeps the 8th-note chatter
     gm_program: "Orchestral Harp"  # articulate; kills the Warm Bell wash
     imfc_program: "Harp"
-    volume: 78                  # motor audible but under both lines (density
+    mt32_volume: 78                  # motor audible but under both lines (density
+    gm_volume: 78
                                 # 1.94 chatter must not dominate)
     imfc_volume: 78
     pan: 64

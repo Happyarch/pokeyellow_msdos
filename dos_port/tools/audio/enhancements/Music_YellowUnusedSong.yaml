@@ -69,7 +69,10 @@ channels:
     mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
     gm_program: 39             # GM Synth Bass 1
     pan: center
-    volume: 64
+    opl_volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 84
     events:
       - {m: 2, b: 1, d: 2, n: C2}    # intro m2b1 (IV)
@@ -99,7 +102,10 @@ channels:
     mt32_patch: 35             # MT-32 Chorale (vocal-ish thirds)
     gm_program: 53             # GM Choir Aahs
     pan: center
-    volume: 56
+    opl_volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 72
     events:
       - {m: 2, b: 1, d: 2, n: E3}    # C major third (ch1 has E4: octave, fine)
@@ -123,7 +129,10 @@ channels:
     mt32_patch: 25             # MT-32 Syn Brass 1 (stab attack)
     gm_program: 63             # GM Synth Brass 1
     pan: right
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 80
     events:
       - {m: 2, b: 2, d: 0.5, n: [E5, G5]}    # C (ch1/2: G4 A4 E4 C5 D5)
@@ -148,7 +157,9 @@ channels:
     mt32_patch: 95            # MT-32 Tuba (FIRST USE project-wide)
     gm_program: 59            # GM Tuba
     pan: center
-    volume: 52                # felt, not heard
+    mt32_volume: 52                # felt, not heard
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 64
     events:
       - {m: 1, b: 1, d: 4, n: G1}     # under V-VI (12th/10th vs bass)
@@ -166,7 +177,9 @@ channels:
     mt32_patch: 37            # MT-32 Soundtrack (FIRST USE project-wide)
     gm_program: 96            # GM Pad 8 (sweep)
     pan: left
-    volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 76
     events:
       - {m: 9, b: 1, d: 4, n: Bb5}    # breakdown answers (all above ch3's

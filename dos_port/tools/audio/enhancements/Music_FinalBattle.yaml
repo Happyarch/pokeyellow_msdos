@@ -53,7 +53,10 @@ channels:
     gm_program: 39        # GM Synth Bass 1
     imfc_voice: "EBass"   # IMFC E.Bass (Syn Bass precedent: PalletTown sub_bass)
     pan: center
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 80
     events:
       - {m: 1, b: 1, d: 2, n: E1}
@@ -170,7 +173,10 @@ channels:
     gm_program: 90        # GM Pad 2 (warm)
     imfc_voice: "Strings" # IMFC Strings (Str Sect precedent: PalletTown low_pad)
     pan: center
-    volume: 64
+    opl_volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 72
     events:
       - {m: 3, b: 1, d: 4, n: E2}
@@ -231,7 +237,9 @@ channels:
     gm_program: 30        # GM Overdriven Guitar (arena, not distortion)
     imfc_voice: "Fuzz Gt" # IMFC overdriven guitar voice
     pan: center
-    volume: 72
+    mt32_volume: 72
+    gm_volume: 72
+    imfc_volume: 72
     velocity: 88
     events:
       - {m: 1, b: 1, d: 0.5, n: [E2, B2]}
@@ -663,7 +671,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 80
+    mt32_volume: 80
+    gm_volume: 80
+    imfc_volume: 80
     velocity: 96
     events:
       - {m: 1, b: 1, d: 0.4, n: 36}
@@ -890,7 +900,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 80
     events:
       - {m: 1, b: 1, d: 0.2, n: 42}
@@ -1324,7 +1336,9 @@ channels:
     gm_program: 50        # GM String Ensemble 2
     imfc_voice: "String1" # IMFC orchestral strings (distinct from tier-1 Strings)
     pan: center
-    volume: 52
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 68
     events:
       - {m: 36, b: 1, d: 4, n: A3}

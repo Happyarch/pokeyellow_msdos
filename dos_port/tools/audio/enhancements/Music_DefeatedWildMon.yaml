@@ -64,7 +64,10 @@ channels:
     gm_program: 39               # GM Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass (bass precedent: PalletTown sub_bass)
     pan: center
-    volume: 72
+    opl_volume: 72
+    mt32_volume: 72
+    gm_volume: 72
+    imfc_volume: 72
     velocity: 80
     events:
       - {at: 1, pattern: bass_body}
@@ -76,7 +79,10 @@ channels:
     gm_program: 90               # GM Pad 2 (warm)
     imfc_voice: "Strings"        # IMFC Strings (strings precedent: PalletTown low_pad)
     pan: center
-    volume: 64                   # under the bass — reinforcement, not a lead
+    opl_volume: 64                   # under the bass — reinforcement, not a lead
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 76
     events:
       - {at: 1, pattern: pad_body}

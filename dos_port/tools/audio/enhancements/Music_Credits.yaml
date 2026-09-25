@@ -111,7 +111,10 @@ channels:
     mt32_patch: 29               # Syn Bass 1 (round, sustaining)
     gm_program: 39               # Synth Bass 1
     pan: center
-    volume: 64
+    opl_volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 76
     events:
       - {m: 1, b: 1, d: 2, n: A1}      # A (I)
@@ -189,7 +192,10 @@ channels:
     mt32_patch: 49               # Str Sect 1 — cascades as real strings
     gm_program: 90               # Pad 2 (warm)
     pan: center
-    volume: 68
+    opl_volume: 68
+    mt32_volume: 68
+    gm_volume: 68
+    imfc_volume: 68
     velocity: 72
     events:
       - {m: 1, b: 1, d: 2, n: C#3}     # A 3rd
@@ -266,7 +272,9 @@ channels:
     mt32_patch: 53               # Violin 1 (novel as an enhancement voice)
     gm_program: 41               # Violin
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 72
     events:
       # mm1-6 rest: fanfare + statement 1 speak alone.
@@ -324,7 +332,9 @@ channels:
     mt32_patch: 86               # Engl Horn (novel) — the middle-voice song
     gm_program: 70               # English Horn
     pan: center
-    volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 68
     events:
       # Sings only the mm24-33 window (rests m25: the chromatic D–G–F#–F
@@ -345,7 +355,9 @@ channels:
     mt32_patch: 23               # Celesta 1
     gm_program: 9                # Celesta
     pan: right
-    volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 78
     events:
       - {m: 1,  b: 1, d: 1, n: C#7}    # I 3rd — opening bookend

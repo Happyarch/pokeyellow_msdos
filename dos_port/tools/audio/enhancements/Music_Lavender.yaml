@@ -23,7 +23,10 @@ channels:
     gm_program: 39            # Synth Bass 1
     imfc_voice: "EBass"       # IMFC E.Bass (bass family; PalletTown precedent for synth bass)
     pan: center
-    volume: 48                # a floor, not a voice (v1's 64 was too present)
+    opl_volume: 48                # a floor, not a voice (v1's 64 was too present)
+    mt32_volume: 48
+    gm_volume: 48
+    imfc_volume: 48
     velocity: 60
     events:
       - {at: 5, pattern: throb}
@@ -89,7 +92,9 @@ channels:
     gm_program: 20            # Church Organ
     imfc_voice: "POrgan1"     # IMFC pipe organ (MT-32 Pipe Org 2 map)
     pan: center
-    volume: 44                # a wash behind the band, not a comping part
+    mt32_volume: 44                # a wash behind the band, not a comping part
+    gm_volume: 44
+    imfc_volume: 44
     velocity: 64
     events:
       - {at: 5, pattern: organum}

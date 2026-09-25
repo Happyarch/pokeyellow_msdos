@@ -46,5 +46,6 @@ channels:
     imfc_program: "Fantasy"  # evolving Bank6 FM pad keeps the synth-bed character
                              # behind the squares (UNLISTENED — "Strings" if it
                              # needs more battle weight)
-    volume: 85
+    mt32_volume: 85
+    gm_volume: 85
     imfc_volume: 85

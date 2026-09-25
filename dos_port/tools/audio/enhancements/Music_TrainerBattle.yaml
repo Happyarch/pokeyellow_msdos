@@ -59,7 +59,10 @@ channels:
     mt32_patch: 29               # MT-32 Syn Bass 1 (round, sustaining)
     gm_program: 39               # GM Synth Bass 1
     pan: center
-    volume: 85                   # battle level; no ch4 motor in this track
+    opl_volume: 85                   # battle level; no ch4 motor in this track
+    mt32_volume: 85
+    gm_volume: 85
+    imfc_volume: 85
     velocity: 90
     events:
       # intro: chromatic dissolve, half-note roots
@@ -163,7 +166,10 @@ channels:
     mt32_patch: 49               # MT-32 Str Sect 1 — cascades as real strings
     gm_program: 90               # GM Pad 2 (warm)
     pan: center
-    volume: 70                   # under the squares, over the bass
+    opl_volume: 70                   # under the squares, over the bass
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 80
     events:
       - {m: 1, b: 1, d: 2, n: A1}       # F#m  3rd
@@ -268,7 +274,10 @@ channels:
     mt32_patch: 30               # MT-32 Syn Bass 2 (drive color vs sub's 29)
     gm_program: 40               # GM Synth Bass 2
     pan: center
-    volume: 70                   # pump under the sustains, never over them
+    opl_volume: 70                   # pump under the sustains, never over them
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 84
     events:
       # quarter-note root pump; pitch = active slot root (see sub_bass)
@@ -552,7 +561,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 88
+    mt32_volume: 88
+    gm_volume: 88
+    imfc_volume: 88
     events:
       - {at: 11, pattern: kit_bar}        # kit enters with the loop body
       - {at: 12, pattern: kit_bar}
@@ -626,7 +637,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     events:
       - {at: 1, pattern: hat_bar}         # hat ticks through the intro
       - {at: 2, pattern: hat_bar}
@@ -703,7 +716,9 @@ channels:
     mt32_patch: 113              # MT-32 Timpani (factory, novel use on this project)
     gm_program: 48               # GM Timpani (pitched-percussion exemption)
     pan: center
-    volume: 80
+    mt32_volume: 80
+    gm_volume: 80
+    imfc_volume: 80
     velocity: 90
     events:
       - {m: 11, b: 1, d: 4, n: B2}      # body entry under the crash

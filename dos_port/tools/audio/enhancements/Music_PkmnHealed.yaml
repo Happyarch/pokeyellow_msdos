@@ -65,7 +65,10 @@ channels:
     gm_program: 90            # GM Pad 2 (warm)
     imfc_voice: "Strings"     # IMFC Strings (strings precedent: PalletTown low_pad)
     pan: center
-    volume: 48                # under the GB trio — reinforcement, not a lead
+    opl_volume: 48                # under the GB trio — reinforcement, not a lead
+    mt32_volume: 48
+    gm_volume: 48
+    imfc_volume: 48
     velocity: 54              # tamed twice for OPL3 (TL math runs off
                               # vel*volume); MT-32 keeps its CC7 body,
                               # slightly softer attack
@@ -79,7 +82,9 @@ channels:
     gm_program: 9             # GM Celesta
     imfc_voice: "Celeste"     # IMFC Celeste (bells precedent: PalletTown sparkle)
     pan: center
-    volume: 64                # a glint on the climax, not a section
+    mt32_volume: 64                # a glint on the climax, not a section
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 80
     events:
       - {at: 2, pattern: chime_body}

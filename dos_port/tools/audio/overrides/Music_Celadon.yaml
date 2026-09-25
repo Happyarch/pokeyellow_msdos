@@ -34,7 +34,8 @@ channels:
     gm_program: "Lead 4 (chiff)"  # GM voice (was default square before the
                                   # switch work); chiff is the Dungeon2-
                                   # precedented match for Doctor Solo
-    volume: 106                   # default 96; nudge the melody line up
+    mt32_volume: 106                   # default 96; nudge the melody line up
+    gm_volume: 106
     imfc_volume: 106
     pan: 84
     switches:                     # DEMO: rehearsal-2 independence (m10) with
@@ -54,6 +55,7 @@ channels:
                                   # and the treble crossing line; kills the
                                   # Warm Bell decay wash masking the squares
     imfc_program: "Pizzic1"       # short-decay pluck, same family
-    volume: 60                    # user audition 2026-07-07: sit the pedal
+    mt32_volume: 60                    # user audition 2026-07-07: sit the pedal
+    gm_volume: 60
                                   # well under the squares
     imfc_volume: 60

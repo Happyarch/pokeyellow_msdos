@@ -944,8 +944,15 @@ def write_midi(path: Path, song: Song, ov: dict, target: str, enhance=None):
                     # order 1: note-offs (0) sort before, note-ons (2) after —
                     # the off -> prog -> on ordering midi_to_stream relies on.
                     evs.append((f, 1, bytes((0xC0 | mc, sprog))))
-        vol_key = "imfc_volume" if target == "imfc" else "volume"
-        vol = chan_setting(ov, gc, vol_key, chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
+        if target == "imfc":
+            vol = chan_setting(ov, gc, "imfc_volume",
+                               chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
+        elif target == "mt32":
+            vol = chan_setting(ov, gc, "mt32_volume",
+                               chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
+        else:
+            vol = chan_setting(ov, gc, "gm_volume",
+                               chan_setting(ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
         pan = chan_setting(ov, gc, "pan", 64)
         evs.append((0, 1, bytes((0xB0 | mc, 7, vol))))
         evs.append((0, 1, bytes((0xB0 | mc, 10, pan))))

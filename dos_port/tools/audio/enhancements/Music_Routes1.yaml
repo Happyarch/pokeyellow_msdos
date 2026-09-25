@@ -58,7 +58,9 @@ channels:
     gm_program: 39        # GM Synth Bass 1
     imfc_voice: "EBass"   # IMFC E.Bass (bass family; PalletTown precedent)
     pan: center
-    volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 76
     events:
       - {m: 1,  b: 1, d: 2,   n: D2}   # H1  Dmaj7 (I7)
@@ -87,7 +89,9 @@ channels:
     gm_program: 90        # GM Pad 2 (warm)
     imfc_voice: "Strings" # IMFC Strings (PalletTown precedent)
     pan: center
-    volume: 70
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 82
     events:
       - {m: 1,  b: 1, d: 6,   n: F#3}  # H1-H3  D/Bm7/D 3rd/5th/3rd (hold)
@@ -106,7 +110,9 @@ channels:
     gm_program: 9         # GM Celesta
     imfc_voice: "Celeste" # IMFC Celeste (PalletTown precedent)
     pan: center
-    volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 80
     events:
       - {m: 1,  b: 1, d: 1, n: D6}   # top of form (ch2 has D5 — octave ok)

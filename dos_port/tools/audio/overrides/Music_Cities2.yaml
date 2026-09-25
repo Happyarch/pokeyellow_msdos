@@ -39,7 +39,8 @@ channels:
                                 # bows under the violin, drives the m13 HC
     imfc_program: "Cello1"
     gm_program: "Cello"
-    volume: 92                  # under the lead
+    mt32_volume: 92                  # under the lead
+    gm_volume: 92
     imfc_volume: 92
     pan: 48                     # inner line left, melody right
   2:
@@ -50,7 +51,8 @@ channels:
                                 # the Cities1-proven bright lead in E major.
     imfc_program: "Trumpet"
     gm_program: "Trumpet"
-    volume: 100                 # foreground over cello + harp; eased from 104
+    mt32_volume: 100                 # foreground over cello + harp; eased from 104
+    gm_volume: 100
                                 # so the tier-3 celesta pings read (audition)
     imfc_volume: 100
     pan: 80
@@ -69,6 +71,7 @@ channels:
     mt32_program: "Harp 1"      # plucked orchestral glue for the 8th-note wave
     imfc_program: "Harp"
     gm_program: "Orchestral Harp"  # figures; short decay keeps the wave-alone
-    volume: 72                  # spots (m6, pickup m14) exposed, kills the
+    mt32_volume: 72                  # spots (m6, pickup m14) exposed, kills the
+    gm_volume: 72
     imfc_volume: 72
     pan: 64                     # default Warm Bell decay wash

@@ -21,10 +21,14 @@ channels:
   1:
     mt32_program: "JigglyVox"
     gm_program: "Voice Oohs"    # no GM upload path — vox vowel instead
-    volume: 88                  # halo under the Vox lead
+    mt32_volume: 88                  # halo under the Vox lead
+    gm_volume: 88
+    imfc_volume: 88
     pan: 56                     # near-center duet, ch1 a hair left
   2:
     mt32_program: "Funny Vox"   # same voice — unison ensemble by composition
     gm_program: "Voice Oohs"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
+    imfc_volume: 96
     pan: 72                     # ch2 a hair right

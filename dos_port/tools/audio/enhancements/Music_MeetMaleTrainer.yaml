@@ -57,7 +57,9 @@ channels:
     gm_program: 39             # GM Synth Bass 1
     imfc_voice: "EBass"        # IMFC E.Bass
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 84
     events:
       - {m: 1, b: 1, d: 2, n: C#2}   # intro: C#7 root
@@ -75,7 +77,9 @@ channels:
     gm_program: 49             # GM String Ensemble 1
     imfc_voice: "String2"      # IMFC orchestral strings (bank 4)
     pan: center
-    volume: 54
+    mt32_volume: 54
+    gm_volume: 54
+    imfc_volume: 54
     velocity: 66
     events:
       - {m: 1, b: 1, d: 2, n: G#3}   # C#7 fifth
@@ -94,7 +98,9 @@ channels:
     gm_program: 44            # GM Contrabass
     imfc_voice: "WodBass"     # IMFC wood/acoustic bass (bowed family)
     pan: center
-    volume: 50                # felt, not heard
+    mt32_volume: 50                # felt, not heard
+    gm_volume: 50
+    imfc_volume: 50
     velocity: 60
     events:
       - {m: 1, b: 1, d: 2, n: C#1}    # intro roots, octave under low_bass
@@ -112,7 +118,9 @@ channels:
     gm_program: 73            # GM Piccolo
     imfc_voice: "Piccolo"     # IMFC Piccolo
     pan: center
-    volume: 70
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 85
     events:
       - {m: 1, b: 1, d: 0.5, n: E6}   # song downbeat, over the pickup run

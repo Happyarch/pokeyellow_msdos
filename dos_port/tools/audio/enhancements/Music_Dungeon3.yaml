@@ -37,7 +37,9 @@ channels:
     gm_program: 100        # GM FX 4 (Atmosphere)
     imfc_voice: "Fantasy"  # IMFC Fantasy (ROM5 synth pad; airy Atmosphere map)
     pan: center
-    volume: 40
+    mt32_volume: 40
+    gm_volume: 40
+    imfc_volume: 40
     velocity: 56
     events:
       - {at: 5, pattern: haze_ping}
@@ -50,7 +52,9 @@ channels:
     gm_program: 86               # GM Lead 6 (voice), 1-based (Tower fallback)
     imfc_voice: "Theremin"       # IMFC custom Theremin (bank 0; 1:1 custom-timbre map)
     pan: center
-    volume: 46                   # background bed under the ch2 lead; ear will set final level
+    mt32_volume: 46                   # background bed under the ch2 lead; ear will set final level
+    gm_volume: 46
+    imfc_volume: 46
     velocity: 62
     events:
       - {m: 1, b: 1.0, d: 1.5, n: D#3}

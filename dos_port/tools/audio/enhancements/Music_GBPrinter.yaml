@@ -74,7 +74,10 @@ channels:
     mt32_patch: 49              # Str Sect 1 — cascades as real strings
     gm_program: 49              # String Ensemble 1 (same family both targets)
     pan: center
-    volume: 52                  # bed under the music box, not a second lead
+    opl_volume: 52                  # bed under the music box, not a second lead
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 64
     events:
       # Intro m2 only (m1 bare by design).
@@ -109,7 +112,10 @@ channels:
     mt32_patch: 29               # Syn Bass 1 (MuseumGuy precedent)
     gm_program: 39               # Synth Bass 1
     pan: center
-    volume: 48                  # a floor, not a voice
+    opl_volume: 48                  # a floor, not a voice
+    mt32_volume: 48
+    gm_volume: 48
+    imfc_volume: 48
     velocity: 60
     events:
       - {m: 2, b: 1, d: 2, n: C#2}    # C#m7

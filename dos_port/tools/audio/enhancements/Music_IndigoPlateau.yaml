@@ -57,7 +57,10 @@ channels:
     gm_program: 39               # GM Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass (Syn Bass precedent: PalletTown sub_bass)
     pan: center
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 80
     events:
       # Intro (first-time; loop body restates from m3).
@@ -94,7 +97,10 @@ channels:
     gm_program: 90               # GM Pad 2 (warm)
     imfc_voice: "Strings"        # IMFC Strings (Str Sect precedent: PalletTown low_pad)
     pan: center
-    volume: 52
+    opl_volume: 52
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 70
     events:
       # Intro.
@@ -128,7 +134,9 @@ channels:
     gm_program: 61               # GM French Horn
     imfc_voice: "Horn"           # IMFC Horn (brass mapping)
     pan: left
-    volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 76
     events:
       # Intro: dominant pedal, score's own device an octave down.
@@ -163,7 +171,9 @@ channels:
     gm_program: 9                # GM Celesta
     imfc_voice: "Celeste"        # IMFC Celeste (bell mapping; precedent: PalletTown sparkle)
     pan: right
-    volume: 44
+    mt32_volume: 44
+    gm_volume: 44
+    imfc_volume: 44
     velocity: 64
     events:
       # Beats 2&4 answers to ch3's beats-1&3 pings; A#5 at flat-2 crunches.

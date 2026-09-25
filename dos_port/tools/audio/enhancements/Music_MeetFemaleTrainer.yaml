@@ -53,7 +53,9 @@ channels:
     gm_program: 39             # GM Synth Bass 1
     imfc_voice: "EBass"        # IMFC E.Bass (bass family; PalletTown precedent; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 84
     events:
       - {m: 1, b: 1, d: 8, n: E2}     # intro m1-m2: I (under flourish + B pedal)
@@ -74,7 +76,9 @@ channels:
     gm_program: 49             # GM String Ensemble 1
     imfc_voice: "String2"      # IMFC String2 (Bank 4 orchestral; Cities2 precedent for Str Sect 2; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 54
+    mt32_volume: 54
+    gm_volume: 54
+    imfc_volume: 54
     velocity: 66
     events:
       - {m: 1, b: 1, d: 8, n: G#3}     # I third (octave under ch1's G#4)
@@ -94,7 +98,9 @@ channels:
     gm_program: 44            # GM Contrabass
     imfc_voice: "Cello1"      # IMFC Cello1 (Bank 4 orchestral; Routes3/Routes4 precedent for Contrabass; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 50                # felt, not heard
+    mt32_volume: 50                # felt, not heard
+    gm_volume: 50
+    imfc_volume: 50
     velocity: 60
     events:
       - {m: 5, b: 4.5, d: 0.5, n: E1} # body pickup
@@ -110,7 +116,9 @@ channels:
     gm_program: 73            # GM Piccolo
     imfc_voice: "Piccolo"     # IMFC Piccolo (Bank 2 ROM1; exact piccolo-family match; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 70
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 85
     events:
       - {m: 1, b: 1, d: 0.5, n: E6}   # song downbeat, over the octave B's

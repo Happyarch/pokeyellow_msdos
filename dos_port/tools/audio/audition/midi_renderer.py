@@ -204,7 +204,12 @@ class MidiSession:
                     prog, sw_evs.get(gc, []))
                 for f, sprog in sw_evs.get(gc, []):
                     self.base_events.setdefault(f, []).append(bytes((0xC0 | mc, sprog)))
-            vol = chan_setting(self.ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100))
+            if self.target == "mt32":
+                vol = chan_setting(self.ov, gc, "mt32_volume",
+                                   chan_setting(self.ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
+            else:
+                vol = chan_setting(self.ov, gc, "gm_volume",
+                                   chan_setting(self.ov, gc, "volume", DEFAULT_VOLUME.get(gc, 100)))
             pan = chan_setting(self.ov, gc, "pan", 64)
             self.base_init_msgs.append(bytes((0xB0 | mc, 7, vol)))
             self.base_init_msgs.append(bytes((0xB0 | mc, 10, pan)))

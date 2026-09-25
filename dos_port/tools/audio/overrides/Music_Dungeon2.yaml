@@ -11,21 +11,24 @@ channels:
     mt32_program: "Fantasy"
     gm_program: "FX 3 (crystal)"
     imfc_program: "Fantasy"
-    volume: 90
+    mt32_volume: 90
+    gm_volume: 90
     imfc_volume: 90
     pan: 44
   2:
     mt32_program: "Doctor Solo"
     gm_program: "Lead 4 (chiff)"
     imfc_program: "SynLead"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
     imfc_volume: 100
     pan: 84
   3:
     mt32_program: "Ice Rain"
     gm_program: "FX 1 (rain)"
     imfc_program: "Glocken"
-    volume: 92
+    mt32_volume: 92
+    gm_volume: 92
     imfc_volume: 92
     pan: 64
 

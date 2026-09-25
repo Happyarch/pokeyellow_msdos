@@ -64,7 +64,10 @@ channels:
     gm_program: 39               # Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass
     pan: center
-    volume: 62
+    opl_volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 80
     events:
       - {m: 1, b: 1, d: 4, n: C2}           # pickup + I (A opens)
@@ -81,7 +84,10 @@ channels:
     gm_program: 90               # Pad 2 (warm)
     imfc_voice: "Strings"        # IMFC Strings
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 76
     events:
       - {m: 1, b: 1, d: 4, n: E3}           # I, 3rd
@@ -101,7 +107,9 @@ channels:
     gm_program: 61               # French Horn
     imfc_voice: "Horn"           # IMFC Horn
     pan: left
-    volume: 52
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 72
     events:
       - {at: 10, pattern: horn_b}
@@ -114,7 +122,9 @@ channels:
     gm_program: 47               # Orchestral Harp
     imfc_voice: "Harp"           # IMFC Harp
     pan: right
-    volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 78
     events:
       - {at: 1,  pattern: harp_body}

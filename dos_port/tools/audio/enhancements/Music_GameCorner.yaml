@@ -85,7 +85,10 @@ channels:
     gm_program: 39               # GM Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass (bass family; IMFC level follows legacy volume 95 by fallback)
     pan: center
-    volume: 95                   # slightly hotter than Pallet Town sub_bass (track needs it)
+    opl_volume: 95                   # slightly hotter than Pallet Town sub_bass (track needs it)
+    mt32_volume: 95
+    gm_volume: 95
+    imfc_volume: 95
     velocity: 105
     events:
       # Intro: mm. 1–2 (before loop start at m3).
@@ -155,7 +158,9 @@ channels:
     gm_program: 5                # GM Electric Piano 1
     imfc_voice: "EPiano1"        # IMFC EPiano1, Bank 3 (keys family; IMFC level follows legacy volume 72 by fallback)
     pan: center
-    volume: 72                   # lighter than the bass; fills without dominating
+    mt32_volume: 72                   # lighter than the bass; fills without dominating
+    gm_volume: 72
+    imfc_volume: 72
     velocity: 80
     # Jazz backbeat comp: chord 3rds on beats 2 & 4, octave 3.
     # Duration 0.75 beats — crisp stab, lets the wave ticker breathe.
@@ -265,7 +270,9 @@ channels:
     gm_program: 12               # GM Vibraphone
     imfc_voice: "Vibes"          # IMFC Vibes, Bank 2 (mallet family per GM/channel intent; IMFC level follows legacy volume 64 by fallback)
     pan: center
-    volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 72
     # Vibraphone chord-tone twinkles at structural phrase cadence points only.
     # Placed at octave 5 (chord 9ths) to stay above the wave ticker and ch2.

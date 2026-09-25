@@ -58,7 +58,10 @@ channels:
     mt32_patch: 65               # Acou Bass 1: round plucked beach bounce
     gm_program: 33               # Acoustic Bass
     pan: center
-    volume: 62
+    opl_volume: 62
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 80
     events:
       - {m: 1, b: 1, d: 2, n: E2}    # E
@@ -145,7 +148,10 @@ channels:
     mt32_patch: 49               # Str Sect 1: cascades as real strings
     gm_program: 90               # Pad 2 (warm)
     pan: center
-    volume: 56
+    opl_volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 74
     events:
       - {m: 1, b: 1, d: 2, n: G#3}   # E 3rd
@@ -231,7 +237,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 80
     events:
       - {at: 1, pattern: surf_groove}
@@ -279,7 +287,9 @@ channels:
     mt32_patch: 78               # Pan Pipes: breathy sun-on-water, novel
     gm_program: 76               # Pan Flute
     pan: right
-    volume: 48
+    mt32_volume: 48
+    gm_volume: 48
+    imfc_volume: 48
     velocity: 68
     events:
       - {m: 1, b: 1, d: 0.5, n: E6}    # song open (ch2 has E5: octave)

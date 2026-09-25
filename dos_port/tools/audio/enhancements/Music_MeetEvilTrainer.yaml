@@ -84,7 +84,10 @@ channels:
     gm_program: 39             # GM Synth Bass 1
     imfc_voice: "EBass"        # IMFC E.Bass (bass family; PalletTown precedent; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 80
     events:
       - {m: 1, b: 1, d: 2, n: G2}    # intro: m1b1 pickup (VI)
@@ -103,7 +106,9 @@ channels:
     gm_program: 49            # GM String Ensemble 1
     imfc_voice: "String2"     # IMFC String2 (Bank 4 orchestral; Cities2 precedent for Str Sect 2; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 52                # felt, not heard
+    mt32_volume: 52                # felt, not heard
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 64
     events:
       - {m: 1, b: 1, d: 4, n: B1}    # intro: under the pickup + descent
@@ -115,7 +120,9 @@ channels:
     rhythm: true              # routes to MIDI ch 10; no patches, notes are drums
     evolving: true            # authors every iteration: intro + ramp + hold
     pan: center
-    volume: 85                # felt in the chest, under the melody
+    mt32_volume: 85                # felt in the chest, under the melody
+    gm_volume: 85
+    imfc_volume: 85
     events:
       - {m: 1, b: 1, d: 0.5, n: 36, v: 110}   # intro: lub (kick)
       - {m: 1, b: 1.5, d: 0.5, n: 43, v: 90}  # intro: dub (high floor tom)
@@ -137,7 +144,9 @@ channels:
     gm_program: 56            # GM Orchestra Hit
     imfc_voice: "Orchest"     # IMFC Orchest (Bank 4 orchestral stab; closest Orche-Hit map; IMFC level follows legacy volume by fallback)
     pan: center
-    volume: 70
+    mt32_volume: 70
+    gm_volume: 70
+    imfc_volume: 70
     velocity: 90
     events:
       - {m: 2, b: 3, d: 0.5, n: A#3}   # intro rub bars

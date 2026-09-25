@@ -67,7 +67,10 @@ channels:
     gm_program: 90            # GM Pad 2 (warm)
     imfc_voice: "Strings"
     pan: center
-    volume: 62                # lighter than Pallet Town's 72 — "light pad"
+    opl_volume: 62                # lighter than Pallet Town's 72 — "light pad"
+    mt32_volume: 62
+    gm_volume: 62
+    imfc_volume: 62
     velocity: 78
     events:
       - {at: 1, pattern: pad_body}
@@ -79,7 +82,9 @@ channels:
     gm_program: 53            # GM Choir Aahs
     imfc_voice: "Voices"
     pan: center
-    volume: 50                # a halo at the PAC, not a section
+    mt32_volume: 50                # a halo at the PAC, not a section
+    gm_volume: 50
+    imfc_volume: 50
     velocity: 70
     events:
       - {at: 1, pattern: choir_body}

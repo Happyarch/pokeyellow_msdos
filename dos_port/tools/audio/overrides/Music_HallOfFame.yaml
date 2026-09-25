@@ -22,15 +22,21 @@ channels:
   1:
     mt32_program: "Trombone 1"   # whole-note cantus, under the trumpet
     gm_program: "Trombone"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
+    imfc_volume: 96
     pan: 56
   2:
     mt32_program: "Trumpet 1"    # the Hall of Fame melody carries
     gm_program: "Trumpet"
-    volume: 104
+    mt32_volume: 104
+    gm_volume: 104
+    imfc_volume: 104
     pan: 72
   3:
     mt32_program: "Pizzicato"    # 8th-note D-G pedal + quarter figures
     gm_program: "Pizzicato Strings"
-    volume: 88
+    mt32_volume: 88
+    gm_volume: 88
+    imfc_volume: 88
     pan: 64

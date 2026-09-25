@@ -111,7 +111,10 @@ channels:
     mt32_patch: 29                # SynBass1 (round, sustaining)
     gm_program: 39                # Synth Bass 1
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 80
     events:
       - {m: 1,  b: 1, d: 6, n: E1}    # I (spans mm1–m2b2)
@@ -139,7 +142,10 @@ channels:
     mt32_patch: 49               # Str Sect 1 — cascades as real strings on MT-32
     gm_program: 90               # Pad 2 (warm)
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 76
     events:
       - {m: 1,  b: 1, d: 6, n: G#3}   # I, 3rd
@@ -170,7 +176,9 @@ channels:
     mt32_patch: 93               # Fr Horn 1
     gm_program: 61               # French Horn
     pan: left
-    volume: 52
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 72
     events:
       - {m: 1,  b: 1, d: 6, n: B2}    # I opening, 5th (pad has the 3rd)
@@ -195,7 +203,9 @@ channels:
     mt32_patch: 35               # Chorale (factory idx 34)
     gm_program: 53               # Choir Aahs
     pan: center
-    volume: 48                  # halo under the climax/final, not a lead
+    mt32_volume: 48                  # halo under the climax/final, not a lead
+    gm_volume: 48
+    imfc_volume: 48
     velocity: 70
     events:
       - {m: 5,  b: 1, d: 4, n: E4}              # climax root under C#6
@@ -206,7 +216,9 @@ channels:
     mt32_patch: 23               # Celesta 1
     gm_program: 9                # Celesta
     pan: right
-    volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 78
     events:
       - {m: 1,  b: 1, d: 1, n: E6}              # opening tonic stroke

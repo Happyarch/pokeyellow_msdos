@@ -17,17 +17,23 @@ channels:
   1:
     mt32_program: "Square Wave"   # the motor stays 8-bit-sharp
     gm_program: "Lead 1 (square)"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
+    imfc_volume: 100
     pan: 52
   2:
     mt32_program: "Clarinet 2"    # dark woody menace (FIRST USE); trumpet
     gm_program: "Clarinet"        # was the alternative — see report
-    volume: 102                   # melody carries
+    mt32_volume: 102                   # melody carries
+    gm_volume: 102
+    imfc_volume: 102
     pan: 76
   3:
     mt32_program: "Flute 1"       # wave countermelody, natural mapping
     gm_program: "Flute"
-    volume: 92                    # texture, below the melody
+    mt32_volume: 92                    # texture, below the melody
+    gm_volume: 92
+    imfc_volume: 92
     pan: 64
 drums:
   velocity: 96                # dense id-3 pattern sits under the motor

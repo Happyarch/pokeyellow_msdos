@@ -1011,6 +1011,19 @@ def lint_overrides(path: Path) -> tuple[Report, dict]:
             if imfc_v is not None:
                 if not isinstance(imfc_v, int) or isinstance(imfc_v, bool) or not 0 <= imfc_v <= 127:
                     rep.err(f"channels.{key}: imfc_volume must be an integer 0-127 (got {imfc_v!r})")
+            mt32_v = chs[key].get("mt32_volume")
+            if mt32_v is not None:
+                if not isinstance(mt32_v, int) or isinstance(mt32_v, bool) or not 0 <= mt32_v <= 127:
+                    rep.err(f"channels.{key}: mt32_volume must be an integer 0-127 (got {mt32_v!r})")
+            gm_v = chs[key].get("gm_volume")
+            if gm_v is not None:
+                if not isinstance(gm_v, int) or isinstance(gm_v, bool) or not 0 <= gm_v <= 127:
+                    rep.err(f"channels.{key}: gm_volume must be an integer 0-127 (got {gm_v!r})")
+            leg_v = chs[key].get("volume")
+            if leg_v is not None and (mt32_v is not None or gm_v is not None or imfc_v is not None):
+                rep.err(f"channels.{key}: cannot mix legacy 'volume' with device-scoped volume keys (mt32_volume, gm_volume, imfc_volume)")
+            elif leg_v is not None:
+                rep.warn(f"channels.{key}: 'volume' is deprecated in favor of device-scoped volume keys (mt32_volume, gm_volume, imfc_volume)")
 
     analysis = load_analysis(label)
     frames = analysis["frames"]

@@ -15,20 +15,23 @@ channels:
     mt32_program: "Flute 1"     # the singing sea-shanty theme melody
     gm_program: "Flute"
     imfc_program: "Flute"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
     imfc_volume: 100
     pan: 54
   2:
     mt32_program: "Str Sect 3"  # high shimmer above the theme (proved in
     gm_program: "String Ensemble 1"  # this register on Pallet's ch2)
     imfc_program: "Strings"
-    volume: 92
+    mt32_volume: 92
+    gm_volume: 92
     imfc_volume: 92
     pan: 74
   3:
     mt32_program: "Harp 1"      # plucked water-sparkle for the wave ostinato
     gm_program: "Orchestral Harp"
     imfc_program: "Harp"
-    volume: 108                 # up a touch (was 104) — the fast-decaying pluck
+    mt32_volume: 108                 # up a touch (was 104) — the fast-decaying pluck
+    gm_volume: 108
     imfc_volume: 108
                                 # needs level to stay audible under flute+strings

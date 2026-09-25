@@ -19,21 +19,24 @@ channels:
     mt32_program: "Oboe"
     gm_program: "Oboe"
     imfc_program: "Oboe"
-    volume: 92
+    mt32_volume: 92
+    gm_volume: 92
     imfc_volume: 92
     pan: 48
   2:
     mt32_program: "Flute 1"
     gm_program: "Flute"
     imfc_program: "Flute"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
     imfc_volume: 100
     pan: 80
   3:
     mt32_program: "Pizzicato"
     gm_program: "Pizzicato Strings"
     imfc_program: "Pizzic1"
-    volume: 96
+    mt32_volume: 96
+    gm_volume: 96
     imfc_volume: 96
     pan: 64
 drums:

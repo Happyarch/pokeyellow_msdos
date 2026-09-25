@@ -66,7 +66,10 @@ channels:
     mt32_patch: 29               # SynBass1 (round, sustaining)
     gm_program: 39               # Synth Bass 1
     pan: center
-    volume: 60
+    opl_volume: 60
+    mt32_volume: 60
+    gm_volume: 60
+    imfc_volume: 60
     velocity: 80
     events:
       # Intro (m1–m3 b2). G ostinato then bVII pickup; release on the loop.
@@ -106,7 +109,10 @@ channels:
     mt32_patch: 49               # Str Sect 1 — cascades as real strings on MT-32
     gm_program: 90               # Pad 2 (warm)
     pan: center
-    volume: 58
+    opl_volume: 58
+    mt32_volume: 58
+    gm_volume: 58
+    imfc_volume: 58
     velocity: 76
     events:
       # 3rd of I (B2) held through the slam; 3rd of bVII (A2) is a step.
@@ -149,7 +155,9 @@ channels:
     mt32_patch: 93               # Fr Horn 1
     gm_program: 61               # French Horn
     pan: left
-    volume: 52
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 72
     events:
       - {m: 1,  b: 1, d: 6, n: D2}          # intro I, 5th
@@ -166,7 +174,9 @@ channels:
     mt32_patch: 103              # Tube Bell
     gm_program: 15               # Tubular Bells
     pan: right
-    volume: 56
+    mt32_volume: 56
+    gm_volume: 56
+    imfc_volume: 56
     velocity: 78
     events:
       - {m: 1,  b: 3, d: 0.5, n: G5}        # intro slam (melody is G4)

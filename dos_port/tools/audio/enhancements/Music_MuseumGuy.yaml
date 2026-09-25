@@ -69,7 +69,10 @@ channels:
     gm_program: 39               # GM Synth Bass 1
     imfc_voice: "EBass"          # IMFC E.Bass (bass -> EBass mapping)
     pan: center
-    volume: 88                   # felt, not heard — a stroll, not a march
+    opl_volume: 88                   # felt, not heard — a stroll, not a march
+    mt32_volume: 88
+    gm_volume: 88
+    imfc_volume: 88
     velocity: 100
     events:
       # Intro: mm. 1–2 (dominant setup: vii° → iii7 → V7 → V).

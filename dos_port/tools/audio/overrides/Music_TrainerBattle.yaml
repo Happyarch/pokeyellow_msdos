@@ -17,12 +17,18 @@ channels:
   1:
     mt32_program: "Square Wave"
     gm_program: "Lead 1 (square)"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
+    imfc_volume: 100
   2:
     mt32_program: "Sawtooth"
     gm_program: "Lead 2 (sawtooth)"
-    volume: 105
+    mt32_volume: 105
+    gm_volume: 105
+    imfc_volume: 105
   3:
     mt32_program: "Elec Bass 1"
     gm_program: "Electric Bass (finger)"
-    volume: 95
+    mt32_volume: 95
+    gm_volume: 95
+    imfc_volume: 95

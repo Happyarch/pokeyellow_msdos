@@ -12,20 +12,23 @@ channels:
     mt32_program: "Square Wave"   # composite-line half; stays 8-bit-sharp
     gm_program: "Lead 1 (square)"
     imfc_program: "SynLead"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
     imfc_volume: 100
     pan: 52
   2:
     mt32_program: "Square Wave"   # composite-line half; melody carries
     gm_program: "Lead 1 (square)"
     imfc_program: "SynLead"
-    volume: 104
+    mt32_volume: 104
+    gm_volume: 104
     imfc_volume: 104
     pan: 76
   3:
     mt32_program: "Warm Bell"     # fifth-ostinato attack + sustain body
     gm_program: "Music Box"
     imfc_program: "TubeBe1"
-    volume: 92
+    mt32_volume: 92
+    gm_volume: 92
     imfc_volume: 92
     pan: 64

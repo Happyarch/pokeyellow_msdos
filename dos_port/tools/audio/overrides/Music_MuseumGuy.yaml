@@ -27,7 +27,8 @@ channels:
                                 # (PalletTown ch1 precedent)
     gm_program: "Flute"
     imfc_program: "Flute"
-    volume: 120                 # the tune — foreground (bumped per audition
+    mt32_volume: 120                 # the tune — foreground (bumped per audition
+    gm_volume: 120
                                 # 2026-09-24: flute sat under the EP sparkle)
     imfc_volume: 120
     pan: 80                     # melody right, figuration left
@@ -35,7 +36,8 @@ channels:
     mt32_program: "Elec Piano 1"  # bounce for the arpeggiated figuration
     gm_program: "Electric Piano 1"  # (Cities1 motor precedent)
     imfc_program: "EPiano1"
-    volume: 86                  # under the flute
+    mt32_volume: 86                  # under the flute
+    gm_volume: 86
     imfc_volume: 86
     pan: 48
   3:
@@ -44,7 +46,8 @@ channels:
                                 # Cities1/Vermilion cure). Glock was the
                                 # alternative; pizz is the proven quantity.
     imfc_program: "Pizzic1"
-    volume: 68                  # tucked — high register carries on its own
+    mt32_volume: 68                  # tucked — high register carries on its own
+    gm_volume: 68
                                 # (default 110 up there would scream)
     imfc_volume: 68
     pan: 64

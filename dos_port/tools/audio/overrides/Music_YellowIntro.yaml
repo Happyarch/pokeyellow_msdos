@@ -25,15 +25,21 @@ channels:
   1:
     mt32_program: "Square Wave"   # inner line stays 8-bit-sharp
     gm_program: "Lead 1 (square)"
-    volume: 92                    # under the flute lead
+    mt32_volume: 92                    # under the flute lead
+    gm_volume: 92
+    imfc_volume: 92
     pan: 40                       # inner voice left, melody right
   2:
     mt32_program: "Flute 1"       # lyrical arch melody, foreground
     gm_program: "Flute"
-    volume: 106
+    mt32_volume: 106
+    gm_volume: 106
+    imfc_volume: 106
     pan: 84
   3:
     mt32_program: "Harp 1"        # plucked broken-chord motor, articulate
     gm_program: "Orchestral Harp"
-    volume: 84                    # motor present, under the lead
+    mt32_volume: 84                    # motor present, under the lead
+    gm_volume: 84
+    imfc_volume: 84
     pan: 64

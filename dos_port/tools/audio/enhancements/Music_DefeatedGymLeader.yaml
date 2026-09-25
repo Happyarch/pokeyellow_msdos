@@ -31,7 +31,10 @@ channels:
     gm_program: 39        # GM Synth Bass 1
     imfc_voice: "EBass"   # IMFC E.Bass (legacy volume: no imfc_volume)
     pan: center
-    volume: 72
+    opl_volume: 72
+    mt32_volume: 72
+    gm_volume: 72
+    imfc_volume: 72
     velocity: 80
     events:
       - {m: 1, b: 1, d: 2, n: D2}
@@ -94,7 +97,10 @@ channels:
     gm_program: 90        # GM Pad 2 (warm)
     imfc_voice: "Strings" # IMFC Strings (legacy volume: no imfc_volume)
     pan: center
-    volume: 64
+    opl_volume: 64
+    mt32_volume: 64
+    gm_volume: 64
+    imfc_volume: 64
     velocity: 76
     events:
       - {m: 1, b: 1, d: 2, n: F#3}
@@ -154,7 +160,9 @@ channels:
     tier: 2
     rhythm: true
     pan: center
-    volume: 76
+    mt32_volume: 76
+    gm_volume: 76
+    imfc_volume: 76
     velocity: 88
     events:
       - {m: 3, b: 1, d: 0.4, n: 36}

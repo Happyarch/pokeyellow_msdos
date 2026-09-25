@@ -21,7 +21,10 @@ channels:
     gm_program: 44            # Contrabass
     imfc_voice: "EBass"       # IMFC E.Bass (bass family; legacy volume covers IMFC level)
     pan: center
-    volume: 52                # felt more than heard
+    opl_volume: 52                # felt more than heard
+    mt32_volume: 52
+    gm_volume: 52
+    imfc_volume: 52
     velocity: 70
     transpose: -12
     events:

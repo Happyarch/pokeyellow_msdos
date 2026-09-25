@@ -16,14 +16,20 @@ channels:
   1:
     mt32_program: "Square Wave"   # keep the jumping inner line 8-bit-sharp
     gm_program: "Lead 1 (square)"
-    volume: 100
+    mt32_volume: 100
+    gm_volume: 100
+    imfc_volume: 100
     pan: 48
   2:
     mt32_program: "Trumpet 1"     # the iconic title melody, foreground
     gm_program: "Trumpet"
-    volume: 110
+    mt32_volume: 110
+    gm_volume: 110
+    imfc_volume: 110
     pan: 64
   3:
     mt32_program: "Atmosphere"    # ostinato + D-pedal glissandi
     gm_program: "FX 4 (atmosphere)"
-    volume: 88
+    mt32_volume: 88
+    gm_volume: 88
+    imfc_volume: 88
