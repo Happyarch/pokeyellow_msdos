@@ -25,6 +25,7 @@ channels:
     mt32_program: "Cello 1"     # lyrical inner line in B3..E5; bows under
                                 # the trumpet, sings the mm24-29 duets
     gm_program: "Cello"
+    imfc_program: "Cello1"      # exact cello-family match (Routes3/Routes4 precedent)
     mt32_volume: 92                  # under the lead
     gm_volume: 92
     imfc_volume: 92
@@ -33,6 +34,7 @@ channels:
     mt32_program: "Trumpet 1"   # the hymn melody; noble long tones carry
                                 # over cello + harp + tier-1 pad
     gm_program: "Trumpet"
+    imfc_program: "Trumpet"     # Bank-2 standard trumpet (IndigoPlateau precedent)
     mt32_volume: 100                 # foreground; eased so tier-3 celesta pings read
     gm_volume: 100
     imfc_volume: 100
@@ -41,6 +43,7 @@ channels:
     mt32_program: "Harp 1"      # plucked glue for the 8th-note wave arps;
                                 # short decay keeps figures articulate
     gm_program: "Orchestral Harp"
+    imfc_program: "Harp"        # plucked Bank-2 voice (PalletTown/Surfing precedent)
     mt32_volume: 72
     gm_volume: 72
     imfc_volume: 72

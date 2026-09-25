@@ -53,6 +53,7 @@ channels:
     opl_patch: sub_bass_clear  # octave-up sideband for pitch definition
     mt32_patch: 57             # 1-based: Contrabass (factory #57)
     gm_program: 44             # 1-based: Contrabass
+    imfc_voice: "UprtBas"      # IMFC upright acoustic bass (Contrabass intent)
     pan: center
     opl_volume: 54                 # felt more than heard
     mt32_volume: 54
@@ -73,6 +74,7 @@ channels:
     opl_patch: soft_pad_clear  # presence without buzz
     mt32_patch: 54             # 1-based: Cello 1 (factory #54)
     gm_program: 43             # 1-based: Cello
+    imfc_voice: "Cello1"       # IMFC cello (direct match)
     pan: left
     opl_volume: 60
     mt32_volume: 60
@@ -91,6 +93,7 @@ channels:
     tier: 2
     mt32_patch: "Theremin"     # custom timbre, Patch #12, 1 partial
     gm_program: 86             # 1-based: Lead 6 (voice), the recipe's GM pair
+    imfc_voice: "Ghostie"      # IMFC eerie voice (cold surveillance-descant intent)
     pan: right
     mt32_volume: 76                 # distant watcher, not a soloist
     gm_volume: 76
@@ -109,6 +112,7 @@ channels:
     percussion: true           # non-tonal keyfollow-0 drone (NightWind pattern)
     mt32_patch: "FluoroHum"    # PROPOSED — not yet in mt32/timbres.yaml
     gm_program: 104            # 1-based: FX 8 (sci-fi), sterile hum fallback
+    imfc_voice: "SineWav"      # IMFC sine drone (ballast-hum intent; timbre still proposed)
     pan: center
     mt32_volume: 58                 # institutional dread bed, under the tenor
     gm_volume: 58

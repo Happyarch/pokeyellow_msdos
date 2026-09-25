@@ -19,6 +19,7 @@ channels:
   1:
     mt32_program: "Bassoon"
     gm_program: "Bassoon"
+    imfc_program: "Bassoon"
     mt32_volume: 96
     gm_volume: 96
     imfc_volume: 96
@@ -26,6 +27,7 @@ channels:
   2:
     mt32_program: "Clarinet 1"
     gm_program: "Clarinet"
+    imfc_program: "Clarine"
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100
@@ -33,6 +35,7 @@ channels:
   3:
     mt32_program: "Flute 1"
     gm_program: "Flute"
+    imfc_program: "Flute"
     mt32_volume: 90
     gm_volume: 90
     imfc_volume: 90

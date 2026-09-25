@@ -17,6 +17,7 @@ channels:
   1:
     mt32_program: "Square Wave"   # the motor stays 8-bit-sharp
     gm_program: "Lead 1 (square)"
+    imfc_program: "SynLead"       # Bank5 synth lead for the square motor (FinalBattle precedent)
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100
@@ -24,6 +25,7 @@ channels:
   2:
     mt32_program: "Clarinet 2"    # dark woody menace (FIRST USE); trumpet
     gm_program: "Clarinet"        # was the alternative — see report
+    imfc_program: "Clarine"       # Bank2 ROM1 reed, same family (OaksLab precedent)
     mt32_volume: 102                   # melody carries
     gm_volume: 102
     imfc_volume: 102
@@ -31,6 +33,7 @@ channels:
   3:
     mt32_program: "Flute 1"       # wave countermelody, natural mapping
     gm_program: "Flute"
+    imfc_program: "Flute"         # breath-flute family, same as MT-32 (PalletTown precedent)
     mt32_volume: 92                    # texture, below the melody
     gm_volume: 92
     imfc_volume: 92

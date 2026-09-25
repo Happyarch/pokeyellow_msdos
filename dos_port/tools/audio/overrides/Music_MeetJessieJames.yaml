@@ -11,6 +11,7 @@ channels:
   2:
     mt32_program: "Bassoon"   # comic-menace motto reed (Evil's Oboe stays darker)
     gm_program: "Bassoon"
+    imfc_program: "Bassoon"   # IMFC Bassoon (bank 4 orchestral reed, 1:1 reed map)
     mt32_volume: 102               # melody carries
     gm_volume: 102
     imfc_volume: 102

@@ -17,6 +17,7 @@ channels:
   3:
     mt32_program: "Glock"
     gm_program: "Music Box"
+    imfc_program: "Glocken"
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100

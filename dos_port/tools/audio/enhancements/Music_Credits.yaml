@@ -110,6 +110,7 @@ channels:
     opl_patch: sub_bass          # pure sine; sits under the pulse shim
     mt32_patch: 29               # Syn Bass 1 (round, sustaining)
     gm_program: 39               # Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass (bass precedent: PalletTown sub_bass)
     pan: center
     opl_volume: 64
     mt32_volume: 64
@@ -191,6 +192,7 @@ channels:
     opl_patch: soft_pad          # organ-like FM warmth, not a second pulse
     mt32_patch: 49               # Str Sect 1 — cascades as real strings
     gm_program: 90               # Pad 2 (warm)
+    imfc_voice: "Strings"        # IMFC Strings (strings precedent: PalletTown low_pad)
     pan: center
     opl_volume: 68
     mt32_volume: 68
@@ -271,6 +273,8 @@ channels:
     tier: 2                      # MT-32/GM only — no opl_patch allowed
     mt32_patch: 53               # Violin 1 (novel as an enhancement voice)
     gm_program: 41               # Violin
+    imfc_voice: "String1"        # IMFC orchestral strings, violin arch (SafariZone/Cities1
+                                 # precedent; distinct from the pad's Bank-2 Strings)
     pan: center
     mt32_volume: 62
     gm_volume: 62
@@ -331,6 +335,8 @@ channels:
     tier: 2                      # MT-32/GM only — no opl_patch allowed
     mt32_patch: 86               # Engl Horn (novel) — the middle-voice song
     gm_program: 70               # English Horn
+    imfc_voice: "Oboe"           # IMFC double-reed family (Oboe/Engl-Horn interchange:
+                                 # CinnabarMansion precedent)
     pan: center
     mt32_volume: 58
     gm_volume: 58
@@ -354,6 +360,7 @@ channels:
     tier: 3                      # color/flourish — dropped first under pressure
     mt32_patch: 23               # Celesta 1
     gm_program: 9                # Celesta
+    imfc_voice: "Celeste"        # IMFC Celeste (bells precedent: PalletTown sparkle)
     pan: right
     mt32_volume: 60
     gm_volume: 60

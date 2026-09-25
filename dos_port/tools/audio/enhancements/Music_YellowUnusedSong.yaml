@@ -68,6 +68,7 @@ channels:
     opl_patch: sub_bass        # sine carrier — foundation, not a pulse
     mt32_patch: 29             # MT-32 Syn Bass 1 (cascades cleanly)
     gm_program: 39             # GM Synth Bass 1
+    imfc_voice: "EBass"        # IMFC E.Bass (bass family; PalletTown precedent)
     pan: center
     opl_volume: 64
     mt32_volume: 64
@@ -101,6 +102,7 @@ channels:
     opl_patch: soft_pad        # sustained thirds under the motor
     mt32_patch: 35             # MT-32 Chorale (vocal-ish thirds)
     gm_program: 53             # GM Choir Aahs
+    imfc_voice: "Voices"       # IMFC Voices (choir family; Pokecenter precedent)
     pan: center
     opl_volume: 56
     mt32_volume: 56
@@ -128,6 +130,7 @@ channels:
     opl_patch: pulse_soft      # soft pulse comping, under the GB squares
     mt32_patch: 25             # MT-32 Syn Brass 1 (stab attack)
     gm_program: 63             # GM Synth Brass 1
+    imfc_voice: "Brass"        # IMFC Brass (syn-brass family; FIRST USE project-wide)
     pan: right
     opl_volume: 60
     mt32_volume: 60
@@ -156,6 +159,7 @@ channels:
     tier: 2                   # ominous tonic hum — premium body
     mt32_patch: 95            # MT-32 Tuba (FIRST USE project-wide)
     gm_program: 59            # GM Tuba
+    imfc_voice: "Horn Lo"     # IMFC low brass (tuba family; FIRST USE project-wide)
     pan: center
     mt32_volume: 52                # felt, not heard
     gm_volume: 52
@@ -176,6 +180,7 @@ channels:
     tier: 3                   # eerie color — dropped first under pressure
     mt32_patch: 37            # MT-32 Soundtrack (FIRST USE project-wide)
     gm_program: 96            # GM Pad 8 (sweep)
+    imfc_voice: "Fantasy"     # IMFC evolving pad (Soundtrack map; Dungeon3 precedent)
     pan: left
     mt32_volume: 60
     gm_volume: 60

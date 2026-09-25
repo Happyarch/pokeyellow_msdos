@@ -73,6 +73,7 @@ channels:
     opl_patch: soft_pad         # organ-like FM warmth; not a pulse
     mt32_patch: 49              # Str Sect 1 — cascades as real strings
     gm_program: 49              # String Ensemble 1 (same family both targets)
+    imfc_voice: "Strings"       # IMFC Strings (Str Sect family map)
     pan: center
     opl_volume: 52                  # bed under the music box, not a second lead
     mt32_volume: 52
@@ -111,6 +112,7 @@ channels:
     opl_patch: sub_bass          # pure sine; no FM sidebands in the low end
     mt32_patch: 29               # Syn Bass 1 (MuseumGuy precedent)
     gm_program: 39               # Synth Bass 1
+    imfc_voice: "EBass"          # IMFC E.Bass (Syn Bass family map)
     pan: center
     opl_volume: 48                  # a floor, not a voice
     mt32_volume: 48

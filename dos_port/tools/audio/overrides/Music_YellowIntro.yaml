@@ -25,6 +25,7 @@ channels:
   1:
     mt32_program: "Square Wave"   # inner line stays 8-bit-sharp
     gm_program: "Lead 1 (square)"
+    imfc_program: "SynLead"       # Bank5 synth lead (FinalBattle/WildBattle precedent)
     mt32_volume: 92                    # under the flute lead
     gm_volume: 92
     imfc_volume: 92
@@ -32,6 +33,7 @@ channels:
   2:
     mt32_program: "Flute 1"       # lyrical arch melody, foreground
     gm_program: "Flute"
+    imfc_program: "Flute"         # same family (PalletTown precedent)
     mt32_volume: 106
     gm_volume: 106
     imfc_volume: 106
@@ -39,6 +41,7 @@ channels:
   3:
     mt32_program: "Harp 1"        # plucked broken-chord motor, articulate
     gm_program: "Orchestral Harp"
+    imfc_program: "Harp"          # same family (PalletTown precedent)
     mt32_volume: 84                    # motor present, under the lead
     gm_volume: 84
     imfc_volume: 84

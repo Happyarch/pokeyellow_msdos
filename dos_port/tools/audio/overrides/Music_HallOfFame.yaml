@@ -22,6 +22,7 @@ channels:
   1:
     mt32_program: "Trombone 1"   # whole-note cantus, under the trumpet
     gm_program: "Trombone"
+    imfc_program: "Trombon"      # Bank 4 low brass (DefeatedWildMon precedent)
     mt32_volume: 96
     gm_volume: 96
     imfc_volume: 96
@@ -29,6 +30,7 @@ channels:
   2:
     mt32_program: "Trumpet 1"    # the Hall of Fame melody carries
     gm_program: "Trumpet"
+    imfc_program: "Trumpet"      # Bank 2 standard trumpet (DefeatedWildMon precedent)
     mt32_volume: 104
     gm_volume: 104
     imfc_volume: 104
@@ -36,6 +38,7 @@ channels:
   3:
     mt32_program: "Pizzicato"    # 8th-note D-G pedal + quarter figures
     gm_program: "Pizzicato Strings"
+    imfc_program: "Pizzic1"      # dry pluck, same family (Pokecenter/GameCorner precedent)
     mt32_volume: 88
     gm_volume: 88
     imfc_volume: 88

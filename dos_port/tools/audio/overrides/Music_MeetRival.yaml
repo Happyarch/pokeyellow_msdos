@@ -7,6 +7,7 @@ channels:
   1:
     mt32_program: "Trumpet 1"
     gm_program: "Trumpet"
+    imfc_program: "Trumpet" # IMFC Trumpet (family map from mt32 Trumpet 1)
     mt32_volume: 100
     gm_volume: 100
     imfc_volume: 100
