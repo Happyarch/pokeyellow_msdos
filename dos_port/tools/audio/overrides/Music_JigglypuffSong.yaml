@@ -21,6 +21,7 @@ channels:
   1:
     mt32_program: "JigglyVox"
     gm_program: "Voice Oohs"    # no GM upload path — vox vowel instead
+    imfc_program: "JigglyVox"   # custom 1:1 (bank0/prog1, vocal-formant twin)
     mt32_volume: 88                  # halo under the Vox lead
     gm_volume: 88
     imfc_volume: 88
@@ -28,6 +29,7 @@ channels:
   2:
     mt32_program: "Funny Vox"   # same voice — unison ensemble by composition
     gm_program: "Voice Oohs"
+    imfc_program: "JigglyVox"   # no factory Funny Vox on IMFC; custom JigglyVox is modeled on it — confirm by ear the unison still nulls
     mt32_volume: 96
     gm_volume: 96
     imfc_volume: 96
