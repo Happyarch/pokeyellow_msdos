@@ -28,7 +28,9 @@ channels:
   1:
     mt32_program: "Fantasy"
     gm_program: "FX 3 (crystal)"
+    imfc_program: "Fantasy"
     volume: 90
+    imfc_volume: 90
     pan: 44
     switches:                     # AUDITION FINDING (maintainer): the ~30 s
                                   # scales are CH1's chromatic episode
@@ -42,23 +44,27 @@ channels:
                                   # first note-on f=1440, which abuts the
                                   # preceding note end; octave-4 re-entry
                                   # note-on f=2208).
-      - {m: 13, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 18, b: 3, mt32_program: "Fantasy", gm_program: "FX 3 (crystal)"}
+      - {m: 13, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 18, b: 3, mt32_program: "Fantasy", gm_program: "FX 3 (crystal)", imfc_program: "Fantasy"}
   2:
     mt32_program: "Doctor Solo"
     gm_program: "Lead 4 (chiff)"
+    imfc_program: "SynLead"
     volume: 100
+    imfc_volume: 100
     pan: 84
   3:
     mt32_program: "Ice Rain"
     gm_program: "FX 1 (rain)"
+    imfc_program: "Bells"
     volume: 92
+    imfc_volume: 92
     pan: 64
     switches:
-      - {m: 12, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 13, b: 3, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)"}
-      - {m: 19, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 21, b: 2, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)"}
+      - {m: 12, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 13, b: 3, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)", imfc_program: "Bells"}
+      - {m: 19, b: 4, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 21, b: 2, mt32_program: "Ice Rain", gm_program: "FX 1 (rain)", imfc_program: "Bells"}
 
 drums:
   velocity: 80

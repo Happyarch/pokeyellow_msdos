@@ -15,14 +15,20 @@ channels:
   1:
     mt32_program: "Flute 1"
     gm_program: "Flute"
+    imfc_program: "Flute"       # water family (PalletTown precedent)
     volume: 98
+    imfc_volume: 98
     pan: 54
   2:
     mt32_program: "Str Sect 3"
     gm_program: "String Ensemble 1"
+    imfc_program: "Strings"     # soft-section shimmer (PalletTown precedent)
     volume: 90
+    imfc_volume: 90
     pan: 74
   3:
     mt32_program: "Harp 1"
     gm_program: "Orchestral Harp"
+    imfc_program: "Harp"        # plucked wave figure (PalletTown precedent)
     volume: 98
+    imfc_volume: 98

@@ -7,17 +7,23 @@ channels:
   1:
     mt32_program: "Flute 1"     # lyrical melody voice
     gm_program: "Flute"
+    imfc_program: "Flute"
     volume: 100
+    imfc_volume: 100
     pan: 54
   2:
     mt32_program: "Piccolo 1"   # bright figuration + high descant
     gm_program: "Piccolo"       # (sits above the flute line)
+    imfc_program: "Piccolo"
     volume: 92                  # figuration under the melody
+    imfc_volume: 92
     pan: 74
   3:
     mt32_program: "Acou Bass 1" # real bassline (A3-D4)
     gm_program: "Acoustic Bass"
+    imfc_program: "WodBass"
     volume: 104
+    imfc_volume: 104
 drums:                          # GB ch4: noise id 15 ticking the off-beats
   velocity: 92                  # restored: easing to 80 hurt MT-32; OPL hat fixed separately (see below)
                                 # ("and" of almost every beat, mm1-8)

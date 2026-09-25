@@ -16,15 +16,22 @@ channels:
   1:
     mt32_program: "Trombone 1"
     gm_program: "Trombone"
+    imfc_program: "Trombon"  # Bank4 low brass for the A-pedal tread
     volume: 90
+    imfc_volume: 90
   2:
     mt32_program: "Trumpet 1"
     gm_program: "Trumpet"
+    imfc_program: "Trumpet"  # Bank2 standard trumpet for the D-pedal lead
     volume: 96
+    imfc_volume: 96
   3:
     mt32_program: "Warm Bell"
     gm_program: "Orchestral Harp"
+    imfc_program: "Harp"  # plucked Bank2 voice matches the GM harp for the bell
+                          # pings/pillars ("Bells" candidate — UNLISTENED)
     volume: 92
+    imfc_volume: 92
 # No drums: map: the GB noise tread stays on the default all-snare mapping
 # (ids 17/18/19 -> 38). A kick/hat layering was considered but the GB noise
 # timbres are UNVERIFIED by ear — left as an open audition question.

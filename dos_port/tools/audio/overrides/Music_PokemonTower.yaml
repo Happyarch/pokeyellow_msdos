@@ -26,15 +26,21 @@ channels:
   1:
     mt32_program: "Warm Bell"
     gm_program: "Celesta"
+    imfc_program: "TubeBe1"     # tubular bell (Warm Bell precedent: MeetEvilTrainer)
     volume: 82
+    imfc_volume: 82
     pan: 36                      # staccato crystal chimes left...
   2:
     mt32_program: "Theremin"
     gm_program: "Lead 6 (voice)"
+    imfc_program: "Theremin"    # custom IMFC Theremin 1:1 (bank 0, prog 3)
     volume: 104
+    imfc_volume: 104
     pan: 64                      # ...soaring theremin center lead
   3:
     mt32_program: "Echo Pan"
     gm_program: "FX 7 (echoes)"
+    imfc_program: "Pan Flt"     # pan-flute family for the ethereal texture
     volume: 92
+    imfc_volume: 92
     pan: 72                      # ...ethereal echo pan texture

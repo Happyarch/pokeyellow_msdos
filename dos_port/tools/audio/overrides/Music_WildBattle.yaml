@@ -46,26 +46,32 @@ channels:
   1:
     mt32_program: "Sawtooth"          # custom timbre (staged at Patch #27)
     gm_program: "Lead 2 (sawtooth)"
+    imfc_program: "Sawtooth"        # custom IMFC Sawtooth (bank0/prog2)
     volume: 92                  # tucked a smidge under the ensemble (audition 2026-09-12)
+    imfc_volume: 92
     switches:
-      - {m: 1, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 3, b: 1, mt32_program: "Clavi 1", gm_program: "Clavinet"}
-      - {m: 11, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 23, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)"}
-      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
-      - {m: 47, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)"}
+      - {m: 1, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 3, b: 1, mt32_program: "Clavi 1", gm_program: "Clavinet", imfc_program: "Clav"}
+      - {m: 11, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 23, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)", imfc_program: "Sawtooth"}
+      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
+      - {m: 47, b: 1, mt32_program: "Sawtooth", gm_program: "Lead 2 (sawtooth)", imfc_program: "Sawtooth"}
   # square 2 — THE LEAD (higher voice, reaches E6; analysis agrees:
   # melody_channel 2). Pulse on opening scales, Clavi 2 on intro hook/verse,
   # transitions to pulse for the loop.
   2:
     mt32_program: "Square Wave"
     gm_program: "Lead 1 (square)"
+    imfc_program: "SynLead"
     volume: 90                  # lead balance (audition 2026-09-12)
+    imfc_volume: 90
     switches:
-      - {m: 3, b: 1, mt32_program: "Clavi 2", gm_program: "Clavinet"}
-      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)"}
+      - {m: 3, b: 1, mt32_program: "Clavi 2", gm_program: "Clavinet", imfc_program: "Clav"}
+      - {m: 35, b: 1, mt32_program: "Square Wave", gm_program: "Lead 1 (square)", imfc_program: "SynLead"}
   # wave — busiest bed (16ths + low ostinato). Atmosphere pads behind
   # the saws (as on Gym Leader / Final Battle), tucked under the leads.
   3:
     mt32_program: "Atmosphere"
+    imfc_program: "Fantasy"
     volume: 85
+    imfc_volume: 85

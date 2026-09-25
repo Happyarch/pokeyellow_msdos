@@ -28,16 +28,22 @@ channels:
                                   # reverted; Syn Bass 1 off, Elec Bass
                                   # superseded untried)
     gm_program: "FX 7 (echoes)"
+    imfc_program: "TubeBe1"
     volume: 96
+    imfc_volume: 96
     pan: 56
   2:
     mt32_program: "Doctor Solo"   # audition experiment 2026-09-10: breathy synth
                                   # lead on the stratospheric E6 melody
     gm_program: "Lead 2 (sawtooth)"
+    imfc_program: "SynLead"
     volume: 104                   # melody carries
+    imfc_volume: 104
     pan: 72
   3:
     mt32_program: "Warm Bell"     # soft bed under the wave pulse (Whistle 1
                                   # tried 2026-09-10, too piping — reverted)
     gm_program: "Music Box"
+    imfc_program: "Bells"
     volume: 92                    # texture, below the melody
+    imfc_volume: 92

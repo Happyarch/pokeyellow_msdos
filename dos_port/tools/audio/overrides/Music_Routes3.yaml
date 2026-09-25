@@ -20,17 +20,23 @@ channels:
   1:
     mt32_program: "Oboe"
     gm_program: "Oboe"
+    imfc_program: "Oboe"
     volume: 97
+    imfc_volume: 97
     pan: 48
   2:
     mt32_program: "Bassoon"
     gm_program: "Bassoon"
+    imfc_program: "Bassoon"
     volume: 100
+    imfc_volume: 100
     pan: 80
   3:
     mt32_program: "Pizzicato"
     gm_program: "Pizzicato Strings"
+    imfc_program: "Pizzic1"
     volume: 96
+    imfc_volume: 96
     pan: 64
 drums:
   # GB-side truth (audio/sfx/noise_instrument{17,18,19}_1.asm): three

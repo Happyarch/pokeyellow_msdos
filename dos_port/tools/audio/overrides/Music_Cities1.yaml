@@ -16,17 +16,23 @@ channels:
   1:
     mt32_program: "Elec Piano 1"  # percussive attack suits the 16th motor
     gm_program: "Electric Piano 1"
+    imfc_program: "EPiano1"
     volume: 92                    # under the lead
+    imfc_volume: 92
     pan: 48                       # inner line left, melody right
   2:
     mt32_program: "Trumpet 1"     # bright lead, owns the octave-5/6 register
     gm_program: "Trumpet"
+    imfc_program: "Trumpet"
     volume: 104                   # foreground over motor + drums
+    imfc_volume: 104
     pan: 80
   3:
     mt32_program: "Pizzicato"     # dry pluck for the 8th-note figures;
     gm_program: "Pizzicato Strings"  # kills the Warm Bell decay wash
+    imfc_program: "Pizzic1"
     volume: 72                    # glue sits between the spread lines
+    imfc_volume: 72
     pan: 64
 drums:
   # A/B candidate: ch4 uses noise instruments 6/7/8, all kick (36) by

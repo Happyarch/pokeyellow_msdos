@@ -16,15 +16,21 @@ channels:
   1:
     mt32_program: "Trombone 1"   # low fanfare line, under the trumpet
     gm_program: "Trombone"
+    imfc_program: "Trombon"
     volume: 96
+    imfc_volume: 96
     pan: 56
   2:
     mt32_program: "Trumpet 1"    # the victory melody carries
     gm_program: "Trumpet"
+    imfc_program: "Trumpet"
     volume: 104
+    imfc_volume: 104
     pan: 72
   3:
     mt32_program: "Fr Horn 1"    # octave pump as horn chords
     gm_program: "French Horn"
+    imfc_program: "Horn"
     volume: 88
+    imfc_volume: 88
     pan: 64

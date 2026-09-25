@@ -13,19 +13,25 @@
 channels:
   1:
     mt32_program: "Echo Bell"
+    imfc_program: "Bells"
     volume: 100
+    imfc_volume: 100
     pan: 40                      # ostinato left...
   2:
     mt32_program: "Koto"  # __was Contrabass (user pick) — ch2 is the__ hand edit, koto works really well here
+    imfc_program: "Koto"
                                  # C6-B6 HIGH figure, 2+ octaves above a
                                  # contrabass's home register, so it turned
                                  # rasp; cello = same family, warm up high
                                  # (user audition 2026-07-07)
     volume: 100                  # melody carries; 106 enveloped the backing (user, 2026-07-07)
+    imfc_volume: 100
     pan: 88                      # ...melody right: wide, uneasy stage
   3:
     mt32_program: "Ice Rain"
+    imfc_program: "Glocken"
     volume: 92                   # default 110 would swamp; it's texture
+    imfc_volume: 92
                                  # (pan left unset: song panning applies)
 drums:
   # GB ch4 is a bare heartbeat pulse (noise instrument 7, twice per loop,

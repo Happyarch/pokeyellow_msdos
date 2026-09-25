@@ -26,21 +26,27 @@ channels:
                                 # warm and breathy in the B3–B4 register
                                 # (PalletTown ch1 precedent)
     gm_program: "Flute"
+    imfc_program: "Flute"
     volume: 120                 # the tune — foreground (bumped per audition
                                 # 2026-09-24: flute sat under the EP sparkle)
+    imfc_volume: 120
     pan: 80                     # melody right, figuration left
   2:
     mt32_program: "Elec Piano 1"  # bounce for the arpeggiated figuration
     gm_program: "Electric Piano 1"  # (Cities1 motor precedent)
+    imfc_program: "EPiano1"
     volume: 86                  # under the flute
+    imfc_volume: 86
     pan: 48
   3:
     mt32_program: "Pizzicato"   # dry pluck for the octave-6 counter-melody;
     gm_program: "Pizzicato Strings"  # kills the Warm Bell wash (Celadon/
                                 # Cities1/Vermilion cure). Glock was the
                                 # alternative; pizz is the proven quantity.
+    imfc_program: "Pizzic1"
     volume: 68                  # tucked — high register carries on its own
                                 # (default 110 up there would scream)
+    imfc_volume: 68
     pan: 64
 drums:
   # GB-side truth (DRUM_PARAMS / NR43): 17/18/19 share NR43 $22 (same

@@ -21,6 +21,9 @@ channels:
   # square 1 — the lead; states the descending motive most clearly (B3-F#5).
   1:
     mt32_program: "Square Wave"
+    imfc_program: "SynLead"  # Bank5 synth lead for the square lead (UNLISTENED —
+                             # confirm vs "MonoSyn" by ear; ch1 is the reserved
+                             # electric-guitar candidate)
   # square 2 — higher, more active secondary voice (reaches E6); disguises the
   # motive inside a busier line. Custom "Sawtooth" (timbres.yaml, Patch #27)
   # instead of factory Square Wave: the detuned-twin saw gives the busy line
@@ -30,6 +33,9 @@ channels:
   2:
     mt32_program: "Sawtooth"
     gm_program: "Lead 2 (sawtooth)"
+    imfc_program: "MonoSyn"  # cutting Bank5 mono-style lead for the busy detuned
+                             # saw line, distinct from ch1's SynLead (UNLISTENED —
+                             # if it pierces at E6, try "SynLead" to match ch1)
   # wave table — busiest voice (D3-G5): carries the low end and restates the
   # melody near the loop (m.52-53). Atmosphere pads the tense harmonic bed
   # behind the squares (as on Gym Leader), tucked a little under the leads.
@@ -37,4 +43,8 @@ channels:
   # "Soundtrack" (more drama) or "Str Sect 2" (battle weight).
   3:
     mt32_program: "Atmosphere"
+    imfc_program: "Fantasy"  # evolving Bank6 FM pad keeps the synth-bed character
+                             # behind the squares (UNLISTENED — "Strings" if it
+                             # needs more battle weight)
     volume: 85
+    imfc_volume: 85

@@ -37,8 +37,10 @@ channels:
   1:
     mt32_program: "Cello 1"     # lyrical inner line in B3..F#5 = cello territory;
                                 # bows under the violin, drives the m13 HC
+    imfc_program: "Cello1"
     gm_program: "Cello"
     volume: 92                  # under the lead
+    imfc_volume: 92
     pan: 48                     # inner line left, melody right
   2:
     mt32_program: "Trumpet 1"    # REVISED (audition 2026-09-11): Violin 1 tried
@@ -46,9 +48,11 @@ channels:
                                 # (quick attacks), not a slow-decay bowed line.
                                 # Trumpet has the fast attack it wants and is
                                 # the Cities1-proven bright lead in E major.
+    imfc_program: "Trumpet"
     gm_program: "Trumpet"
     volume: 100                 # foreground over cello + harp; eased from 104
                                 # so the tier-3 celesta pings read (audition)
+    imfc_volume: 100
     pan: 80
     switches:                   # timed mid-song program changes (m/b positions
                                 # resolve through the analysis beat map; the
@@ -59,10 +63,12 @@ channels:
       # on m18 b2.5 (32.13s, right on the fast 16th-note fanfare pickup
       # run [B4, C#5, D#5, E5, F#5, G#5, A5]), letting the trumpet
       # execute the punchy attacks back into the loop at 33.3s.
-      - {m: 14, b: 1, mt32_program: "Violin 1", gm_program: "Violin"}
-      - {m: 18, b: 2.5, mt32_program: "Trumpet 1", gm_program: "Trumpet"}
+      - {m: 14, b: 1, mt32_program: "Violin 1", gm_program: "Violin", imfc_program: "SoloVio"}
+      - {m: 18, b: 2.5, mt32_program: "Trumpet 1", gm_program: "Trumpet", imfc_program: "Trumpet"}
   3:
     mt32_program: "Harp 1"      # plucked orchestral glue for the 8th-note wave
+    imfc_program: "Harp"
     gm_program: "Orchestral Harp"  # figures; short decay keeps the wave-alone
     volume: 72                  # spots (m6, pickup m14) exposed, kills the
+    imfc_volume: 72
     pan: 64                     # default Warm Bell decay wash

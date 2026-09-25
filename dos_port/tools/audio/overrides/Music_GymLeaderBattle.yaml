@@ -1,8 +1,12 @@
 channels:
   1:
     mt32_program: "Square Wave"
+    imfc_program: "SynLead"
   2:
     mt32_program: "Square Wave"
+    imfc_program: "SynLead"
   3:
     mt32_program: "Atmosphere"
+    imfc_program: "Fantasy"
     volume: 75
+    imfc_volume: 75

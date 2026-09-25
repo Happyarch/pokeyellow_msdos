@@ -12,15 +12,21 @@ channels:
   1:
     mt32_program: "Whistle 2"
     gm_program: "Whistle"
+    imfc_program: "Whistle"
     volume: 82
+    imfc_volume: 82
     pan: 64
   2:
     mt32_program: "Violin 2"
     gm_program: "Violin"
+    imfc_program: "SoloVio"
     volume: 85
+    imfc_volume: 85
     pan: 80
   3:
     mt32_program: "Marimba"
     gm_program: "Marimba"
+    imfc_program: "Marimba"
     volume: 68
+    imfc_volume: 68
     pan: 48
