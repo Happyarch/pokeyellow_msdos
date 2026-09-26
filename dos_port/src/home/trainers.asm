@@ -47,21 +47,15 @@
 ; selector to the flat field above, so every caller in this file is byte-faithful.
 ;
 ; ----------------------------------------------------------------------------
-; npc_beaten_flags -> TrainerFlagAction CONVERGENCE.
+; TrainerFlagAction — the one trainers-beaten state.
 ; ----------------------------------------------------------------------------
-; The bespoke port keeps trainers-beaten state in map_sprites.asm's `npc_beaten_flags`
-; (a 16-bit BSS reset every InitMapSprites => NON-persistent: trainers un-beat on every
-; map reload).  This engine's persistent `TrainerFlagAction` is the faithful replacement:
-; it drives the home global `FlagAction` against the header's flag_ptr => wEventFlags
-; (persistent across warps), and it is already the live path wherever a map is wired to
-; TrainerMapScript (CheckForEngagingTrainers and TalkToTrainer both use it).
-; ROOT FOLLOW-UP (premise now MET, convergence still pending): the trainer-header DATA
-; exists (assets/trainer_headers.inc, generated), so the remaining item is Stage 5a
-; wiring the rest of the trainer maps, at which point map_sprites.asm's
-; CheckTrainerSight / TrainerEncounterFlow and their npc_beaten_flags fallback are
-; deleted rather than rerouted. The fallback scans SLOTS, so it cannot call
-; TrainerFlagAction as-is — that needs a slot->header mapping it does not have.
-; Owned by docs/current_plan_overworld_realign.md Stage J.
+; This engine's persistent `TrainerFlagAction` drives the home global `FlagAction`
+; against the header's flag_ptr => wEventFlags (persistent across warps), used by
+; CheckForEngagingTrainers and TalkToTrainer on every trainer map. The port-only
+; `npc_beaten_flags` BSS cache and its CheckTrainerSight / TrainerEncounterFlow
+; fallback were DELETED 2026-09-26 once all 67 trainer maps were measured to reach
+; the faithful path; npc_beaten_flags was non-persistent (reset every
+; InitMapSprites) and could not drive TrainerFlagAction anyway.
 ;
 ; ----------------------------------------------------------------------------
 ; BATTLE ENTRY — StartTrainerBattle does NOT run the battle (Stage 1b).
@@ -313,8 +307,8 @@ ReadTrainerHeaderInfo:
 ; pret: home/trainers.asm:TrainerFlagAction  (predef_jump FlagActionPredef)
 ; The port calls the FlagAction leaf directly (regs set by hand) — same faithful
 ; equivalent used elsewhere (see the DEVIATION on engine/menus/pokedex.asm:IsPokemonBitSet).
-; This is the PERSISTENT
-; replacement for map_sprites.asm's non-persistent npc_beaten_flags (see header).
+; This is the persistent beaten-flag op (the port-only npc_beaten_flags fallback
+; was deleted 2026-09-26; see the header note above).
 ; In:  ESI = flag array base (GB WRAM offset, e.g. wEventFlags+N), CL = bit, BH = action.
 ; Out: CL = result (FLAG_TEST).
 ; ----------------------------------------------------------------------------
@@ -368,8 +362,8 @@ TalkToTrainer:
 ; ----------------------------------------------------------------------------
 ; CheckFightingMapTrainers — any trainer seeing the player and wanting to fight?
 ; pret: home/trainers.asm:CheckFightingMapTrainers (_DEBUG B-skip omitted — no _DEBUG)
-; This is the faithful, persistent replacement for map_sprites.asm's bespoke
-; CheckTrainerSight (root rewires OverworldLoop's sight hook here later).
+; The faithful, persistent sight path, reached from the map's _Script on every
+; trainer map.
 ; ----------------------------------------------------------------------------
 CheckFightingMapTrainers:
     call CheckForEngagingTrainers
@@ -473,10 +467,9 @@ EndTrainerBattle:
     mov al, [ebp + wIsInBattle]
     cmp al, 0xff
     jz ResetButtonPressedAndMapScript       ; pret: jp z
-    ; Stage 1b RETIRED the null-header-pointer skip that used to sit here. Its
-    ; premise — "TrainerEncounterFlow reaches EndTrainerBattle without calling
-    ; StoreTrainerHeaderPointer" — is false as of Stage 1b: that bespoke call is
-    ; gone, and every remaining path stores a non-null header first.
+; Stage 1b RETIRED the null-header-pointer skip that used to sit here. Every
+    ; present path stores a non-null header first (the port-only TrainerEncounterFlow
+    ; it once guarded against was deleted 2026-09-26).
     ;   * map script tables -> TrainerMapScript -> ExecuteCurMapScriptInTable ->
     ;     StoreTrainerHeaderPointer, and TrainerMapScript refuses to dispatch a
     ;     map whose MapScriptParams headers slot is 0.
@@ -653,8 +646,7 @@ SaveEndBattleTextPointers:
 ; folded into gb_memmap.inc, so the pret name now resolves to the real .bss label.
 ; The code below keeps the port-only flat alias `map_sprite_extra_data`, which
 ; map_sprites.asm exports alongside the pret name at the same address; the writer
-; (LoadSprite, overworld.asm) and the other reader (TrainerEncounterFlow) both index
-; the flat array too.
+; (LoadSprite, overworld.asm) indexes the flat array too.
 ; NOTE: wMapSpriteExtraData is populated by LoadSprite (home/overworld.asm, called
 ;       from InitSprites during LoadMapHeader) from the map object binary's trainer
 ;       class/set pairs — not by InitMapSprites, which only loads tile patterns.

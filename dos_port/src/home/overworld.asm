@@ -65,7 +65,6 @@ extern IsWarpTileInFrontOfPlayer                    ; src/engine/overworld/playe
 extern DisplayTextID                    ; src/home/text_script.asm (B.4)
 extern EnableAutoTextBoxDrawing         ; src/home/window.asm
 extern MapScriptPointers                  ; assets/map_scripts.inc
-extern TrainerMapScript                   ; src/scripts/trainer_map_script.asm (Stage 1b sight gate)
 extern PlayDefaultMusic             ; src/home/audio.asm (real gateway)
 extern RedBikeSprite                    ; src/gfx/sprites.asm
 extern RunNPCMovementScript         ; src/home/npc_movement.asm
@@ -121,7 +120,6 @@ extern OVERWORLD_BLOCKS_SIZE        ; assets/overworld_blocks.inc (map_headers.a
 extern AnyPartyAlive                      ; src/engine/battle/core.asm
 extern CheckForHiddenEventOrBookshelfOrCardKeyDoor ; src/home/hidden_events.asm
 extern CheckForceBikeOrSurf               ; src/engine/overworld/player_state.asm
-extern CheckTrainerSight                  ; src/engine/overworld/map_sprites.asm
 extern ClearVariablesOnEnterMap           ; src/engine/overworld/clear_variables.asm
 extern DebugDumpMemory                    ; src/debug/debug_dump.asm
 extern Delay3                             ; src/home/palettes.asm
@@ -250,7 +248,6 @@ extern SpecialEnterMap                    ; src/engine/menus/main_menu.asm
 extern StopAllMusic                       ; src/home/audio.asm
 extern StopAllSounds                      ; src/home/init.asm
 extern TilePairCollisionsWater            ; src/data/tilesets/pair_collision_tile_ids.asm
-extern TrainerEncounterFlow               ; src/engine/overworld/map_sprites.asm
 extern UpdateSprites                      ; src/home/update_sprites.asm
 extern _AdvancePlayerSprite               ; src/engine/overworld/advance_player_sprite.asm
 extern _LeaveMapAnim                      ; src/engine/overworld/player_animations.asm
@@ -1845,31 +1842,10 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     jmp .battleOccurred
 .noPendingOpponent:
 
-    ; --- Stage 1b: the bespoke sight path is now GATED OFF where the faithful
-    ; one is wired. pret has no CheckTrainerSight/TrainerEncounterFlow; its only
-    ; trainer-sight mechanism is the map's own _Script -> CheckFightingMapTrainers,
-    ; which the port reaches from RunMapScript (this file, OverworldLoop) and
-    ; which seeds wCurOpponent for the battle-entry poll there. On a map wired to
-    ; TrainerMapScript BOTH paths were armed, and the bespoke one won the race
-    ; (its own distance<=4 test vs the header's view range), so the faithful path
-    ; could never be observed in a continuous run. The predicate is DATA-DRIVEN
-    ; against the generated dispatch table rather than a hand-kept map list, so
-    ; each map the overworld-events rollout wires shrinks this hook's domain with
-    ; no edit here. It keys on TrainerMapScript specifically, NOT merely
-    ; "!= DefaultMapScript": PALLET_TOWN has a non-default _Script that is not a
-    ; trainer script, and a "any non-default script" test would silently strip
-    ; sight handling from any such map that did have trainers.
-    ; DEVIATION{class=temporary; pret=home/overworld.asm:OverworldLoopLessDelay; behavior=on maps not yet wired to TrainerMapScript the port still runs the port-only CheckTrainerSight and TrainerEncounterFlow pair after the fly/dungeon-warp test, which pret has no counterpart for; evidence=MapScriptPointers in the generated assets/map_scripts.inc dispatches only a SUBSET of maps to TrainerMapScript, and that subset GROWS with the overworld-events rollout, so it is deliberately not enumerated here — measure it with grep -c 'dd TrainerMapScript' dos_port/assets/map_scripts.inc. On every map outside that subset MapScriptPointers[wCurMap] is DefaultMapScript or a non-trainer script, the faithful CheckFightingMapTrainers flow is unreachable, and deleting the hook outright would remove trainer engagement there entirely; lifetime=deleted when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_realign.md Stage J (adopted from the retired overworld-events plan)}
-    movzx ecx, byte [ebp + wCurMap]
-    cmp dword [MapScriptPointers + ecx*4], TrainerMapScript
-    je .noTrainerSight                       ; faithful map-script path owns this map
-    ; Flags: the cmp above is consumed by the je; CheckTrainerSight sets its own
-    ; CF after popad, so the jnc below still reads ITS result, not this test's.
-    call CheckTrainerSight
-    jnc .noTrainerSight
-    call TrainerEncounterFlow
-    jmp OverworldLoop
-.noTrainerSight:
+    ; Trainer sight is owned entirely by the map's _Script -> CheckFightingMapTrainers
+    ; (pret has no other mechanism). The port-only CheckTrainerSight /
+    ; TrainerEncounterFlow fallback was deleted 2026-09-26 once all 67 trainer maps
+    ; were measured to reach the faithful path.
 
     ; ForceBikeDown (Cycling Road auto-scroll) and AreInputsSimulated used to sit
     ; HERE, at the seam where the port had unpacked JoypadOverworld. Both moved
@@ -5270,11 +5246,6 @@ InitSprites:
     movzx eax, byte [ebp + esi]
     inc esi
     mov [ebp + H_LOAD_SPRITE_TEMP2], al
-    ; DEVIATION{class=data-model; pret=home/overworld.asm:InitSprites; behavior=sets per-slot ISTRAINER flag in wSpriteStateData2 for trainer sprites where pret has no such field; evidence=pret re-derives trainer-ness from text-id flags at interaction time in IsSpriteOrSignInFrontOfPlayer SPRITE branch realized as CheckNPCInteraction, port interaction stack reads ISTRAINER set at load time; lifetime=permanent, port ext to support CheckTrainerSight and TrainerEncounterFlow}
-    test al, TRAINER_FLAG
-    jz .not_trainer_slot
-    mov byte [ebp + edx + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 1
-.not_trainer_slot:
     ; LoadSprite: ECX = wMapSpriteData index; ESI = read ptr (advanced past any
     ; trainer/item extra bytes on return). It preserves EBX/EDX/EDI and clobbers EAX.
     mov ecx, edi

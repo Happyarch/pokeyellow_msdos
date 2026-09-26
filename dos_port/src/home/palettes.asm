@@ -18,12 +18,6 @@
 ;   src/home/init.asm                     GBPalNormal
 ;   src/engine/menus/naming_screen.asm    RunDefaultPaletteCommand
 ;
-; InitMapSprites' port-only private helper (ResetMapTrainerState) deliberately
-; did NOT come with it: it is overworld map-sprite bookkeeping with no pret
-; counterpart, and CLAUDE.md lets a port-only helper live where its subsystem
-; requires so long as it does not absorb a pret label. It stays in
-; map_sprites.asm and is externed below. (Its former sibling
-; ApplyToggleableHiddenGate was retired 2026-08-06 — see map_sprites.asm.)
 bits 32
 %include "gb_memmap.inc"
 
@@ -47,7 +41,6 @@ global RunDefaultPaletteCommand
 global GetHealthBarColor
 extern _RunPaletteCommand
 extern _InitMapSprites               ; src/engine/overworld/map_sprites.asm
-extern ResetMapTrainerState          ; src/engine/overworld/map_sprites.asm (port ext)
 extern ClearSprites                 ; src/home/clear_sprites.asm
 extern LoadTextBoxTilePatterns      ; src/home/load_font.asm
 extern ReloadMapSpriteTilePatterns  ; src/home/reload_sprites.asm
@@ -82,16 +75,11 @@ section .text
 
 ; ---------------------------------------------------------------------------
 ; InitMapSprites — home wrapper (pret name; extern'd by overworld.asm + text_script.asm).
-; Runs the port-extension per-map bookkeeping, then the faithful _InitMapSprites.
+; Runs the faithful _InitMapSprites.
 ; All registers preserved (pushad/popad).
 ; ---------------------------------------------------------------------------
 InitMapSprites:
     pushad
-    ; DIVERGENCE (port ext): reset the per-map trainer/interaction state. Kept here
-    ; (not in InitSprites) so it fires on exactly the paths the bespoke reset did —
-    ; map load + .mapTransition + post-text InitMapSprites — but NOT on the interaction
-    ; stack's post-dialog reload (that path calls ReloadWalkingTilePatterns, not this).
-    call ResetMapTrainerState
     ; (ApplyToggleableHiddenGate call RETIRED 2026-08-06: destructively zeroing a
     ; hidden toggleable's PICTUREID made runtime ShowObject a no-op — the Pallet
     ; Oak cutscene wedge. Hidden objects now KEEP their slot and VRAM tiles, as

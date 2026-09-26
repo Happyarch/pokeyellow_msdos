@@ -785,8 +785,6 @@
 %define SPRITESTATEDATA2_MOVEMENTDELAY 0x8   ; frames until next random walk attempt (pret 0x08)
 %define SPRITESTATEDATA2_MOVEMENTBYTE1 0x6   ; $ff=STAY, $fe=WALK(random), <$fe=scripted
 %define SPRITESTATEDATA2_GRASSPRIORITY 0x7   ; $80=under grass (set by CheckSpriteAvailability)
-%define SPRITESTATEDATA2_ISTRAINER   0xA   ; port istrainer flag (DIVERGENCE: pret has no such field);
-                                                ; OW-A.2 P2 moved it off ORIGFACINGDIRECTION@0x9 into pret-unused 0x0A
 %define SPRITESTATEDATA2_IMAGEBASEOFFSET 0xE
 %define SPRITESTATEDATA2_ORIGFACINGDIRECTION 0x9   ; pret ORIGFACINGDIRECTION (OW-A.2 restores; was bespoke ISTRAINER)
 %define SPRITESTATEDATA2_PICTUREID   0xD   ; pret SPRITESTATEDATA2_PICTUREID

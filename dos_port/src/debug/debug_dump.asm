@@ -230,7 +230,6 @@ global RunWarpDoorTestSeed
 %endif
 %ifdef DEBUG_BEATEN_TALK
 extern PrepareNewGameDebug
-extern npc_beaten_flags
 global RunBeatenTalkTestSeed
 %endif
 %ifdef DEBUG_BATTLE_GHOST
@@ -681,9 +680,9 @@ section .text
 ; (RunMapScript's faithful _Script -> CheckFightingMapTrainers, plus the
 ; port-only CheckTrainerSight/TrainerEncounterFlow pair called from
 ; OverworldLoopLessDelay), so entering the full loop engaged the trainer twice
-; and could never match ground truth. That bespoke hook is now GATED OFF on
-; every map dispatched to TrainerMapScript, which is every map these sight
-; scenarios use — see the DEVIATION at the gate site in src/home/overworld.asm.
+; and could never match ground truth. That port-only hook was DELETED
+; 2026-09-26 (all 67 trainer maps measured to reach the faithful path), so the
+; full loop now runs the faithful path alone.
 ; The retirement this comment used to describe as a pending task HAS HAPPENED,
 ; and the continuous scenario it was a prerequisite for is trainer_battle_route
 ; (RunTrainerRouteTest below), which DOES drive the real OverworldLoop.
@@ -2329,13 +2328,12 @@ RunWarpDoorTestSeed:
 
 %ifdef DEBUG_BEATEN_TALK
 extern PrepareNewGameDebug
-extern npc_beaten_flags
 ; ---------------------------------------------------------------------------
 ; RunBeatenTalkTestSeed — beaten-trainer re-talk gate (overworld realign I.6 — A7).
 ; Like RunTrainerRouteTestSeed but seeds the beaten flag SET. EnterMap falls
 ; through into the real OverworldLoop and AUTOKEY_BEATEN_TALK presses A in
 ; front of the trainer. Seeds the debug party, empty bag, and sets
-; npc_beaten_flags bit for Route 3 Youngster 0 (view 6, bit 0).
+; the REAL persistent event flag for Route 3 Youngster 0.
 ; In: EBP = GB memory base. Returns.
 ; ---------------------------------------------------------------------------
 RunBeatenTalkTestSeed:
@@ -2344,10 +2342,10 @@ RunBeatenTalkTestSeed:
     mov byte [ebp + wNumBagItems], 0
     mov byte [ebp + wBagItems], 0xFF
     call PrepareNewGameDebug
-    ; Set beaten flag for the Youngster at Route 3 view 0: npc_beaten_flags bit 0
-    ; (port-bespoke BSS, not TrainerFlagAction yet — see Stage J). The golden's
-    ; Lua does the same via wEventFlags/Engine flag? For now we use the same BSS.
-    bts word [npc_beaten_flags], 0
+    ; Set the REAL persistent event flag for Route 3 Youngster 0, so the faithful
+    ; CheckForEngagingTrainers/TalkToTrainer flag test skips him. The old
+    ; port-only npc_beaten_flags BSS was deleted with the trainer-sight fallback.
+    SetEvent EVENT_BEAT_ROUTE_3_TRAINER_0
     ret
 %endif
 

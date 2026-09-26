@@ -16,8 +16,7 @@
 ;     walk tiles after a menu/dialog overwrites the shared vFont region.
 ;
 ; Port extensions kept here (; DIVERGENCE): the toggleable-hidden object gate and the
-; overworld interaction stack (CheckNPCInteraction / CheckTrainerSight /
-; TrainerEncounterFlow / ShowTextStream).
+; overworld interaction stack (CheckNPCInteraction / ShowTextStream).
 ; pret's IsSpriteOrSignInFrontOfPlayer is ported COMPLETE in its mirror,
 ; src/home/overworld.asm (R-002 retirement: sign branch + counter-range
 ; extension + the faithful pixel-based sprite scan). OverworldLoop's A-press
@@ -77,15 +76,12 @@ global GetSpriteVRAMAddress
 global ReadSpriteSheetData
 global LoadMapSpritesImageBaseOffset
 global GetSpriteImageBaseOffset
-global ResetMapTrainerState        ; port-ext per-map-load trainer state (called by wrapper)
 ; (ApplyToggleableHiddenGate global retired 2026-08-06 — see the tombstone below)
 global CheckNPCInteraction
 global ShowTextStream
 global npc_dialog_wait_impl
 global w_map_text_table_ptr
 global MapTextTablePointers
-global CheckTrainerSight
-global TrainerEncounterFlow
 global wMapSpriteExtraData       ; M8.1: per-NPC [class,set] cache (pret wMapSpriteExtraData)
 global wMapSpriteData            ; OW-A.2: [movement byte 2, masked text id] per slot (pret wMapSpriteData)
 
@@ -113,24 +109,6 @@ section .bss
 ; the faithful loader uses wSpriteSet (WRAM) + the SpriteSheetPointerTable instead.
 h_vram_slot:          resb 1                 ; pret hVRAMSlot (HRAM loop temp): current VRAM tile-pattern slot
 w_map_text_table_ptr: resd 1                 ; flat ptr to current map's TextTable (set by EnterMap)
-; npc_beaten_flags is the bespoke UNWIRED-MAP fallback's beaten cache and resets
-; on every map reload, so a sight-defeated trainer re-engages after a warp/continue.
-; The HEADER-DRIVEN path is already persistent: CheckForEngagingTrainers (and
-; TalkToTrainer) test/set the real wEventFlags bit through TrainerFlagAction
-; (home/trainers.asm), driven by the generated trainer headers, on the 17 maps
-; wired to TrainerMapScript (measured 2026-09-24: grep -c 'dd TrainerMapScript'
-; assets/map_scripts.inc). This array therefore only affects the maps still
-; running the port-only CheckTrainerSight/TrainerEncounterFlow fallback, and it
-; cannot be routed through TrainerFlagAction from here: the fallback scans SLOTS
-; while TrainerFlagAction needs the slot's HEADER, and there is no slot->header map.
-; It retires with the fallback when Stage 5a wiring completes
-; (docs/current_plan_overworld_realign.md Stage J); see the temporary DEVIATION at
-; home/overworld.asm:1862 and the follow-up note in src/home/trainers.asm.
-global npc_beaten_flags
-npc_beaten_flags:     resw 1   ; bit N-1 = NPC slot N beaten; cleared in InitMapSprites
-w_trainer_enc_slot:   resb 1   ; engaging trainer slot byte-offset (0xFF = none)
-w_player_frozen:      resb 1   ; 1 = block player input during encounter flow
-w_check_npc_slot_tmp: resb 1   ; C.2: slot offset for beaten-trainer dispatch (CheckNPCInteraction)
 
 ; wMapSpriteExtraData — port equivalent of pret wMapSpriteExtraData
 ; (ram/wram.asm: "trainer class/item ID, trainer set ID", MAX_OBJECT_EVENTS*2).
@@ -232,13 +210,6 @@ section .text
 ; engine/overworld/map_sprites.asm body, is of course still this file's.
 ; ---------------------------------------------------------------------------
 
-; ResetMapTrainerState (port ext) — zero the per-map interaction bookkeeping.
-; Also called by InitSprites is NOT done; only the InitMapSprites wrapper calls it.
-ResetMapTrainerState:
-    mov word [npc_beaten_flags], 0
-    mov byte [w_trainer_enc_slot], 0xFF
-    mov byte [w_player_frozen], 0
-    ret
 
 ; ApplyToggleableHiddenGate — RETIRED 2026-08-06. The destructive map-load gate
 ; (zeroing a hidden toggleable's PICTUREID) made runtime ShowObject a no-op:
@@ -653,9 +624,6 @@ CheckNPCInteraction:
 
 .found_npc:
     ; ── Found: NPC at target block ──────────────────────────────────────────
-    ; C.2: beaten-trainer gate moved from here into TRAINER TALK dispatch
-    ; (beaten → after-battle text, not not_found). Unbeaten flow unchanged.
-    mov [w_check_npc_slot_tmp], al           ; save slot number (1-15) for beaten check in dispatch
 
     ; Set hTilePlayerStandingOn so UpdateSpriteImage picks this NPC's VRAM slot.
     ; UpdateSprites leaves hTilePlayerStandingOn = last-slot value after the loop;
@@ -747,23 +715,14 @@ CheckNPCInteraction:
     push 0
     jmp DisplayPokemartDialogue
 .run_trainer_talk:
-    ; C.2: if this trainer's BSS beaten bit is set, show after-battle text
-    ; (pret TalkToTrainer sel 6) instead of re-engaging. Unbeaten → TrainerTalkHook.
-    movzx edx, byte [w_check_npc_slot_tmp]  ; slot number (1-15)
-    dec dl                                  ; bit index (0-14)
-    bt word [npc_beaten_flags], dx
-    jc .beaten_trainer
+    ; pret: `ld hl, <Map>TrainerHeaderN / call TalkToTrainer / jp TextScriptEnd`.
+    ; TalkToTrainer tests the header's persistent event flag itself and prints the
+    ; after-battle text when the trainer is beaten; the old port-only BSS cache and
+    ; its separate .beaten_trainer branch were a duplicate of that test and are gone.
     mov esi, edi                            ; ESI = flat trainer-header ptr (pret: ld hl)
     call TrainerTalkHook
     jmp .dialog_done
-.beaten_trainer:
-    mov esi, edi
-    mov al, 6
-    call ReadTrainerHeaderInfo              ; sel 6 = after-battle text
-    mov dword [text_msgbox], msgbox_dialog
-    call PrintText
-    call npc_dialog_wait_impl
-    jmp .dialog_done
+
 .run_script:
     mov al, [edi]
     cmp al, TX_SCRIPT_MART
@@ -813,7 +772,7 @@ ShowTextStream:
     ret
 
 ; ── shared helper: copy current wTileMap dialog rows to window layer, wait A/B ──
-; Called by CheckNPCInteraction and TrainerEncounterFlow. Not a dot-local label so
+; Called by CheckNPCInteraction. Not a dot-local label so
 ; both callers can reach it. Preserves ECX, ESI, EDI (push/pop).
 npc_dialog_wait_impl:
     ; Copy wTileMap rows 12-17 to GB_TILEMAP1 rows 0-5 (window layer source).
@@ -880,262 +839,4 @@ npc_dialog_wait_impl:
     pop edi
     pop esi
     pop ecx
-    ret
-
-; ---------------------------------------------------------------------------
-; CheckTrainerSight — scan NPC slots 1-15 for an unbeaten trainer with the
-; player in their line-of-sight (facing direction, distance ≤ 4 blocks).
-;
-; Sets w_trainer_enc_slot to the matching slot's byte offset if found.
-; Out: CF=1 if a trainer spotted the player, CF=0 otherwise.
-; All registers preserved (pushad/popad; CF set after popad).
-;
-; The distance is a hardcoded 4, not the trainer header's view byte. This routine
-; scans SLOTS, and the view byte lives in the map's trainer-HEADER table, which is
-; walked by CheckForEngagingTrainers (home/trainers.asm) by header index — there is
-; no slot→header mapping to read it from here. The faithful path already uses the
-; header's `view<<4` via wTrainerEngageDistance (CheckForEngagingTrainers ->
-; TrainerEngage -> CheckSpriteCanSeePlayer). This bespoke scan runs only on maps
-; not yet wired to TrainerMapScript (the gate at home/overworld.asm:1862) and is
-; deleted with that gate at Stage 5a wiring; its 4 matches the common default
-; view byte. Do not grow this routine — wire the map instead.
-; ---------------------------------------------------------------------------
-CheckTrainerSight:
-    pushad
-
-    ; Player block coords. Do NOT read wSpriteStateData2 slot 0 MAPY/MAPX: nothing
-    ; in the port ever writes them (ResetPlayerSpriteData zeroes slot 0 and only
-    ; NPC slots 1-15 are populated), so that read pinned the "player" at (0,0) and
-    ; the sight test could only ever fire at map column 0. The live player position
-    ; is wYCoord/wXCoord (the raw map block; _AdvancePlayerSprite writes them every
-    ; completed step). Sprite MAPY/MAPX carry a +4 bias over the raw map block
-    ; (gen_map_headers emits object_event y+4/x+4; auto_movement.asm stores
-    ; map_block+4), so +4 puts the player in the same space the trainer slots use.
-    movzx ebx, byte [ebp + wYCoord]
-    add ebx, 4                             ; BL = player_mapy in sprite-MAPY space
-    movzx ecx, byte [ebp + wXCoord]
-    add ecx, 4                             ; CL = player_mapx in sprite-MAPY space
-
-    mov esi, 0x10                          ; start at NPC slot 1
-.cts_loop:
-    cmp esi, 0x100
-    jge .cts_none
-
-    ; Skip inactive slot
-    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET], 0
-    je .cts_next
-
-    ; Skip non-trainer
-    cmp byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_ISTRAINER], 0
-    je .cts_next
-
-    ; Skip if already beaten (bit_index = slot/0x10 - 1, i.e. 0-14)
-    mov edx, esi
-    shr dl, 4                              ; slot number (1-15) in DL
-    dec dl                                 ; bit index (0-14)
-    bt word [npc_beaten_flags], dx         ; CF = beaten bit
-    jc .cts_next
-
-    ; Load trainer position
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPY]  ; AL = trainer_mapy
-    movzx edx, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_MAPX]  ; DL = trainer_mapx
-
-    ; Check facing direction → sight line (BL=player_mapy, CL=player_mapx)
-    movzx edi, byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_FACINGDIRECTION]
-
-    cmp edi, SPRITE_FACING_DOWN
-    jne .cts_try_up
-    ; DOWN: same MAPX, player south of trainer, dist ≤ 4
-    cmp cl, dl                             ; player_mapx == trainer_mapx?
-    jne .cts_next
-    cmp bl, al                             ; player_mapy > trainer_mapy?
-    jle .cts_next
-    mov ah, bl
-    sub ah, al                             ; dist = player_mapy - trainer_mapy
-    cmp ah, 4
-    ja .cts_next
-    jmp .cts_found
-
-.cts_try_up:
-    cmp edi, SPRITE_FACING_UP
-    jne .cts_try_left
-    ; UP: same MAPX, player north of trainer, dist ≤ 4
-    cmp cl, dl
-    jne .cts_next
-    cmp bl, al                             ; player_mapy < trainer_mapy?
-    jge .cts_next
-    mov ah, al
-    sub ah, bl                             ; dist = trainer_mapy - player_mapy
-    cmp ah, 4
-    ja .cts_next
-    jmp .cts_found
-
-.cts_try_left:
-    cmp edi, SPRITE_FACING_LEFT
-    jne .cts_try_right
-    ; LEFT: same MAPY, player west of trainer, dist ≤ 4
-    cmp bl, al                             ; player_mapy == trainer_mapy?
-    jne .cts_next
-    cmp cl, dl                             ; player_mapx < trainer_mapx?
-    jge .cts_next
-    mov ah, dl
-    sub ah, cl                             ; dist = trainer_mapx - player_mapx
-    cmp ah, 4
-    ja .cts_next
-    jmp .cts_found
-
-.cts_try_right:
-    ; RIGHT: same MAPY, player east of trainer, dist ≤ 4
-    cmp bl, al
-    jne .cts_next
-    cmp cl, dl                             ; player_mapx > trainer_mapx?
-    jle .cts_next
-    mov ah, cl
-    sub ah, dl                             ; dist = player_mapx - trainer_mapx
-    cmp ah, 4
-    ja .cts_next
-
-.cts_found:
-    mov eax, esi                           ; ESI = slot offset (0x10-0xF0); AL = low byte
-    mov [w_trainer_enc_slot], al           ; save slot offset (fits in a byte)
-    popad
-    stc
-    ret
-
-.cts_next:
-    add esi, 0x10
-    jmp .cts_loop
-
-.cts_none:
-    popad
-    clc
-    ret
-
-; ---------------------------------------------------------------------------
-; TrainerEncounterFlow — trainer encounter stub (no battle engine).
-; Pret ref: home/overworld.asm:TrainerEncounter (stub).
-;
-; Flow: brief freeze → face trainer → show pre-battle text →
-;       mark trainer beaten → clear encounter state.
-;
-; Reads w_trainer_enc_slot for the engaging trainer's slot offset.
-; All registers preserved (pushad/popad).
-;
-; STAGE 1b (2026-08-04): this pair is now REACHED ONLY ON UNWIRED MAPS. Its
-; caller in OverworldLoopLessDelay (src/home/overworld.asm) skips it whenever
-; MapScriptPointers[wCurMap] is TrainerMapScript, so on a wired map the faithful
-; pret flow (the map's _Script -> CheckFightingMapTrainers ->
-; DisplayEnemyTrainerTextAndStartBattle) is the only sight path, as on the GB.
-; That gate — not this routine — carries the DEVIATION that retires when the
-; overworld-events Stage 5a rollout finishes wiring the remaining maps; at that
-; point this routine and CheckTrainerSight become dead and should be DELETED
-; rather than left linked.
-; ---------------------------------------------------------------------------
-TrainerEncounterFlow:
-    pushad
-
-    mov byte [w_player_frozen], 1
-
-    ; --- Brief freeze before text (~45 frames) ---
-    ; TODO: Add ! bubble over trainer's head here.
-    mov ecx, 45
-.tef_freeze:
-    call DelayFrame
-    dec ecx
-    jnz .tef_freeze
-
-    ; --- Make trainer face player and freeze NPC movement during text ---
-    movzx esi, byte [w_trainer_enc_slot]   ; ESI = slot byte offset (0x10-0xF0)
-    movzx eax, byte [ebp + esi + wSpriteStateData2 + SPRITESTATEDATA2_IMAGEBASEOFFSET]
-    dec al
-    ror al, 4
-    mov [ebp + hTilePlayerStandingOn], al
-    call MakeNPCFacePlayer
-    or byte [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], (1 << BIT_FACE_PLAYER)
-
-    ; --- Look up and show pre-battle text ---
-    ; text id lives in wMapSpriteData[(slot-1)*2 + 1] (OW-A.2 P2 relocation).
-    mov eax, esi
-    shr eax, 4
-    dec eax
-    add eax, eax
-    movzx eax, byte [wMapSpriteData + eax + 1]  ; masked text id (pret's 1-based id)
-    test eax, eax
-    jz .tef_text_done                      ; id 0 = no text (pret's sentinel)
-    lea edx, [eax * 8 - 8]                 ; pret's `dec a`, folded into the entry scale
-    mov ecx, [w_map_text_table_ptr]        ; flat ptr to current map's TextTable (0 if none)
-    test ecx, ecx
-    jz .tef_text_done
-
-    mov edi, [ecx + edx]                   ; flat DS ptr to text stream
-    test edi, edi
-    jz .tef_text_done
-
-    ; EDI = the flat stream, walked in place by TCP. Save it across the pose/font
-    ; setup below (LoadFontTilePatterns clobbers EDI).
-    push edi
-
-    ; Force the player to a standing pose before the font overwrites the walk tiles
-    ; at $8800 — see the matching note in CheckNPCInteraction (avoids the player
-    ; rendering font glyphs while the dialog freezes the overworld loop).
-    mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
-    mov [ebp + wSpritePlayerStateData1ImageIndex], al
-    mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
-    mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
-
-    or byte [ebp + wFontLoaded], (1 << BIT_FONT_LOADED)
-    call LoadFontTilePatterns
-    pop esi                                 ; the flat stream saved above
-    mov dword [text_msgbox], msgbox_dialog     ; overworld dialog projection
-    call PrintText
-    call npc_dialog_wait_impl
-
-.tef_text_done:
-    ; --- M8.1 sight->battle wiring -------------------------------------------
-    ; Seed the engaged-trainer globals from this slot's cached class/set, then hand
-    ; off to StartTrainerBattle (the pret home/trainers.asm battle-entry).  This
-    ; inline read of wMapSpriteExtraData is a stopgap for pret EngageMapTrainer,
-    ; which M8.2 (trainer-header engine) will provide via wSpriteIndex.
-    ; StartTrainerBattle SEEDS the battle parameters (wCurOpponent / wTrainerClass /
-    ; wTrainerNo) and returns. It does NOT run the battle: OverworldLoop's
-    ; wCurOpponent poll enters it, and the incremented wCurMapScript would make the
-    ; next RunMapScript dispatch EndTrainerBattle (script-pointer index 2). That is
-    ; why no EndTrainerBattle call follows this one — see the DEVIATION below.
-    ; STAGE 1b CORRECTION (2026-08-04): that cleanup hand-off is now UNREACHABLE
-    ; FROM HERE. The gate in OverworldLoopLessDelay means this flow runs only on
-    ; maps NOT dispatched to TrainerMapScript, and on exactly those maps
-    ; MapScriptPointers[wCurMap] is DefaultMapScript (or a non-trainer script), so
-    ; the incremented wCurMapScript indexes a table RunMapScript never reaches.
-    ; The residual below is therefore unconditional on this path, not conditional
-    ; on wiring as it was when this comment was first written.
-    movzx eax, byte [w_trainer_enc_slot]   ; slot byte offset (0x10-0xF0)
-    shr al, 4                              ; slot number (1-15)
-    dec al                                 ; 0-based slot index
-    movzx eax, al
-    add eax, eax                           ; *2 -> wMapSpriteExtraData index
-    mov cl, [wMapSpriteExtraData + eax]     ; trainer class (OPP_* value)
-    mov [ebp + wEngagedTrainerClass], cl
-    mov cl, [wMapSpriteExtraData + eax + 1] ; trainer set
-    mov [ebp + wEngagedTrainerSet], cl
-    call StartTrainerBattle
-    ; DEVIATION{class=temporary; pret=home/trainers.asm:EndTrainerBattle; behavior=a battle entered through this bespoke flow never runs EndTrainerBattle, so BIT_PRINT_END_BATTLE_TEXT and wCurMapScript stay set after it and the trainer is not flagged beaten by the pret path; evidence=the Stage 1b gate in OverworldLoopLessDelay reaches this routine only when MapScriptPointers[wCurMap] is not TrainerMapScript, and on those maps the generated assets/map_scripts.inc dispatches DefaultMapScript or a non-trainer script, so the wCurMapScript increment StartTrainerBattle makes indexes a script-pointer table RunMapScript never dispatches; lifetime=deleted together with CheckTrainerSight, TrainerEncounterFlow and the gate itself when Stage 5a wiring completes and all standard trainer maps are wired, owned by docs/current_plan_overworld_realign.md Stage J (adopted from the retired overworld-events plan)}
-    ; -------------------------------------------------------------------------
-    call hide_window                    ; count=0 (nothing drawn); parks hWY off-screen
-    and byte [ebp + wFontLoaded], ~(1 << BIT_FONT_LOADED)
-    call ReloadWalkingTilePatterns      ; OW-A.2 P3c: faithful post-dialog walk-tile reload
-    call LoadPlayerSpriteGraphics
-    call LoadCurrentMapView
-    call DelayFrame
-
-    ; --- Mark trainer beaten (bit_index = slot/0x10 - 1) ---
-    movzx edx, byte [w_trainer_enc_slot]
-    shr dl, 4                              ; slot number (1-15)
-    dec dl                                 ; bit index (0-14)
-    bts word [npc_beaten_flags], dx        ; set beaten bit
-
-    ; --- Clear encounter state ---
-    mov byte [w_trainer_enc_slot], 0xFF
-    mov byte [w_player_frozen], 0
-
-    popad
     ret

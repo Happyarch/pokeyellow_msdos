@@ -1216,10 +1216,9 @@ endif
 # dispatch (RunMapScript -> MapScriptPointers[wCurMap] -> TrainerMapScript ->
 # CheckFightingMapTrainers) until it engages, then dump GBSTATE.BIN + FRAME.BIN.
 #
-# They deliberately do NOT enter OverworldLoop: the port still carries a bespoke
-# CheckTrainerSight/TrainerEncounterFlow hook that pret has no counterpart for, and
-# running both would engage the trainer twice. See RunMapScriptSightTest's header in
-# src/debug/debug_dump.asm.
+# They deliberately do NOT enter OverworldLoop: this keeps their compared surface
+# free of the joypad, walking and battle state a full-loop run necessarily moves.
+# See RunMapScriptSightTest's header in src/debug/debug_dump.asm.
 #
 # ONE GATE PER MAP, not one gate with overrides: golden_diff validates the scenario
 # id stamped in the dump against the manifest, and gen_scenario_registry derives that
