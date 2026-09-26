@@ -40,17 +40,19 @@ global g_imfc_base
 
 IMFC_PORT_PIU0  equ 0x0   ; Data from card to PC
 IMFC_PORT_PIU1  equ 0x1   ; Data from PC to card
-IMFC_PORT_PIU2  equ 0x2   ; Status / Handshake (bit 2 = OBF)
+IMFC_PORT_PIU2  equ 0x2   ; Status / Handshake (bit 0 = TxRDY, bit 5 = RxRDY)
 IMFC_PORT_PCR   equ 0x3   ; 8255 / PD71055 control register
+IMFC_PORT_TCR   equ 0x8   ; Total control register (bit 4 = 9th data bit)
 IMFC_PORT_TSR   equ 0xC   ; Total status register
-IMFC_POLL_BOUND equ 4000  ; bounded poll loop iterations
+IMFC_POLL_BOUND equ 50000 ; bounded poll loop iterations
 
 section .text
 
 ; ---------------------------------------------------------------------------
 ; imfc_detect — probe the TSR and handshake ports for the IMFC.
 ; An absent ISA bus reads 0xFF; a valid IMFC TSR has bits 2..6 as 0.
-; On success, configures the 8255 PIU mode and sets g_imfc_present = 1.
+; On success, configures the 8255 PIU mode, unblocks routing, and sets
+; g_imfc_present = 1.
 ; Preserves EBX, ESI, EDI.
 ; ---------------------------------------------------------------------------
 imfc_detect:
@@ -64,13 +66,8 @@ imfc_detect:
     test al, 0x7C                 ; bits 2..6 must be 0 on valid card
     jnz .absent
 
-    ; Configure 8255 PIU mode:
-    ; Mode 1 for Group 0 (Port 0 input), Mode 1 for Group 1 (Port 1 output)
-    ; Control word = 0xB4
-    mov dx, [g_imfc_base]
-    add dx, IMFC_PORT_PCR
-    mov al, 0xB4
-    out dx, al
+    call imfc_init_hardware
+    jc .absent
 
     mov byte [g_imfc_present], 1
     mov byte [g_imfc_music], 1
@@ -87,7 +84,47 @@ imfc_detect:
     ret
 
 ; ---------------------------------------------------------------------------
-; imfc_write_data — send one byte in AL to PIU1 with bounded handshake poll.
+; imfc_write_cmd — send one command byte in AL (Bit 8 = 1) with handshake poll.
+; Returns CF=0 on success, CF=1 on timeout.
+; Preserves EBX, ESI, EDI.
+; ---------------------------------------------------------------------------
+imfc_write_cmd:
+    push ebx
+    push ecx
+    push edx
+    mov bl, al
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PIU2
+    mov ecx, IMFC_POLL_BOUND
+.poll_obf:
+    in al, dx
+    test al, 0x04                 ; Port C bit 2: OBF (0 = ready, 1 = buffer full)
+    jz .ready                     ; 0 = ready for next byte
+    dec ecx
+    jnz .poll_obf
+    pop edx
+    pop ecx
+    pop ebx
+    stc
+    ret
+
+.ready:
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_TCR
+    mov al, 0x10                  ; Bit 4 = 1 (Command: 9th bit = 1)
+    out dx, al
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PIU1
+    mov al, bl
+    out dx, al
+    pop edx
+    pop ecx
+    pop ebx
+    clc
+    ret
+
+; ---------------------------------------------------------------------------
+; imfc_write_data — send one MIDI/data byte in AL (Bit 8 = 0) with handshake poll.
 ; Returns CF=0 on success, CF=1 on timeout.
 ; Preserves EBX, ESI, EDI.
 ; ---------------------------------------------------------------------------
@@ -101,7 +138,7 @@ imfc_write_data:
     mov ecx, IMFC_POLL_BOUND
 .poll_obf:
     in al, dx
-    test al, 0x04                 ; Port C bit 2: OBF (Output Buffer Full)
+    test al, 0x04                 ; Port C bit 2: OBF (0 = ready, 1 = buffer full)
     jz .ready                     ; 0 = ready for next byte
     dec ecx
     jnz .poll_obf
@@ -113,6 +150,10 @@ imfc_write_data:
 
 .ready:
     mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_TCR
+    xor al, al                    ; Bit 4 = 0 (Data: 9th bit = 0)
+    out dx, al
+    mov dx, [g_imfc_base]
     add dx, IMFC_PORT_PIU1
     mov al, bl
     out dx, al
@@ -120,6 +161,120 @@ imfc_write_data:
     pop ecx
     pop ebx
     clc
+    ret
+
+; ---------------------------------------------------------------------------
+; imfc_drain_input — discard any pending bytes from the card's output port.
+; Preserves EBX, ESI, EDI.
+; ---------------------------------------------------------------------------
+imfc_drain_input:
+    push ecx
+    push edx
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PIU2
+    mov ecx, 2000
+.check:
+    in al, dx
+    test al, 0x20                 ; Port C bit 5: RxRDY (card has data for PC)
+    jz .done
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PIU0
+    in al, dx                     ; read and discard
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PIU2
+    dec ecx
+    jnz .check
+.done:
+    pop edx
+    pop ecx
+    ret
+
+; ---------------------------------------------------------------------------
+; imfc_init_hardware — resets card and configures internal routing paths.
+; Card powers on with System_To_SP = 0x00, discarding all incoming PC MIDI.
+; We send 0xE2 (Set Paths) to set System_To_SP = 0x1F.
+; Returns CF=0 on success, CF=1 on failure.
+; ---------------------------------------------------------------------------
+imfc_init_hardware:
+    push ebx
+    push ecx
+    push edx
+
+    ; Configure 8255 PIU mode 1:
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PCR
+    mov al, 0xB4                  ; 8255 Mode 1 (Port A in, Port B out)
+    out dx, al
+
+    ; Soft reboot command 0xE5 (takes 1 byte, Bit 8 = 1)
+    mov al, 0xE5
+    call imfc_write_cmd
+    jc .fail
+
+    ; Delay ~50 ms (3 ticks or loop counter fallback)
+    mov ebx, [tick_count]
+    add ebx, 3
+    mov ecx, 1000000
+.wait_reboot:
+    cmp [tick_count], ebx
+    jae .reboot_done
+    dec ecx
+    jnz .wait_reboot
+.reboot_done:
+
+    ; Re-arm PIU Mode 1 after reboot:
+    mov dx, [g_imfc_base]
+    add dx, IMFC_PORT_PCR
+    mov al, 0xB4
+    out dx, al
+
+    ; Drain greeting/reboot status
+    call imfc_drain_input
+
+    ; Send Set Paths command 0xE2 (6 bytes total, all with Bit 8 = 1):
+    ; [0xE2, 0x00, 0x00, 0x07, 0x1F, 0x00]
+    mov al, 0xE2
+    call imfc_write_cmd
+    jc .fail
+    mov al, 0x00                  ; MidiIn_To_System
+    call imfc_write_cmd
+    jc .fail
+    mov al, 0x00                  ; System_To_MidiOut
+    call imfc_write_cmd
+    jc .fail
+    mov al, 0x07                  ; MidiIn_To_SP
+    call imfc_write_cmd
+    jc .fail
+    mov al, 0x1F                  ; System_To_SP: route PC MIDI to Sound Processor!
+    call imfc_write_cmd
+    jc .fail
+    mov al, 0x00                  ; MidiIn_To_MidiOut
+    call imfc_write_cmd
+    jc .fail
+
+    ; Wait briefly and drain response (card responds with 0xE2)
+    mov ebx, [tick_count]
+    add ebx, 1
+    mov ecx, 500000
+.wait_ack:
+    cmp [tick_count], ebx
+    jae .ack_done
+    dec ecx
+    jnz .wait_ack
+.ack_done:
+    call imfc_drain_input
+
+    clc
+    pop edx
+    pop ecx
+    pop ebx
+    ret
+
+.fail:
+    stc
+    pop edx
+    pop ecx
+    pop ebx
     ret
 
 ; ---------------------------------------------------------------------------
