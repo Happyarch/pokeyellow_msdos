@@ -408,7 +408,7 @@ trainer-header tables (it is what the whole map-script sight family and
 scenario 51 run on). What remains of this item is only its TAIL — the
 `npc_beaten_flags` → `TrainerFlagAction` convergence (`npc_beaten_flags` is
 still written in `map_sprites.asm:225`), which is OWNED by
-`docs/current_plan_overworld_realign.md` Stage J (adopted 2026-08-28 from the
+`docs/plans/overworld_realign.md` Stage J (adopted 2026-08-28 from the
 retired overworld-events plan Stage 5a; arbitration 2026-08-04, threads 19/20)
 and shrinks per wired map. Keep the item for the tail; do not
 re-cite the "no generator" premise.
@@ -808,7 +808,7 @@ map's blocks index into.
 work also unblocks the last three standard-shape trainer maps
 (`CERULEAN_CAVE_B1F` = `CAVERN`, `POWER_PLANT` = `FACILITY`, `VIRIDIAN_FOREST` =
 `FOREST` — the tail of retired `docs/plans/overworld_events.md` Stage 5a, now
-`docs/current_plan_overworld_realign.md` Stage J) and every
+`docs/plans/overworld_realign.md` Stage J) and every
 Stage 5b story leg that enters a building. Flagged to the maintainer 2026-08-04 as
 a candidate workstream of its own; it is **not** staged, and no plan currently
 owns it.
@@ -1032,7 +1032,7 @@ since `3f1b12be`.**
 ### 37. Overworld-events plan retirement — dormant evidence + rollout tails
 Filed 2026-08-28 when `docs/current_plan_overworld_events.md` was retired to
 `docs/plans/overworld_events.md` (maintainer direction). The overworld-seam
-work was ADOPTED by `docs/current_plan_overworld_realign.md` Stage J
+work was ADOPTED by `docs/plans/overworld_realign.md` Stage J
 (trainer-sight hook retirement + Stage 5a wiring, P3c comment residue,
 `wEnteringCableClub` hold-open, club-map warp). What NO plan owns now:
 

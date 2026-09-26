@@ -157,7 +157,14 @@ All five printer-script links above are DONE.
       than silence. Re-run the sibling-drop audit across all 225, not just the
       blocked 18.
 
-## Trainer-sight fidelity: remove the port-only fallback (added 2026-09-26)
+## Trainer-sight fidelity: port-only fallback REMOVED (done 2026-09-26, `9875e91df`)
+
+**STATUS: DONE.** The fallback (`CheckTrainerSight` + `TrainerEncounterFlow`) and all
+its state were deleted; the faithful `CheckFightingMapTrainers` path is now the only
+trainer-engagement path. `make image` clean, `static_gate` PASS 8/8, pgate PASS 37/37
+(16 core + all `*_sight` / `trainer_battle_route` / `route17_trainer_battle` /
+`beaten_trainer_talk`). No new golden (maintainer ruling 2026-09-26). Memory
+`trainer-sight-faithful-path-universal`; episode 295.
 
 ### Why
 

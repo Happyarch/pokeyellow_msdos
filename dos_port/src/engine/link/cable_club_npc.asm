@@ -340,7 +340,7 @@ section .text
 ; AfterDisplayingTextID is CheckNPCInteraction's .dialog_done here; the
 ; wEnteringCableClub hold-open nuance matters only once the club-map warp is
 ; wired (the overworld half of that flow — the hold-open check itself and the
-; warp's end-to-end scenario — is owned by docs/current_plan_overworld_realign.md
+; warp's end-to-end scenario — is owned by docs/plans/overworld_realign.md
 ; Stage J.5, adopted 2026-08-28; this plan's Stage 3 keeps the in-club session).
 ; DEVIATION{class=projection; pret=home/text_script.asm:DisplayTextID; behavior=the receptionist text id dispatches through CheckNPCInteraction's generated SCRIPT table into this shim instead of DisplayTextID's TX_SCRIPT byte case; evidence=the port's overworld NPC-talk path is the generated dialog table (map_sprites.asm CheckNPCInteraction) and pret's DisplayTextID case body is call CableClubNPC then AfterDisplayingTextID which this shim and .dialog_done reproduce; lifetime=permanent overworld dialog-dispatch projection}
 ; ---------------------------------------------------------------------------
