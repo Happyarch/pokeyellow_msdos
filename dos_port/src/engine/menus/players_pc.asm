@@ -562,7 +562,10 @@ PlayerPCPromptWait:
     mov al, bl
     mov [ebp + hJoyLast], al
     mov [ebp + hJoyHeld], al
-    test al, PAD_A | PAD_B
+    ; Test the EDGE, not the held byte: AL is hJoyInput (held), so `test al` exited
+    ; on a merely-held A/B and a held A raced through the prompts. pret's
+    ; PromptText -> ManualTextScroll waits for a FRESH press.
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait

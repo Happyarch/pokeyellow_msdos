@@ -1496,7 +1496,13 @@ BattlePromptWait:
     mov al, bl
     mov [ebp + hJoyLast], al
     mov [ebp + hJoyHeld], al
-    test al, PAD_A | PAD_B
+    ; Test the EDGE just computed, not the held byte. AL here is hJoyInput (all
+    ; held buttons), so the old `test al` exited the wait the moment A/B was
+    ; merely HELD: a held A raced through every battle message. pret's PromptText
+    ; -> ManualTextScroll -> WaitForTextScrollButtonPress waits for a FRESH press
+    ; (JoypadLowSensitivity reports hJoyPressed with hJoy7 == 0), so test the
+    ; edge in hJoyPressed instead.
+    test byte [ebp + hJoyPressed], PAD_A | PAD_B
     jnz .done
     dec ecx
     jnz .wait
