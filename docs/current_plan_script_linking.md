@@ -157,6 +157,80 @@ All five printer-script links above are DONE.
       than silence. Re-run the sibling-drop audit across all 225, not just the
       blocked 18.
 
+## Trainer-sight fidelity: remove the port-only fallback (added 2026-09-26)
+
+### Why
+
+The port carries a port-only trainer-sight fallback — `CheckTrainerSight` +
+`TrainerEncounterFlow` (`src/engine/overworld/map_sprites.asm`), called from
+`OverworldLoopLessDelay` (`src/home/overworld.asm`) — with no pret counterpart.
+It is an M8.1-era stopgap: hardcoded 4-block range, a non-persistent `.bss`
+beaten cache (`npc_beaten_flags`), no `EndTrainerBattle`, and no `text_asm` /
+trainer-talk dispatch. `cc2a55227` fixed its player-coordinate read, so it began
+firing on per-map trainer maps where the faithful path was already live. On
+Pewter Gym it printed `PewterGymCooltrainerMText`'s machine code as text
+(`.4o… error.`) and left the trainer unflagged, so the battle re-engaged forever.
+
+### Measurement — the fallback serves no trainer map
+
+All 67 pret maps that define `<Map>TrainerHeaders` already run
+`CheckFightingMapTrainers`:
+
+| route to `CheckFightingMapTrainers` | count |
+|---|---|
+| generic `TrainerMapScript` | 17 |
+| per-map `_Script`, pointer table generated in `assets/map_script_tables.inc` | 23 |
+| per-map `_Script`, inline call | 27 |
+| **total** | **67** |
+
+Zero trainer maps dispatch only `DefaultMapScript`. `trainer_map_script.asm`
+stays: it is the intentional dedup of pret's copied `_Script` boilerplate (46
+maps) and trainer-talk hooks (265), with the per-map operands in generated data.
+
+### Work
+
+- **Audit** the faithful routines: `src/engine/overworld/trainer_sight.asm`
+  (`TrainerEngage`, `ReadTrainerScreenPosition`, `TrainerWalkUpToPlayer`,
+  `_Get/_SetSpritePosition1/2`, `CheckSpriteCanSeePlayer`,
+  `CheckPlayerIsInFrontOfSprite`) and the home labels
+  (`CheckForEngagingTrainers`, `CheckFightingMapTrainers`, `TalkToTrainer`,
+  `DisplayEnemyTrainerTextAndStartBattle`, `StartTrainerBattle`,
+  `EndTrainerBattle`) with `faithdiff` + source compare. Run the `*_sight`
+  goldens and `trainer_battle_route`.
+- **Delete** the fallback:
+  - `src/home/overworld.asm`: the gate + its `DEVIATION` and the two `extern`s;
+    the `ISTRAINER` store + DEVIATION in `InitSprites`.
+  - `src/engine/overworld/map_sprites.asm`: `CheckTrainerSight` and
+    `TrainerEncounterFlow`; `.bss` `npc_beaten_flags`, `w_trainer_enc_slot`,
+    `w_player_frozen`, `w_check_npc_slot_tmp`; simplify `CheckNPCInteraction`'s
+    `.run_trainer_talk` to call `TrainerTalkHook` unconditionally (pret's shape —
+    `TalkToTrainer` already does the persistent flag test).
+  - `include/gb_memmap.inc`: remove `SPRITESTATEDATA2_ISTRAINER` (port-only; set
+    only in `InitSprites`, read only by the fallback).
+  - `src/debug/debug_dump.asm`: migrate `DEBUG_BEATEN_TALK`'s
+    `RunBeatenTalkTestSeed` off `npc_beaten_flags` to the real
+    `EVENT_BEAT_ROUTE_3_TRAINER_0` flag.
+  - `Makefile`: update the sight-gate comment (its "would engage twice" rationale
+    is gone).
+- **No new golden** (maintainer ruling 2026-09-26). Coverage is the existing
+  `*_sight` set, `trainer_battle_route`, `beaten_trainer_talk`, plus
+  `fidelity` / `fidelity-full`.
+- **Deferred, measurement-only.** pret gates engagement on the trainer being on
+  the GB screen (`IMAGEINDEX != 0xff`, computed by `CheckSpriteAvailability` over
+  160×144). The port's `CheckSpriteAvailability` uses the wider 320×200 zone
+  (`MAPY ∈ [wYCoord-2,+9]`, `MAPX ∈ [wXCoord-6,+13]`, a permanent projection
+  deviation), so a trainer the GB would hide can be eligible. First compare
+  engage decisions port-vs-golden-ROM across the trainer placements; add a
+  `DEVIATION{class=projection}` guard in `TrainerEngage` only if a divergence
+  actually manifests.
+
+### Sweep
+
+Delete memory `regression-overworld-checktrainersight-player-coord`; update
+`regression-battle-second-trainer-wont-engage`; fix the stale
+`docs/current_plan_overworld_realign.md` references (archived to
+`docs/plans/overworld_realign.md`); `episode_record` the removal.
+
 ## Verification for any change here
 
 `make assets` → `make -j8` → `make static_gate` (must print **8** static checks) →
