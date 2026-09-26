@@ -61,7 +61,7 @@ global g_mpu_base
 
 extern tick_count                 ; boot/timing.asm — 60 Hz PIT tick counter
 
-MPU_POLL_BOUND  equ 4000          ; status reads before declaring timeout
+MPU_POLL_BOUND  equ 32768         ; status reads before declaring timeout (raised for DOSBox-X reset window)
 MPU_DRR         equ 0x40          ; status bit 6: 0 = ready for output
 MPU_DSR         equ 0x80          ; status bit 7: 0 = data available
 MPU_CMD_RESET   equ 0xFF

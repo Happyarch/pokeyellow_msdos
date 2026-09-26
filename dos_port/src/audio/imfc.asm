@@ -98,8 +98,8 @@ imfc_write_cmd:
     mov ecx, IMFC_POLL_BOUND
 .poll_obf:
     in al, dx
-    test al, 0x04                 ; Port C bit 2: OBF (0 = ready, 1 = buffer full)
-    jz .ready                     ; 0 = ready for next byte
+    test al, 0x01                 ; Port C bit 0: TxRDY (1 = card ready for input)
+    jnz .ready                    ; 1 = ready for next byte
     dec ecx
     jnz .poll_obf
     pop edx
@@ -138,8 +138,8 @@ imfc_write_data:
     mov ecx, IMFC_POLL_BOUND
 .poll_obf:
     in al, dx
-    test al, 0x04                 ; Port C bit 2: OBF (0 = ready, 1 = buffer full)
-    jz .ready                     ; 0 = ready for next byte
+    test al, 0x01                 ; Port C bit 0: TxRDY (1 = card ready for input)
+    jnz .ready                    ; 1 = ready for next byte
     dec ecx
     jnz .poll_obf
     pop edx
@@ -203,7 +203,7 @@ imfc_init_hardware:
     ; Configure 8255 PIU mode 1:
     mov dx, [g_imfc_base]
     add dx, IMFC_PORT_PCR
-    mov al, 0xB4                  ; 8255 Mode 1 (Port A in, Port B out)
+    mov al, 0xBC                  ; 8255 control word [BC] per IBM manual (Mode 1, A=in, B=out)
     out dx, al
 
     ; Soft reboot command 0xE5 (takes 1 byte, Bit 8 = 1)
@@ -225,7 +225,7 @@ imfc_init_hardware:
     ; Re-arm PIU Mode 1 after reboot:
     mov dx, [g_imfc_base]
     add dx, IMFC_PORT_PCR
-    mov al, 0xB4
+    mov al, 0xBC                  ; 8255 control word [BC] per IBM manual (re-arm after reboot)
     out dx, al
 
     ; Drain greeting/reboot status
