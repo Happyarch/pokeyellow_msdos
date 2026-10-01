@@ -13,8 +13,8 @@
 
 $pas = @"
 [sblaster]
-sbtype  = none
-oplmode = none
+sbtype  = pas16
+oplmode = auto
 
 [speaker]
 pcspeaker = true
