@@ -3303,6 +3303,37 @@
                 "masks": "golden_diff.SCENARIOS"
             },
             "verification": "Route 3 (12,8) re-talks beaten Youngster, after-battle text prints via ReadTrainerHeaderInfo sel 6, no battle (A7)"
+        },
+        {
+            "name": "start_menu_null_text_map",
+            "id": 110,
+            "tier": "core",
+            "scenario_class": "default",
+            "build_flags": "DEBUG_STARTMENU_NULLMAP=1 AUTOKEY_DUMP_FRAME=600",
+            "port_entry_gate": "DEBUG_STARTMENU_NULLMAP",
+            "navigation_script": "tools/mgba_harness/scenarios/start_menu_null_text_map.lua",
+            "dump": {
+                "type": "GBSTATE",
+                "schema_version": 2,
+                "artifact": "GBSTATE.BIN",
+                "timeout_seconds": 150,
+                "terminal_marker": "complete"
+            },
+            "must_hit": [
+                "DisplayTextID",
+                "DisplayStartMenu"
+            ],
+            "comparison": {
+                "regions": [
+                    "tilemap",
+                    "vram",
+                    "oam",
+                    "wram"
+                ],
+                "projection": "golden_diff.SCENARIOS",
+                "masks": "golden_diff.SCENARIOS"
+            },
+            "verification": "the START menu opened through the REAL overworld joypad path on REDS_HOUSE_2F (0x26), whose MapTextTablePointers entry is NULL. start_menu cannot witness this: it calls DisplayStartMenu directly on non-null Pallet Town, so it passes with or without the dispatch. Here both sides reach the bedroom (the port by DEBUG_SPAWN, the golden by a real new game), press START, and DisplayTextID runs its hTextID==0 dispatch on a null-text-table map. c.f. cf5ec020d, which moved the port-only null-table bail BELOW that dispatch (pret's order, since pret has no bail at all): before it, START fell through to 'after displaying text' and the menu never opened, so the compared START-menu box was blank and the scenario fails."
         }
     ],
     "disabled_scenarios": []

@@ -1646,6 +1646,25 @@ EnterMap:
     call SeamReseatView
     call RunBeatenTalkTestSeed               ; party + beaten flag set; RETURNS
 %endif
+%ifdef DEBUG_STARTMENU_NULLMAP
+    ; START-menu dispatch gate on a NULL-text-table map (REDS_HOUSE_2F, 0x26 —
+    ; its MapTextTablePointers entry is `dd 0`). Same shape as DEBUG_SURF/LEDGE
+    ; above: seed the deterministic identity, derive the view pointer, then FALL
+    ; THROUGH into the real OverworldLoop. Nothing here opens the menu: the
+    ; AUTOKEY_STARTMENU_NULLMAP script injects one PAD_START into the live
+    ; joypad, so OverworldLoopLessDelay's own START branch sets hTextID=0 and
+    ; calls DisplayTextID — the dispatch whose ordering this gate defends. On
+    ; the pre-fix code the null-table guard returned before that dispatch, no
+    ; menu opened, and the dumped GBSTATE.BIN shows the bare bedroom; AutoKeyDrive
+    ; photographs at AUTOKEY_DUMP_FRAME.
+    ;
+    ; Facing is seeded HERE (InitSprites rebuilds the sprite state from the map
+    ; object binary during LoadMapData), and DOWN matches the golden's arrival
+    ; facing and the port's own default.
+    call SeedDeterministicPlayerIdentity     ; "RED" / id 0 — the golden's identity
+    call SeamReseatView                      ; view ptr + block coords + collision mirror
+    mov byte [ebp + wSpritePlayerStateData1FacingDirection], SPRITE_FACING_DOWN
+%endif
 
     ; fall through to OverworldLoop
 

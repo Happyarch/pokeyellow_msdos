@@ -2514,6 +2514,59 @@ SCENARIOS = {
             ],
         },
     },
+    "start_menu_null_text_map": {
+        # cf5ec020d regression gate. start_menu calls DisplayStartMenu directly on
+        # non-null Pallet Town, so it passes whether or not DisplayTextID's START
+        # dispatch runs. This scenario instead boots onto REDS_HOUSE_2F (0x26), a
+        # map whose generated MapTextTablePointers entry is NULL (`dd 0 ; (no
+        # NPCs)`), and reaches the menu through the live overworld joypad: the
+        # port's AUTOKEY_STARTMENU_NULLMAP injects one START, the golden presses
+        # START on the real ROM. DisplayTextID then runs with hTextID == 0 on a
+        # null-text-table map. Pre-fix the port's null-table guard returned before
+        # that dispatch, so no menu was drawn and the projected box below is blank.
+        "flags": "DEBUG_STARTMENU_NULLMAP=1 AUTOKEY_DUMP_FRAME=600",
+        "wram_skip": dict(_NONBATTLE_WRAM_SKIP),
+        # This scenario's subject is the START menu BOX, not the bedroom backdrop.
+        # The port's 20x18 GB subwindow inside the 40x25 canvas is the map mirror
+        # (block-aligned); every cell outside the projected box is masked below, so
+        # the window only has to keep every masked cell on-canvas (it does: golden
+        # rows/cols + (3,10) stay inside 25x40). The bedroom backdrop is covered by
+        # the overworld scenarios; a mask here is a scope statement, not a
+        # divergence waiver — a divergence in the box itself still fails.
+        "window": (10, 3),
+        "projections": [
+            # START menu box, same widescreen re-anchor as start_menu: golden
+            # (row 0..13, col 10..19) -> canvas (row+0, col+20). docs/ui_projection.md
+            # "overworld-ui (START menu)": X+20, Y+0.
+            ((0, 10, 13, 19), (20, 0),
+             "START menu box projected X+20 (docs/ui_projection.md)"),
+        ],
+        "masks": {
+            "tilemap": [
+                ((0, 0, 13, 9),
+                 "bedroom map mirror left of the START menu box: the port's block-aligned "
+                 "backdrop is not this scenario's subject (the box is), and the bedroom map "
+                 "render is owned by the overworld scenarios"),
+                ((14, 0, 17, 19),
+                 "bedroom map mirror below the START menu box: same reason as the left rect"),
+            ],
+            # The REDS_HOUSE tileset gfx is only 1168 bytes (gfx/tilesets/reds_house.2bpp
+            # = 73 tiles, $00-$48), but LoadTilesetTilePatternData copies a fixed $600
+            # bytes. On the golden ROM the loader reads the last 23 tiles ($49-$5F) past
+            # RedsHouse2_GFX (gfx/tilesets.asm: an empty RedsHouse1_GFX label immediately
+            # precedes the INCBIN) into whatever data follows; the port's staged blob is
+            # only the asset, so its tail is the previous tileset's residue. Same class
+            # as surfing_pikachu_intro's past-the-asset tail and it cannot be reproduced
+            # by a generator that lays assets out independently. The displayed START
+            # menu box and the rest of vChars2 are unmasked.
+            "vram": [
+                (s, "vChars2 tiles $49-$5F: past-the-asset tail of the 73-tile "
+                    "reds_house.2bpp (the loader copies a fixed $600 = 96 tiles) — the "
+                    "golden holds ROM-adjacent bytes, the port its prior tileset residue")
+                for s in range(256 + 0x49, 256 + 0x60)
+            ],
+        },
+    },
     "surfing_pikachu_intro": {
         # Backlog item 34 / archived docs/plans/surfing_pikachu.md Stage 8. Full
         # render comparison (tilemap + vram + oam + wram), NOT "datastruct": the

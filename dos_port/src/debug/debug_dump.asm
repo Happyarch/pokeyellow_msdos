@@ -7987,6 +7987,17 @@ autokey_script:
 %assign AK_A AK_A + 20
 %endrep
     dd  -1,  -1, 0
+%elifdef AUTOKEY_STARTMENU_NULLMAP
+    ; start_menu_null_text_map (debug harness): ONE PAD_START injected into the
+    ; live overworld joypad so the loop's own START branch runs
+    ; DisplayTextID with hTextID = 0 on REDS_HOUSE_2F (0x26 — a NULL
+    ; MapTextTablePointers entry). The generic AUTOKEY_DUMP_FRAME dump in
+    ; AutoKeyDrive photographs the result. No other press: a stray A/DOWN after
+    ; the menu opens would move the cursor and change the compared state.
+    ; Late enough that EnterMap's wJoyIgnore has cleared and the real loop is
+    ; running, early enough that the menu is settled well before the dump.
+    dd  180, 186, PAD_START
+    dd  -1,  -1, 0
 %elifdef AUTOKEY_ITEMUSE
     ; items-plan Stage 5 (DEBUG_ITEMUSE): drive the real bag USE path twice.
     ;   START → DOWN DOWN → A          : open the START menu, pick ITEM

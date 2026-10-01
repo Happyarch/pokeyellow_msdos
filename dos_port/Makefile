@@ -1167,6 +1167,31 @@ $(eval $(call dump_gate,DEBUG_CALCSTATS))
 # Start-menu gate: boot to overworld, force the START menu open, render one frame,
 # dump FRAME.BIN, exit. make DEBUG_STARTMENU=1
 $(eval $(call dump_gate,DEBUG_STARTMENU))
+# START-menu-through-DisplayTextID gate on a map whose NPC text table is NULL.
+# DEBUG_STARTMENU calls DisplayStartMenu directly, so it can never witness the
+# dispatch in DisplayTextID (home/text_script.asm) that decides between "show
+# the map/​sprite text" and "open the START menu". On the 34 maps whose generated
+# MapTextTablePointers entry is 0 (assets/npc_dialogs/all_dialogs.inc) the port's
+# null-text-table guard used to sit BEFORE that dispatch, so START did nothing on
+# them — REDS_HOUSE_2F (0x26), the first map of a new game. This gate boots
+# straight onto REDS_HOUSE_2F and FALLS THROUGH into the real OverworldLoop;
+# AUTOKEY_STARTMENU_NULLMAP injects one PAD_START into the live joypad, so the
+# loop's own START branch sets hTextID=0 and calls DisplayTextID. AutoKeyDrive
+# photographs GBSTATE.BIN at AUTOKEY_DUMP_FRAME.
+#   make DEBUG_STARTMENU_NULLMAP=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_STARTMENU_NULLMAP
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_STARTMENU_NULLMAP -D DEBUG_SPAWN -D SKIP_TITLE
+STARTMENU_NULLMAP_MAP ?= 0x26
+STARTMENU_NULLMAP_Y   ?= 6
+STARTMENU_NULLMAP_X   ?= 3
+NASMFLAGS += -D DEBUG_SPAWN_MAP=$(STARTMENU_NULLMAP_MAP)
+NASMFLAGS += -D DEBUG_SPAWN_Y=$(STARTMENU_NULLMAP_Y)
+NASMFLAGS += -D DEBUG_SPAWN_X=$(STARTMENU_NULLMAP_X)
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_STARTMENU_NULLMAP
+AUTOKEY_DUMP_FRAME ?= 600
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
 # Sign-text gate (fidelity plan Stage 1b — the streamed-text golden): spawn beside the
 # Pallet Town sign facing it, run the real A-press dispatch
 # (IsSpriteOrSignInFrontOfPlayer -> SignLoop -> DisplaySignText -> ShowTextStream),
