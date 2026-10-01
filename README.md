@@ -143,30 +143,51 @@ Copy the resulting `PKMN.EXE` and `CWSDPMI.EXE` into your DOSBox-X mount and run
 
 #### Run scripts and CLI flags
 
-The bash launchers have PowerShell counterparts, with the same argument
-convention (`/...` tokens are `PKMN.EXE` flags, everything else goes to make):
+`run` (bash) and `run.ps1` (PowerShell) are the launchers, and behave the
+same. `run-mcp` is `run` under the MCP-patched DOSBox-X for live symbolic
+debugging; `build` / `build.ps1` only build.
 
-| PowerShell | bash | What |
-|---|---|---|
-| `.\build.ps1` | `build` | build `PKMN.EXE` |
-| `.\run.ps1` | `run` | build + launch in DOSBox-X |
-| `.\run-mt32.ps1` | `run-mt32` | MT-32 music via DOSBox-X's built-in MUNT |
-| `.\run-spk.ps1` | `run-spk` | Sound Blaster off — PC-speaker PWM cry |
-| `.\run-tandy.ps1` | `run-tandy` | Tandy 1000 SN76489 PSG |
+Arguments come in three prefix-determined groups:
 
-Common CLI flags for `PKMN.EXE` (pass after `run` or directly in DOS):
-- Audio: `/NOENH` (disable FM/MT-32 enhancements, play raw GB audio), `/LOOP` (loop track in `DEBUG_AUDIO=1`), `/MUNT`, `/GM`
-- Network: `/COM1`, `/COM2` (UART serial null-modem), `/IPX` (IPX network socket), `/TCP <host>:<port>` (TCP packet driver)
-- Printer: `/PRN` (LPT1 printer pass-through), `/PRNFILE` (print to disk file)
-- Video / Engine: `SKIP_TITLE=1` (make flag: boots directly to overworld map)
+| Prefix | Goes to |
+|---|---|
+| `/FLAG` | `PKMN.EXE` inside DOS (its in-game command line) |
+| `-FLAG`, `--FLAG` | DOSBox-X itself (e.g. `-fullscreen`) |
+| anything else (`NAME=value`) | `make`, e.g. `SKIP_TITLE=1` |
+| `--` | everything after it goes to `make`, verbatim |
+
+`--help` lists the device flags; `--dry-run` prints the generated config and
+the exact emulator command. Examples:
+
+```sh
+dos_port/run SKIP_TITLE=1                    # base machine (SB + AdLib)
+dos_port/run /MT32 DEBUG_AUDIO=1 /LOOP       # MT-32 music via MUNT
+dos_port/run /GB -fullscreen                 # Game Blaster, fullscreen
+dos_port/run-mcp /MT32                        # same, under the debugger
+```
 
 ```powershell
 cd dos_port
 .\run.ps1 SKIP_TITLE=1
 .\run.ps1 DEBUG_AUDIO=1 /LOOP /NOENH
+.\run.ps1 /MT32 DEBUG_AUDIO=1 /LOOP
 ```
-$env:MT32_ROMDIR = 'C:\roms\mt32'; .\run-mt32.ps1 DEBUG_AUDIO=1 /LOOP
-```
+
+**Devices** (each configures the emulated machine, and passes its flag to the
+game): `/MT32` `/TANDY` `/INNOVA` `/COVOX` `/GB` `/PAS` `/IMFC` `/SPK`.
+`/SPK` is launcher-only — the game's own `/SPK` would force the speaker shim
+and take music off the AdLib, defeating the A/B test. `/PAS` needs a DOSBox-X
+build with PAS support. `SPK_ONLY=1` makes `/SPK` a true speaker-only machine.
+
+**Common `PKMN.EXE` flags** (pass after `run`):
+- Audio: `/NOENH` (disable FM/MT-32 enhancements), `/LOOP` (loop the `DEBUG_AUDIO=1` track), `/GM` (General MIDI), `/NOSOUND`
+- Network: `/COM1`–`/COM4` (UART serial null-modem), `/BAUD=n`, `/IPX`, `/IPXSOCK=n`, `/TCPWAIT[=port]`, `/TCP=a.b.c.d[:port]`, `/IP=`, `/MASK=`, `/GW=`
+- Link / harness: `/LINKLOG`, `/PARTYB`
+- Printer: `/PRINT9`, `/PRNCOLOR`, `/PRNFILE`
+- Build / engine: `SKIP_TITLE=1` (make flag: boot directly to the overworld map), `BUG_FIX_LEVEL=1|2`
+
+Opt-in tab-completion for both launchers across all three namespaces lives in
+`dos_port/tools/completion/` (zsh, bash, PowerShell).
 
 They find DOSBox-X on `PATH` or in the usual install directories, put
 `.toolchain\` on `PATH` automatically, and supply the `LD=` override for you.

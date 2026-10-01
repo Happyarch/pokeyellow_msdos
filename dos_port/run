@@ -233,14 +233,18 @@ esac
 # --- emulator ----------------------------------------------------------------
 # Everything uses the system dosbox-x except /PAS, which needs the fork (system
 # dosbox-x predates upstream's PAS support and has none). RUN_EMULATOR overrides
-# both, for testing.
-EMULATOR="${RUN_EMULATOR:-}"
-if [ -z "$EMULATOR" ]; then
-    if [ "$device" = pas ]; then
-        EMULATOR="$(bash "$DOSPORT/tools/fork_binary.sh")"
+# both, for testing. A dry run tolerates a missing binary so `--dry-run` (and
+# the sh/ps1 parity check) works on a machine that has not built them.
+if [ -n "${RUN_EMULATOR:-}" ]; then
+    EMULATOR="$RUN_EMULATOR"
+elif [ "$device" = pas ]; then
+    if [ "$dry_run" = 1 ]; then
+        EMULATOR="$(bash "$DOSPORT/tools/fork_binary.sh" 2>/dev/null || printf '<fork-not-found>')"
     else
-        EMULATOR="dosbox-x"
+        EMULATOR="$(bash "$DOSPORT/tools/fork_binary.sh")"
     fi
+else
+    EMULATOR="dosbox-x"
 fi
 
 if [ "$dry_run" = 1 ]; then

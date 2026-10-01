@@ -12,14 +12,30 @@ _pkmn_run_complete() {
     local cur
     cur="${COMP_WORDS[COMP_CWORD]}"
 
-    local dos_flags="/NOSOUND /NOENH /LOOP /NODMA /MT32 /GM /TANDY /INNOVA /COVOX /GB /PAS /IMFC /SPK /LINKLOG /PARTYB /IPX /IPXSOCK= /PKTINT= /COM1 /COM2 /COM3 /COM4 /BAUD= /TCPWAIT /TCP= /IP= /MASK= /GW= /PRINT9 /PRNCOLOR /PRNFILE"
-    local host_flags="--help --dry-run -- -fullscreen -window -conf -defaultdir -c -set -userconf -nolgc -exit"
-    local make_vars="SKIP_TITLE=1 BUG_FIX_LEVEL=1 BUG_FIX_LEVEL=2 DEBUG_DUMP=1 DEBUG_AUDIO=1 DEBUG_PERF=1 DEBUG_TRANSITION=1 DEBUG_WALK_NORTH=1 DEBUG_STATUS=1 DEBUG_STARTMENU=1 TRACK="
+    local dos_flags=(
+        '/NOSOUND' '/NOENH' '/LOOP' '/NODMA'
+        '/MT32' '/GM' '/TANDY' '/INNOVA' '/COVOX' '/GB' '/PAS' '/IMFC' '/SPK'
+        '/LINKLOG' '/PARTYB' '/IPX' '/IPXSOCK=' '/PKTINT='
+        '/COM1' '/COM2' '/COM3' '/COM4' '/BAUD='
+        '/TCPWAIT' '/TCP=' '/IP=' '/MASK=' '/GW='
+        '/PRINT9' '/PRNCOLOR' '/PRNFILE'
+    )
+    local host_flags=(
+        '--help' '--dry-run' '--'
+        '-fullscreen' '-window' '-conf' '-defaultdir' '-c' '-set'
+        '-userconf' '-nolgc' '-exit'
+    )
+    local make_vars=(
+        'SKIP_TITLE=1' 'BUG_FIX_LEVEL=1' 'BUG_FIX_LEVEL=2'
+        'DEBUG_DUMP=1' 'DEBUG_AUDIO=1' 'DEBUG_PERF=1' 'DEBUG_TRANSITION=1'
+        'DEBUG_WALK_NORTH=1' 'DEBUG_STATUS=1' 'DEBUG_STARTMENU=1'
+        'TRACK='
+    )
 
     case "$cur" in
-        /*) COMPREPLY=( $(compgen -W "$dos_flags" -- "$cur") ) ;;
-        -*) COMPREPLY=( $(compgen -W "$host_flags" -- "$cur") ) ;;
-        *)  COMPREPLY=( $(compgen -W "$make_vars" -- "$cur") \
+        /*) COMPREPLY=( $(compgen -W "${dos_flags[*]}" -- "$cur") ) ;;
+        -*) COMPREPLY=( $(compgen -W "${host_flags[*]}" -- "$cur") ) ;;
+        *)  COMPREPLY=( $(compgen -W "${make_vars[*]}" -- "$cur") \
                         $(compgen -f -- "$cur") ) ;;
     esac
     return 0

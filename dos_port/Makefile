@@ -5461,6 +5461,12 @@ INC_DEPS := $(wildcard include/*.inc) $(wildcard assets/*.inc) \
 static_gate:
 	@tools/static_gate $(GATEFLAGS)
 
+# The run/run.ps1 + completion drift guard. Pure --dry-run, no emulator; the
+# ps1 half is skipped when pwsh is absent. Run it after touching either
+# launcher, any device conf, or the completion scripts.
+check-run-parity:
+	@tools/check_run_parity.sh
+
 # Point git at the tracked hook directory, so the static gate runs on every
 # commit without anyone having to remember. Opt-in and reversible:
 #   make install-hooks     -> git config core.hooksPath .githooks

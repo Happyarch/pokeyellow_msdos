@@ -1,5 +1,11 @@
-# dos_port/run-common.ps1 — shared implementation behind run.ps1, run-mt32.ps1,
-# run-spk.ps1 and run-tandy.ps1. Dot-source it; do not invoke it directly.
+# dos_port/run-common.ps1 — shared implementation behind run.ps1 and build.ps1.
+# Dot-source it; do not invoke it directly.
+#
+# run.ps1 is the ONE Windows launcher (the per-device run-<x>.ps1 wrappers are
+# gone — they were the same file with a different conf snippet, mirroring the
+# bash wrappers that were folded into dos_port/run). The device table lives
+# here in Get-DeviceConf so sh and ps1 stay in step; see dos_port/run for the
+# canonical argument namespaces.
 #
 # These are the Windows counterparts of the bash `run*` scripts, and they differ
 # from them in ONE structural way that matters:
@@ -26,16 +32,152 @@ $script:DumpFiles = @('FRAME.BIN', 'DUMP.BIN', 'GBSTATE.BIN', 'PERF.BIN',
 
 function Split-RunArgs {
     <#
-      Same convention as the bash scripts: '/...' tokens are PKMN.EXE flags,
-      everything else is a make argument.
-        run.ps1 SKIP_TITLE=1 DEBUG_AUDIO=1 /LOOP /NOENH
+      Three argument namespaces, matching the bash dos_port/run:
+        /FLAG         -> PKMN.EXE inside DOS            (Exe)
+        -FLAG --FLAG  -> DOSBox-X itself                (Host)
+        name / name=  -> make                           (Make)
+        --            -> everything after goes to make
+        --help        -> Help ;  --dry-run -> DryRun
+      A host flag's value is the next token when it has no '=' (so
+      `-c "mount c ."` works):
+        run.ps1 SKIP_TITLE=1 DEBUG_AUDIO=1 /LOOP -fullscreen
     #>
     param([string[]]$Arguments = @())
-    $exe = @(); $make = @()
+    $exe = @(); $make = @(); $hostArgs = @()
+    $sep = $false; $hostValue = $false; $help = $false; $dry = $false
     foreach ($a in $Arguments) {
-        if ($a.StartsWith('/')) { $exe += $a } else { $make += $a }
+        if ($sep) { $make += $a; continue }
+        if ($a -eq '--')        { $sep = $true;  continue }
+        if ($a -eq '--help')    { $help = $true; continue }
+        if ($a -eq '--dry-run') { $dry = $true;  continue }
+        if ($a.StartsWith('/')) { $exe += $a; $hostValue = $false; continue }
+        if ($a.StartsWith('-')) { $hostArgs += $a; $hostValue = $true; continue }
+        if ($hostValue -and ($a -notmatch '=')) { $hostArgs += $a } else { $make += $a }
+        $hostValue = $false
     }
-    return @{ Exe = $exe; Make = $make }
+    return @{ Exe = $exe; Make = $make; Host = $hostArgs; Help = $help; DryRun = $dry }
+}
+
+$script:DeviceFlags = @('MT32', 'TANDY', 'INNOVA', 'COVOX', 'GB', 'PAS', 'IMFC', 'SPK')
+
+function Show-RunUsage {
+    Write-Host @'
+dos_port/run.ps1 — build + launch PKMN.EXE in DOSBox-X.
+
+  .\run.ps1 [make args] [/EXE flags] [-dosbox-x flags]
+
+  /FLAG          passed to PKMN.EXE inside DOS (e.g. /LOOP /NOENH)
+  -FLAG --FLAG   passed to DOSBox-X itself (e.g. -fullscreen)
+  name=value     passed to make (e.g. SKIP_TITLE=1 DEBUG_AUDIO=1)
+  --             everything after this goes to make, verbatim
+
+  /MT32 /TANDY /INNOVA /COVOX /GB /PAS /IMFC /SPK   pick a hardware config
+  --dry-run      print the generated conf + emulator command, do not launch
+  --help         this message
+'@
+}
+
+function Resolve-Device {
+    <# First device flag in $ExeArgs wins; two different ones is an error.
+       /SPK is a launcher selector only and is NOT forwarded (the game's own
+       /SPK would force the speaker shim and take music off the AdLib). #>
+    param([string[]]$ExeArgs = @())
+    $name = ''
+    foreach ($a in $ExeArgs) {
+        if ($a.Length -lt 2 -or $a[0] -ne '/') { continue }
+        $tok = $a.Substring(1)
+        if ($script:DeviceFlags -contains $tok) {
+            $cand = $tok.ToLower()
+            if ($name -and $name -ne $cand) {
+                throw "two device flags given: /$($name.ToUpper()) and /$tok - a machine has one sound card"
+            }
+            $name = $cand
+        }
+    }
+    $kept = $ExeArgs
+    if ($name -eq 'spk') { $kept = @($ExeArgs | Where-Object { $_ -ne '/SPK' }) }
+    return @{ Name = $name; ExeArgs = $kept }
+}
+
+function Get-DeviceConf {
+    <# The device half of the conf, mirroring dos_port/run's `case $device`.
+       New-RunConf inserts a blank line before this, exactly like the bash
+       heredocs' leading blank line. #>
+    param([string]$Device)
+    switch ($Device) {
+        '' { return '' }
+        'gb' { return @"
+[sblaster]
+sbtype  = gb
+oplmode = none
+
+[speaker]
+pcspeaker = true
+"@ }
+        'covox' { return @"
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+disney = true
+pcspeaker = true
+"@ }
+        'imfc' { return @"
+[imfc]
+imfc        = true
+imfc_base   = 2a20
+imfc_irq    = 3
+imfc_filter = on
+"@ }
+        'innova' { return @"
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+pcspeaker = true
+
+[innova]
+innova     = true
+sidbase    = 280
+samplerate = 22050
+quality    = 0
+"@ }
+        'pas' { return @"
+[sblaster]
+sbtype  = pas16
+oplmode = auto
+
+[speaker]
+pcspeaker = true
+"@ }
+        'spk' {
+            $opl = if ($env:SPK_ONLY) { 'none' } else { 'opl3' }
+            return @"
+[sblaster]
+sbtype  = none
+oplmode = $opl
+"@ }
+        'tandy' { return @"
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+tandy = on
+"@ }
+        'mt32' {
+            $romDir = if ($env:MT32_ROMDIR) { $env:MT32_ROMDIR }
+                      else { Join-Path $script:DosPort 'mt32-roms' }
+            return @"
+[midi]
+mpu401      = intelligent
+mididevice  = mt32
+mt32.romdir = $romDir
+"@ }
+        default { throw "unknown device: $Device" }
+    }
 }
 
 function Enable-LocalToolchain {
@@ -176,25 +318,51 @@ function New-RunConf {
 }
 
 function Invoke-Run {
-    <# The whole flow: build, stage, write conf, launch, clean up. #>
-    param(
-        [string[]]$Arguments = @(),
-        [string[]]$ExtraExeArgs = @(),
-        [string]$ExtraConf = ''
-    )
-    $split = Split-RunArgs $Arguments
-    Invoke-Build -MakeArgs $split.Make
+    <# The whole flow: classify, pick the device, build, stage, write conf,
+       launch, clean up. Mirrors dos_port/run. #>
+    param([string[]]$Arguments = @())
 
-    $dosbox = Find-DosBoxX
+    $split = Split-RunArgs $Arguments
+    if ($split.Help) { Show-RunUsage; return }
+
+    $dev = Resolve-Device -ExeArgs $split.Exe
+    $exeArgs = @($dev.ExeArgs)
+
+    if ($dev.Name -eq 'mt32' -and -not $split.DryRun) {
+        $romDir = if ($env:MT32_ROMDIR) { $env:MT32_ROMDIR }
+                  else { Join-Path $script:DosPort 'mt32-roms' }
+        if (-not (Test-Path (Join-Path $romDir 'MT32_CONTROL.ROM'))) {
+            throw "run: no MT32_CONTROL.ROM in $romDir (set MT32_ROMDIR)"
+        }
+    }
+
+    if (-not $split.DryRun) { Invoke-Build -MakeArgs $split.Make }
+
+    $dosbox = try { Find-DosBoxX } catch { '<dosbox-x not found>' }
     $stage  = New-StagingDir
-    $exeArgs = @($ExtraExeArgs) + @($split.Exe)
-    $conf = New-RunConf -StageDir $stage -ExeArgs $exeArgs -ExtraConf $ExtraConf
+    $conf = New-RunConf -StageDir $stage -ExeArgs $exeArgs `
+                        -ExtraConf (Get-DeviceConf -Device $dev.Name)
+
+    if ($split.DryRun) {
+        $name = if ($dev.Name) { $dev.Name } else { 'base' }
+        Write-Host "run: device   = $name"
+        Write-Host "run: make     = $($split.Make -join ' ')"
+        Write-Host "run: exe      = $($exeArgs -join ' ')"
+        Write-Host "run: dosbox-x = $($split.Host -join ' ')"
+        Write-Host "run: emulator = $dosbox"
+        Write-Host "run: conf:"
+        Get-Content $conf | ForEach-Object { Write-Host "    $_" }
+        Remove-Item $conf -Force -ErrorAction SilentlyContinue
+        return
+    }
 
     Show-IsolationWarning
     try {
         # -defaultconf ignores the user's own dosbox-x config so nothing it
-        # mounts leaks in; our -conf still applies on top.
-        & $dosbox -defaultdir $script:DosPort -defaultconf -conf $conf
+        # mounts leaks in; our -conf still applies on top. Host args go after
+        # -conf so they can override the defaults.
+        $argv = @('-defaultdir', $script:DosPort, '-defaultconf', '-conf', $conf) + $split.Host
+        & $dosbox @argv
     } finally {
         Remove-Item $conf -Force -ErrorAction SilentlyContinue
     }
