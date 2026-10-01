@@ -128,8 +128,18 @@ This script rsyncs the working tree to a temporary space-free directory (autotoo
 
 ### `pas.cpp` include order (found 2026-10-01) — now HISTORICAL, not a live break
 `src/hardware/pas.cpp` (PAS16 stage 4) included `dma.h` **before** `inout.h`. `dma.h`'s `DMAChannel` declares `IO_ReadHandleObject`/`IO_WriteHandleObject`, which only `inout.h` defines, and `dma.h` does not include it — so the build died with `'IO_ReadHandleObject' does not name a type`. **Fix: include `inout.h` before `dma.h`** (every other `dma.h` user already does).
-**RESOLVED / MOOT since the 2026-10-01 resync:** that `pas.cpp` was OURS and has been deleted — the fork now carries upstream's `src/hardware/pas.cpp`, which orders the includes correctly, and `mcp-debug` is at the resync (`bf8558e36`). The general rule still holds for any new `dma.h` user, but do NOT go looking for a live build break here.
+**RESOLVED / MOOT since the 2026-10-01 resync:** that `pas.cpp` was OURS and has been deleted — the fork now carries upstream's `src/hardware/pas.cpp`, which orders the includes correctly, and `mcp-debug` carries the resync. The general rule still holds for any new `dma.h` user, but do NOT go looking for a live build break here.
 
 Two traps around the build script:
 - The script pipes `make` through `tail -10`, so its own log shows only a warning snippet, not the error. Re-run `make -j$(nproc)` in `/tmp/dosbox-x-mcp-build` to see the real failure.
 - The script rsyncs the submodule working tree as-is, so an **uncommitted** submodule change is picked up. To test a working-tree edit without committing: patch the file under `/tmp/dosbox-x-mcp-src/`, re-run `make` in the build dir, then copy `src/dosbox-x` over both installed binaries.
+
+### Fork code must build on NON-Linux too (lesson, 2026-10-01)
+
+The fork has CI on Linux, macOS, MSVC (32/64-bit and WinXP), MinGW/UCRT64 and HX-DOS. Our additions are written and tested on Linux, so anything POSIX-only breaks those jobs **silently until CI runs** — which is exactly what happened on 2026-10-01 with (a) the AF_UNIX bridge's `<sys/socket.h>`/`<pthread.h>`/`select`/`recv` includes and (b) the `SCREENSHOT` command's `realpath()` (MSVC has no `realpath` **and no `PATH_MAX`**).
+
+Rules:
+- Guard platform-specific code explicitly. The bridge is `#if defined(__linux__)`; `realpath` is `#if defined(HAVE_REALPATH) ... #else <report the path as given> #endif` — `HAVE_REALPATH` is autotools-probed (`configure.ac AC_CHECK_FUNCS([realpath])`) and absent from `vs/config.h`.
+- Where surrounding code still references a guarded symbol, keep an `#else` stub — `mcp_break_pending` is polled unconditionally by `Normal_Loop`, so it must exist (as `false`) on non-Linux.
+- **"It builds here" is not evidence.** Check that the guards *exclude* the code: a `g++ <build flags> -fsyntax-only -U__linux__` pass, plus a shim `config.h` with the `HAVE_REALPATH` line removed (note `-UHAVE_REALPATH` alone does NOT work — `config.h` re-defines it after `-U`).
+- Full story and the CI log lines: memory `regression-tooling-dosbox-x-mcp-bridge-breaks-nonlinux-ci`.

@@ -84,6 +84,10 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
 - [x] **0. Branch + references.** `pas16` branch cut off `mcp-debug`
   (clean, in sync); four references in `/tmp/pas_ref/` (verified types).
 - [x] **1. Skeleton `src/hardware/pas.cpp`.**
+  **NOTE 2026-10-01: the fork stages below (1-6) are SUPERSEDED.** The fork
+  adopted upstream's own PAS driver (`[sblaster] sbtype = pas16`) and our
+  standalone `[pas]` implementation was deleted; these entries are kept as the
+  historical record of what was built. The G-track (game side) below still stands.
   - [x] 1.1 `class PAS : public Module_base`, `[pas]` section keys
     (`pas`/`pasbase`/`pasirq`/`pasdma`/`pasrate`), `PAS_Init` declared +
     section registered in `src/dosbox.cpp`, `AddExitFunction` teardown.

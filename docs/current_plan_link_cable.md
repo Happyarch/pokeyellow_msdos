@@ -462,6 +462,16 @@ blocks in `src/engine/menus/naming_screen.asm`.
        named-pipe/AF_UNIX serial transports (c15fcee41) and RPC agent
        interface are in-tree but unused by the link plan — evaluate before
        Stage 3+ transport work. Prior `0eff618fd` refs above are history.
+ - [x] Fork resync 2026-10-01: `mcp-debug` is now the resync commit `617a2d7e6`
+       (upstream `f1c4414ff` merged into the fork). The fork ADOPTED upstream's
+       own PAS support (`sbtype=pas16`) and DELETED our standalone `[pas]`
+       section and `pas.cpp`; NMDBG (`0eff618fd`), the SYMF/REGJSON/SCREENSHOT
+       additions and the IMFC SysEx fix are all still present. Two non-Linux CI
+       breaks were fixed (the AF_UNIX bridge and the SCREENSHOT `realpath` are
+       now platform-guarded). The tooling binary was rebuilt from the resynced
+       submodule and installed. See stigmergy memories
+       `decision-dosbox-x-pas-adopt-upstream`, `tooling-dosbox-x-resync-plan`,
+       `regression-tooling-dosbox-x-mcp-bridge-breaks-nonlinux-ci`.
 
 ### Stage 3 — Trade Center
 - [x] HAL block seam 2026-08-22 (`b50e1e0`): `NF_BLK` reliable frame type +
