@@ -5336,10 +5336,19 @@ endif
 # repo. (DOSBox-X's hdd imgmount needs a real MBR + partition — a bare "superfloppy"
 # FAT image fails to mount; hence sfdisk + a partition at sector $(IMG_PART_SEC).)
 #
-# Built on every `make` (fast). The image is created once at size EXE + host +
-# 5 MB; subsequent builds refresh PKMN.EXE *in place* (via mtools at the partition
-# offset $(IMG_PART_OFF)) and PRESERVE any save already written inside it. Delete
-# PKMN.IMG (or `make clean-image`) to reset.
+# Built on every `make` (fast). *** THE SAVE CONTRACT (2026-10-01): `image`
+# NEVER TOUCHES POKEMON.DSV (nor any other non-build file) inside the image. ***
+#   - No image        -> create a BARE image: PKMN.EXE + CWSDPMI.EXE only.
+#   - Image present   -> refresh PKMN.EXE/CWSDPMI.EXE *in place* via mtools at
+#                        the partition offset $(IMG_PART_OFF); everything else
+#                        (the save, a dump) is left exactly as it was.
+#   - Image too small -> FAIL with instructions. This used to `rm -f` the image
+#                        and silently recreate it, which destroyed the save with
+#                        no record; a rebuild must never do that.
+#   - Free space short-> FAIL before writing, so an EXE that outgrew the image
+#                        cannot leave a torn PKMN.EXE behind.
+# In:   `dos_port/tools/pick_save.sh <candidate>` stages a save.
+# Reset: `make clean-image` (DELETES the save — back it up first).
 #
 # Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
 # ---------------------------------------------------------------------------
@@ -5347,25 +5356,44 @@ image: $(TARGET) $(DPMI_HOST)
 	@exe_sz=$$(stat -c%s $(TARGET)); \
 	 dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
 	 img_sz=$$(( ($(IMG_PART_OFF) + exe_sz + dpmi_sz + $(IMG_SLACK) + 1048576 + 511) / 512 * 512 )); \
-	 if [ -f $(IMG) ] && [ $$(stat -c%s $(IMG)) -lt $$img_sz ]; then \
-	    echo "Recreating $(IMG): $(TARGET) outgrew the existing image"; \
-	    rm -f $(IMG); \
-	 fi; \
 	 if [ ! -f $(IMG) ]; then \
-	    rm -f $(IMG); \
 	    truncate -s $$img_sz $(IMG); \
 	    printf 'label: dos\n$(IMG_PART_SEC),,6,*\n' | sfdisk -q $(IMG) >/dev/null 2>&1; \
 	    mkfs.fat -F 16 -n PKMN --offset $(IMG_PART_SEC) $(IMG) >/dev/null; \
 	    echo "Created $(IMG) ($$((img_sz/1048576)) MB, ~5 MB free for saves)"; \
-	fi
+	 elif [ $$(stat -c%s $(IMG)) -lt $$img_sz ]; then \
+	    echo "image: $(IMG) is too small for this build (needs $$((img_sz/1048576)) MB, has $$((($$(stat -c%s $(IMG))) / 1048576)) MB)." >&2; \
+	    echo "       Refusing to recreate it: that would destroy POKEMON.DSV inside it." >&2; \
+	    echo "       Back the save up, reset, then re-stage:" >&2; \
+	    echo "         dos_port/tools/pick_save.sh --backup" >&2; \
+	    echo "         make -C dos_port clean-image" >&2; \
+	    echo "         dos_port/tools/pick_save.sh backup" >&2; \
+	    exit 1; \
+	 fi
 	@set -e; \
 	 mt=$$(mktemp); \
 	 printf 'drive x: file="%s" offset=$(IMG_PART_OFF)\n' "$(CURDIR)/$(IMG)" > $$mt; \
+	 exe_sz=$$(stat -c%s $(TARGET)); dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
+	 free=$$(MTOOLSRC=$$mt mdir x: | grep 'bytes free' | tr -cd '0-9'); \
+	 old_exe=$$(MTOOLSRC=$$mt mdir x: | awk '$$1=="PKMN" && $$2=="EXE" {print $$3}'); \
+	 old_dpmi=$$(MTOOLSRC=$$mt mdir x: | awk '$$1=="CWSDPMI" && $$2=="EXE" {print $$3}'); \
+	 : "$${old_exe:=0}"; : "$${old_dpmi:=0}"; \
+	 need=$$(( (exe_sz > old_exe ? exe_sz - old_exe : 0) + (dpmi_sz > old_dpmi ? dpmi_sz - old_dpmi : 0) )); \
+	 if [ "$$free" -lt "$$need" ]; then \
+	    rm -f $$mt; \
+	    echo "image: not enough free space in $(IMG) for this build" >&2; \
+	    echo "       free=$$free need=$$need bytes (PKMN.EXE $$exe_sz, CWSDPMI $$dpmi_sz)." >&2; \
+	    echo "       Free space with 'make -C dos_port clean-image' (DESTROYS POKEMON.DSV)," >&2; \
+	    echo "       or remove stray files from the image, then rebuild." >&2; \
+	    exit 1; \
+	 fi; \
 	 MTOOLSRC=$$mt mcopy -D o $(TARGET) x:PKMN.EXE; \
 	 MTOOLSRC=$$mt mcopy -D o $(DPMI_HOST) x:$(DPMI_HOST); \
 	 rm -f $$mt
 	@echo "Packaged $(TARGET) -> $(IMG) (isolated C: for dos_port/run)"
 
+# Delete the image. THIS DESTROYS POKEMON.DSV inside it — back it up first:
+#   dos_port/tools/pick_save.sh --backup
 clean-image:
 	rm -f $(IMG)
 
