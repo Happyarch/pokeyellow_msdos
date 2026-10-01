@@ -175,19 +175,34 @@ DisplayTextID:
     ; src/home/predef_text.asm.
     mov esi, [w_predef_text_table_ptr]
 .checkTextTable:
-    test esi, esi
-    jnz .haveTextTable
-    jmp AfterDisplayingTextID
-.haveTextTable:
-
     ; ld d,$00 / ldh a,[hTextID] / ld [wSpriteIndex],a
     xor edx, edx                        ; d = 0 (de high byte)
     movzx eax, byte [ebp + hTextID]
     mov [ebp + wSpriteIndex], al
 
     ; dict TEXT_START_MENU, DisplayStartMenu   (and a / jp z since id==0)
+    ;
+    ; *** ORDER IS LOAD-BEARING. *** This dispatch MUST be tested BEFORE the
+    ; null-text-table guard below, and that is also pret's order: pret's
+    ; home/text_script.asm runs `dict TEXT_START_MENU, DisplayStartMenu` (:29)
+    ; immediately after loading hTextID and only dereferences the map text
+    ; pointer much later (:60) — pret has no null bail at all. The port needs
+    ; one (its ordinary-map table is a flat {dd stream, dd size} array) but
+    ; placing it first made START do NOTHING on every map whose
+    ; MapTextTablePointers entry is 0: 34 maps, emitted as `dd 0 ; (no NPCs)`
+    ; by assets/npc_dialogs/all_dialogs.inc. Measured live 2026-10-01 on
+    ; REDS_HOUSE_2F (0x26), the first map of a new game — w_map_text_table_ptr
+    ; was 0, DisplayStartMenu was never reached, and the same press worked one
+    ; map later (REDS_HOUSE_1F, non-null).
     test al, al
     jz DisplayStartMenu
+
+    ; PORT-ONLY guard, now at the point pret first dereferences the table: an
+    ; ordinary map with no NPC dialogs publishes a NULL pointer, so bail rather
+    ; than index through it. Reached only for non-zero text IDs.
+    ; DEVIATION{class=data-model; pret=home/text_script.asm:DisplayTextID; behavior=an ordinary map whose generated MapTextTablePointers entry is 0 bails to AfterDisplayingTextID instead of indexing a null table, so a non-zero hTextID resolves to no text; evidence=the port publishes the map text table as a flat stream-and-size pointer array (w_map_text_table_ptr, map_sprites.asm) and 34 maps have no NPC dialogs so all_dialogs.inc emits a null entry for them, where pret always has a real wCurMapTextPtr table; lifetime=retire if the generator emits an empty table instead of a null pointer}
+    test esi, esi
+    jz AfterDisplayingTextID
     ; dict TEXT_PIKACHU_ANIM, DisplayPikachuEmotion
     cmp al, TEXT_PIKACHU_ANIM
     jz DisplayPikachuEmotion
