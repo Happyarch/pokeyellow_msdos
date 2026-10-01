@@ -1,92 +1,118 @@
 #!/usr/bin/env bash
-# dos_port/run-mcp — like dos_port/run, but under the MCP-patched DOSBox-X so
-# an agent can drive the heavy debugger live (breakpoints, memory, frame
-# dumps) while a human pilots headed.
+# dos_port/run-mcp — dos_port/run, but under the MCP-patched DOSBox-X so an
+# agent can drive the heavy debugger live (breakpoints, memory, frame dumps)
+# while a human pilots headed.
 #
-# Like run/run-mt32:
-#   - it BUILDS: `make image` with any non-`/…` args (e.g. `run-mcp SKIP_TITLE=1`);
-#   - '/…' tokens become PKMN.EXE flags (e.g. `run-mcp /MT32`), same split as run;
-#   - C: is the isolated PKMN.IMG image, so the run loads the SAME working
-#     POKEMON.DSV save as run/run-mt32 (the old script mounted the host
-#     dos_port/ dir and saw a different, stale save).
+# Same argument namespaces, device table and conf snippets as `run` (see that
+# file's header) — this shares the fork binary, the device confs and the
+# classifier so `run-mcp /MT32` means the same thing `run /MT32` does, plus:
+#   - the emulator is ALWAYS the fork binary (the MCP socket lives there);
+#   - the conf gets the [log] mcp_socket plus a captures= dir;
+#   - a launch handshake records which build is running, so the long-lived MCP
+#     server resolves symbols against THIS checkout (see tools/dosbox_mcp/);
+#   - no -defaultconf (unchanged from before).
 #
-# Consequence of the image: files the game writes (POKEMON.DSV on save,
-# FRAME.BIN/DUMP.BIN/GBSTATE.BIN from harness builds) land INSIDE the image —
-# extract them with e.g.
+# C: is the isolated PKMN.IMG, so the run loads the SAME working POKEMON.DSV as
+# `run`. Files the game writes land INSIDE the image — extract with e.g.
 #   mcopy -n -i PKMN.IMG@@1048576 ::FRAME.BIN .
-# (1048576 = partition byte offset). The debugger's own MEMDUMP.BIN still
-# lands on the host (emulator CWD), as does the MCP screenshot() output.
+# (1048576 = partition byte offset). The debugger's own MEMDUMP.BIN and MCP
+# screenshot() output land on the host (emulator CWD).
 #
-# Usage:
-#   dos_port/run-mcp [make args] [/EXE flags]
-#
-# Steps:
-#   1. Build PKMN.EXE + refresh it inside PKMN.IMG (a save already in the
-#      image is preserved across rebuilds — same as run).
-#   2. Write the launch handshake (/tmp/dosbox-mcp.launch) recording WHICH
-#      build is being launched, so the long-lived MCP server resolves symbols
-#      against this checkout instead of the one it was started in.
-#   3. Launch tools/dosbox-x-mcp/dosbox-x-mcp with a generated conf that
-#      enables the heavy debugger and the MCP socket.
-#
-# The MCP server (tools/dosbox_mcp/server.py) is registered via
-# .claude/settings.json and started automatically by Claude Code.
-# You don't need to start it manually.
+# Usage: dou_port/run-mcp [make args] [/EXE flags] [-dosbox-x flags]
+set -eo pipefail
 
-set -euo pipefail
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-DOSPORT="$SCRIPT_DIR"
-# dosbox-x-mcp: the Happyarch/dosbox-x fork (submodule tools/dosbox-x, branch
-# mcp-debug), deliberately named so it never collides with the system dosbox-x.
-BINARY="${DOSPORT}/tools/dosbox-x-mcp/dosbox-x-mcp"
-# Overridable so two worktrees can each run an instance at once. The default is
-# unchanged, so a single-tree workflow behaves exactly as before. This MUST stay
-# in sync with dosbox_mcp/server.py, which reads the same variable with the same
-# default -- point the server at one socket and the emulator at another and the
-# MCP tools connect to nothing, with no error that says why.
+DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$DOSPORT/.." && pwd)"
+# Deliberately named dosbox-x-mcp so it never collides with the system dosbox-x.
+BINARY="$(bash "$DOSPORT/tools/fork_binary.sh")"
+# Overridable so two worktrees can each run an instance at once. This MUST stay
+# in sync with tools/dosbox_mcp/server.py, which reads the same variable with
+# the same default — point the server at one socket and the emulator at another
+# and the MCP tools connect to nothing, with no error that says why.
 SOCK_PATH="${DOSBOX_MCP_SOCKET:-/tmp/dosbox-mcp.sock}"
 LAUNCH_FILE="${DOSBOX_MCP_LAUNCH:-/tmp/dosbox-mcp.launch}"
 
-make_args=()
-exe_args=()
+usage() {
+    cat <<'EOF'
+dos_port/run-mcp — build + launch PKMN.EXE under the MCP-patched DOSBox-X.
+
+  run-mcp [make args] [/EXE flags] [-dosbox-x flags]
+
+  Same flags as dos_port/run. /MT32 /TANDY /INNOVA /COVOX /GB /PAS /IMFC /SPK
+  pick a hardware config; --dry-run prints the conf; --help this message.
+  The emulator is always the fork binary (tools/dosbox-x-mcp/dosbox-x-mcp).
+EOF
+}
+
+# --- argument classification (identical to run) ------------------------------
+make_args=(); exe_args=(); host_args=()
+want_help=0; dry_run=0; sep=0; host_value=0
 for a in "$@"; do
+    if [ "$sep" = 1 ]; then make_args+=("$a"); continue; fi
     case "$a" in
-        /*) exe_args+=("$a") ;;
-        *)  make_args+=("$a") ;;
+        --)        sep=1 ;;
+        --help)    want_help=1 ;;
+        --dry-run) dry_run=1 ;;
+        /*)        exe_args+=("$a");  host_value=0 ;;
+        -*)        host_args+=("$a"); host_value=1 ;;
+        *)
+            if [ "$host_value" = 1 ] && [[ "$a" != *=* ]]; then
+                host_args+=("$a")
+            else
+                make_args+=("$a")
+            fi
+            host_value=0
+            ;;
     esac
 done
 
-if [ ! -x "$BINARY" ]; then
-    echo "ERROR: patched binary not found at $BINARY"
-    echo "Run: dos_port/tools/build_dosbox_mcp.sh"
-    exit 1
+if [ "$want_help" = 1 ]; then usage; exit 0; fi
+
+# --- device selection --------------------------------------------------------
+DEV_FLAGS=(MT32 TANDY INNOVA COVOX GB PAS IMFC SPK)
+device=""
+for a in ${exe_args[@]+"${exe_args[@]}"}; do
+    for d in "${DEV_FLAGS[@]}"; do
+        if [ "$a" = "/$d" ]; then
+            cand="${d,,}"
+            if [ -n "$device" ] && [ "$device" != "$cand" ]; then
+                echo "run-mcp: two device flags given: /${device^^} and /$d" >&2
+                exit 2
+            fi
+            device="$cand"
+        fi
+    done
+done
+if [ "$device" = spk ]; then
+    kept=()
+    for a in ${exe_args[@]+"${exe_args[@]}"}; do
+        [ "$a" = "/SPK" ] || kept+=("$a")
+    done
+    exe_args=(${kept[@]+"${kept[@]}"})
 fi
 
-# Same guard as dos_port/run: a live session holds PKMN.IMG mounted rw —
-# rebuilding/double-mounting under it corrupts the run (verified 2026-07-07).
-if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+# --- live-session guard ------------------------------------------------------
+if command -v fuser >/dev/null 2>&1 && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
     echo "run-mcp: PKMN.IMG is held open by a running DOSBox-X session —" >&2
     echo "         close it before launching another run." >&2
     exit 1
 fi
 
-# Build the EXE + refresh it inside the disk image (save data in the image is
-# preserved across rebuilds; delete PKMN.IMG or `make clean-image` to reset).
-make -C "$DOSPORT" image "${make_args[@]}"
+# --- build + refresh the image ----------------------------------------------
+if [ "$dry_run" = 0 ]; then
+    make -C "$DOSPORT" image ${make_args[@]+"${make_args[@]}"}
+fi
 
-# Scratch conf: the tracked dos_port/dosbox-x.conf, plus the MCP socket, a
-# pinned captures dir, and any /EXE flags — the same load pattern as run and
-# run-mt32 (which sed/append onto the same file), so machine/cpu/render/video
-# settings can never drift from the tested config. [log] is appended fresh
-# (the tracked conf has no [log] section); captures is inserted into the
-# existing [dosbox] section.
-CONF="$(mktemp --suffix=.conf)"
-trap 'rm -f "$CONF"' EXIT
+# --- generate the conf -------------------------------------------------------
+EXE_LINE="PKMN.EXE"
+if [ ${#exe_args[@]} -gt 0 ]; then EXE_LINE="PKMN.EXE ${exe_args[*]}"; fi
+
 CAPTURE_DIR="${DOSBOX_MCP_CAPTURE_DIR:-/tmp/dosbox-mcp-capture}"
 mkdir -p "$CAPTURE_DIR"
-sed -e "s|^PKMN.EXE\$|PKMN.EXE${exe_args:+ ${exe_args[*]}}|" \
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed -e "s|^PKMN\.EXE\$|$EXE_LINE|" \
     -e "/^\[dosbox\]$/a captures=${CAPTURE_DIR}" \
     "$DOSPORT/dosbox-x.conf" > "$CONF"
 cat >> "$CONF" <<EOF
@@ -96,14 +122,115 @@ cat >> "$CONF" <<EOF
 mcp_socket=${SOCK_PATH}
 EOF
 
-# Launch handshake — tells the MCP server WHICH BUILD it is now debugging.
-# The server (tools/dosbox_mcp/server.py) is long-lived and started by Claude
-# Code from whatever checkout it was registered in; without this it resolved
-# pkmn.sym from ITS OWN directory, so a worktree build got main-checkout
-# addresses (right symbol name, plausible address, breakpoint never fires).
-# This script is the only party that knows the answer, so it records it here.
-# Written atomically (temp + mv) because the server re-reads it on mtime
-# change and must never see a half-written path.
+case "$device" in
+    "") ;;
+    mt32)
+        ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"
+        if [ "$dry_run" = 0 ] && [ ! -f "$ROMDIR/MT32_CONTROL.ROM" ]; then
+            echo "run-mcp: no MT32_CONTROL.ROM in $ROMDIR (set MT32_ROMDIR)" >&2
+            exit 1
+        fi
+        cat >> "$CONF" <<EOF
+
+[midi]
+mpu401      = intelligent
+mididevice  = mt32
+mt32.romdir = $ROMDIR
+EOF
+        ;;
+    gb)     cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = gb
+oplmode = none
+
+[speaker]
+pcspeaker = true
+EOF
+        ;;
+    covox)  cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+disney = true
+pcspeaker = true
+EOF
+        ;;
+    imfc)   cat >> "$CONF" <<'EOF'
+
+[imfc]
+imfc        = true
+imfc_base   = 2a20
+imfc_irq    = 3
+imfc_filter = on
+EOF
+        ;;
+    innova) cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+pcspeaker = true
+
+[innova]
+innova     = true
+sidbase    = 280
+samplerate = 22050
+quality    = 0
+EOF
+        ;;
+    pas)    cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = pas16
+oplmode = auto
+
+[speaker]
+pcspeaker = true
+EOF
+        ;;
+    spk)
+        OPLMODE=opl3
+        [ -n "${SPK_ONLY:-}" ] && OPLMODE=none
+        cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = $OPLMODE
+EOF
+        ;;
+    tandy)  cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+tandy = on
+EOF
+        ;;
+esac
+
+if [ "$dry_run" = 1 ]; then
+    echo "run-mcp: device    = ${device:-base}"
+    echo "run-mcp: make      = ${make_args[*]:-<none>}"
+    echo "run-mcp: exe       = ${exe_args[*]:-<none>}"
+    echo "run-mcp: dosbox-x  = ${host_args[*]:-<none>}"
+    echo "run-mcp: emulator  = $BINARY"
+    echo "run-mcp: socket    = $SOCK_PATH"
+    echo "run-mcp: conf:"
+    sed 's/^/    /' "$CONF"
+    exit 0
+fi
+
+# Launch handshake — tells the long-lived MCP server WHICH BUILD it is now
+# debugging (it otherwise resolves pkmn.sym from wherever it was started).
+# Written atomically (temp + mv) because the server re-reads it on mtime change.
 cat > "${LAUNCH_FILE}.$$" <<EOF
 # Written by run-mcp — the build the emulator is currently running.
 # Consumed by tools/dosbox_mcp/server.py (KEY=VALUE, DOSPORT is load-bearing).
@@ -120,7 +247,7 @@ echo "  Socket:  ${SOCK_PATH}"
 echo "  Build:   ${DOSPORT}  (recorded in ${LAUNCH_FILE})"
 echo "  Binary:  ${BINARY}"
 echo "  Image:   ${DOSPORT}/PKMN.IMG (same working save as dos_port/run)"
-echo "  PKMN.EXE boots and free-runs; pause it from MCP to set breakpoints."
+echo "  Config:  ${device:-base}${device:+ (device conf applied)}"
 echo ""
 echo "From Claude Code: pause_exec() once in-game, then set_breakpoint('OverworldLoop'),"
 echo "  continue_exec(), gb_read(), dump_frame() etc."
@@ -128,12 +255,8 @@ echo ""
 
 # No -break-start: breakpoints need the game's runtime CS/DS selectors, which
 # only exist once PKMN.EXE is loaded — the MCP flow is pause_exec() →
-# set_breakpoint() → continue_exec().  (At BIOS entry there is nothing to
-# target, and a paused emulator can't service the socket BREAK request.)
-# The socket is started from DEBUG_Init so it is ready as soon as DOSBox-X opens.
-# cd: the debugger writes MEMDUMP.BIN to its CWD; keep that next to PKMN.EXE
-# where the MCP server (DOSBOX_MCP_DIR) expects it.
+# set_breakpoint() → continue_exec(). cd keeps MEMDUMP.BIN next to PKMN.EXE
+# where the MCP server expects it.
 cd "$DOSPORT"
-exec "$BINARY" \
-    -defaultdir "$DOSPORT" \
-    -conf "$CONF"
+exec "$BINARY" -defaultdir "$DOSPORT" -conf "$CONF" \
+    ${host_args[@]+"${host_args[@]}"}

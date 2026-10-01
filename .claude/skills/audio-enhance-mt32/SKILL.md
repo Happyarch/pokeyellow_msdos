@@ -318,6 +318,6 @@ Batch renders print peak/nonzero stats — nonzero==0 means silence (broken map)
 Agents verify with batch renders + peak/nonzero stats; the interactive GUI
 is human territory (voice/timbre ear judgments). `dgad --help` lists all flags.
 
-End-to-end in-DOS verification via `dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
+End-to-end in-DOS verification via `dos_port/run /MT32 DEBUG_AUDIO=1 TRACK=<MUSIC_* constant> /LOOP`.
 The track is the `TRACK=` make variable — never edit the Makefile or
 debug_dump.asm to swap songs.

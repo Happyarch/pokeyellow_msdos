@@ -1,59 +1,261 @@
 #!/usr/bin/env bash
-# Build PKMN.EXE, package it into the isolated FAT image (PKMN.IMG), and launch
-# it in DOSBox-X. C: is that image — the host filesystem is never mounted, so the
-# game's saves and any buffer-overflow / OOB disk writes stay inside the image
-# (at any BUG_FIX_LEVEL). Args are split by prefix: '/...' tokens are passed as
-# PKMN.EXE command-line flags, everything else goes to make, e.g.:
-#   dos_port/run SKIP_TITLE=1                 # make arg
-#   dos_port/run DEBUG_AUDIO=1 /LOOP /NOENH   # make arg + two EXE flags
-# EXE flags currently understood (see boot/entry.asm parse_cmdline):
-#   audio:      /NOSOUND /MT32 /GM /TANDY /SPK /NOENH /LOOP
-#   link cable: /COM1 /COM2 /COM3 /COM4 /BAUD=n /LINKLOG
-#               /IPX /IPXSOCK=n /PKTINT=0xNN
-#               /TCPWAIT[=port] /TCP=a.b.c.d[:port] /IP=a.b.c.d
-#               /MASK=a.b.c.d /GW=a.b.c.d
-#   printer:    /PRINT9 /PRNCOLOR /PRNFILE
-#   harness:    /PARTYB (tradecheck/battlecheck B-side debug party)
-set -e
+# dos_port/run — build PKMN.EXE, refresh it into the isolated FAT image, and
+# launch it in DOSBox-X with a chosen audio/hardware configuration.
+#
+# This is the ONE bash launcher. The old per-device wrappers (run-mt32, run-gb,
+# run-covox, run-imfc, run-innova, run-pas, run-spk, run-tandy) were all the same
+# script with a different conf snippet, and had drifted: run-gb and run-pas each
+# built the conf twice and silently dropped your /EXE flags, and run-spk/run-tandy
+# never learned arg-splitting or the live-session guard. They are gone; the
+# device is now a table row below.
+#
+# THREE ARGUMENT NAMESPACES (prefix-determined):
+#   /FLAG         -> PKMN.EXE inside DOS, via the conf's autoexec line
+#   -FLAG --FLAG  -> DOSBox-X itself, appended after -conf (overrides defaults)
+#   name=value, name -> make, e.g. SKIP_TITLE=1 DEBUG_AUDIO=1
+# A host flag's VALUE is the next token when it has no '=' (so `-c "mount c ."`
+# works); `--` forces everything after it to go to make, no classification.
+# `--help` is ours; `-h` goes to DOSBox-X (its own help).
+#
+# DEVICE SELECTION (first one wins; two different devices is an error):
+#   /MT32  /TANDY  /INNOVA  /COVOX  /GB  /PAS  /IMFC  /SPK
+#   Each is passed through to the game (it IS the detection — see the shims)
+#   EXCEPT /SPK, which only configures the emulated machine here: the game's
+#   own /SPK forces the speaker shim and would take music off the AdLib, which
+#   is the opposite of what run-spk's "SB off, AdLib on" A/B wants.
+# /GM, /NOSOUND and the link/printer flags have no conf of their own and are
+# plain pass-through.
+#
+# EXAMPLES
+#   dos_port/run SKIP_TITLE=1                 # base machine (SB + AdLib)
+#   dos_port/run /MT32 DEBUG_AUDIO=1 /LOOP    # MT-32 music loop
+#   dos_port/run /GB -fullscreen              # Game Blaster, DOSBox-X fullscreen
+#   dos_port/run --dry-run /PAS               # show conf + exact emulator command
+#
+# /PAS needs the FORK binary (system dosbox-x has no PAS at all); everything
+# else uses dosbox-x. run-mcp always uses the fork.
+set -eo pipefail
+
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-make_args=()
-exe_args=()
+usage() {
+    cat <<'EOF'
+dos_port/run — build + launch PKMN.EXE in DOSBox-X.
+
+  run [make args] [/EXE flags] [-dosbox-x flags]
+
+  /FLAG          passed to PKMN.EXE inside DOS (e.g. /LOOP /NOENH)
+  -FLAG --FLAG   passed to DOSBox-X itself (e.g. -fullscreen)
+  name=value     passed to make (e.g. SKIP_TITLE=1 DEBUG_AUDIO=1)
+  --             everything after this goes to make, verbatim
+
+  /MT32 /TANDY /INNOVA /COVOX /GB /PAS /IMFC /SPK   pick a hardware config
+  --dry-run      print the generated conf + emulator command, do not launch
+  --help         this message
+
+  Run-mcp uses the same flags; see dos_port/run-mcp.
+EOF
+}
+
+# --- argument classification -------------------------------------------------
+make_args=(); exe_args=(); host_args=()
+want_help=0; dry_run=0; sep=0; host_value=0
 for a in "$@"; do
+    if [ "$sep" = 1 ]; then make_args+=("$a"); continue; fi
     case "$a" in
-        /*) exe_args+=("$a") ;;
-        *)  make_args+=("$a") ;;
+        --)        sep=1 ;;
+        --help)    want_help=1 ;;
+        --dry-run) dry_run=1 ;;
+        /*)        exe_args+=("$a");  host_value=0 ;;
+        -*)        host_args+=("$a"); host_value=1 ;;
+        *)
+            if [ "$host_value" = 1 ] && [[ "$a" != *=* ]]; then
+                host_args+=("$a")
+            else
+                make_args+=("$a")
+            fi
+            host_value=0
+            ;;
     esac
 done
 
-# A live DOSBox-X session holds PKMN.IMG mounted read-write: rebuilding the
-# image under it and double-mounting corrupts the run (verified 2026-07-07:
-# the second session fails to mount C, or silently loses writes). Refuse.
-if command -v fuser >/dev/null && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
+if [ "$want_help" = 1 ]; then usage; exit 0; fi
+
+# --- device selection --------------------------------------------------------
+DEV_FLAGS=(MT32 TANDY INNOVA COVOX GB PAS IMFC SPK)
+device=""
+for a in ${exe_args[@]+"${exe_args[@]}"}; do
+    for d in "${DEV_FLAGS[@]}"; do
+        if [ "$a" = "/$d" ]; then
+            cand="${d,,}"
+            if [ -n "$device" ] && [ "$device" != "$cand" ]; then
+                echo "run: two device flags given: /${device^^} and /$d" >&2
+                echo "     pick one — a machine has one sound card." >&2
+                exit 2
+            fi
+            device="$cand"
+        fi
+    done
+done
+
+# /SPK selects this launcher's speaker machine but is NOT forwarded (see header).
+if [ "$device" = spk ]; then
+    kept=()
+    for a in ${exe_args[@]+"${exe_args[@]}"}; do
+        [ "$a" = "/SPK" ] || kept+=("$a")
+    done
+    exe_args=(${kept[@]+"${kept[@]}"})
+fi
+
+# --- live-session guard ------------------------------------------------------
+# A live DOSBox-X session holds PKMN.IMG mounted read-write: rebuilding or
+# double-mounting under it corrupts the run (verified 2026-07-07).
+if command -v fuser >/dev/null 2>&1 && fuser -s "$DOSPORT/PKMN.IMG" 2>/dev/null; then
     echo "run: PKMN.IMG is held open by a running DOSBox-X session —" >&2
     echo "     close it before launching another run." >&2
     exit 1
 fi
 
-# Build the EXE + refresh it inside the disk image (save data in the image is
-# preserved across rebuilds; delete PKMN.IMG or `make clean-image` to reset).
-make -C "$DOSPORT" image "${make_args[@]}"
-
-# -defaultconf : ignore the user's system dosbox-x config, so nothing it mounts
-#                (host dirs, Z: overrides) leaks in. Our -conf still applies on
-#                top (machine/cpu settings + the imgmount-only autoexec).
-# NB: -securemode is NOT usable here — it restricts the memory/DPMI services
-#     CWSDPMI needs, so the DPMI executable won't start. Isolation instead comes
-#     from mounting ONLY the disk image (no host directory is ever mounted).
-CONF="$DOSPORT/dosbox-x.conf"
-if [ ${#exe_args[@]} -gt 0 ]; then
-    # Append the EXE flags to the autoexec's `PKMN.EXE` line in a throwaway
-    # copy of the conf — the tracked conf stays argument-free.
-    SCRATCH="$(mktemp --suffix=.conf)"
-    trap 'rm -f "$SCRATCH"' EXIT
-    sed "s|^PKMN.EXE\$|PKMN.EXE ${exe_args[*]}|" "$CONF" > "$SCRATCH"
-    CONF="$SCRATCH"
-    dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"
-else
-    exec dosbox-x -defaultdir "$DOSPORT" -defaultconf -conf "$CONF"
+# --- build + refresh the image ----------------------------------------------
+if [ "$dry_run" = 0 ]; then
+    make -C "$DOSPORT" image ${make_args[@]+"${make_args[@]}"}
 fi
+
+# --- generate the conf -------------------------------------------------------
+EXE_LINE="PKMN.EXE"
+if [ ${#exe_args[@]} -gt 0 ]; then EXE_LINE="PKMN.EXE ${exe_args[*]}"; fi
+
+CONF="$(mktemp --suffix=.conf)"
+trap 'rm -f "$CONF"' EXIT
+sed "s|^PKMN\.EXE\$|$EXE_LINE|" "$DOSPORT/dosbox-x.conf" > "$CONF"
+
+case "$device" in
+    "")
+        ;;
+    mt32)
+        ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"
+        if [ "$dry_run" = 0 ] && [ ! -f "$ROMDIR/MT32_CONTROL.ROM" ]; then
+            echo "run: no MT32_CONTROL.ROM in $ROMDIR (set MT32_ROMDIR)" >&2
+            exit 1
+        fi
+        cat >> "$CONF" <<EOF
+
+[midi]
+mpu401      = intelligent
+mididevice  = mt32
+mt32.romdir = $ROMDIR
+EOF
+        ;;
+    gb)
+        cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = gb
+oplmode = none
+
+[speaker]
+pcspeaker = true
+EOF
+        ;;
+    covox)
+        cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+disney = true
+pcspeaker = true
+EOF
+        ;;
+    imfc)
+        cat >> "$CONF" <<'EOF'
+
+[imfc]
+imfc        = true
+imfc_base   = 2a20
+imfc_irq    = 3
+imfc_filter = on
+EOF
+        ;;
+    innova)
+        cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+pcspeaker = true
+
+[innova]
+innova     = true
+sidbase    = 280
+samplerate = 22050
+quality    = 0
+EOF
+        ;;
+    pas)
+        cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = pas16
+oplmode = auto
+
+[speaker]
+pcspeaker = true
+EOF
+        ;;
+    spk)
+        OPLMODE=opl3
+        [ -n "${SPK_ONLY:-}" ] && OPLMODE=none
+        cat >> "$CONF" <<EOF
+
+[sblaster]
+sbtype  = none
+oplmode = $OPLMODE
+EOF
+        ;;
+    tandy)
+        cat >> "$CONF" <<'EOF'
+
+[sblaster]
+sbtype  = none
+oplmode = none
+
+[speaker]
+tandy = on
+EOF
+        ;;
+esac
+
+# --- emulator ----------------------------------------------------------------
+# Everything uses the system dosbox-x except /PAS, which needs the fork (system
+# dosbox-x predates upstream's PAS support and has none). RUN_EMULATOR overrides
+# both, for testing.
+EMULATOR="${RUN_EMULATOR:-}"
+if [ -z "$EMULATOR" ]; then
+    if [ "$device" = pas ]; then
+        EMULATOR="$(bash "$DOSPORT/tools/fork_binary.sh")"
+    else
+        EMULATOR="dosbox-x"
+    fi
+fi
+
+if [ "$dry_run" = 1 ]; then
+    echo "run: device    = ${device:-base}"
+    echo "run: make      = ${make_args[*]:-<none>}"
+    echo "run: exe       = ${exe_args[*]:-<none>}"
+    echo "run: dosbox-x  = ${host_args[*]:-<none>}"
+    echo "run: emulator  = $EMULATOR"
+    echo "run: conf:"
+    sed 's/^/    /' "$CONF"
+    exit 0
+fi
+
+# -defaultconf: ignore the user's system dosbox-x config, so nothing it mounts
+# (host dirs, Z: overrides) leaks in. -securemode is NOT usable: it restricts
+# the memory/DPMI services CWSDPMI needs.
+exec "$EMULATOR" -defaultdir "$DOSPORT" -defaultconf -conf "$CONF" \
+    ${host_args[@]+"${host_args[@]}"}

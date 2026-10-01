@@ -225,7 +225,7 @@ driver path (OPL shim, MPU-401, Tandy/speaker). The track is a make variable —
 
 ```sh
 dos_port/run DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP   # OPL3, loops forever
-dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
+dos_port/run /MT32 DEBUG_AUDIO=1 TRACK=MUSIC_CELADON /LOOP  # MT-32 via MUNT
 ```
 
 `TRACK=` takes any `MUSIC_*` constant from `assets/audio_constants.inc`
@@ -250,7 +250,7 @@ exits — that's the byte-verification mode, not the listening mode.
     ```sh
     python3 tools/audio/gb_to_midi.py --target mt32 --songs GameCorner --no-enhance
     python3 tools/audio/midi_to_stream.py --target mt32
-    dos_port/run-mt32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
+    dos_port/run /MT32 DEBUG_AUDIO=1 TRACK=MUSIC_GAME_CORNER /LOOP
     make -C dos_port assets   # afterwards: restore the enhanced streams
     ```
     (`mpu401.o` depends on `music_streams.inc` in the Makefile, so the rebuild
