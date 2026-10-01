@@ -169,12 +169,13 @@ dos_port/run-mcp [make args] [/EXE flags]
 Launches DOSBox-X with the live MCP socket bridge connected.
 
 ### Canonical MCP Workflow
-1. `pause_exec()` — pause free-running emulator.
-2. `set_breakpoint("OverworldLoop")` — arm breakpoint on any symbol in `pkmn.sym` (global or local) or hex address.
-3. `continue_exec()` — resume execution and await breakpoint.
-4. `wait_break()` — collect break notification without tearing down socket.
+1. **`pause_exec()` FIRST — not optional.** While the guest free-runs the bridge answers **only** BREAK; every other command is serviced at a debugger entry. One sent before the pause pins `_pending` with no entry ever coming and the bridge is dead for that emulator's life. (`server.py` since `3c99fe298` auto-BREAKs in that state, but treat the ordering as mandatory.)
+2. `set_breakpoint("OverworldLoop")` — arm breakpoint on any symbol in `pkmn.sym` (global or local) or hex address. **Check it SUCCEEDED**: a DS-selector "no descriptor / still booting DOS?" answer means the pause landed outside the game's pmode — re-`pause_exec()` until it lands in game code.
+3. `continue_exec(wait_for_break=false)` — resume; returns immediately ("RUNNING").
+4. `wait_break()` — collect the break notification (keep each call ≤45 s; the transport times out ~60 s).
 5. `where()` — inspect nearest symbol at or below `EIP`.
 6. Inspect state with `get_registers()`, `gb_read()`, `x86_read()`, `disassemble()`, `dump_frame()`, or `screenshot()`.
+7. **Hung with no hit?** `force_break()` then `wait_break()` — parks a BREAK the socket thread reads out-of-band. Live since the 2026-10-01 rebuild (fork `174d08bc9`); a pre-rebuild binary ignores it, and only the pilot's `Alt+Pause` or a restart recovers. See memory `regression-tooling-dosbox-mcp-bridge-wedge`.
 
 ### `dump_frame` vs `screenshot`
 
@@ -186,8 +187,9 @@ Launches DOSBox-X with the live MCP socket bridge connected.
 ### Essential Debugger Traps
 1. **BP vs BPLM**: `set_breakpoint` sets an execution breakpoint. `set_watchpoint` (`BPLM`) is a memory-change watchpoint (never fires on unchanged code bytes).
 2. **Double-Quote Hex Literals**: Expression parser parses unquoted `AF`, `BP`, `DX` as registers/flags. Always double-quote: `EV "AF"`.
-3. **RUN-Outstanding Rule**: While a RUN is pending, `wait_break()` is the **only** call that can proceed. If the guest hangs upstream of breakpoints, trigger break manually with `Alt+Pause`.
-4. **Process Management**: **NEVER `pkill -f dosbox`** (this kills `server.py` and disconnects MCP tools). Kill the binary specifically: `pkill -f dosbox-x-mcp`.
+3. **RUN-Outstanding Rule**: While a RUN is pending, `wait_break()` is the only call that can proceed. If the guest hangs upstream of breakpoints, use `force_break()` → `wait_break()`. That is live only in a fork built from `174d08bc9`+ (rebuilt 2026-10-01); an older binary reports "BREAK parked" and never fires — fall back to `Alt+Pause` or an emulator restart.
+4. **Editing the MCP server (OpenCode V2)**: `server.py` is long-lived and does **not** hot-reload. After editing it run `opencode service restart` (`opencode reload` may suffice); restarting the TUI/app does not recycle it, because `opencode serve --service` owns the MCP children. `opencode mcp list` shows their status.
+5. **Process Management**: **NEVER `pkill -f dosbox`** (this kills `server.py` and disconnects MCP tools). Kill the binary specifically: `pkill -f dosbox-x-mcp`.
 
 > [!WARNING]
 > **Required Subskill**: If your task touches debugger internals, SYMF symbol loading, selector translation, or socket timeouts, you **MUST read [`references/dosbox_mcp.md`](references/dosbox_mcp.md) in full** using the read tool before proceeding. Do not guess protocols or rely on memory.
