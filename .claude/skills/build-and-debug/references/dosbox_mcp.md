@@ -126,9 +126,10 @@ dos_port/tools/build_dosbox_mcp.sh
 ```
 This script rsyncs the working tree to a temporary space-free directory (autotools fails on path spaces), compiles `dosbox-x-mcp`, and installs copies to `tools/dosbox-x-mcp/` and `~/.local/bin/`. Commit the submodule commit SHA to the main repository when done.
 
-### Known build break at mcp-debug HEAD (found 2026-10-01): `pas.cpp` include order
-`src/hardware/pas.cpp` (PAS16 stage 4) included `dma.h` **before** `inout.h`. `dma.h`'s `DMAChannel` declares `IO_ReadHandleObject`/`IO_WriteHandleObject`, which only `inout.h` defines, and `dma.h` does not include it — so the build died with `'IO_ReadHandleObject' does not name a type`. **Fix: include `inout.h` before `dma.h`** (every other `dma.h` user already does; `pas.cpp` was the only one that did not).
+### `pas.cpp` include order (found 2026-10-01) — now HISTORICAL, not a live break
+`src/hardware/pas.cpp` (PAS16 stage 4) included `dma.h` **before** `inout.h`. `dma.h`'s `DMAChannel` declares `IO_ReadHandleObject`/`IO_WriteHandleObject`, which only `inout.h` defines, and `dma.h` does not include it — so the build died with `'IO_ReadHandleObject' does not name a type`. **Fix: include `inout.h` before `dma.h`** (every other `dma.h` user already does).
+**RESOLVED / MOOT since the 2026-10-01 resync:** that `pas.cpp` was OURS and has been deleted — the fork now carries upstream's `src/hardware/pas.cpp`, which orders the includes correctly, and `mcp-debug` is at the resync (`bf8558e36`). The general rule still holds for any new `dma.h` user, but do NOT go looking for a live build break here.
 
-Two traps around this:
+Two traps around the build script:
 - The script pipes `make` through `tail -10`, so its own log shows only a warning snippet, not the error. Re-run `make -j$(nproc)` in `/tmp/dosbox-x-mcp-build` to see the real failure.
-- The script rsyncs the submodule working tree as-is, so an **uncommitted** submodule fix is picked up. If the `pas.cpp` reorder is not committed you can still build by patching `/tmp/dosbox-x-mcp-src/src/hardware/pas.cpp` and re-running `make` in the build dir, then copying `src/dosbox-x` over both installed binaries.
+- The script rsyncs the submodule working tree as-is, so an **uncommitted** submodule change is picked up. To test a working-tree edit without committing: patch the file under `/tmp/dosbox-x-mcp-src/`, re-run `make` in the build dir, then copy `src/dosbox-x` over both installed binaries.

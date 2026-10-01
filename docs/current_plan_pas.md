@@ -10,9 +10,13 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
 ## Why (thesis)
 
 - 86Box v4.2 emulates PAS Plus/16/16D, but our golden harness runs our
-  DOSBox-X fork — which emulates no PAS at all (closed `sbtype` list, no
-  `pas=` key). A game-side PAS driver cannot be validated without a fork
-  backend.
+  DOSBox-X fork. **SUPERSEDED 2026-10-01** — this bullet used to say our fork
+  "emulates no PAS at all (closed `sbtype` list, no `pas=` key)", which was
+  true only of our fork's UPSTREAM BASE. Upstream independently landed its own
+  PAS driver (`8759d741c`, 2026-09-18: PAS original/Plus/16) and the fork now
+  RESYNCS onto it, so PAS IS emulated via `[sblaster] sbtype = pas16` and our
+  standalone `[pas]` section is retired (see the stigmergy memory
+  `decision-dosbox-x-pas-adopt-upstream`).
 - License is clean: 86Box ships GPL v2 `COPYING`; `snd_pas16.c` carries
   author/copyright lines but no "v2 only" notice (GPL §9: no version
   lock-in). Our fork is GPL v2-or-later. Combination stays GPL-2.0+ with
@@ -66,8 +70,11 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
   `snd_pas16.c` authors, kernel docs). No 86Box expression copied; every
   behavioral block re-derived. Changes marked per GPL §2a from the first
   commit.
-- Config section `[pas]`: `pas` (bool, default false), `pasbase`
-  (`0x388`), `pasirq`, `pasdma`, `pasrate` — innova/disney key conventions.
+- **RETIRED 2026-10-01.** The standalone `[pas]` section (`pas`, `pasbase`,
+  `pasirq`, `pasdma`, `pasrate`) no longer exists: the fork adopted upstream's
+  `[sblaster] sbtype = pas16`. `oplmode` must NOT be `none` (that installs a
+  write-only `adlib_gusforward` at 0x388, so the shim's status reads fail);
+  `pasrate` was dropped as dead. The runner conf lives in `dos_port/run-pas`.
 - This repo's `lint_pret_labels`/annotation rules do NOT apply to the fork
   (C++ emulator code, not the NASM port); the fork's own build + warnings
   are the gate.
@@ -114,12 +121,12 @@ MIDAS `pas.inc` SDK fragment (mixer protocol, `INT 2Fh` hooks), Linux
     retirement note. PIO carries closed; FIR + OPL-forwarder + MPU/SB
     remap stay deferred with tightened notes.
   - Committed `b67113d13`, mirrored to `mcp-debug`.
-- [x] **5. Docs + changelog.** `[pas]` section documented in both
-  reference confs (generator-exact shape, `[innova]` mirror) + CHANGELOG
-  entry under Next version. Committed `ff19e711e`, mirrored to
-  `mcp-debug`. Follow-up (not this stage): MSVC `vs/dosbox-x.vcxproj`
-  + `.filters` need `pas.cpp` entries; `setup.conf` installer variant
-  needs the `[pas]` block.
+- [x] ~~**5. Docs + changelog.**~~ **SUPERSEDED 2026-10-01.** `ff19e711e`
+  documented the `[pas]` section, which no longer exists. The fork carries
+  upstream's PAS and its own reference confs UNCHANGED, deliberately:
+  regenerating them would add a fork-only conf diff (and upstream's own
+  checked-in confs are stale relative to any current binary) that would
+  conflict on every future resync.
 - [ ] **6. Plus + 16D (fork only, after stage 4).** The 86Box-covered set
   joins the emulator; game never uses them. Scoped when stage 4 lands.
 
@@ -158,8 +165,14 @@ winner).
     39/39 nasm matrix; lint 0, no new tokens; runner diff = swaps only,
     keys match precedent, `bash -n` clean; snapshot map (PAS file
     `0x23C..0x23F`, neighbors recorded).
-  - [ ] G3.1 Cold boot `run-pas` → card-OPL3 music (snapshot `0x23C`
-    tells probe failure from keying failure).
+  - [~] G3.1 Cold boot → card-OPL3 music. **PARTLY DONE 2026-10-01:** the
+    maintainer ear-checked the resynced fork and it SOUNDS GOOD, via a
+    scratch launcher on the merged binary. `run-pas` itself only became
+    correct on 2026-10-01 (`sbtype=pas16` + the FORK binary, since the
+    system dosbox-x has no PAS at all, + a single `CONF` block) and needs the
+    rebuild. NOTE: the `0x23C` snapshot byte is DEBUG_AUDIO-gated
+    (`debug_dump.asm:2008`), NOT dead code — read `g_pas_on` at DS:27D0B0 in
+    a plain build.
   - [ ] G3.2 Catch sequence (FM squares + patch-4 voice + OPL noise).
   - [ ] G3.3 Noise-heavy battle (no drone through rests).
   - [ ] G3.4 Pikachu cry via SB/speaker (`pika_dbg_device` 1 or 2, never
