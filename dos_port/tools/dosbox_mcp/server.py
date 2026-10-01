@@ -230,9 +230,13 @@ def _symbols() -> SymbolMap:
     return sm
 
 # Execution state as best the client can track it:
-#   'unknown' — just launched / reconnected; game may be free-running
+#   'unknown' — just launched / reconnected; game may be free-running.  A
+#               command timeout also forces this (the guest was executing).
 #   'paused'  — last exchange ended inside the debugger loop
 #   'running' — a RUN was issued and its break notification is still pending
+# _game_ctx() treats BOTH 'unknown' and 'running' as "may be executing" and
+# forces a BREAK before issuing anything, because a command sent into a
+# free-running guest is serviced only at a debugger entry.
 _state = 'unknown'
 
 # Cached while paused inside the game — stable across a session
@@ -257,11 +261,20 @@ def _q(val) -> str:
 
 def _cmd(raw: str, timeout: float = 60.0) -> str:
     """Send a raw debugger command, return captured output (or error text)."""
+    global _state
     try:
         _client.connect()
     except OSError as e:
         return f"ERROR: cannot connect to {SOCK_PATH}: {e}"
-    return _client.command(raw, timeout=timeout)
+    try:
+        return _client.command(raw, timeout=timeout)
+    except ResponseTimeout:
+        # Nothing came back in time: the guest is executing (or wedged), so
+        # whatever state we were tracking was wrong.  Record that BEFORE
+        # re-raising so the next _game_ctx() forces a BREAK for an entry
+        # instead of sending another command into the same void.
+        _state = 'unknown'
+        raise
 
 
 def _parse_regjson(out: str) -> dict:
@@ -300,22 +313,33 @@ def _game_ctx() -> Optional[str]:
     """Ensure we are paused inside the game (pmode, selectors known).
     Returns None when ready, or an error string."""
     global _cached_ds_base
-    if _state == 'running':
-        return ("ERROR: game is running — a RUN is waiting for a breakpoint. "
-                "Use wait_break() to wait for it (or restart with breakpoints "
-                "set before continuing).")
     if _client.has_pending():
         return ("ERROR: a previous command's response is still pending — "
-                "call wait_break() to collect it. A RUN is outstanding and its "
-                "reply arrives only at the next debugger entry; if the game is "
-                "hung with no breakpoint hit, call force_break() to interrupt "
-                "it (or ask the pilot to press the DOSBox-X debugger hotkey "
-                "(Alt+Pause)), then wait_break() collects the halt point.")
-    regs = _regs()
-    if 'error' in regs:
-        return f"ERROR: cannot read registers: {regs['error']}"
-    if _cached_ds_base is None:
-        _cached_ds_base = _sel_base(_cached_ds)
+                "call wait_break() to collect it. Its reply arrives only at "
+                "the next debugger entry; if the game is hung with no "
+                "breakpoint hit, call force_break() to interrupt it (or ask "
+                "the pilot to press the DOSBox-X debugger hotkey (Alt+Pause)), "
+                "then wait_break() collects the halt point.")
+    # 'unknown' (just launched / reconnected — the guest may be free-running)
+    # and 'running' (a RUN outlived its collection) BOTH mean the guest may be
+    # executing.  Every command below is serviced only at a debugger entry, so
+    # sending one blind is exactly what used to pin _pending forever with no
+    # entry ever coming; the old guard rejected only 'running', so the FIRST
+    # tool call after launch went into the void.  A BREAK is the one request the
+    # guest answers while it executes, so take one here (exactly what
+    # pause_exec does) to force the entry before touching the debugger.
+    if _state in ('running', 'unknown'):
+        brk = pause_exec()
+        if brk.startswith('ERROR'):
+            return brk
+    try:
+        regs = _regs()
+        if 'error' in regs:
+            return f"ERROR: cannot read registers: {regs['error']}"
+        if _cached_ds_base is None:
+            _cached_ds_base = _sel_base(_cached_ds)
+    except (ResponseTimeout, PendingResponse) as e:
+        return f"ERROR: {e}"
     if _cached_ds_base is None:
         return (f"ERROR: DS selector {_cached_ds} has no descriptor — the CPU "
                 "is not in the game's protected-mode context yet (still "
