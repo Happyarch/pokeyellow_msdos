@@ -79,7 +79,7 @@ extern DisableWaitingAfterTextDisplay   ; NOT YET DEFINED IN THE PORT
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
 extern EngageMapTrainer
-extern FlagActionPredef
+extern FlagAction
 extern GetPikachuFacingDirectionAndReturnToE   ; NOT YET DEFINED IN THE PORT
 extern GiveItem
 extern InitBattleEnemyParameters
@@ -183,7 +183,7 @@ CinnabarGymSetTrainerHeader:
 %assign event_byte_a -1
 CinnabarGymFlagAction:
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef_jump; behavior=Predef dispatch replaced by a direct jmp, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    jmp FlagActionPredef
+    jmp FlagAction
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -300,8 +300,9 @@ CinnabarGymOpenGateScript:
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     %assign event_byte EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH, result in CL)
     call CinnabarGymFlagAction
-    mov al, bl
+    mov al, cl
     test al, al
     jnz .no_sound
     mov al, [ebp + wTrainerHeaderFlagBit]
@@ -340,6 +341,7 @@ CinnabarGymScript_75023:
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     %assign event_byte EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH)
     call CinnabarGymFlagAction
     ret
 
@@ -352,6 +354,7 @@ CinnabarGymScript_75032:
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
     %assign event_byte EVENT_BYTE(EVENT_BEAT_CINNABAR_GYM_TRAINER_0)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH)
     call CinnabarGymFlagAction
     ret
 
@@ -364,6 +367,7 @@ CinnabarGymScript_75041:
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
     %assign event_byte EVENT_BYTE(EVENT_CINNABAR_GYM_GATE0_UNLOCKED)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH)
     call CinnabarGymFlagAction
     call UpdateCinnabarGymGateTileBlocks
     ret

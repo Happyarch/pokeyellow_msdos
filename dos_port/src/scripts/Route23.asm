@@ -58,7 +58,7 @@ global VolcanoBadgeText
 extern CallFunctionInTable
 extern DisplayTextID
 extern EnableAutoTextBoxDrawing
-extern FlagActionPredef
+extern FlagAction
 extern HideObject
 extern PlaySoundWaitForCurrent
 extern PrintText
@@ -156,9 +156,10 @@ Route23DefaultScript:
     mov bh, FLAG_TEST
     mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
     %assign event_byte EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH, result in CL)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call FlagActionPredef
-    mov al, bl
+    call FlagAction
+    mov al, cl
     test al, al
     jz .nr_57
         ret
@@ -318,9 +319,10 @@ Route23CheckForBadgeScript:
     mov bl, al
     mov bh, FLAG_TEST
     mov esi, wObtainedBadges
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH, result in CL)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call FlagActionPredef
-    mov al, bl
+    call FlagAction
+    mov al, cl
     test al, al
     jnz .have_badge
     mov esi, Route23YouDontHaveTheBadgeYetText
@@ -340,8 +342,9 @@ Route23CheckForBadgeScript:
     mov bh, FLAG_SET
     mov esi, wEventFlags + EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
     %assign event_byte EVENT_BYTE(EVENT_PASSED_CASCADEBADGE_CHECK)
+    mov cl, bl                                  ; FlagAction takes the bit in CL (tree convention: ESI/CL/BH)
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call FlagActionPredef
+    call FlagAction
     mov al, SCRIPT_ROUTE23_RESET_TO_DEFAULT
     mov [ebp + wRoute23CurScript], al
     ret
