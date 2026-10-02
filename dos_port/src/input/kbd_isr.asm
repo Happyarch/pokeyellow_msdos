@@ -376,7 +376,7 @@ kbd_ring_push:
     mov [kbd_ring + ecx], al
     inc ecx
     and ecx, KBD_RING_SIZE - 1
-    mov [kbd_ring_pad], ah
+    mov [kbd_ring + ecx], ah
     inc ecx
     and ecx, KBD_RING_SIZE - 1
     mov dl, [kbd_ring_tail]
