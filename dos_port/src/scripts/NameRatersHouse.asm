@@ -33,6 +33,12 @@ extern DisplayPartyMenu
 extern EnableAutoTextBoxDrawing
 extern GBPalWhiteOutWithDelay3
 extern GetPartyMonName2
+; Port compositor state (audit J, NameRater same shape): DisplayPartyMenu raises
+; two windows plus g_bg_whiteout/g_obj_over_window; cleared on return to the
+; overworld (or before the naming screen, which manages its own windows).
+extern g_window_count                         ; src/ppu/ppu.asm
+extern g_bg_whiteout                          ; src/ppu/ppu.asm
+extern g_obj_over_window                      ; src/ppu/ppu.asm
 extern LoadGBPal
 extern PrintText
 extern RestoreScreenTilesAndReloadTilePatterns
@@ -124,6 +130,12 @@ NameRatersHouseNameRaterText:
     call GBPalWhiteOutWithDelay3
     call RestoreScreenTilesAndReloadTilePatterns
     call LoadGBPal
+    ; Port compositor teardown (audit J, NameRater same shape as J1-J3): drop the
+    ; party screen's two windows, un-blank the viewport, restore window-last
+    ; order (mov preserves flags, so the popfd/pop below keep CF intact).
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
     pop eax
     popfd
     jb .did_not_rename

@@ -51,6 +51,11 @@ extern EmotionBubble
 extern EnableAutoTextBoxDrawing
 extern GBPalNormal
 extern GBPalWhiteOutWithDelay3
+; Port compositor state (audit J3): DisplayPartyMenu raises two windows plus
+; g_bg_whiteout/g_obj_over_window; cleared on both exits below.
+extern g_window_count                         ; src/ppu/ppu.asm
+extern g_bg_whiteout                          ; src/ppu/ppu.asm
+extern g_obj_over_window                      ; src/ppu/ppu.asm
 extern GiveItem
 extern InitializePikachuTextID   ; src/engine/pikachu/pikachu_emotions.asm
 extern LoadCurrentMapView
@@ -376,6 +381,11 @@ PokemonFanClubChairmanText:
     jae .print
     call GBPalWhiteOutWithDelay3
     call RestoreScreenTilesAndReloadTilePatterns
+    ; Port compositor teardown (audit J3, cancel path): drop the party screen's
+    ; two windows, un-blank the viewport, restore window-last order.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
     mov esi, Text_59c24
     jmp .gbpals_print_text
 
@@ -396,6 +406,11 @@ PokemonFanClubChairmanText:
     call LoadScreenTilesFromBuffer2
     call Delay3
     call GBPalNormal
+    ; Port compositor teardown (audit J3, chosen path): drop the party screen's
+    ; two windows, un-blank the viewport, restore window-last order.
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
     mov esi, Text_59c2e
     mov al, [ebp + hOaksAideResult]
     test al, al

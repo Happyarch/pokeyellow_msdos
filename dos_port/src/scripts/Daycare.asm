@@ -37,6 +37,11 @@ extern DisplayTextBoxID
 extern EnableAutoTextBoxDrawing
 extern GBPalWhiteOutWithDelay3
 extern GetPartyMonName
+; Port compositor state (audit J2): DisplayPartyMenu raises two windows plus
+; g_bg_whiteout/g_obj_over_window; cleared on return to the overworld.
+extern g_window_count                         ; src/ppu/ppu.asm
+extern g_bg_whiteout                          ; src/ppu/ppu.asm
+extern g_obj_over_window                      ; src/ppu/ppu.asm
 extern HasEnoughMoney
 extern IsThisPartyMonStarterPikachu
 extern KnowsHMMove
@@ -109,6 +114,12 @@ DaycareGentlemanText:
     call GBPalWhiteOutWithDelay3                  ; call GBPalWhiteOutWithDelay3
     call RestoreScreenTilesAndReloadTilePatterns  ; call RestoreScreenTilesAndReloadTilePatterns
     call LoadGBPal                                ; call LoadGBPal
+    ; Port compositor teardown (audit J2): drop the party screen's two windows,
+    ; un-blank the viewport, restore window-last order (mov preserves flags, so
+    ; the popfd below still restores DisplayPartyMenu's CF).
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
     popfd                                         ; pop af
     mov esi, .AllRightThenText                    ; ld hl, .AllRightThenText
     jc .done                                      ; jp c, .done

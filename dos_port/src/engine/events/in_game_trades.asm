@@ -93,6 +93,11 @@ extern RestoreScreenTilesAndReloadTilePatterns  ; src/home/palettes.asm
 extern ReloadTilesetTilePatterns                ; src/home/reload_tiles.asm
 extern Delay3                                   ; src/home/palettes.asm
 extern LoadGBPal                                ; src/home/fade.asm
+; Port compositor state (audit J1): DisplayPartyMenu raises two windows plus
+; g_bg_whiteout/g_obj_over_window; cleared on return to the overworld.
+extern g_window_count                         ; src/ppu/ppu.asm
+extern g_bg_whiteout                          ; src/ppu/ppu.asm
+extern g_obj_over_window                      ; src/ppu/ppu.asm
 extern DelayFrames                              ; src/home/delay.asm
 extern LoadWildData                             ; src/engine/overworld/wild_mons.asm
 extern Random                                   ; src/home/random.asm
@@ -277,6 +282,13 @@ InGameTrade_RestoreScreen:
     call LoadScreenTilesFromBuffer2
     call Delay3
     call LoadGBPal
+    ; Port compositor teardown (audit J1): drop the party screen's two windows,
+    ; un-blank the viewport, restore window-last order. Battle callers do this
+    ; in RestoreBattleScreenState; the overworld needs the same minus the msgbox
+    ; switch (the party screen restores msgbox_dialog itself).
+    mov dword [g_window_count], 0
+    mov dword [g_bg_whiteout], 0
+    mov dword [g_obj_over_window], 0
     mov bl, 10                                  ; ld c, 10 — DelayFrames' counter is
                                                 ; 8 bits on the GB and stays 8 bits here
     call DelayFrames
