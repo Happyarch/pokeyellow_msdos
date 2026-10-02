@@ -5375,6 +5375,11 @@ image: $(TARGET) $(DPMI_HOST)
 	 printf 'drive x: file="%s" offset=$(IMG_PART_OFF)\n' "$(CURDIR)/$(IMG)" > $$mt; \
 	 exe_sz=$$(stat -c%s $(TARGET)); dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
 	 free=$$(MTOOLSRC=$$mt mdir x: | grep 'bytes free' | tr -cd '0-9'); \
+	 if [ -z "$$free" ]; then \
+	    rm -f $$mt; \
+	    echo "image: cannot read $(IMG) with mtools (mdir failed) — is it a valid image?" >&2; \
+	    exit 1; \
+	 fi; \
 	 old_exe=$$(MTOOLSRC=$$mt mdir x: | awk '$$1=="PKMN" && $$2=="EXE" {print $$3}'); \
 	 old_dpmi=$$(MTOOLSRC=$$mt mdir x: | awk '$$1=="CWSDPMI" && $$2=="EXE" {print $$3}'); \
 	 : "$${old_exe:=0}"; : "$${old_dpmi:=0}"; \
@@ -5466,6 +5471,14 @@ static_gate:
 # launcher, any device conf, or the completion scripts.
 check-run-parity:
 	@tools/check_run_parity.sh
+
+# Argument-routing tests for run/run-mcp (stub make/emulator, --dry-run; no
+# build, no launch) and the `make image` save-contract tests (scratch image
+# only, never the real PKMN.IMG).
+check-run-args:
+	@tools/test_run_args.sh
+check-image-guard:
+	@tools/test_image_guard.sh
 
 # Point git at the tracked hook directory, so the static gate runs on every
 # commit without anyone having to remember. Opt-in and reversible:

@@ -24,7 +24,8 @@ set -eo pipefail
 DOSPORT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$DOSPORT/.." && pwd)"
 # Deliberately named dosbox-x-mcp so it never collides with the system dosbox-x.
-BINARY="$(bash "$DOSPORT/tools/fork_binary.sh")"
+# RUN_EMULATOR overrides it (testing; mirrors dos_port/run).
+BINARY="${RUN_EMULATOR:-$(bash "$DOSPORT/tools/fork_binary.sh")}"
 # Overridable so two worktrees can each run an instance at once. This MUST stay
 # in sync with tools/dosbox_mcp/server.py, which reads the same variable with
 # the same default — point the server at one socket and the emulator at another
