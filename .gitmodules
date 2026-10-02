@@ -1,18 +1,18 @@
 [submodule "dos_port/tools/unicode_converter"]
 	path = dos_port/tools/unicode_converter
-	url = git@github.com:Happyarch/Pokemon_Bootleg_Green_Scripts.git
+	url = ../Pokemon_Bootleg_Green_Scripts.git
 [submodule "dos_port/tools/mgba"]
 	path = dos_port/tools/mgba
 	url = https://github.com/mgba-emu/mgba.git
 [submodule "docs/references/openmusictheory.github.io"]
 	path = docs/references/openmusictheory.github.io
-	url = git@github.com:Happyarch/openmusictheory.github.io.git
+	url = ../openmusictheory.github.io.git
 	branch = claude-skills-prep
 [submodule "dos_port/tools/dosbox-x"]
 	path = dos_port/tools/dosbox-x
-	url = git@github.com:Happyarch/dosbox-x.git
+	url = ../dosbox-x.git
 	branch = mcp-debug
 	shallow = true
 [submodule "dos_port/tools/dos-gb-audio-dbg"]
 	path = dos_port/tools/dos-gb-audio-dbg
-	url = git@github.com:Happyarch/dos-gb-audio-dbg.git
+	url = ../dos-gb-audio-dbg.git
