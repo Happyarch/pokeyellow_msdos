@@ -300,6 +300,8 @@ DaycareGentlemanText:
 ; what the bail message read it as. HL is ESI and DE is EDX here, so the pair lowers to a
 ; single `mov edx, esi`; neither SM83 `ld r, r` nor x86 `mov` touches flags.
     mov edx, esi                                  ; ld d, h / ld e, l
+    mov [ebp + wPredefDE], dh                     ; stage DE for GetPredefRegisters (big-endian, like add_mon.asm:267-269)
+    mov [ebp + wPredefDE + 1], dl
     mov al, 1                                     ; ld a, 1
     mov [ebp + wLearningMovesFromDayCare], al     ; ld [wLearningMovesFromDayCare], a
     call WriteMonMoves                            ; predef WriteMonMoves
