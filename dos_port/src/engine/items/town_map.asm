@@ -56,6 +56,7 @@ extern FarCopyDataDouble, CopyVideoData, CopyVideoDataDouble  ; home/copy2.asm
 extern JoypadLowSensitivity            ; src/home/joypad2.asm
 extern g_tilecache_dirty               ; ppu.asm — see the FarCopyData note in LoadTownMap
 extern g_bg_whiteout                   ; ppu.asm — full-screen BG whiteout flag
+extern g_window_count                  ; ppu.asm — window descriptors (audit AS: saved/hidden/restored here)
 extern spr_oam_valid                   ; ppu.asm — render_sprites active-entry count
 extern spr_dos_sy, spr_dos_sx          ; ppu.asm — sprite canvas positions
 extern hide_window                     ; home/window.asm
@@ -479,6 +480,12 @@ LoadTownMap:
     mov [tm_saved_stride], eax
     mov eax, [g_bg_whiteout]
     mov [tm_saved_whiteout], eax
+    ; Port compositor (audit AS): the bag list box is a live window here; hide the
+    ; whole list while the flat-canvas modal owns the screen, restoring on exit
+    ; (same save/restore idiom as the whiteout above).
+    mov eax, [g_window_count]
+    mov [tm_saved_wc], eax
+    mov dword [g_window_count], 0
 
     ; port: draw the whole 20-wide screen centered in the 40-wide tile buffer.
     mov dword [text_row_stride], SCREEN_TILES_W
@@ -645,6 +652,8 @@ ExitTownMap:
     mov [ebp + IO_SCY], al
     mov eax, [tm_saved_whiteout]
     mov [g_bg_whiteout], eax
+    mov eax, [tm_saved_wc]
+    mov [g_window_count], eax
     mov eax, [tm_saved_stride]
     mov [text_row_stride], eax
     jmp RunDefaultPaletteCommand        ; pret: jp RunDefaultPaletteCommand
@@ -998,3 +1007,4 @@ tm_saved_scx:       resb 1
 tm_saved_scy:       resb 1
 tm_saved_stride:    resd 1
 tm_saved_whiteout:  resd 1
+tm_saved_wc:        resd 1
