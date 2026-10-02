@@ -269,7 +269,7 @@ UpdateCurrentAnimatedObjectFrame:
     mov [ebp + wCurrentAnimatedObjectOAMBufferOffset], al ; ld [..], a  (save cursor low byte)
     cmp al, wShadowOAMEnd & 0xff           ; cp LOW(wShadowOAMEnd)
     jae .oam_is_full                          ; jr nc, .oam_is_full
-    dec ecx                                   ; dec c
+    dec cl                                    ; dec c (8-bit: pret count 0 runs 256 and stops, audit B1)
     jnz .loop                                 ; jr nz, .loop
     pop ebx                                   ; pop bc
     jmp .finish

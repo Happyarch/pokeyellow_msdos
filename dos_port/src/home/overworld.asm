@@ -3198,8 +3198,10 @@ ApplyMapBorderOverrides:
     movzx edx, byte [esi + 1]                     ; col
     add eax, edx
     lea edi, [eax + wOverworldMap]              ; GB offset of run start
-    movzx ecx, byte [esi + 2]                     ; len
+    movzx ecx, byte [esi + 2]                     ; len (port-only format: 0 means an empty run)
     add esi, 3
+    test cl, cl                                   ; empty run copies nothing (generator emits only nonzero lens)
+    jz .run
 .copy:
     mov al, [esi]                                 ; flat src (embedded data)
     mov [ebp + edi], al                           ; GB dest

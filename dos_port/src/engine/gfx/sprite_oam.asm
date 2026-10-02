@@ -442,7 +442,7 @@ PrepareOAMData:
     mov [ebp + edi], al
     inc ebx
     inc edi
-    dec ecx
+    dec cl
     jnz .tileLoop
 
     ; commit write cursor
