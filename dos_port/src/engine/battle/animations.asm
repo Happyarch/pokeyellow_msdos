@@ -1763,8 +1763,12 @@ _AnimationWaterDroplets:
     mov [ebp + wBaseCoordY], al
     cmp al, 112
     jb .loop
-    call AnimationCleanOAM
+    ; Publish BEFORE cleanup: the DelayFrame inside AnimationCleanOAM must show
+    ; the just-composed droplets (audit BB — publish-after-clean rendered nothing,
+    ; the sole inversion among all publish sites). CleanOAM then wipes + publishes
+    ; zeroed, and the closing DelayFrame shows the cleared state like pret's tail.
     call PublishBattleAnimOAM
+    call AnimationCleanOAM
     jmp DelayFrame
 
 global AnimationLeavesFalling
