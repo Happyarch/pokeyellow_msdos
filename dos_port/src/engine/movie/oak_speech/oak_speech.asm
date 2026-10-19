@@ -37,6 +37,7 @@ extern InitOptions                   ; engine/menus/main_menu.asm
 extern StopAllMusic                  ; home/audio.asm
 extern PlayMusic                     ; home/audio.asm — AL = music id, BL = bank
 extern PlaySound                     ; home/audio.asm — AL = sound id
+extern WaitForSoundToFinish          ; src/home/delay.asm
 extern ClearScreen                   ; home/copy2.asm — blank wTileMap (surface state survives)
 extern LoadTextBoxTilePatterns       ; home/load_font.asm
 extern InitPlayerData2               ; oak_speech/init_player_data.asm (pret predef)
@@ -237,7 +238,9 @@ IntroTextWait:
     jmp .wait
 .done:
     mov byte [ebp + esi], 0x7F
-    ret
+    call WaitForSoundToFinish
+    mov al, SFX_PRESS_AB
+    jmp PlaySound
 
 ; ---------------------------------------------------------------------------
 ; PrepareOakSpeech — clear the save block for a new game, keeping only the four

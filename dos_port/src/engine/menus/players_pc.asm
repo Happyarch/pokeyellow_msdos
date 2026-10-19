@@ -580,6 +580,9 @@ PlayerPCPromptWait:
 .done:
     mov byte [ebp + esi], TILE_SPC          ; erase the ▼
     call PlayerPCMirror
+    call WaitForSoundToFinish
+    mov al, SFX_PRESS_AB
+    call PlaySound
     popad
     ret
 

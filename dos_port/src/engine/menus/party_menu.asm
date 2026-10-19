@@ -51,6 +51,7 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%include "assets/audio_constants.inc"
 
 %define UI_LAYOUT_EQUATES_ONLY 1
 %include "assets/ui_layout_menus.inc"
@@ -86,6 +87,8 @@ extern g_obj_over_window             ; ppu/ppu.asm — OBJ over the window layer
 extern Delay3                        ; src/home/palettes.asm
 extern DelayFrame                    ; src/home/vblank.asm
 extern GBPalNormal                   ; src/home/palettes.asm
+extern PlaySound                     ; home/audio.asm — In: AL = sound id
+extern WaitForSoundToFinish          ; src/home/delay.asm
 extern PrintText                     ; home/window.asm — ESI=FLAT TX stream ptr
 extern text_msgbox                   ; home/text.asm — → the active msgbox projection
 extern msgbox_dialog                 ; home/text.asm — the overworld default we restore
@@ -482,6 +485,9 @@ PartyMenuPromptWait:
 .done:
     mov byte [ebp + esi], TILE_SPC          ; erase the ▼
     call PartyMenuMirror
+    call WaitForSoundToFinish
+    mov al, SFX_PRESS_AB
+    call PlaySound
     popad
     ret
 

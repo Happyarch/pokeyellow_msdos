@@ -1517,7 +1517,9 @@ BattlePromptWait:
 .done:
     mov byte [ebp + esi], T_SPACE       ; erase the ▼
     pop esi
-    ret
+    call WaitForSoundToFinish
+    mov al, SFX_PRESS_AB
+    jmp PlaySound
 
 section .data
 align 4
