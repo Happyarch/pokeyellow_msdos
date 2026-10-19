@@ -45,12 +45,14 @@ extern sb_pcm_play                ; src/audio/sb_pcm.asm
 extern spk_pcm_play               ; src/audio/spk_pcm.asm
 extern opl_silence                ; src/audio/opl_shim.asm (guarded, no-OPL safe)
 extern midi_all_notes_off         ; src/audio/mpu401.asm (guarded, no-MPU safe)
+extern imfc_all_notes_off         ; src/audio/imfc.asm (guarded, no-IMFC safe)
 extern tandy_silence              ; src/audio/tandy_shim.asm (guarded)
 extern spk_silence                ; src/audio/spk_shim.asm (also frees PIT ch2
                                   ;  for spk_pcm's mode-0 use; safe always)
 extern covox_silence              ; src/audio/covox_shim.asm (guarded, DAC-safe)
 extern cms_silence                ; src/audio/cms_shim.asm (guarded, SAA-safe)
 extern innova_silence             ; src/audio/innova_shim.asm (guarded, SID-safe)
+extern pas_silence                ; src/audio/pas_shim.asm (guarded, PAS-safe)
 extern covox_play_clip            ; src/audio/covox_shim.asm (DAC cry player)
 
 %ifndef ENABLE_PIKA_PCM
@@ -89,9 +91,11 @@ PlayPikachuSoundClip:
     call tandy_silence            ; cut held PSG voices
     call spk_silence              ; speaker gate off + hand PIT ch2 to spk_pcm
     call midi_all_notes_off       ; cut held MT-32/GM notes in MIDI mode
+    call imfc_all_notes_off       ; cut held IMFC notes in IMFC mode
     call covox_silence            ; cut held DAC voices (no-op when off)
     call cms_silence              ; cut held CMS voices (no-op when off)
     call innova_silence           ; cut held SID voices (no-op when off)
+    call pas_silence              ; cut held PAS OPL voices (no-op when off)
     pop ebx
     mov esi, [PikachuCriesPointerTable + ebx*8]
     mov ecx, [PikachuCriesPointerTable + ebx*8 + 4]

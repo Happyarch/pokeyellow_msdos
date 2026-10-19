@@ -56,6 +56,7 @@ global OplMasterAttTable
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
 extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
+extern enh_all_off                ; src/audio/opl_enh.asm
 extern g_sb_present               ; src/audio/audio_hal.asm (BLASTER/DSP probe)
 extern g_sb_base
 extern g_sb_dsp_ver
@@ -208,20 +209,6 @@ opl_init:
     mov ax, 0xBD00              ; rhythm mode off, AM/VIB depth low
     call opl_write
     call opl_silence
-    ; reset software voice state
-    mov ecx, 4 * VS_SIZE
-    mov edi, voice_state
-.clr:
-    mov byte [edi], 0
-    inc edi
-    loop .clr
-    mov edi, voice_state
-    mov ecx, 4
-.vinit:
-    mov byte [edi + VS_PATCH], 0xFF
-    mov byte [edi + VS_LAST40], 0xFF
-    add edi, VS_SIZE
-    loop .vinit
     mov dword [g_opl_ch_override], 0xFFFFFFFF
 .done:
     popad
@@ -230,13 +217,14 @@ opl_init:
 ; key off all 9 voices and pull every operator to max attenuation. Safe with
 ; no OPL present. Exported for PlayPikachuSoundClip: the shim's software
 ; envelopes freeze during the cli PCM clip (the GB's *hardware* envelopes
-; kept decaying through its freeze), so held notes must be cut. opl_pass
-; restores TL every tick; a cut voice re-keys on its next note-on.
+; kept decaying through its freeze), so held notes must be cut. Invalidates
+; voice_state and enh_state caches so subsequent notes reload patches and TL.
 opl_silence:
     cmp byte [g_opl_present], 0
     jz .absent
     push eax
     push ecx
+    push edi
     mov ah, 0xB0
     mov ecx, 9
 .koff:
@@ -251,6 +239,22 @@ opl_silence:
     call opl_write
     inc ah
     loop .tl
+    ; reset software voice state so VS_PATCH and VS_LAST40 are reloaded
+    mov ecx, 4 * VS_SIZE
+    mov edi, voice_state
+.clr:
+    mov byte [edi], 0
+    inc edi
+    loop .clr
+    mov edi, voice_state
+    mov ecx, 4
+.vinit:
+    mov byte [edi + VS_PATCH], 0xFF
+    mov byte [edi + VS_LAST40], 0xFF
+    add edi, VS_SIZE
+    loop .vinit
+    call enh_all_off
+    pop edi
     pop ecx
     pop eax
 .absent:

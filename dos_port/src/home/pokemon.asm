@@ -673,6 +673,7 @@ PlayCry:
     jmp .done
 
 .fallback:
+    mov al, bh                        ; restore species ID
     call GetCryData
     call PlaySound
     call WaitForSoundToFinish               ; THE blocking step — see above

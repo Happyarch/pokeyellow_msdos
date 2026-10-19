@@ -122,7 +122,23 @@ spk_pass:
 .noRestart:
     cmp byte [edi + SS_KEY], 0
     jz .next
+    ; keep sweep register in sync for pulse 1
+    test ebx, ebx
+    jnz .noSweepSync
+    mov al, [ebp + rAUD1SWEEP]
+    cmp al, [edi + SS_SWEEP]
+    je .noSweepSync
+    mov [edi + SS_SWEEP], al
+    mov word [edi + SS_SWACC], 0
+.noSweepSync:
     ; frequency follow (engine vibrato / pitch slides)
+    ; Pulse 1 with active hardware sweep manages its own frequency via spk_sweep;
+    ; comparing against static NRx3/NRx4 would clobber the swept frequency every tick.
+    test ebx, ebx
+    jnz .doFreqFollow
+    test byte [edi + SS_SWEEP], 0x70
+    jnz .running
+.doFreqFollow:
     mov cl, [ebp + esi + 3]
     mov ch, [ebp + esi + 4]
     and ch, 7
@@ -281,6 +297,7 @@ spk_sweep:
     mov edx, eax
     mov cl, [edi + SS_SWEEP]
     and cl, 7
+    jz .done
     shr eax, cl
     test byte [edi + SS_SWEEP], 8
     jnz .down

@@ -41,19 +41,22 @@ extern g_sb_base                  ; src/audio/audio_hal.asm (BLASTER A field)
 extern g_sb_irq                   ; src/audio/audio_hal.asm (BLASTER I field)
 extern g_sb_dma                   ; src/audio/audio_hal.asm (BLASTER D field)
 extern g_sb_present               ; src/audio/audio_hal.asm
+extern g_shim_device              ; src/audio/audio_hal.asm
 extern current_pit_divisor        ; boot/timing.asm
 extern ds_base                    ; boot/entry.asm
 extern DelayFrame                 ; src/home/vblank.asm
 
 ; --- Pokemon cry audio engine externs (Stage 2/3) ---
 extern opl_silence                ; src/audio/opl_shim.asm
-extern enh_seq_stop               ; src/audio/opl_enh.asm
+extern enh_all_off                ; src/audio/opl_enh.asm
 extern midi_all_notes_off         ; src/audio/mpu401.asm
+extern imfc_all_notes_off         ; src/audio/imfc.asm
 extern tandy_silence              ; src/audio/tandy_shim.asm
 extern spk_silence                ; src/audio/spk_shim.asm
 extern covox_silence              ; src/audio/covox_shim.asm
 extern cms_silence                ; src/audio/cms_shim.asm
 extern innova_silence             ; src/audio/innova_shim.asm
+extern pas_silence                ; src/audio/pas_shim.asm
 extern g_cry_rate                 ; src/input/input_cfg.asm
 extern cry_synth_set_rate         ; src/audio/cry_synth.asm
 extern cry_pcm_buffer             ; src/audio/cry_synth.asm
@@ -425,9 +428,17 @@ sb_sfx_dma_play:
     pop edx
     jnc .notSoftApu
 
-    ; 2. Check if Sound Blaster and DMA are available
+    ; 2. Check if Sound Blaster and DMA are available (and active shim is OPL/SB/auto)
     cmp byte [g_sb_present], 0
     jz .fallback
+    mov dl, [g_shim_device]
+    cmp dl, 0xFF
+    je .devOk
+    cmp dl, 7                     ; DEV_SB
+    je .devOk
+    cmp dl, 1                     ; DEV_OPL
+    jne .fallback
+.devOk:
     cmp byte [dma_ready], 0
     jz .fallback
     cmp byte [g_sb_nodma], 0
@@ -596,8 +607,10 @@ sb_cry_play:
 
     ; a) Silence/mute all active sound sources:
     call opl_silence
-    call enh_seq_stop
+    call pas_silence
+    call enh_all_off
     call midi_all_notes_off
+    call imfc_all_notes_off
     call tandy_silence
     call spk_silence
     call covox_silence
@@ -626,11 +639,6 @@ sb_cry_play:
     movzx edx, word [g_cry_rate]
     call sb_dma_play
     jc .fallbackDirect            ; if DSP reject, try direct fallback
-
-    ; Mark SFX channels active
-    mov byte [ebp + wChannelSoundIDs + CHAN5], 0xFF
-    mov byte [ebp + wChannelSoundIDs + CHAN6], 0xFF
-    mov byte [ebp + wChannelSoundIDs + CHAN8], 0xFF
 
 .waitDmaLoop:
     cmp byte [g_sb_dma_active], 0

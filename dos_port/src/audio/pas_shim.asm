@@ -73,6 +73,7 @@ global g_pas_on
 %if ENABLE_AUDIO_PAS != 0
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
 extern OplPatches                 ; src/audio/opl_shim.asm — shared FM rows
 extern OplSlotMod                 ; (single definition there; the %else arm
 extern OplRegGroups               ; keeps these resolving when OPL is off)
@@ -227,31 +228,18 @@ pas_init:
     call pas_write
     mov byte [g_pas_on], 1
     call pas_silence
-    ; reset software voice state
-    mov ecx, 4 * PS_SIZE
-    mov edi, pas_state
-.clr:
-    mov byte [edi], 0
-    inc edi
-    loop .clr
-    mov edi, pas_state
-    mov ecx, 4
-.vinit:
-    mov byte [edi + PS_PATCH], 0xFF
-    mov byte [edi + PS_LAST40], 0xFF
-    add edi, PS_SIZE
-    loop .vinit
 .done:
     popad
     ret
 
-; pas_silence — key off all 9 voices and pull every operator to max
-; attenuation. No-op without the card. Voices re-key on their next note-on.
+; pas_silence — key off all 9 voices, pull every operator to max
+; attenuation, and invalidate pas_state caches so voices reload patches and TL.
 pas_silence:
     cmp byte [g_pas_on], 0
     jz .absent
     push eax
     push ecx
+    push edi
     mov ah, 0xB0
     mov ecx, 9
 .koff:
@@ -266,6 +254,21 @@ pas_silence:
     call pas_write
     inc ah
     loop .tl
+    ; reset software voice state
+    mov ecx, 4 * PS_SIZE
+    mov edi, pas_state
+.clr:
+    mov byte [edi], 0
+    inc edi
+    loop .clr
+    mov edi, pas_state
+    mov ecx, 4
+.vinit:
+    mov byte [edi + PS_PATCH], 0xFF
+    mov byte [edi + PS_LAST40], 0xFF
+    add edi, PS_SIZE
+    loop .vinit
+    pop edi
     pop ecx
     pop eax
 .absent:
@@ -725,9 +728,10 @@ pas_volume:
     shl ah, cl
     test [p_nr51], ah
     jz .mute
-    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; MIDI / IMFC mode: the external stream carries the music, so a GB channel
     ; only voices on FM while an SFX owns it (wChannelSoundIDs CHAN5-8)
-    cmp byte [g_midi_music], 0
+    mov cl, [g_midi_music]
+    or cl, [g_imfc_music]
     jz .clamp
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .clamp

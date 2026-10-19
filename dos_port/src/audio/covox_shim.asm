@@ -93,6 +93,7 @@ global g_covox_on
 %include "assets/pika_pcm.inc"
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
 extern g_covox_rate               ; word: PCM rate in Hz, owned by input_cfg
                                   ; (parsed once at boot; tick path only)
 extern pcm_pace_init              ; src/audio/sb_pcm.asm — PIT pacer
@@ -309,9 +310,26 @@ covox_pass:
 .noRestart:
     cmp byte [edi + CS_KEY], 0
     jz .next
+    ; Sync rAUD1SWEEP if changed mid-note (e.g. Func_2223 clearing sweep on SFX end)
+    test ebx, ebx
+    jnz .noSweepSync
+    mov al, [ebp + rAUD1SWEEP]
+    cmp al, [edi + CS_SWEEP]
+    je .noSweepSync
+    mov [edi + CS_SWEEP], al
+    mov word [edi + CS_SWACC], 0
+.noSweepSync:
     cmp ebx, 3
     je .fNoise
     ; frequency follow (engine vibrato / pitch slides)
+    ; If Pulse 1 has an active hardware sweep (period != 0), NR13/NR14 holds
+    ; the initial unswept frequency — do NOT overwrite CS_FREQ from it!
+    test ebx, ebx
+    jnz .doFreqFollow
+    mov al, [edi + CS_SWEEP]
+    and al, 0x70
+    jnz .svc
+.doFreqFollow:
     mov cl, [ebp + esi + 3]
     mov ch, [ebp + esi + 4]
     and ch, 7
@@ -812,6 +830,7 @@ covox_sweep:
     mov edx, eax
     mov cl, [edi + CS_SWEEP]
     and cl, 7
+    jz .done                      ; shift 0 -> no frequency change
     shr eax, cl
     test byte [edi + CS_SWEEP], 8
     jnz .down
@@ -980,9 +999,10 @@ covox_setup:
     mov al, [edi + CS_ENVVOL]
     mov [edi + CS_AMP], al
 .midi:
-    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; MIDI / IMFC mode: the external stream carries the music, so a GB channel
     ; only renders while an SFX owns it (wChannelSoundIDs CHAN5-8)
-    cmp byte [g_midi_music], 0
+    mov cl, [g_midi_music]
+    or cl, [g_imfc_music]
     jz .done
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .done

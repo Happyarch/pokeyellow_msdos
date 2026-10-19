@@ -52,6 +52,7 @@ global g_tandy_on
 %if ENABLE_AUDIO_TANDY != 0
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
 
 section .text
 
@@ -194,7 +195,23 @@ tandy_pass:
 .noRestart:
     cmp byte [edi + TS_KEY], 0
     jz .next
+    ; keep sweep register in sync for pulse 1
+    test ebx, ebx
+    jnz .noSweepSync
+    mov al, [ebp + rAUD1SWEEP]
+    cmp al, [edi + TS_SWEEP]
+    je .noSweepSync
+    mov [edi + TS_SWEEP], al
+    mov word [edi + TS_SWACC], 0
+.noSweepSync:
     ; frequency follow (engine vibrato / pitch slides / NR43 rewrites)
+    ; Pulse 1 with active hardware sweep manages its own frequency via tandy_sweep;
+    ; comparing against static NRx3/NRx4 would clobber the swept frequency every tick.
+    test ebx, ebx
+    jnz .doFreqFollow
+    test byte [edi + TS_SWEEP], 0x70
+    jnz .running
+.doFreqFollow:
     mov cl, [ebp + esi + 3]
     mov ch, [ebp + esi + 4]
     and ch, 7
@@ -404,6 +421,7 @@ tandy_sweep:
     mov edx, eax
     mov cl, [edi + TS_SWEEP]
     and cl, 7
+    jz .done
     shr eax, cl
     test byte [edi + TS_SWEEP], 8
     jnz .down
@@ -509,10 +527,13 @@ tandy_volume:
     shl ah, cl
     test [t_nr51_snap], ah
     jz .mute
-    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; MIDI/IMFC mode: the MT-32/GM/IMFC stream carries the music, so a GB channel
     ; only voices on the PSG while an SFX owns it (wChannelSoundIDs CHAN5-8)
     cmp byte [g_midi_music], 0
+    jnz .checkMidiMute
+    cmp byte [g_imfc_music], 0
     jz .clamp
+.checkMidiMute:
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jnz .clamp
 .mute:

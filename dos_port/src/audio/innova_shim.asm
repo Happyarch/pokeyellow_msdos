@@ -72,6 +72,7 @@ global g_innova_on
 %if ENABLE_AUDIO_INNOVA != 0
 
 extern g_midi_music               ; src/audio/mpu401.asm — MIDI mode active
+extern g_imfc_music               ; src/audio/imfc.asm — IMFC mode active
 
 section .text
 
@@ -227,19 +228,19 @@ innova_silence:
     mov ah, 0x13
     xor al, al
     call innova_write
-    ; caches read back as the silenced values, so the next tick re-emits only
-    ; on change (KEY flags stay, like tandy_silence: voices resume on their
-    ; next tick and re-key fully on their next restart)
+    ; invalidate caches (incl. SS_FREQ so .noRestart calls innova_setfreq after
+    ; $00-$18 were zeroed on the chip)
     lea edi, [innova_state]
     mov ecx, 3
 .cache:
+    mov word [edi + SS_FREQ], 0xFFFF
     mov byte [edi + SS_LASTCTL], 0
     mov byte [edi + SS_LASTSUS], 0
-    mov word [edi + SS_LASTFN], 0
-    mov word [edi + SS_LASTPW], 0
+    mov word [edi + SS_LASTFN], 0xFFFF
+    mov word [edi + SS_LASTPW], 0xFFFF
     add edi, SS_SIZE
     loop .cache
-    mov byte [s_lastmode], 0
+    mov byte [s_lastmode], 0xFF
     mov byte [s_noise_is_sfx], 0
     call innova_filter_init
     pop edi
@@ -356,7 +357,23 @@ innova_pass:
 .noRestart:
     cmp byte [edi + SS_KEY], 0
     jz .next
+    ; keep sweep register in sync for pulse 1
+    test ebx, ebx
+    jnz .noSweepSync
+    mov al, [ebp + rAUD1SWEEP]
+    cmp al, [edi + SS_SWEEP]
+    je .noSweepSync
+    mov [edi + SS_SWEEP], al
+    mov word [edi + SS_SWACC], 0
+.noSweepSync:
     ; frequency follow (engine vibrato / pitch slides)
+    ; Pulse 1 with active hardware sweep manages its own frequency via innova_sweep;
+    ; comparing against static NRx3/NRx4 would clobber the swept frequency every tick.
+    test ebx, ebx
+    jnz .doFreqFollow
+    test byte [edi + SS_SWEEP], 0x70
+    jnz .running
+.doFreqFollow:
     mov cl, [ebp + esi + 3]
     mov ch, [ebp + esi + 4]
     and ch, 7
@@ -581,6 +598,7 @@ innova_sweep:
     mov edx, eax
     mov cl, [edi + SS_SWEEP]
     and cl, 7
+    jz .done                      ; shift 0 -> no frequency change
     shr eax, cl
     test byte [edi + SS_SWEEP], 8
     jnz .down
@@ -720,9 +738,10 @@ innova_volume:
     jz .mute
     shl al, 4
 .haveSR:
-    ; MIDI mode: the MT-32/GM stream carries the music, so a GB channel
+    ; MIDI / IMFC mode: the external stream carries the music, so a GB channel
     ; only voices on the SID while an SFX owns it (wChannelSoundIDs CHAN5-8)
-    cmp byte [g_midi_music], 0
+    mov cl, [g_midi_music]
+    or cl, [g_imfc_music]
     jz .voice
     cmp byte [ebp + wChannelSoundIDs + CHAN5 + ebx], 0
     jz .mute
@@ -788,8 +807,9 @@ innova_noise_keyon:
     or al, [ebp + wChannelSoundIDs + CHAN6]
     or al, [ebp + wChannelSoundIDs + CHAN7]
     jnz .off                    ; SFX in flight: suppress music drum steal
-    ; MIDI mode: the MT-32/GM stream carries the music, so music drums never steal V3
-    cmp byte [g_midi_music], 0
+    ; MIDI / IMFC mode: the external stream carries the music, so music drums never steal V3
+    mov al, [g_midi_music]
+    or al, [g_imfc_music]
     jnz .off
     mov byte [s_noise_is_sfx], 0
     jmp .latchPayload
@@ -903,8 +923,9 @@ innova_noise_tick:
     ret
 
 .checkMidi:
-    ; MIDI mode: music drums never stay on SID
-    cmp byte [g_midi_music], 0
+    ; MIDI / IMFC mode: music drums never stay on SID
+    mov al, [g_midi_music]
+    or al, [g_imfc_music]
     jz .tickVoice
     call innova_noise_restore
     ret

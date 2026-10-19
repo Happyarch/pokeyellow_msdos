@@ -31,6 +31,7 @@ bits 32
 %include "assets/audio_constants.inc"
 
 global enh_init
+global enh_all_off
 global enh_seq_start
 global enh_seq_stop
 global enh_seq_tick
@@ -197,16 +198,21 @@ enh_level:
     ret
 
 ; ---------------------------------------------------------------------------
-; enh_all_off — key off every pool voice (port I/O only if an OPL answered).
+; enh_all_off — key off every pool voice and invalidate patch cache so
+; operator registers are reloaded if opl_silence clobbered 0x40..0x55.
 ; ---------------------------------------------------------------------------
 enh_all_off:
     cmp byte [g_opl_present], 0
     jz .done
+    push eax
     push ebx
+    push ecx
+    push edx
     push edi
     xor ebx, ebx
     mov edi, enh_state
 .v:
+    mov byte [edi + EV_PATCH], 0xFF
     cmp byte [edi + EV_KEY], 0
     jz .next
     mov byte [edi + EV_KEY], 0
@@ -221,7 +227,10 @@ enh_all_off:
     cmp ebx, POOL_SIZE
     jb .v
     pop edi
+    pop edx
+    pop ecx
     pop ebx
+    pop eax
 .done:
     ret
 
@@ -450,6 +459,7 @@ enh_master_att: resb 1
 
 section .text
 enh_init:
+enh_all_off:
 enh_seq_start:
 enh_seq_stop:
 enh_seq_tick:

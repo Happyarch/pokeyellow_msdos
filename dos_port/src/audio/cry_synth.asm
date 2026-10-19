@@ -740,8 +740,16 @@ cry_render_clip:
 .rateOk:
     call cry_synth_reset
 
-    ; Route all channels to both terminals during cry render
+    ; Route all channels to both terminals during cry render (saving prior state)
+    mov al, [ebp + rAUDTERM]
+    mov [clip_saved_term], al
     mov byte [ebp + rAUDTERM], 0xFF
+    mov al, [ebp + rAUDVOL]
+    mov [clip_saved_vol], al
+    test al, al
+    jnz .volOk
+    mov byte [ebp + rAUDVOL], 0x77
+.volOk:
 
     ; Temporarily pause background music (CHAN1-CHAN4)
     mov al, [ebp + wMuteAudioAndPauseMusic]
@@ -790,9 +798,19 @@ cry_render_clip:
     jnz .frameLoop
 
 .cryDone:
-    ; Restore background music pause/mute state
+    ; Restore background music pause/mute state and hardware registers
     mov al, [clip_saved_mute]
     mov [ebp + wMuteAudioAndPauseMusic], al
+    mov al, [clip_saved_term]
+    mov [ebp + rAUDTERM], al
+    mov al, [clip_saved_vol]
+    mov [ebp + rAUDVOL], al
+
+    ; Clear restart bits so subsequent frame won't re-trigger FM voices
+    and byte [ebp + rAUD1HIGH], 0x7F
+    and byte [ebp + rAUD2HIGH], 0x7F
+    and byte [ebp + rAUD3HIGH], 0x7F
+    and byte [ebp + rAUD4GO], 0x7F
 
     mov edi, [clip_dest]
     mov eax, [clip_tot_samples]

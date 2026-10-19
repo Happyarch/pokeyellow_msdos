@@ -616,13 +616,13 @@ imfc_rescale_cc7:
     cmp al, 0xFF
     je .next
     call imfc_scale_vol
-    mov bh, al
+    push eax
     mov al, bl
     or al, 0xB0
     call imfc_write_data
     mov al, 7
     call imfc_write_data
-    mov al, bh
+    pop eax
     call imfc_write_data
 .next:
     inc ebx
