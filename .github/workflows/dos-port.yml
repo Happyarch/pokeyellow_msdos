@@ -59,10 +59,16 @@ jobs:
   static-gate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (with submodules)
+      - name: Checkout
         uses: actions/checkout@v7
-        with:
-          submodules: recursive
+
+      # Only unicode_converter is required by `make -C dos_port assets` /
+      # `static_gate` (see header comment above). Avoid `submodules: recursive`
+      # so heavy dev-only submodules (dosbox-x, mgba, dos-gb-audio-dbg,
+      # openmusictheory) are not cloned and unpushed submodule refs on `nas`
+      # cannot break GitHub CI.
+      - name: Checkout unicode_converter submodule
+        run: git submodule update --init dos_port/tools/unicode_converter
 
       - name: Checkout rgbds
         uses: actions/checkout@v7
