@@ -81,8 +81,10 @@ These involve unguarded writes that may exceed the intended WRAM region:
   was being skipped.
   - **Root fix (always on):** `InitPlayerData2` is ported
     (`src/engine/movie/oak_speech/init_player_data.asm`) and now runs on the boot
-    path via the `OakSpeech` prologue (`main_menu_stubs.asm`), so the default
-    bag/box/party state always carries a `$FF` terminator.
+    path from both entry points: `OakSpeech`'s prologue
+    (`src/engine/movie/oak_speech/oak_speech.asm:336`) for a normal new game, and
+    `src/home/init.asm:328` for the `SKIP_TITLE` boot. The default bag/box/party
+    state therefore always carries a `$FF` terminator.
   - **Defensive fix (`BUG_FIX_LEVEL >= 1`):** `SanitizeInventory`
     (`inventory.asm`) clamps a list's `count` to its hardcoded capacity
     (`BAG_ITEM_CAPACITY` = 20 / `PC_ITEM_CAPACITY` = 50) and forces a `$FF`
@@ -97,7 +99,8 @@ ACE routes execute attacker-controlled bytes as code. On the original Game Boy t
 is bounded to GB ROM/RAM. In the DOS port:
 
 - **Under DPMI**: The DPMI host (CWSDPMI) provides segmented protection. Writes
-  through the EBP-relative emulated space are bounded to the 72 KB allocation.
+  through the EBP-relative emulated space are bounded to the 160 KiB (`0x28000`)
+  allocation (64 KB GB space + native back buffer + four resident SRAM banks).
   However, if ACE manages to forge a far pointer and execute outside the game's
   `.text` segment, it can reach arbitrary DOS memory including disk buffers,
   TSR-resident code, and BIOS data.

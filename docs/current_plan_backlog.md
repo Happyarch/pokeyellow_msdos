@@ -678,11 +678,16 @@ The port-only `BillsPC*Logic` fork names this item used to cite are DELETED —
 the pret-labeled `BillsPCDeposit`/`BillsPCWithdraw`/`BillsPCRelease` bodies
 replaced them. See `docs/plans/sram_pc_storage.md` stage 6.
 
-### 12. Status screen: front pic, cry, and the STATS wire-up
-From `docs/plans/pokemon_behavior.md`.
+### 12. Status screen: front pic, cry, and the STATS wire-up — **DONE**
+From `docs/plans/pokemon_behavior.md`. Completed: `StatusScreen`/`StatusScreen2`
+(`src/engine/pokemon/status_screen.asm`, LINKED) load the mon front pic
+(`LoadFlippedFrontSpriteByMonIndex`), play the cry (`PlayCry`), and draw the
+stats box (`PrintStatsBox`), all through the real status-screen path.
 
-### 13. `LoadPokedexTilePatterns` tileset
-From `docs/plans/menus.md`.
+### 13. `LoadPokedexTilePatterns` tileset — **DONE**
+From `docs/plans/menus.md`. Completed: ported in
+`src/engine/gfx/load_pokedex_tiles.asm` and called from
+`src/engine/menus/pokedex.asm` (both dex pages).
 
 ### 14. Window-compositor gap
 From `docs/plans/menus.md`. Related to the documented Z-order inversion (the
@@ -886,10 +891,23 @@ live loop) is met.
 
 ---
 
-### 34. Surfing Pikachu minigame has NO golden scenario
+### 34. Surfing Pikachu minigame has NO golden scenario — **INTRO DEFECTS NOW COVERED**
 Filed 2026-08-18 when `docs/current_plan_surfing_pikachu.md` was archived. This is
 that plan's Stage 8, rehomed rather than ticked: the plan is archived as *stopped*,
 and this box was never done.
+
+**UPDATE — the intro-rendering half now has a registered must-hit golden.**
+`surfing_pikachu_intro` is registered in `tools/scenario_manifest.json` (id 87)
+and carries a `tools/golden_diff.py` `SCENARIOS` entry. It drives the real
+in-game dispatch into `SurfingPikachuMinigameIntro` and compares tilemap + VRAM +
+OAM + WRAM against the ROM, covering the two intro rendering defects fixed
+2026-08-18 (`7445a3fa8`): no OBJ ever drawn (g_obj_over_window zeroed by
+ClearSprites) and the intro rendering as a uniform tile-`$00` field (nothing
+mirrored wTileMap to GB_TILEMAP0). Entry is forced and symmetric with the port's
+`RunSurfingPikachuTest` gate; RNG and the 3-frame-buffered joypad keep the
+gameplay loop cross-emulator incomparable, so the scenario witnesses the intro
+only. The third defect (jump that never landed, `08154a437`) lies in that
+gameplay loop and therefore remains undefended by the suite.
 
 **What is missing.** A deterministic golden scenario (RNG pin + scripted input
 tape on both the mGBA and DOSBox-X sides, because `Random` and

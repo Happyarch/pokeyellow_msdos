@@ -37,12 +37,17 @@ Living document. Update this when edge cases are discovered during translation.
 
 ## EBP Memory Model
 
-`EBP` = base address of a 72 KB flat allocation representing the GB address space.
+`EBP` = base address of a **160 KiB (`0x28000`)** flat DPMI allocation: the 64 KB GB
+address space (`$0000-$FFFF`), plus the 64,000-byte native 320×200 back buffer, plus
+the four resident emulated SRAM banks. Banks 1–3 live ABOVE the GB window (the port
+keeps them resident rather than bank-switching them through `$A000`); bank 0 stays in
+the hardware SRAM window.
 
 ```
 [EBP + 0x8000]  VRAM bank 0         (8 KB)   → GB_VRAM0
 [EBP + 0x9800]  BG tilemap 0        (1 KB)   → GB_TILEMAP0
 [EBP + 0x9C00]  BG tilemap 1        (1 KB)   → GB_TILEMAP1
+[EBP + 0xA000]  SRAM bank 0         (8 KB)   → GB_SRAM_BANK0
 [EBP + 0xC000]  WRAM bank 0         (4 KB)   → GB_WRAM0
 [EBP + 0xD000]  WRAM bank 1         (4 KB)   → GB_WRAM1
 [EBP + 0xFE00]  OAM                 (160 B)  → GB_OAM
@@ -51,12 +56,21 @@ Living document. Update this when edge cases are discovered during translation.
 [EBP + 0xFF80]  HRAM                (127 B)  → GB_HRAM
 [EBP + 0xFFFF]  IE register shadow  (1 B)    → GB_IE
 [EBP + 0x10000] VRAM bank 1 (CGB)   (8 KB)  → GB_VRAM1
+[EBP + 0x12000] native back buffer  (64000 B) → GB_BACKBUF
+[EBP + 0x22000] SRAM bank 1         (8 KB)   → GB_SRAM_BANK1
+[EBP + 0x24000] SRAM bank 2         (8 KB)   → GB_SRAM_BANK2
+[EBP + 0x26000] SRAM bank 3         (8 KB)   → GB_SRAM_BANK3
+[EBP + 0x28000] end of allocation
 ```
 
 Dereference GB pointer in HL:  `mov al, [ebp + esi]`  
 Store to GB pointer in HL:     `mov [ebp + esi], al`  
 Increment HL (hli):            `inc esi`  
 Decrement HL (hld):            `dec esi`
+
+> Resident SRAM banks 1–3 are reached by flat 32-bit offset (`GB_SRAM_BANK1..3`,
+> `$22000-$27FFF`), not through the `$A000` window — see the `DEVIATION{class=banking}`
+> at `include/gb_memmap.inc:1592`.
 
 ---
 
@@ -111,7 +125,17 @@ and come back to fix it if `daa`/`cpl` is ever reached via this path.
 
 ## Calling Convention Notes
 
-- Callee-saved (must preserve across calls): `EBP`, `EBX`, `ESI`
+**Translated SM83 code does NOT follow the standard C callee-saved convention.**
+The register map (BC→BX, DE→DX, HL→ESI) IS the argument/return convention: a
+translated routine's arguments and results travel in `EBX`/`EDX`/`ESI` exactly as
+pret's `b`/`c`, `d`/`e`, `h`/`l` do, and a callee may legitimately clobber any of
+them according to its own pret contract — e.g. `AddBCD` takes `ESI`/`EDX` and `CL`
+and walks both pointers downward. Callers must read the callee's header/pret source
+rather than assume a blanket "EBX/ESI are preserved" rule.
+
+- Hard-preserved across calls: `EBP` (the GB base pointer; never repurpose)
+- Preserved only when the pret contract says so: `EBX`, `EDX`, `ESI` (they are
+  argument registers — see above)
 - Caller-saved (may be clobbered): `EAX`, `ECX`, `EDX`, `EDI`
 - Stack: 4-byte aligned; `ESP` must be valid at all times
 - The GB's `push af` / `pop af` idiom needs `push ax` / `pop ax` at minimum;

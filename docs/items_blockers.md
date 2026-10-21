@@ -73,31 +73,29 @@ the text in `wild_encounters.asm`; overworld-events Stage 2 owns the shared
 compare the message surface. A generic fidelity pass without those hits is
 regression-only evidence.
 
-### In-battle ITEM button — `BattleItemMenu` is ret-only
+### In-battle ITEM button — RESOLVED 2026-08-12 (battle plan 2c)
 
-**Repository state:** the linked `BattleItemMenu` body in
-`src/engine/battle/battle_menu.asm` falls through to `BattlePartyMenu: ret`.
-`DisplayBattleMenu` calls it when ITEM is selected, so the button currently
-reopens the battle menu instead of entering the bag.
-
-**Owner split:** `docs/current_plan_battle_completion.md` Stage 2c owns the
-in-battle bag and turn-consumption routing. The items plan already owns and has
-state coverage for `UseItem_`, catching, and battle-item effects.
-
-**Acceptance:** real battle navigation must hit `BattleItemMenu`, select an
-item, hit `UseItem`, and verify both the effect and whether the turn is consumed.
-The existing `battle_menu` golden does not exercise this sub-flow.
+**Repository state:** the in-battle ITEM button is ported in
+`src/engine/battle/core.asm:3416-3500+` (`BagWasSelected` / `DisplayPlayerBag` /
+`DisplayBagMenu` / `UseBagItem`, pret `core.asm:2292-2400`). It replaces the
+port-only ret-only `BattleItemMenu`, which was DELETED rather than renamed so
+pret's body lives under the mirror rule. It opens the real bag list menu, runs
+the selection through the shared `UseItem` dispatcher, and decides whether the
+enemy gets a turn and whether the battle ends. `BattleItemMenu` no longer exists
+in the tree as a body (only stale comments in `src/debug/debug_dump.asm` name it;
+those are out of scope here). The `battle_menu` golden covers the menu surface.
 
 ## Non-blocking deferred fidelity tails
 
-- **Poké Flute / Pikachu:** `project_state` reports
-  `IsPikachuRightNextToPlayer` and `PlaySpecificPikachuEmotion` missing, so the
-  Pewter sleeping-Pikachu branch currently follows the ordinary no-effect
-  path. Restore it with the Pikachu-emotion subsystem.
-- **Pikachu happiness:** `ModifyPikachuHappiness` is a linked stub with 9 call
-  sites / 8 unique callers (re-measured 2026-08-02). Medicine, TM/HM, and
-  X-item call sites are already placed; retiring the one stub activates them
-  together.
+- **Poké Flute / Pikachu — RESOLVED.** `IsPikachuRightNextToPlayer`
+  (`src/engine/pikachu/pikachu_follow.asm:1232`) and
+  `PlaySpecificPikachuEmotion` (`src/engine/pikachu/pikachu_emotions.asm:360`)
+  are real linked bodies, and `item_effects.asm:3545` calls the former on the
+  Pewter sleeping-Pikachu branch.
+- **Pikachu happiness — RESOLVED.** `ModifyPikachuHappiness` is a real linked
+  body in `src/engine/events/pikachu_happiness.asm:62`, not a stub; the
+  Medicine, TM/HM, X-item, faint, level-up, gym-leader and Bill's-PC call sites
+  all reach it.
 - **Snorlax encounters:** Poké Flute owns setting the Route 12/16 fight events;
   overworld-events owns the map-script consumers that turn those events into
   encounters.
