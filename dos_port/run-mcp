@@ -223,10 +223,13 @@ esac
 # (DOSBox-X defaults: auto/timed=true). Explicit 4axis is what the game's 0x201
 # driver wants: in 2axis mode Select/Start live on emulated stick 2, which
 # gamepad_hal.asm never reads.
-# `make image` (invoked below with these same make args) also seeds a missing
-# POKEMON.CFG with device=gamepad when this is set — create-only. timed=false
-# is REQUIRED (untimed countdown model matches the driver's counting loop;
-# timed=true reads a centered stick as deflection).
+# `make image` (invoked below with these same make args) enforces the matching
+# POKEMON.CFG device line (gamepad iff a stick is requested, else keyboard),
+# preserving bindings and remaps. timed=false is REQUIRED (untimed countdown
+# model matches the driver's counting loop; timed=true reads a centered stick
+# as deflection). If the pad walks untouched, suspect a second enumerated
+# stick (motion sensors): JOYSTICKTYPE=4axis_2 selects the second physical
+# device instead.
 joystick_type="${JOYSTICKTYPE:-}"
 for arg in ${make_args[@]+"${make_args[@]}"}; do
     case "$arg" in

@@ -18,6 +18,8 @@ import sys
 GAMEPAD_TEMPLATE = (
     "[keyboard]\n"
     "device = gamepad\n"
+    "; walks untouched? your system may list a second stick first\n"
+    "; (e.g. motion sensors) — relaunch with JOYSTICKTYPE=4axis_2\n"
     "\n"
     "[gamepad]\n"
     "gamepad_a = 1\n"

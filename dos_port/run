@@ -257,9 +257,12 @@ esac
 # timed=false is REQUIRED, not a preference: the driver's loop counts port
 # reads, which matches the untimed countdown model exactly (centered = 64,
 # full deflection = 0/128); under timed=true the discharge is wall-time and a
-# centered stick reads as deflection. `make image` (invoked below with these
-# same make args) also seeds a missing POKEMON.CFG with device=gamepad when
-# this is set — create-only.
+# centered stick reads as deflection. If the pad walks untouched, suspect a
+# second enumerated stick (motion sensors): JOYSTICKTYPE=4axis_2 selects the
+# second physical device instead.
+# `make image` (invoked below with these same make args) enforces the matching
+# POKEMON.CFG device line (gamepad iff a stick is requested, else keyboard),
+# preserving bindings and remaps — the keyboard/stick switch for testing.
 joystick_type="${JOYSTICKTYPE:-}"
 for arg in ${make_args[@]+"${make_args[@]}"}; do
     case "$arg" in

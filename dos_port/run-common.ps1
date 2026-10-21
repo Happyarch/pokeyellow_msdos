@@ -340,8 +340,11 @@ function Invoke-Run {
 
     # Joystick selection (make-namespace, ALSA pattern): JOYSTICKTYPE=... shapes
     # [joystick] only, never reaches PKMN.EXE. Unset = no section (defaults).
-    # Invoke-Run also seeds a missing rundir\POKEMON.CFG with device=gamepad
-    # when this is set (anything but none) — create-only, mirroring make image.
+    # Invoke-Run enforces the matching rundir\POKEMON.CFG device line (gamepad
+    # iff a stick is requested, else keyboard), preserving bindings and remaps.
+    # timed=false matches the driver's counting loop; if the pad walks
+    # untouched, suspect a second enumerated stick: JOYSTICKTYPE=4axis_2
+    # selects the second physical device instead.
     $joystickType = $env:JOYSTICKTYPE
     foreach ($m in $split.Make) {
         if ($m -like 'JOYSTICKTYPE=*') { $joystickType = $m.Substring('JOYSTICKTYPE='.Length) }

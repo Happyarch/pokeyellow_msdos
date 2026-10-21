@@ -5363,7 +5363,9 @@ endif
 #        between keyboard and stick testing without hand-editing the image.
 #        The game itself never writes this file (input_cfg.asm is 3Dh/3Fh/3Eh
 #        only), so without this a stick-enabled build boots keyboard-only and
-#        0x201 stays unread.
+#        0x201 stays unread. If directions misbehave with a modern pad (walks
+#        untouched), the OS may enumerate a second stick first (e.g. motion
+#        sensors) — 4axis_2 drives from the second physical stick instead.
 # Reset: `make clean-image` (DELETES the save — back it up first).
 #
 # Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
@@ -5415,6 +5417,7 @@ image: $(TARGET) $(DPMI_HOST)
 	 MTOOLSRC=$$mt mcopy -n x:POKEMON.CFG $$mt.cfg 2>/dev/null || rm -f $$mt.cfg; \
 	 python3 tools/sync_input_cfg.py $$mt.cfg $$want_dev; \
 	 MTOOLSRC=$$mt mcopy -D o $$mt.cfg x:POKEMON.CFG; \
+	 echo "image: POKEMON.CFG device -> $$want_dev (bindings/remaps untouched)"; \
 	 rm -f $$mt $$mt.cfg
 	@echo "Packaged $(TARGET) -> $(IMG) (isolated C: for dos_port/run)"
 
