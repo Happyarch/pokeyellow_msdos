@@ -5353,13 +5353,17 @@ endif
 #                        cannot leave a torn PKMN.EXE behind.
 # In:   `dos_port/tools/pick_save.sh <candidate>` stages a save.
 # In:   JOYSTICKTYPE=auto|2axis|4axis|4axis_2|fcs|ch|none (cf. run's ALSA
-#        pattern) seeds the guest input selection: when set to anything but
-#        none and the image has no POKEMON.CFG, one is created selecting the
-#        Gravis-order gamepad (device=gamepad plus the identity [gamepad]
-#        mapping). Create-only — an existing CFG (user keybindings) is never
-#        rewritten; the game itself never writes this file
-#        (input_cfg.asm is 3Dh/3Fh/3Eh only), so without seeding a
-#        stick-enabled build boots keyboard-only and 0x201 stays unread.
+#        pattern) selects the guest input device for every build: a stick type
+#        (anything but none) means gamepad, unset/none means keyboard.
+#        tools/sync_input_cfg.py enforces the [keyboard] device line
+#        accordingly — creating POKEMON.CFG from the managed template when
+#        missing (device plus the identity [gamepad] mapping = Gravis order),
+#        flipping only that line when present. Keybindings, [gamepad] remaps,
+#        comments and [audio] are never touched: the flip is how you switch
+#        between keyboard and stick testing without hand-editing the image.
+#        The game itself never writes this file (input_cfg.asm is 3Dh/3Fh/3Eh
+#        only), so without this a stick-enabled build boots keyboard-only and
+#        0x201 stays unread.
 # Reset: `make clean-image` (DELETES the save — back it up first).
 #
 # Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
@@ -5407,17 +5411,11 @@ image: $(TARGET) $(DPMI_HOST)
 	 fi; \
 	 MTOOLSRC=$$mt mcopy -D o $(TARGET) x:PKMN.EXE; \
 	 MTOOLSRC=$$mt mcopy -D o $(DPMI_HOST) x:$(DPMI_HOST); \
-	 if [ -n "$(JOYSTICKTYPE)" ] && [ "$(JOYSTICKTYPE)" != "none" ]; then \
-	    if MTOOLSRC=$$mt mdir x:POKEMON.CFG >/dev/null 2>&1; then \
-	       echo "image: keeping existing POKEMON.CFG (not clobbering keybindings)"; \
-	    else \
-	       printf '[keyboard]\ndevice = gamepad\n\n[gamepad]\ngamepad_a = 1\ngamepad_b = 2\ngamepad_select = 3\ngamepad_start = 4\n' > $$mt.cfg; \
-	       MTOOLSRC=$$mt mcopy -D o $$mt.cfg x:POKEMON.CFG; \
-	       rm -f $$mt.cfg; \
-	       echo "image: seeded POKEMON.CFG (device=gamepad, Gravis-order mapping) for JOYSTICKTYPE=$(JOYSTICKTYPE)"; \
-	    fi; \
-	 fi; \
-	 rm -f $$mt
+	 if [ -n "$(JOYSTICKTYPE)" ] && [ "$(JOYSTICKTYPE)" != "none" ]; then want_dev=gamepad; else want_dev=keyboard; fi; \
+	 MTOOLSRC=$$mt mcopy -n x:POKEMON.CFG $$mt.cfg 2>/dev/null || rm -f $$mt.cfg; \
+	 python3 tools/sync_input_cfg.py $$mt.cfg $$want_dev; \
+	 MTOOLSRC=$$mt mcopy -D o $$mt.cfg x:POKEMON.CFG; \
+	 rm -f $$mt $$mt.cfg
 	@echo "Packaged $(TARGET) -> $(IMG) (isolated C: for dos_port/run)"
 
 # Delete the image. THIS DESTROYS POKEMON.DSV inside it — back it up first:
