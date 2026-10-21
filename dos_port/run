@@ -133,18 +133,36 @@ case "$device" in
     "")
         ;;
     mt32)
-        ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"
-        if [ "$dry_run" = 0 ] && [ ! -f "$ROMDIR/MT32_CONTROL.ROM" ]; then
-            echo "run: no MT32_CONTROL.ROM in $ROMDIR (set MT32_ROMDIR)" >&2
-            exit 1
-        fi
-        cat >> "$CONF" <<EOF
+        midi_dev="$MIDIDEVICE"
+        midi_cfg="$MIDICONFIG"
+        for arg in "${make_args[@]}"; do
+            case "$arg" in
+                MIDIDEVICE=*) midi_dev="${arg#MIDIDEVICE=}" ;;
+                MIDICONFIG=*) midi_cfg="${arg#MIDICONFIG=}" ;;
+            esac
+        done
+        if [ "$midi_dev" = "alsa" ] || [ -n "$midi_cfg" ]; then
+            cat >> "$CONF" <<EOF
+
+[midi]
+mpu401      = intelligent
+mididevice  = alsa
+midiconfig  = ${midi_cfg:-128:0}
+EOF
+        else
+            ROMDIR="${MT32_ROMDIR:-$HOME/.config/scummvm}"
+            if [ "$dry_run" = 0 ] && [ ! -f "$ROMDIR/MT32_CONTROL.ROM" ]; then
+                echo "run: no MT32_CONTROL.ROM in $ROMDIR (set MT32_ROMDIR)" >&2
+                exit 1
+            fi
+            cat >> "$CONF" <<EOF
 
 [midi]
 mpu401      = intelligent
 mididevice  = mt32
 mt32.romdir = $ROMDIR
 EOF
+        fi
         ;;
     gb)
         cat >> "$CONF" <<'EOF'

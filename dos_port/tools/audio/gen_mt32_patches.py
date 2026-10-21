@@ -190,11 +190,10 @@ def build_messages(defs: dict, system: bool = True) -> list[bytes]:
         if len(reserves) != 9 or sum(reserves) > 32:
             raise ValueError("partial_reserves: 9 values summing to <= 32")
         # midi_channels: part<-channel routing, 9 values (parts 1-8 + rhythm).
-        # The in-game-verified table is [2,3,4,5,6,7,8,9,9] (see timbres.yaml's
-        # note). Do NOT assume the Roland "0 = MIDI ch 1" spec and "correct" this
-        # to [1,2,...] — that shifts every voice down a part in-game. This
-        # default only applies if timbres.yaml omits the key; keep it correct.
-        channels = sysd.get("midi_channels", [2, 3, 4, 5, 6, 7, 8, 9, 9])
+        # Roland System Area SysEx 0x10000D uses 0-based channel values:
+        # 0 = Ch 1, 1 = Ch 2, ..., 8 = Ch 9, 9 = Ch 10.
+        # Routing parts 1-8 to MIDI channels 2-9 and rhythm to channel 10:
+        channels = sysd.get("midi_channels", [1, 2, 3, 4, 5, 6, 7, 8, 9])
         if len(channels) != 9:
             raise ValueError("midi_channels: need 9 values (parts 1-8 + rhythm)")
         system_blob = bytes((
