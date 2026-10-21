@@ -595,6 +595,9 @@ EnterMap:
     ;
     ; Seeded BEFORE LoadMapData, which reads the coords (same rule as DEBUG_SPAWN).
     mov byte [ebp + wCurMap], HIDDENOBJ_MAP
+%ifdef HIDDENOBJ_LAST_MAP
+    mov byte [ebp + wLastMap], HIDDENOBJ_LAST_MAP
+%endif
     mov byte [ebp + wYCoord], HIDDENOBJ_Y
     mov byte [ebp + wXCoord], HIDDENOBJ_X
     mov byte [ebp + wDestinationWarpID], 0xFF  ; "not a warp arrival" (see DEBUG_SPAWN)

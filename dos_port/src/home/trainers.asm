@@ -652,8 +652,9 @@ SaveEndBattleTextPointers:
 ;       class/set pairs — not by InitMapSprites, which only loads tile patterns.
 ; ----------------------------------------------------------------------------
 EngageMapTrainer:
-    movzx eax, byte [ebp + wSpriteIndex]
-    dec eax
+    mov al, byte [ebp + wSpriteIndex]
+    dec al                          ; 8-bit wrap: 0 -> 0xFF (255), never a negative 32-bit index
+    movzx eax, al
     add eax, eax                    ; (idx-1)*2
     lea esi, [eax + map_sprite_extra_data]  ; FLAT array alias (see the ⚠ above)
     mov al, [esi]                   ; trainer class

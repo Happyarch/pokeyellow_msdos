@@ -918,8 +918,9 @@ Evolution_FlagAction:
 ; Out: ESI (hl) = flat pointer to the level-up learnset (past the evo data).
 ; ===========================================================================
 GetMonLearnset:
-    movzx ecx, byte [ebp + wCurPartySpecies]
-    dec ecx                                  ; index = species - 1
+    mov al, byte [ebp + wCurPartySpecies]
+    dec al                                   ; 8-bit wrap: 0 -> 0xFF (255), never a negative 32-bit index
+    movzx ecx, al                            ; index = species - 1
     mov esi, [EvosMovesPointerTable + ecx*4]  ; flat 32-bit pointer (dd table)
 .skipEvolutionDataLoop:
     mov al, [esi]                            ; flat read of the blob

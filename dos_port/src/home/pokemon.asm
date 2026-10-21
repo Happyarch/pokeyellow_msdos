@@ -152,8 +152,9 @@ GetMonHeader:
     ; normal path: src = BaseStats + (dex - 1) * BASE_DATA_SIZE
     mov [ebp + wPokedexNum], al         ; ld [wPokedexNum], a
     call IndexToPokedex                 ; predef IndexToPokedex
-    movzx eax, byte [ebp + wPokedexNum] ; ld a, [wPokedexNum]
-    dec eax
+    mov al, byte [ebp + wPokedexNum]    ; ld a, [wPokedexNum]
+    dec al                              ; 8-bit wrap: 0 -> 0xFF (255), never a negative 32-bit index
+    movzx eax, al
     imul eax, eax, BASE_DATA_SIZE
     lea esi, [BaseStats + eax]        ; flat (program-image) source
     lea edi, [ebp + wMonHeader]       ; flat dest in GB memory

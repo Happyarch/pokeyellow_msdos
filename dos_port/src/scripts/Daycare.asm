@@ -27,7 +27,7 @@ global DaycareGentlemanText
 global Daycare_Script
 global Daycare_TextPointers
 
-extern AddBCDPredef
+extern AddBCD
 extern AddNTimes
 extern Bankswitch
 extern CalcExperience
@@ -56,7 +56,7 @@ extern RemovePokemon
 extern RestoreScreenTilesAndReloadTilePatterns
 extern SaveScreenTilesToBuffer2
 extern SchedulePikachuSpawnForAfterText   ; NOT YET DEFINED IN THE PORT
-extern SubBCDPredef
+extern SubBCD
 extern TextScriptEnd
 extern WriteMonMoves
 extern YesNoChoice
@@ -237,7 +237,9 @@ DaycareGentlemanText:
     push esi                                      ; push hl
     push edx                                      ; push de
     push ebx                                      ; push bc
-    call AddBCDPredef                             ; predef AddBCDPredef
+    mov cl, bl                                    ; AddBCD's byte count is CL; pret's C lives in BL
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus GetPredefRegisters would reload ESI/EDX/BC from the stale wPredefHL-DE-BC slots over the live ones staged here; lifetime=retired when PredefPointers is ported}
+    call AddBCD                                   ; add [hl] to [de], c bytes (predef wrapper dropped)
     pop ebx                                       ; pop bc
     pop edx                                       ; pop de
     pop esi                                       ; pop hl
@@ -275,8 +277,9 @@ DaycareGentlemanText:
     inc esi
     inc esi                                       ; inc hl
     mov edx, wPlayerMoney + 2                     ; ld de, wPlayerMoney + 2
-    mov bl, 3                                     ; ld c, $3
-    call SubBCDPredef                             ; predef SubBCDPredef
+    mov cl, 3                                     ; ld c, $3
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus GetPredefRegisters would reload ESI/EDX/BC from the stale wPredefHL-DE-BC slots over the live ones staged here; lifetime=retired when PredefPointers is ported}
+    call SubBCD                                   ; subtract [hl] from [de], c bytes (predef wrapper dropped)
     mov al, SFX_PURCHASE                          ; ld a, SFX_PURCHASE
     call PlaySoundWaitForCurrent                  ; call PlaySoundWaitForCurrent
     mov al, MONEY_BOX                             ; ld a, MONEY_BOX

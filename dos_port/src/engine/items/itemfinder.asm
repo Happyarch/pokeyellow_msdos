@@ -22,7 +22,7 @@ HiddenItemNear:
     lea esi, [HiddenItemCoords]
     mov bh, 0
 .loop:
-    mov dx, 3
+    mov edx, 3                              ; full-width: IsInRestOfArray adds EDX to ESI, a dirty upper word would corrupt the stride
     mov al, byte [ebp + wCurMap]
     call IsInRestOfArray
     jnc .done ; return if current map has no hidden items
@@ -41,6 +41,7 @@ HiddenItemNear:
     ;     ESI/EDX/EBX from the stale wPredefHL/DE/BC slots. The port has no predef
     ;     dispatcher: call FlagAction directly. (Same trap as experience.asm and
     ;     evolution.asm.)
+    ; DEVIATION{class=banking; pret=engine/items/itemfinder.asm:HiddenItemNear; behavior=calls FlagAction directly where pret runs predef FlagActionPredef; evidence=the port has no predef dispatcher and FlagActionPredef's first act is GetPredefRegisters, which reloads ESI/EDX/EBX from the stale wPredefHL-DE-BC slots and would overwrite the flag array in ESI and the index-action in BH-BL the caller just set; lifetime=permanent flat-code calling boundary}
     mov esi, wObtainedHiddenItemsFlags
     mov cl, bh
     mov bh, FLAG_TEST

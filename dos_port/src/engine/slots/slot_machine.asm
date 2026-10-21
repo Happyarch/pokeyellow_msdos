@@ -76,8 +76,8 @@ extern SlotMachineWheel2        ; src/data/events/slot_machine_wheels.asm
 extern SlotMachineWheel3        ; src/data/events/slot_machine_wheels.asm
 extern PrintBCDNumber           ; src/home/print_bcd.asm
 extern PrintNumber              ; src/home/print_num.asm
-extern SubBCDPredef             ; src/engine/math/bcd.asm
-extern AddBCDPredef             ; src/engine/math/bcd.asm
+extern SubBCD                   ; src/engine/math/bcd.asm
+extern AddBCD                   ; src/engine/math/bcd.asm
 extern WaitForSoundToFinish     ; src/home/delay.asm
 extern PlaySound                ; src/home/audio.asm
 extern UpdateCGBPal_BGP         ; src/home/cgb_palettes.asm
@@ -475,7 +475,8 @@ SlotMachine_SubtractBetFromPlayerCoins:
     inc esi
     mov edx, wPlayerCoins + 1
     mov cl, 2
-    call SubBCDPredef
+; DEVIATION{class=banking; pret=engine/slots/slot_machine.asm:SlotMachine_SubtractBetFromPlayerCoins; behavior=calls SubBCD directly where pret runs predef SubBCDPredef; evidence=SubBCDPredef in the port is GetPredefRegisters falling through to SubBCD and the port has no predef dispatcher staging wPredefHL-DE-BC for this site, so GetPredefRegisters would overwrite the live ESI/EDX/CL with stale slots - the same convention AddBCD and vending_machine already use; lifetime=permanent, the port calls predef targets directly}
+    call SubBCD
     ; NO ret — pret FALLS THROUGH into SlotMachine_PrintCreditCoins
     ; (engine/slots/slot_machine.asm:646-648: `predef SubBCDPredef` is the last
     ; instruction before the label). Subtracting the bet is what repaints the
@@ -538,7 +539,8 @@ SlotMachine_PayCoinsToPlayer:
     mov esi, wTempCoins1 + 1
     mov edx, wPlayerCoins + 1
     mov cl, 2
-    call AddBCDPredef
+; DEVIATION{class=banking; pret=engine/slots/slot_machine.asm:SlotMachine_PayCoinsToPlayer; behavior=calls AddBCD directly where pret runs predef AddBCDPredef; evidence=AddBCDPredef in the port is GetPredefRegisters falling through to AddBCD and the port has no predef dispatcher staging wPredefHL-DE-BC for this site, so GetPredefRegisters would overwrite the live ESI/EDX/CL with stale slots - the same convention SubBCD and vending_machine already use; lifetime=permanent, the port calls predef targets directly}
+    call AddBCD
     call SlotMachine_PrintCreditCoins
     call SlotMachine_PrintPayoutCoins
     mov al, SFX_SLOTS_REWARD

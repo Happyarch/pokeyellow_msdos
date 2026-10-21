@@ -61,7 +61,7 @@ global GameCorner_ScriptPointers
 global GameCorner_TextPointers
 global Has9990Coins
 
-extern AddBCDPredef
+extern AddBCD
 extern Bankswitch
 extern CallFunctionInTable
 extern ClearScreenArea
@@ -82,7 +82,7 @@ extern Random
 extern ReplaceTileBlock
 extern SaveEndBattleTextPointers
 extern SetSpriteMovementBytesToFF
-extern SubBCDPredef
+extern SubBCD
 extern TextBoxBorder
 extern TextScriptEnd
 extern TryApplyPikachuMovementData   ; NOT YET DEFINED IN THE PORT
@@ -322,20 +322,20 @@ GameCornerClerkText:
     mov al, 0x10
     mov [ebp + hMoney + 1], al
     mov esi, hMoney + 2
-    mov dx, wPlayerMoney + 2
-    mov bl, 0x3
+    mov edx, wPlayerMoney + 2   ; full-width dest: SubBCD addresses [ebp+edx]
+    mov cl, 3
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call SubBCDPredef
+    call SubBCD
     xor al, al
     mov [ebp + hUnusedCoinsByte], al
     mov [ebp + hCoins], al
     mov al, 0x50
     mov [ebp + hCoins + 1], al
-    mov dx, wPlayerCoins + 1
+    mov edx, wPlayerCoins + 1   ; full-width dest: AddBCD addresses [ebp+edx]
     mov esi, hCoins + 1
-    mov bl, 0x2
+    mov cl, 2
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call AddBCDPredef
+    call AddBCD
     call GameCornerDrawCoinBox
     mov esi, .ThanksHereAre50Coins
     jmp .print_ret
@@ -404,11 +404,11 @@ GameCornerFishingGuru1Text:
     mov [ebp + hCoins], al
     mov al, 0x10
     mov [ebp + hCoins + 1], al
-    mov dx, wPlayerCoins + 1
+    mov edx, wPlayerCoins + 1   ; full-width dest: AddBCD addresses [ebp+edx]
     mov esi, hCoins + 1
-    mov bl, 0x2
+    mov cl, 2
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call AddBCDPredef
+    call AddBCD
     SetEvent EVENT_GOT_10_COINS
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
@@ -494,11 +494,11 @@ GameCornerMiddleAgedMan2Text:
     mov [ebp + hCoins], al
     mov al, 0x20
     mov [ebp + hCoins + 1], al
-    mov dx, wPlayerCoins + 1
+    mov edx, wPlayerCoins + 1   ; full-width dest: AddBCD addresses [ebp+edx]
     mov esi, hCoins + 1
-    mov bl, 0x2
+    mov cl, 2
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call AddBCDPredef
+    call AddBCD
     SetEvent EVENT_GOT_20_COINS_2
     mov esi, .Received20CoinsText
     jmp .print_ret
@@ -556,11 +556,11 @@ GameCornerFishingGuru2Text:
     mov [ebp + hCoins], al
     mov al, 0x20
     mov [ebp + hCoins + 1], al
-    mov dx, wPlayerCoins + 1
+    mov edx, wPlayerCoins + 1   ; full-width dest: AddBCD addresses [ebp+edx]
     mov esi, hCoins + 1
-    mov bl, 0x2
+    mov cl, 2
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call AddBCDPredef
+    call AddBCD
     SetEvent EVENT_GOT_20_COINS
     mov esi, .Received20CoinsText
     jmp .print_ret

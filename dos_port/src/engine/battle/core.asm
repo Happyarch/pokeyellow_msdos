@@ -3762,6 +3762,7 @@ SwitchPlayerMon:
     mov esi, wPartyFoughtCurrentEnemyFlags
     call FlagAction                     ; predef FlagActionPredef
     call LoadBattleMonFromParty
+    call SetPal_Battle                       ; port R1 palette binding (pre-SendOutMon)
     call SendOutMon
     call SaveScreenTilesToBuffer1
     mov al, 2                           ; ld a, $2

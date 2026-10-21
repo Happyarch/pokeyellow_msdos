@@ -1042,7 +1042,7 @@ TrainerInfo_NextTextBoxRow:
     movzx ecx, byte [ebp + wTrainerInfoTextBoxNextRowOffset]
 .loop:
     inc esi
-    dec ecx
+    dec cl                                      ; dec a (pret fidelity: 8-bit counter bound)
     jnz .loop
     ret
 

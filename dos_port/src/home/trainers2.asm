@@ -48,14 +48,16 @@ section .text
 ; Adapted to the port's SPLIT flat tables (TrainerPicPointers / TrainerBaseMoney),
 ; not pret's interleaved TrainerPicAndMoneyPointers (5 bytes/entry).
 ; ----------------------------------------------------------------------------
+; DEVIATION{class=banking; pret=home/trainers2.asm:GetTrainerInformation; behavior=indexes the port's split flat TrainerPicPointers and TrainerBaseMoney tables with flat 32-bit arithmetic (imul) and elides pret's AddNTimes plus BankswitchHome-BankswitchBack pair; evidence=the port is one flat address space and both tables are linked program-image labels, so the bank switches are provably no-ops and AddNTimes' 16-bit pointer walk becomes a flat index - the ADDED [wTrainerBaseMoney] store is the flat destination of pret's 2-byte copy, whose pret-side indirection faithdiff cannot name; lifetime=permanent flat-data and banking boundary}
 GetTrainerInformation:
     call GetTrainerName
     mov al, [ebp + wLinkState]
     test al, al
     jnz .linkBattle
     ; class index = wTrainerClass - 1
-    movzx eax, byte [ebp + wTrainerClass]
-    dec eax
+    mov al, byte [ebp + wTrainerClass]
+    dec al                          ; 8-bit wrap: 0 -> 0xFF (255), never a negative 32-bit index
+    movzx eax, al
     ; port flat trainer picture pointer = TrainerPicPointers[idx]
     mov edi, [TrainerPicPointers + eax*4]
     mov [trainer_pic_ptr], edi

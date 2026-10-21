@@ -205,6 +205,7 @@ DivideBCD_getNextDigit:
 AddBCDPredef:
     extern GetPredefRegisters
     call GetPredefRegisters
+    mov cl, bl  ; GetPredefRegisters restores BC into BX (BL = pret C); AddBCD/SubBCD take the byte count in CL
     ; Fallthrough
 
 AddBCD:
@@ -241,6 +242,7 @@ AddBCD:
 
 SubBCDPredef:
     call GetPredefRegisters
+    mov cl, bl  ; GetPredefRegisters restores BC into BX (BL = pret C); AddBCD/SubBCD take the byte count in CL
     ; Fallthrough
 
 SubBCD:

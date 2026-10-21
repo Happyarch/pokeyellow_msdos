@@ -70,7 +70,7 @@ extern PlaySoundWaitForCurrent
 extern PrintText
 extern PrintText_NoCreatingTextBox
 extern StartSimulatingJoypadStates
-extern SubBCDPredef
+extern SubBCD
 extern TextScriptEnd
 extern UpdateSprites
 extern WaitForSoundToFinish
@@ -406,10 +406,10 @@ SafariZoneGatePrintSafariZoneWorker1WouldYouLikeToJoinText:
     xor al, al
     mov [ebp + wPriceTemp + 2], al
     mov esi, wPriceTemp + 2
-    mov dx, wPlayerMoney + 2
-    mov bl, 3
+    mov edx, wPlayerMoney + 2   ; full-width dest: SubBCD addresses [ebp+edx]
+    mov cl, 3
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
-    call SubBCDPredef
+    call SubBCD
     mov al, SFX_PURCHASE
     call PlaySoundWaitForCurrent
     call WaitForSoundToFinish
