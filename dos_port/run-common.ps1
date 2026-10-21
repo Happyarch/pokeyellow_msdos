@@ -338,10 +338,40 @@ function Invoke-Run {
 
     if (-not $split.DryRun) { Invoke-Build -MakeArgs $split.Make }
 
+    # Joystick selection (make-namespace, ALSA pattern): JOYSTICKTYPE=... shapes
+    # [joystick] only, never reaches PKMN.EXE. Unset = no section (defaults).
+    # Invoke-Run also seeds a missing rundir\POKEMON.CFG with device=gamepad
+    # when this is set (anything but none) — create-only, mirroring make image.
+    $joystickType = $env:JOYSTICKTYPE
+    foreach ($m in $split.Make) {
+        if ($m -like 'JOYSTICKTYPE=*') { $joystickType = $m.Substring('JOYSTICKTYPE='.Length) }
+    }
+    $joystickConf = ''
+    if ($joystickType) {
+        $valid = @('auto','2axis','4axis','4axis_2','fcs','ch','none')
+        if ($valid -notcontains $joystickType) { throw "run: bad JOYSTICKTYPE='$joystickType' (want $($valid -join '|'))" }
+        $joystickConf = @"
+[joystick]
+joysticktype = $joystickType
+timed        = false
+"@
+    }
+
     $dosbox = try { Find-DosBoxX } catch { '<dosbox-x not found>' }
     $stage  = New-StagingDir
+    if ($joystickType -and $joystickType -ne 'none' -and -not (Test-Path (Join-Path $stage 'POKEMON.CFG'))) {
+        Set-Content -Path (Join-Path $stage 'POKEMON.CFG') -Encoding ASCII -Value @(
+            '[keyboard]'
+            'device = gamepad'
+        )
+    }
+    $extra = Get-DeviceConf -Device $dev.Name
+    if ($joystickConf) {
+        if ($extra) { $extra += "`n" }
+        $extra += $joystickConf
+    }
     $conf = New-RunConf -StageDir $stage -ExeArgs $exeArgs `
-                        -ExtraConf (Get-DeviceConf -Device $dev.Name)
+                        -ExtraConf $extra
 
     if ($split.DryRun) {
         $name = if ($dev.Name) { $dev.Name } else { 'base' }

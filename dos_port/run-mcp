@@ -217,6 +217,35 @@ EOF
         ;;
 esac
 
+# --- joystick selection (make-namespace, ALSA pattern) -----------------------
+# JOYSTICKTYPE=auto|2axis|4axis|4axis_2|fcs|ch|none shapes the generated conf's
+# [joystick] section only; it never reaches PKMN.EXE. Unset/empty = no section
+# (DOSBox-X defaults: auto/timed=true). Explicit 4axis is what the game's 0x201
+# driver wants: in 2axis mode Select/Start live on emulated stick 2, which
+# gamepad_hal.asm never reads.
+# `make image` (invoked below with these same make args) also seeds a missing
+# POKEMON.CFG with device=gamepad when this is set — create-only. timed=false
+# is REQUIRED (untimed countdown model matches the driver's counting loop;
+# timed=true reads a centered stick as deflection).
+joystick_type="${JOYSTICKTYPE:-}"
+for arg in ${make_args[@]+"${make_args[@]}"}; do
+    case "$arg" in
+        JOYSTICKTYPE=*) joystick_type="${arg#JOYSTICKTYPE=}" ;;
+    esac
+done
+if [ -n "$joystick_type" ]; then
+    case "$joystick_type" in
+        auto|2axis|4axis|4axis_2|fcs|ch|none) ;;
+        *) echo "run-mcp: bad JOYSTICKTYPE='$joystick_type' (want auto|2axis|4axis|4axis_2|fcs|ch|none)" >&2; exit 2 ;;
+    esac
+    cat >> "$CONF" <<EOF
+
+[joystick]
+joysticktype = $joystick_type
+timed        = false
+EOF
+fi
+
 if [ "$dry_run" = 1 ]; then
     echo "run-mcp: device    = ${device:-base}"
     echo "run-mcp: make      = ${make_args[*]:-<none>}"

@@ -12,6 +12,11 @@
 ;   start = enter   ; or 0x1C / space
 ;   select = backspace ; or 0x0E / tab / rshift
 ;   device = keyboard  ; or gamepad
+;   [gamepad]
+;   gamepad_a = 1      ; gameport button (1-4) driving GB A; identity = Gravis order
+;   gamepad_b = 2      ; (bottom face on modern diamond pads)
+;   gamepad_select = 3
+;   gamepad_start = 4
 ;   [audio]
 ;   covox_rate = 7000   ; Covox DAC rate in Hz, decimal; clamped 4000-44500
 ;   device = auto       ; requested device: none|opl|tandy|spk|innova|covox|gb|pas
@@ -44,6 +49,10 @@ global g_input_device
 global g_covox_rate
 global g_cry_rate
 global g_cfg_audio_device
+global cfg_pad_a
+global cfg_pad_b
+global cfg_pad_select
+global cfg_pad_start
 
 ; Input device constants
 INPUT_DEVICE_KBD     equ 0
@@ -73,6 +82,14 @@ cfg_key_b:      db 0x2C    ; 'Z'
 cfg_key_start:  db 0x1C    ; Enter
 cfg_key_select: db 0x0E    ; Backspace
 g_input_device: db INPUT_DEVICE_KBD
+; Gamepad button remap (POKEMON.CFG [gamepad], parsed once at boot): gameport
+; button index (0..3) driving each GB bit. Identity = Gravis order. These four
+; bytes MUST stay consecutive and in this order: input_init indexes them as
+; [cfg_pad_a + f] when it builds the per-frame lookup table (see input_hal).
+cfg_pad_a:      db 0
+cfg_pad_b:      db 1
+cfg_pad_select: db 2
+cfg_pad_start:  db 3
 ; --- Audio Literals (parsed once at boot; zero per-frame cost) ---
 ; Covox DAC render/playback rate in Hz (POKEMON.CFG [audio] covox_rate,
 ; decimal; clamped at parse to 4000-44500). Default is the DSS fixed rate.
@@ -88,7 +105,7 @@ g_cry_rate:   dw 22050
 ; typo keeps today's behavior.
 g_cfg_audio_device: db 0xFF
 ; Current [section] while parsing (0 = no header seen yet, 1 = [keyboard],
-; 2 = [audio]). The parser is otherwise section-blind (headers used to be
+; 2 = [audio], 3 = [gamepad]). The parser is otherwise section-blind (headers used to be
 ; skipped); only the two DEVICE rows below consult this, so every other key
 ; behaves exactly as before.
 cfg_section: db 0
@@ -100,6 +117,7 @@ PARSE_TYPE_SCANCODE equ 1
 PARSE_TYPE_DEVICE   equ 2
 PARSE_TYPE_COVOX_RATE equ 3
 PARSE_TYPE_AUDIO_DEVICE equ 4
+PARSE_TYPE_GAMEPAD_BUTTON equ 5
 
 align 4
 opt_table:
@@ -119,6 +137,10 @@ opt_table:
     ; in apply_config_key_val). Header-less files keep the legacy input
     ; meaning, so nothing already in the field changes hands.
     dd .str_audio_device, g_cfg_audio_device, PARSE_TYPE_AUDIO_DEVICE
+    dd .str_gamepad_a, cfg_pad_a, PARSE_TYPE_GAMEPAD_BUTTON
+    dd .str_gamepad_b, cfg_pad_b, PARSE_TYPE_GAMEPAD_BUTTON
+    dd .str_gamepad_select, cfg_pad_select, PARSE_TYPE_GAMEPAD_BUTTON
+    dd .str_gamepad_start, cfg_pad_start, PARSE_TYPE_GAMEPAD_BUTTON
     dd 0 ; terminator
 
 .str_up:     db "UP", 0
@@ -133,6 +155,10 @@ opt_table:
 .str_covox_rate: db "COVOX_RATE", 0
 .str_cry_rate:   db "CRY_RATE", 0
 .str_audio_device: db "DEVICE", 0
+.str_gamepad_a: db "GAMEPAD_A", 0
+.str_gamepad_b: db "GAMEPAD_B", 0
+.str_gamepad_select: db "GAMEPAD_SELECT", 0
+.str_gamepad_start: db "GAMEPAD_START", 0
 
 ; --- Key name to scancode lookup table ---
 align 4
@@ -588,8 +614,14 @@ apply_config_key_val:
     je .section_mismatch
 .not_input_device:
     cmp eax, PARSE_TYPE_AUDIO_DEVICE
-    jne .dispatch_parse
+    jne .check_gamepad_btn
     cmp byte [cfg_section], 2
+    jne .section_mismatch
+    jmp .dispatch_parse
+.check_gamepad_btn:
+    cmp eax, PARSE_TYPE_GAMEPAD_BUTTON
+    jne .dispatch_parse
+    cmp byte [cfg_section], 3
     jne .section_mismatch
 .dispatch_parse:
     ; Parse value [EBP .. ECX) based on type
@@ -601,6 +633,8 @@ apply_config_key_val:
     je .parse_covox_rate
     cmp eax, PARSE_TYPE_AUDIO_DEVICE
     je .parse_audio_device
+    cmp eax, PARSE_TYPE_GAMEPAD_BUTTON
+    je .parse_gamepad_button
     jmp .apply_exit
 
 .section_mismatch:
@@ -908,6 +942,34 @@ apply_config_key_val:
     mov byte [edi], 4
     jmp .apply_exit
 
+.parse_gamepad_button:
+    ; Decimal gameport button 1-4 -> store 0-3. Anything else keeps the
+    ; default (identity = Gravis order), so a typo can't deaden the pad.
+    mov esi, ebp
+    xor eax, eax
+.gpb_loop:
+    cmp esi, ecx
+    jae .gpb_done
+    mov bl, [esi]
+    cmp bl, '0'
+    jb .gpb_done
+    cmp bl, '9'
+    ja .gpb_done
+    sub bl, '0'
+    movzx ebx, bl
+    imul eax, eax, 10
+    add eax, ebx
+    inc esi
+    jmp .gpb_loop
+.gpb_done:
+    cmp eax, 1
+    jb .apply_exit
+    cmp eax, 4
+    ja .apply_exit
+    dec eax
+    mov [edi], al
+    jmp .apply_exit
+
 .apply_exit:
     popad
     ret
@@ -943,6 +1005,8 @@ update_cfg_section:
     je .try_keyboard
     cmp al, 'A'
     je .try_audio
+    cmp al, 'G'
+    je .try_gamepad
     jmp .done
 .try_keyboard:
     lea ecx, [edx + 8]
@@ -1001,6 +1065,37 @@ update_cfg_section:
     jne .done
     mov cl, 2
     lea edx, [edx + 5]
+    jmp .expect_close
+.try_gamepad:
+    lea ecx, [edx + 7]
+    cmp ecx, ebx
+    ja .done
+    mov al, [edx + 1]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .done
+    mov al, [edx + 2]
+    and al, 0xDF
+    cmp al, 'M'
+    jne .done
+    mov al, [edx + 3]
+    and al, 0xDF
+    cmp al, 'E'
+    jne .done
+    mov al, [edx + 4]
+    and al, 0xDF
+    cmp al, 'P'
+    jne .done
+    mov al, [edx + 5]
+    and al, 0xDF
+    cmp al, 'A'
+    jne .done
+    mov al, [edx + 6]
+    and al, 0xDF
+    cmp al, 'D'
+    jne .done
+    mov cl, 3
+    lea edx, [edx + 7]
 .expect_close:
     cmp edx, ebx
     jae .done

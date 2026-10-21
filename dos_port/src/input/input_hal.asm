@@ -24,6 +24,7 @@ INPUT_DEVICE_GAMEPAD equ 1
 global input_init
 global input_restore
 global input_poll_hardware
+global pad_btn_xlat       ; port-nibble -> GB-bits table (built once at boot)
 
 ; External HAL drivers
 extern input_config_load    ; src/input/input_cfg.asm
@@ -33,6 +34,7 @@ extern pad_dpad             ; src/input/kbd_isr.asm
 extern pad_buttons          ; src/input/kbd_isr.asm
 extern g_input_device       ; src/input/input_cfg.asm
 extern gamepad_poll         ; src/input/gamepad_hal.asm
+extern cfg_pad_a            ; src/input/input_cfg.asm (a/b/select/start consecutive)
 
 section .text
 
@@ -41,6 +43,7 @@ section .text
 ; ---------------------------------------------------------------------------
 input_init:
     call input_config_load
+    call build_pad_btn_xlat
     call kbd_init
     ret
 
@@ -145,3 +148,43 @@ input_poll_hardware:
     pop ecx
     pop ebx
     ret
+
+; ---------------------------------------------------------------------------
+; build_pad_btn_xlat — resolve the CFG button mapping into a 16-entry table:
+; index = gameport high nibble (buttons, active-low), value = active-high GB
+; button bits. Runs ONCE at boot so the per-frame poll is a single lookup
+; with zero mapping branches (minimal-latency HAL rule — no reparsing, no
+; per-frame input-method work). cfg_pad_a/b/select/start must stay consecutive
+; (input_cfg.asm); indexed here as [cfg_pad_a + f] for f = 0:A, 1:B,
+; 2:Select, 3:Start.
+; ---------------------------------------------------------------------------
+build_pad_btn_xlat:
+    pushad
+    lea edi, [cfg_pad_a]
+    xor ebx, ebx                    ; EBX = port nibble 0..15
+.next_nibble:
+    xor edx, edx                    ; EDX = GB button-bit accumulator
+    xor ecx, ecx                    ; ECX = function f 0..3
+.next_fn:
+    movzx eax, byte [edi + ecx]     ; EAX = gameport button k driving f
+    and eax, 3                      ; (defensive; the parser clamps 1-4 already)
+    bt ebx, eax                     ; nibble bit k set = released (active-low)
+    jc .fn_released
+    mov eax, 1
+    shl eax, cl                     ; 1 << f
+    or edx, eax
+.fn_released:
+    inc ecx
+    cmp ecx, 4
+    jb .next_fn
+    mov [pad_btn_xlat + ebx], dl
+    inc ebx
+    cmp ebx, 16
+    jb .next_nibble
+    popad
+    ret
+
+section .data
+align 4
+; Port high-nibble (buttons, active-low) -> active-high GB button bits.
+pad_btn_xlat: times 16 db 0

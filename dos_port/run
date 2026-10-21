@@ -248,6 +248,37 @@ EOF
         ;;
 esac
 
+# --- joystick selection (make-namespace, ALSA pattern) -----------------------
+# JOYSTICKTYPE=auto|2axis|4axis|4axis_2|fcs|ch|none shapes the generated conf's
+# [joystick] section only; it never reaches PKMN.EXE (cf. MIDIDEVICE/MIDICONFIG
+# for [midi]). Unset/empty = no section (DOSBox-X defaults: auto/timed=true).
+# Explicit 4axis is what the game's 0x201 driver wants: in 2axis mode Select/
+# Start live on emulated stick 2, which gamepad_hal.asm never reads.
+# timed=false is REQUIRED, not a preference: the driver's loop counts port
+# reads, which matches the untimed countdown model exactly (centered = 64,
+# full deflection = 0/128); under timed=true the discharge is wall-time and a
+# centered stick reads as deflection. `make image` (invoked below with these
+# same make args) also seeds a missing POKEMON.CFG with device=gamepad when
+# this is set — create-only.
+joystick_type="${JOYSTICKTYPE:-}"
+for arg in ${make_args[@]+"${make_args[@]}"}; do
+    case "$arg" in
+        JOYSTICKTYPE=*) joystick_type="${arg#JOYSTICKTYPE=}" ;;
+    esac
+done
+if [ -n "$joystick_type" ]; then
+    case "$joystick_type" in
+        auto|2axis|4axis|4axis_2|fcs|ch|none) ;;
+        *) echo "run: bad JOYSTICKTYPE='$joystick_type' (want auto|2axis|4axis|4axis_2|fcs|ch|none)" >&2; exit 2 ;;
+    esac
+    cat >> "$CONF" <<EOF
+
+[joystick]
+joysticktype = $joystick_type
+timed        = false
+EOF
+fi
+
 # --- emulator ----------------------------------------------------------------
 # Everything uses the system dosbox-x except /PAS, which needs the fork (system
 # dosbox-x predates upstream's PAS support and has none). RUN_EMULATOR overrides

@@ -1,5 +1,9 @@
 ; gamepad_hal.asm — DOS Game Port (I/O port 0x201) hardware driver for standard
-; 2/4-button joysticks and gamepads (e.g. Gravis GamePad).
+; 4-button gameport pads (reference target: Gravis GamePad and compatibles).
+; Buttons are numbered per the PC gameport: 1 = Red, 2 = Blue, 3 = Yellow,
+; 4 = Green (PCGamingWiki "Controller:Gravis PC GamePad" technical table);
+; the Gravis manual maps game manuals' "button A" to Red, i.e. button 1 is
+; the primary — hence identity defaults (button 1 -> GB A).
 ;
 ; Game Port 0x201 register layout:
 ;   Write: any byte resets the 555 one-shot timers for analog axes.
@@ -8,10 +12,27 @@
 ;     Bit 1: Joystick 1 Y axis (1 = charging, 0 = done)
 ;     Bit 2: Joystick 2 X axis
 ;     Bit 3: Joystick 2 Y axis
-;     Bit 4: Joystick 1 Button 1 (0 = pressed) -> GB A button
-;     Bit 5: Joystick 1 Button 2 (0 = pressed) -> GB B button
-;     Bit 6: Joystick 1/2 Button 3 (0 = pressed) -> GB Select
-;     Bit 7: Joystick 1/2 Button 4 (0 = pressed) -> GB Start
+;     Bit 4: Joystick 1 Button 1 (0 = pressed)
+;     Bit 5: Joystick 1 Button 2 (0 = pressed)
+;     Bit 6: Joystick 1/2 Button 3 (0 = pressed)
+;     Bit 7: Joystick 1/2 Button 4 (0 = pressed)
+;
+; Which gameport button drives which GB bit is NOT decided here: input_init
+; resolves POKEMON.CFG [gamepad] (gamepad_a/b/select/start, defaults 1/2/3/4 =
+; identity = Gravis order) into the 16-entry pad_btn_xlat table once at boot,
+; and the per-frame poll below is a single table lookup. That is the HAL's
+; minimal-latency rule — no reparsing, no per-frame mapping work. A missing
+; [gamepad] section or key keeps the default; only an explicit remap changes
+; anything, so a typo can never deaden the pad.
+;
+; Timing model: this loop COUNTS port reads while each axis bit stays high.
+; That matches DOSBox-X's UNTIMED gameport emulation exactly (one countdown
+; tick per read: xcount starts at (xpos+1)*64, so centered = 64, full
+; deflection = 0/128 — deterministic, host-speed independent). Under TIMED
+; emulation the discharge is wall-time and no fixed loop budget can track it
+; (a centered stick reads as deflection), so our run scripts force
+; timed=false whenever they enable the stick. Thresholds below assume the
+; untimed model: symmetric thirds around center.
 ;
 ; Build: nasm -f coff -I include/ -I . -o gamepad_hal.o gamepad_hal.asm
 
@@ -19,10 +40,12 @@ bits 32
 
 %include "gb_constants.inc"
 
+extern pad_btn_xlat   ; input_hal.asm: boot-built port-nibble -> GB-bits table
+
 GAMEPORT_IO     equ 0x201
-AXIS_MAX_TICKS  equ 100     ; safety bound for disconnected/floating ports
-AXIS_LOW_THRESH equ 25      ; < 25 ticks: Left / Up
-AXIS_HIGH_THRESH equ 75     ; > 75 ticks: Right / Down
+AXIS_MAX_TICKS  equ 160    ; safety bound for disconnected/floating ports
+AXIS_LOW_THRESH equ 43     ; < 43 ticks: Left / Up
+AXIS_HIGH_THRESH equ 85    ; > 85 ticks: Right / Down
 
 global gamepad_poll
 
@@ -65,30 +88,15 @@ gamepad_poll:
     jb .axis_loop
 
 .axes_finished:
-    ; Now decode buttons and axes into active-high GB layout in DL
+    ; Now decode buttons and axes into active-high GB layout in DL.
+    ; Digital Buttons (from BL): the port high nibble (buttons, active-low)
+    ; indexes the boot-built pad_btn_xlat table — one lookup, zero per-frame
+    ; mapping branches (minimal-latency HAL rule). Remapping lives in
+    ; POKEMON.CFG [gamepad] (parsed once at boot), never here.
     xor edx, edx
-
-    ; Digital Buttons (from BL): active-low (0 = pressed)
-    ; Button 1 (bit 4) -> PAD_A (bit 0)
-    test bl, 0x10
-    jnz .no_btn_a
-    or dl, (1 << 0)
-.no_btn_a:
-    ; Button 2 (bit 5) -> PAD_B (bit 1)
-    test bl, 0x20
-    jnz .no_btn_b
-    or dl, (1 << 1)
-.no_btn_b:
-    ; Button 3 (bit 6) -> PAD_SELECT (bit 2)
-    test bl, 0x40
-    jnz .no_btn_sel
-    or dl, (1 << 2)
-.no_btn_sel:
-    ; Button 4 (bit 7) -> PAD_START (bit 3)
-    test bl, 0x80
-    jnz .no_btn_start
-    or dl, (1 << 3)
-.no_btn_start:
+    movzx eax, bl
+    shr eax, 4
+    mov dl, [pad_btn_xlat + eax]
 
     ; X-Axis (BH ticks):
     ; < AXIS_LOW_THRESH -> Left (bit 5)

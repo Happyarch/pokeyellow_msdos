@@ -2142,6 +2142,9 @@ define hiddenobj_gate
 NEED_DEBUG_DUMP := 1
 NASMFLAGS += -D $(1) -D DEBUG_HIDDENOBJ -D SKIP_TITLE
 NASMFLAGS += -D HIDDENOBJ_MAP=$(2) -D HIDDENOBJ_Y=$(3) -D HIDDENOBJ_X=$(4) -D HIDDENOBJ_DIR=$(5)
+ifneq ($(strip $(6)),)
+NASMFLAGS += -D HIDDENOBJ_LAST_MAP=$(6)
+endif
 NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_QUIET
 AUTOKEY_DUMP_FRAME ?= 260
 # $$ so the reference survives $(call)'s expansion and is resolved by $(eval),
@@ -2156,7 +2159,7 @@ endef
 # prop (y=2,x=1) read facing UP -> player stands at (y=3,x=1)
 # make DEBUG_BINOCULARS=1 [AUTOKEY_DUMP_FRAME=n]
 ifdef DEBUG_BINOCULARS
-$(eval $(call hiddenobj_gate,DEBUG_BINOCULARS,0xB9,3,1,0x04))
+$(eval $(call hiddenobj_gate,DEBUG_BINOCULARS,0xB9,3,1,0x04,0x18))
 endif
 
 # Oak's Lab LEFT poster. assets/hidden_events.inc:
@@ -2167,9 +2170,9 @@ endif
 OAKS_LAB_POSTER ?= left
 ifdef DEBUG_OAKSPOSTER
 ifeq ($(OAKS_LAB_POSTER),right)
-$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,5,0x04))
+$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,5,0x04,0x00))
 else
-$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,4,0x04))
+$(eval $(call hiddenobj_gate,DEBUG_OAKSPOSTER,0x28,1,4,0x04,0x00))
 endif
 endif
 
@@ -2203,7 +2206,7 @@ STATUES_Y ?= 11
 STATUES_X ?= 3
 STATUES_DIR ?= 0x04
 ifdef DEBUG_STATUES
-$(eval $(call hiddenobj_gate,DEBUG_STATUES,0x36,$(STATUES_Y),$(STATUES_X),$(STATUES_DIR)))
+$(eval $(call hiddenobj_gate,DEBUG_STATUES,0x36,$(STATUES_Y),$(STATUES_X),$(STATUES_DIR),0x02))
 # GymStatueText1 splices wGymCityName/wGymLeaderName out of WRAM, and the gym's own
 # map script is what fills them (LoadGymLeaderAndCityName). Tick the script once so
 # the port reaches the state the ROM's overworld loop has already reached.
@@ -5337,7 +5340,8 @@ endif
 # FAT image fails to mount; hence sfdisk + a partition at sector $(IMG_PART_SEC).)
 #
 # Built on every `make` (fast). *** THE SAVE CONTRACT (2026-10-01): `image`
-# NEVER TOUCHES POKEMON.DSV (nor any other non-build file) inside the image. ***
+# NEVER TOUCHES POKEMON.DSV inside the image. Other non-build files are left
+# alone, with one create-only exception: JOYSTICKTYPE seeding below. ***
 #   - No image        -> create a BARE image: PKMN.EXE + CWSDPMI.EXE only.
 #   - Image present   -> refresh PKMN.EXE/CWSDPMI.EXE *in place* via mtools at
 #                        the partition offset $(IMG_PART_OFF); everything else
@@ -5348,11 +5352,20 @@ endif
 #   - Free space short-> FAIL before writing, so an EXE that outgrew the image
 #                        cannot leave a torn PKMN.EXE behind.
 # In:   `dos_port/tools/pick_save.sh <candidate>` stages a save.
+# In:   JOYSTICKTYPE=auto|2axis|4axis|4axis_2|fcs|ch|none (cf. run's ALSA
+#        pattern) seeds the guest input selection: when set to anything but
+#        none and the image has no POKEMON.CFG, one is created selecting the
+#        Gravis-order gamepad (device=gamepad plus the identity [gamepad]
+#        mapping). Create-only — an existing CFG (user keybindings) is never
+#        rewritten; the game itself never writes this file
+#        (input_cfg.asm is 3Dh/3Fh/3Eh only), so without seeding a
+#        stick-enabled build boots keyboard-only and 0x201 stays unread.
 # Reset: `make clean-image` (DELETES the save — back it up first).
 #
 # Needs host tools: sfdisk, mkfs.fat (dosfstools), mcopy (mtools).
 # ---------------------------------------------------------------------------
 image: $(TARGET) $(DPMI_HOST)
+	@case "$(JOYSTICKTYPE)" in ""|auto|2axis|4axis|4axis_2|fcs|ch|none) ;; *) echo "image: bad JOYSTICKTYPE='$(JOYSTICKTYPE)' (want auto|2axis|4axis|4axis_2|fcs|ch|none)" >&2; exit 1;; esac
 	@exe_sz=$$(stat -c%s $(TARGET)); \
 	 dpmi_sz=$$(stat -c%s $(DPMI_HOST)); \
 	 img_sz=$$(( ($(IMG_PART_OFF) + exe_sz + dpmi_sz + $(IMG_SLACK) + 1048576 + 511) / 512 * 512 )); \
@@ -5394,6 +5407,16 @@ image: $(TARGET) $(DPMI_HOST)
 	 fi; \
 	 MTOOLSRC=$$mt mcopy -D o $(TARGET) x:PKMN.EXE; \
 	 MTOOLSRC=$$mt mcopy -D o $(DPMI_HOST) x:$(DPMI_HOST); \
+	 if [ -n "$(JOYSTICKTYPE)" ] && [ "$(JOYSTICKTYPE)" != "none" ]; then \
+	    if MTOOLSRC=$$mt mdir x:POKEMON.CFG >/dev/null 2>&1; then \
+	       echo "image: keeping existing POKEMON.CFG (not clobbering keybindings)"; \
+	    else \
+	       printf '[keyboard]\ndevice = gamepad\n\n[gamepad]\ngamepad_a = 1\ngamepad_b = 2\ngamepad_select = 3\ngamepad_start = 4\n' > $$mt.cfg; \
+	       MTOOLSRC=$$mt mcopy -D o $$mt.cfg x:POKEMON.CFG; \
+	       rm -f $$mt.cfg; \
+	       echo "image: seeded POKEMON.CFG (device=gamepad, Gravis-order mapping) for JOYSTICKTYPE=$(JOYSTICKTYPE)"; \
+	    fi; \
+	 fi; \
 	 rm -f $$mt
 	@echo "Packaged $(TARGET) -> $(IMG) (isolated C: for dos_port/run)"
 
