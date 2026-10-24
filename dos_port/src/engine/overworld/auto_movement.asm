@@ -112,10 +112,22 @@ _EndNPCMovementScript:
     ; one). Floored, map-bounds-checked: mid-step positions land on the tile
     ; the step started from, and wrapped/off-map results keep today's
     ; behavior instead of ghosting.
-    ; DEVIATION{class=data-model; pret=engine/overworld/auto_movement.asm:_EndNPCMovementScript; behavior=refresh the scripted slot's MAPY/MAPX from its walk-end pixels before clearing the script state; evidence=scripted walks move pixels only on both sides while the port idle-renders from MAP, so a finished walk stranded its sprite at the start tile offscreen where hardware OAM still shows the walk-end pixels, measured with the Pewter guide at arrival dialog; lifetime=permanent}
+    ;
+    ; Scope: applies ONLY to open-air guide escorts in Pewter City (tables 2 & 3)
+    ; that remain visible at their destination. Table 1 (Pallet Town Oak escort)
+    ; ends with Oak hidden via HideObject, and its completion runs after warping
+    ; into Oak's Lab where slot 1 belongs to Gary Oak; refreshing slot 1 in Oak's
+    ; Lab would clobber Gary Oak's start position into a wall.
+    ; DEVIATION{class=data-model; pret=engine/overworld/auto_movement.asm:_EndNPCMovementScript; behavior=refresh the scripted slot's MAPY/MAPX from its walk-end pixels before clearing the script state for open-air escorts on their originating map; evidence=scripted walks move pixels only on both sides while the port idle-renders from MAP, so a finished walk stranded its sprite at the start tile offscreen where hardware OAM still shows the walk-end pixels, measured with the Pewter guide at arrival dialog, while Pallet Town table 1 ends post-warp in Oak's Lab where slot 1 is Gary Oak; lifetime=permanent}
     movzx eax, byte [ebp + wNPCMovementScriptSpriteOffset]
     test eax, eax
     jz .noMapRefresh
+    ; Table 1 (Pallet Town escort) hides Oak via HideObject and finishes in Oak's Lab;
+    ; refreshing MAP on Table 1 or any map other than Pewter City clobbers slot 1 on the new map.
+    cmp byte [ebp + wNPCMovementScriptPointerTableNum], 1
+    jbe .noMapRefresh
+    cmp byte [ebp + wCurMap], MAP_ID_PEWTER_CITY
+    jne .noMapRefresh
     push ebx
     push ecx
     ; tileY = (YPIXELS+4)/16 + wYCoord - 4 (invert InitializeSpriteScreenPosition

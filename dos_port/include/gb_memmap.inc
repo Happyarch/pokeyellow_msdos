@@ -1922,6 +1922,7 @@
 
 ; Map IDs (constants/map_constants.asm — subset for implemented maps)
 %define MAP_ID_PALLET_TOWN           0x00
+%define MAP_ID_PEWTER_CITY           0x02   ; pret PEWTER_CITY (constants/map_constants.asm:28)
 %define MAP_ID_OAKS_LAB              0x28   ; pret OAKS_LAB (constants/map_constants.asm:72)
 %define MAP_ID_ROUTE_1               0x0C
 %define MAP_ID_ROUTE_21              0x20
