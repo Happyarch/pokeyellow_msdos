@@ -281,11 +281,7 @@ wPrinterSendState:: db
 wPrinterRowIndex:: db
 
 ; Printer data header
-wPrinterDataHeader::
-wc6ea:: db
-wc6eb:: db
-wc6ec:: db
-wc6ed:: db
+wPrinterDataHeader:: ds 4
 wPrinterChecksum:: dw
 
 UNION
@@ -296,17 +292,18 @@ wPrinterSerialReceived:: db
 ; if this and the previous byte are both $ff: error 2 (connection error)
 wPrinterStatusReceived:: db
 
-wc6f2:: db
-wc6f3:: db
-	ds 12
+	ds 14
+
 wLYOverrides:: ds $100
 wLYOverridesEnd::
 wLYOverridesBuffer:: ds $100
 wLYOverridesBufferEnd::
 
 NEXTU
+wPrinterSendDataSources::
 wPrinterSendDataSource1:: ds 20 tiles
 wPrinterSendDataSource2:: ds 20 tiles
+wPrinterSendDataSourcesEnd::
 ENDU
 
 wPrinterSendDataSource1End::
@@ -319,7 +316,7 @@ wPrinterSendByteOffset:: dw
 wPrinterDataSize:: dw
 wPrinterTileBuffer:: ds SCREEN_AREA
 wPrinterStatusIndicator:: dw
-wcae2:: db
+wPrinterMargins:: db
 wPrinterSettingsTempCopy:: db
 	ds 16
 wPrinterQueueLength:: db
@@ -329,13 +326,7 @@ wPrinterPokedexEntryTextPointer:: dw
 	ds 2
 wPrinterPokedexMonIsOwned:: db
 	ds 226
-UNION
-wcbdc:: ds 1 tiles
-NEXTU
-	ds 14
-wcbea:: dw
-ENDU
-wcbec:: ds 1 tiles
+wPrinterObjectBuffer:: ds 2 tiles
 ENDU
 
 
@@ -447,7 +438,7 @@ wSerialExchangeNybbleReceiveData:: db
 ; this nybble is sent when using Serial_SyncAndExchangeNybble or Serial_ExchangeNybble
 wSerialExchangeNybbleSendData:: db
 	ds 4
-wUnknownSerialCounter:: dw
+wUnknownSerialCounter_cc47:: dw
 ENDU
 
 ; $00 = player mons
@@ -1030,6 +1021,8 @@ wOptionsCursorLocation::
 NEXTU
 wTitleScreenScene:: db
 wTitleScreenTimer:: db
+wTitleScreenResetCounter:: dw
+wTitleScreenPikachuCry:: db
 ENDU
 
 ; 0 = neither
@@ -1507,7 +1500,7 @@ NEXTU
 ; number of hits by player in attacks like Double Slap, etc.
 wPlayerNumHits:: db
 NEXTU
-wUnknownSerialCounter2:: dw
+wLinkByteTimeout:: dw
 ENDU
 
 	ds 2
@@ -2012,13 +2005,14 @@ wWarpEntries:: ds MAX_WARP_EVENTS * 4 ; Y, X, warp ID, map ID
 ; if $ff, the player's coordinates are not updated when entering the map
 wDestinationWarpID:: db
 
+wYellowVersionMemory::
 wPikachuOverworldStateFlags:: db
 wPikachuSpawnState:: db
-wd431:: db
-wd432:: db
-wd433:: db
+wPikachuSpriteStateYPixelOffset:: db
+wPikachuSpriteStateXPixelOffset:: db
+wPikachuCollisionUnusedDelta:: db ; this variable is written to, but is never read from
 wPikachuCollisionCounter:: db
-wd435:: db
+wPlayerIsTalkingToPikachu:: db
 wPikachuFollowCommandBufferSize:: db
 wPikachuFollowCommandBuffer:: ds 16
 
@@ -2037,7 +2031,7 @@ wCurPikaMovementParam1:: db
 wCurPikaMovementFunc1:: db
 wCurPikaMovementParam2:: db
 wCurPikaMovementFunc2:: db
-wd451:: db
+wCurPikaMovementUnusedByte:: db
 wCurPikaMovementSpriteImageIdx:: db
 wPikaSpriteX:: db
 wPikaSpriteY:: db
@@ -2073,23 +2067,24 @@ ENDU
 wPikachuHappiness:: db
 wPikachuMood:: db
 wPikachuSpawnStateFlags:: db
-wd472:: db
+wPlayerState:: db
 	ds 1
-wd474:: db
+wCinnabarGymQuizWrongAnswer:: db
 	ds 4
-wd479:: db
+wReachedMaxInGameTime:: db
 	ds 24
 wPikachuMapScriptFlags:: db
 	ds 1
 wSurfingMinigameHiScore:: dw ; little-endian BCD
 	ds 1
 wPrinterSettings:: db
-wUnknownSerialFlag_d499:: db
+wUnknownSerialFlag_d498:: db
 wPrinterConnectionOpen:: db
 wPrinterOpcode:: db
 wPikachuEmotionModifier:: db
+wYellowVersionMemoryEnd::
 
-	ds 19
+	ds 128 - (wYellowVersionMemoryEnd - wYellowVersionMemory)
 
 ; number of signs in the current map (up to MAX_BG_EVENTS)
 wNumSigns:: db
@@ -2518,7 +2513,7 @@ wCGBPal:: ds PAL_SIZE
 wLastBGP:: db
 wLastOBP0:: db
 wLastOBP1:: db
-wdef4:: db
+wBattleObjPalID:: db
 wBGPPalsBuffer:: ds NUM_ACTIVE_PALS * PAL_SIZE
 
 
