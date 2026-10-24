@@ -225,7 +225,7 @@ LoadPikachuMovementCommandData:
     call GetPikachuMovementScriptByte                   ; call GetPikachuMovementScriptByte
 .no_param2:
     mov [ebp + wCurPikaMovementParam2], al              ; ld [wCurPikaMovementParam2], a
-    mov byte [ebp + wd451], 0                           ; xor a / ld [wd451], a
+    mov byte [ebp + wCurPikaMovementUnusedByte], 0       ; xor a / ld [wCurPikaMovementUnusedByte], a
     stc                                                 ; scf
     ret
 

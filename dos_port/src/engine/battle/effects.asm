@@ -117,7 +117,8 @@ extern ReshowSubstituteAnim          ; src/engine/battle/animations.asm
 
 ; --- battle-animation interpreter (Stage 2b wiring) ---
 extern MoveAnimation                 ; animations.asm — pret predef, direct call in flat model
-extern Func_78e98                    ; animations.asm — BG save/clear/restore around the anim
+extern SaveScreenTilesAndTransferBGMap ; animations.asm — BG save/clear/restore around the anim
+%define Func_78e98 SaveScreenTilesAndTransferBGMap
 
 ; --- flat-model bank passthrough (no banks under DPMI) ---
 extern Bankswitch                    ; src/home/bankswitch2.asm
@@ -249,7 +250,7 @@ SleepEffect:
     and al, SLP_MASK
     jz .setSleepCounter                  ; jr z — reroll on 0
     mov bh, al                           ; ld b,a
-    mov al, [ebp + wUnknownSerialFlag_d499]
+    mov al, [ebp + wUnknownSerialFlag_d498]
     and al, al
     jz .continueSetCounter               ; jr z — XXX stadium stuff? (always taken
                                           ; on real DMG/CGB hardware and in this port;
@@ -431,7 +432,7 @@ FreezeBurnParalyzeEffect:
     mov al, [ebp + wPlayerMoveEffect]
     cmp al, FREEZE_SIDE_EFFECT2         ; more Stadium stuff
     jne .altThreshold1
-    mov al, [ebp + wUnknownSerialFlag_d499]
+    mov al, [ebp + wUnknownSerialFlag_d498]
     test al, al
     mov al, FREEZE_SIDE_EFFECT1         ; mov doesn't touch flags — ZF from the test above survives
     mov bh, (30 * 0xFF / 100) + 1
@@ -500,7 +501,7 @@ FreezeBurnParalyzeEffect:
     mov al, [ebp + wEnemyMoveEffect]
     cmp al, FREEZE_SIDE_EFFECT2
     jne .altThreshold2
-    mov al, [ebp + wUnknownSerialFlag_d499]
+    mov al, [ebp + wUnknownSerialFlag_d498]
     test al, al
     mov al, FREEZE_SIDE_EFFECT1
     mov bh, (30 * 0xFF / 100) + 1
@@ -2034,7 +2035,7 @@ PlayBattleAnimationGotID:
     push edx                             ; push de
     push ebx                             ; push bc
     call MoveAnimation                   ; predef MoveAnimation
-    call Func_78e98                      ; callfar Func_78e98
+    call SaveScreenTilesAndTransferBGMap ; callfar SaveScreenTilesAndTransferBGMap
     pop ebx                              ; pop bc
     pop edx                              ; pop de
     pop esi                              ; pop hl

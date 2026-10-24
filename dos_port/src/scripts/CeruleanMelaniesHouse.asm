@@ -21,14 +21,23 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+global MelanieText1
 global CeruleanHouse1Text_1cfc8
+global MelanieText2
 global CeruleanHouse1Text_1cfce
+global MelanieText3
 global CeruleanHouse1Text_1cfd3
+global MelanieText4
 global CeruleanHouse1Text_1cfd9
+global MelanieText5
 global CeruleanHouse1Text_1cfdf
+global CeruleanMelaniesHouseBulbasaurText
 global CeruleanMelanieHouseBulbasaurText
+global CeruleanMelaniesHouseMelanieText
 global CeruleanMelanieHouseMelanieText
+global CeruleanMelaniesHouseOddishText
 global CeruleanMelanieHouseOddishText
+global CeruleanMelaniesHouseSandshrewText
 global CeruleanMelanieHouseSandshrewText
 global CeruleanMelaniesHouse_Script
 global CeruleanMelaniesHouse_TextPointers
@@ -64,29 +73,30 @@ CeruleanMelaniesHouse_Script:
 %assign event_byte -1
 %assign event_byte_a -1
 CeruleanMelaniesHouse_TextPointers:
-    dd CeruleanMelanieHouseMelanieText
-    dd CeruleanMelanieHouseBulbasaurText
-    dd CeruleanMelanieHouseOddishText
-    dd CeruleanMelanieHouseSandshrewText
+    dd CeruleanMelaniesHouseMelanieText
+    dd CeruleanMelaniesHouseBulbasaurText
+    dd CeruleanMelaniesHouseOddishText
+    dd CeruleanMelaniesHouseSandshrewText
 
 %assign event_byte -1
 %assign event_byte_a -1
+CeruleanMelaniesHouseMelanieText:
 CeruleanMelanieHouseMelanieText:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     CheckEvent EVENT_GOT_BULBASAUR_IN_CERULEAN
-    jnz .asm_1cfbf
-    mov esi, CeruleanHouse1Text_1cfc8
+    jnz .got_bulbasaur
+    mov esi, MelanieText1
     call PrintText
     mov al, [ebp + wPikachuHappiness]
     cmp al, 147
-    jb .asm_1cfb3
-    mov esi, CeruleanHouse1Text_1cfce
+    jb .no_bulbasaur
+    mov esi, MelanieText2
     call PrintText
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
-    jnz .asm_1cfb6
+    jnz .refused
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov al, BULBASAUR
@@ -97,7 +107,7 @@ CeruleanMelanieHouseMelanieText:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov bx, ((153) << 8) | (10)
     call GivePokemon
-    jae .asm_1cfb3
+    jae .no_bulbasaur
     mov al, [ebp + wAddedToParty]
     test al, al
     jnz .sk_42
@@ -105,53 +115,62 @@ CeruleanMelanieHouseMelanieText:
 .sk_42:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
-    mov esi, CeruleanHouse1Text_1cfd3
+    mov esi, MelanieText3
     call PrintText
     mov al, TOGGLE_CERULEAN_BULBASAUR
     mov [ebp + wToggleableObjectIndex], al
 ; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
     call HideObject
     SetEvent EVENT_GOT_BULBASAUR_IN_CERULEAN
+.no_bulbasaur:
 .asm_1cfb3:
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+.refused:
 .asm_1cfb6:
-    mov esi, CeruleanHouse1Text_1cfdf
+    mov esi, MelanieText5
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+.got_bulbasaur:
 .asm_1cfbf:
-    mov esi, CeruleanHouse1Text_1cfd9
+    mov esi, MelanieText4
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+MelanieText1:
 CeruleanHouse1Text_1cfc8:
-    text_far MelanieText1
+    text_far _MelanieText1
     text_waitbutton
     text_end
+MelanieText2:
 CeruleanHouse1Text_1cfce:
-    text_far MelanieText2
+    text_far _MelanieText2
     text_end
+MelanieText3:
 CeruleanHouse1Text_1cfd3:
-    text_far MelanieText3
+    text_far _MelanieText3
     text_waitbutton
     text_end
+MelanieText4:
 CeruleanHouse1Text_1cfd9:
-    text_far MelanieText4
+    text_far _MelanieText4
     text_waitbutton
     text_end
+MelanieText5:
 CeruleanHouse1Text_1cfdf:
-    text_far MelanieText5
+    text_far _MelanieText5
     text_waitbutton
     text_end
+CeruleanMelaniesHouseBulbasaurText:
 CeruleanMelanieHouseBulbasaurText:
-    text_far MelanieBulbasaurText
+    text_far _CeruleanMelaniesHouseBulbasaurText
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -161,8 +180,9 @@ CeruleanMelanieHouseBulbasaurText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+CeruleanMelaniesHouseOddishText:
 CeruleanMelanieHouseOddishText:
-    text_far MelanieOddishText
+    text_far _CeruleanMelaniesHouseOddishText
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -172,8 +192,9 @@ CeruleanMelanieHouseOddishText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+CeruleanMelaniesHouseSandshrewText:
 CeruleanMelanieHouseSandshrewText:
-    text_far MelanieSandshrewText
+    text_far _CeruleanMelaniesHouseSandshrewText
 
 %assign event_byte -1
 %assign event_byte_a -1

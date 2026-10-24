@@ -6,7 +6,7 @@
 ;   GetTileSpriteStandsOn / UpdateSpriteImage / UpdateSpriteMovementDelay /
 ;   UpdateSpriteInWalkingAnimation / NotYetMoving / TryWalking / CanWalkOntoTile /
 ;   Func_5337 / Func_5349 / Func_5357 / MakeNPCFacePlayer / ChangeFacingDirection /
-;   Func_4e32 / Func_5274 / the DoScriptedNPCMovement chain
+;   Func_4e32 / AdvanceScriptedNPCIntraAnimFrameCounter (Func_5274) / the DoScriptedNPCMovement chain
 ;
 ; WHAT IS NO LONGER HERE (chunk 17 of the relocated-label grind): this file used
 ; to carry the entry point and the collision engine as well, under labels whose
@@ -689,7 +689,7 @@ MakeNPCFacePlayer:
 ; Clobbers AL, DL (from Func_5274).
 ; ---------------------------------------------------------------------------
 UpdateSpriteInWalkingAnimation:
-    call Func_5274                      ; advance intra-anim and anim-frame counters
+    call AdvanceScriptedNPCIntraAnimFrameCounter ; advance intra-anim and anim-frame counters
 
     ; YPIXELS += YSTEPVECTOR
     mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]
@@ -1100,15 +1100,15 @@ UpdatePlayerSprite:
 .notMoving:
     mov byte [ebp + W_SPRITE_PLAYER_INTRA_ANIM], 0
     mov byte [ebp + W_SPRITE_PLAYER_ANIM_FRAME], 0
-    call Func_4e32
+    call .setImageIndex
     jmp .grassPriority
 
 .moving:
     mov al, [ebp + wMovementFlags]
     test al, 1 << BIT_SPINNING
     jnz .grassPriority
-    call Func_5274
-    call Func_4e32
+    call AdvanceScriptedNPCIntraAnimFrameCounter
+    call .setImageIndex
 
 .grassPriority:
     ; under-grass BG priority if the standing tile is the tileset's grass tile
@@ -1124,9 +1124,10 @@ UpdatePlayerSprite:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_4e32 — image index = anim frame counter + facing direction.
-; Pret ref: engine/overworld/movement.asm:Func_4e32.
+; .setImageIndex / Func_4e32 — image index = anim frame counter + facing direction.
+; Pret ref: engine/overworld/movement.asm:.setImageIndex (formerly Func_4e32).
 ; ---------------------------------------------------------------------------
+.setImageIndex:
 Func_4e32:
     mov al, [ebp + W_SPRITE_PLAYER_ANIM_FRAME]
     add al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
@@ -1247,7 +1248,7 @@ AnimScriptedNPCMovement:
 
 ; AdvanceScriptedNPCAnimFrameCounter — tick the anim counters, publish frame index.
 AdvanceScriptedNPCAnimFrameCounter:
-    call Func_5274                       ; advance intra-anim + anim-frame counters
+    call AdvanceScriptedNPCIntraAnimFrameCounter ; advance intra-anim + anim-frame counters
     movzx esi, byte [ebp + hCurrentSpriteOffset]
     mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_ANIMFRAMECOUNTER]
     and al, 0x03
@@ -1255,13 +1256,14 @@ AdvanceScriptedNPCAnimFrameCounter:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_5274 — advance the current sprite's walk-animation counters.
+; AdvanceScriptedNPCIntraAnimFrameCounter (formerly Func_5274) — advance the current sprite's walk-animation counters.
 ; Semantic (auto-generated pret label): "AdvanceSpriteAnimFrameCounters".
-; Pret ref: engine/overworld/movement.asm:Func_5274.
+; Pret ref: engine/overworld/movement.asm:AdvanceScriptedNPCIntraAnimFrameCounter.
 ; intra-anim counter ticks 0->3 each call; every 4th tick advances the anim
 ; frame counter 0->3 (16 ticks = a full 4-frame walk cycle).
 ; In: hCurrentSpriteOffset = slot byte offset.
 ; ---------------------------------------------------------------------------
+AdvanceScriptedNPCIntraAnimFrameCounter:
 Func_5274:
     movzx eax, byte [ebp + hCurrentSpriteOffset]
     mov dl, [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_INTRAANIMFRAMECOUNTER]
@@ -1467,7 +1469,7 @@ Func_5331:
 ; vectors. In: hCurrentSpriteOffset = slot byte offset.
 ; ---------------------------------------------------------------------------
 Func_5357:
-    call Func_5274                       ; advance intra-anim + anim-frame counters
+    call AdvanceScriptedNPCIntraAnimFrameCounter ; advance intra-anim + anim-frame counters
     movzx esi, byte [ebp + hCurrentSpriteOffset]
     ; YPIXELS += 2 * YSTEPVECTOR  (pret: a=[+3]; add a; b=a; a=[+4]; add b; [+4]=a)
     mov al, [ebp + esi + wSpriteStateData1 + SPRITESTATEDATA1_YSTEPVECTOR]

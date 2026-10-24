@@ -64,7 +64,7 @@ site is the entire hardware boundary.
   `wPrinterSendDataSource1` payload of `wPrinterDataSize` bytes,
   `wPrinterChecksum`) and interprets the four live packet shapes: INIT resets
   the band accumulator; DATA($280) appends one 640-byte 2bpp band; DATA(0)
-  closes; PRINT (4-byte payload: sheets, margins `wcae2`, palette %11100100,
+  closes; PRINT (4-byte payload: sheets, margins `wPrinterMargins` (formerly `wcae2`), palette %11100100,
   exposure `wPrinterSettingsTempCopy`) renders the page via the backend. On
   completion it publishes `wPrinterHandshake=$81`, `wPrinterStatusFlags` per
   outcome, `wPrinterOpcode=0`. Completion is synchronous; the jumptable's
@@ -103,7 +103,7 @@ New pret mirrors (all labels keep pret names; every routine complete):
   `Printer_PrepareSurfingMinigameHighScoreTileMap`, `Diploma_Surfing_CopyBox`,
   `CopySurfingMinigameScore`, `PrintPCBox_DrawPage1..4`.
 - `dos_port/src/engine/printer/printer2.asm` — `Printer_GetMonStats` + gfx
-  includes.
+  includes (`PrinterHPTileGFX` [formerly `GFX_ea563`], `PrinterLVTileGFX` [formerly `GFX_ea56b`]).
 
 Port-only backend — new `dos_port/src/print/` + `PRINT_SRCS` Makefile bucket
 (model: `SAVE_SRCS`, Makefile:499-500):
@@ -134,14 +134,14 @@ Integration:
 - WRAM: `assets/pret_ram.inc:1198-1221` already carries the printer block at
   shifted addresses (`wPrinterData` 0xCE4A … `wPrinterTileBuffer` 0xD0DA …
   `wPrinterDataEnd` 0xD257; `wPrinterConnectionOpen` 0xE267, `wPrinterOpcode`
-  0xE268). **One gap: `wcae2`** fails `gen_pret_ram.py`'s name filter —
-  hand-add `%define wcae2 0xD244` to gb_memmap.inc, rerun
+  0xE268). **One gap: `wPrinterMargins`** (formerly `wcae2`) fails `gen_pret_ram.py`'s name filter —
+  hand-add `%define wPrinterMargins 0xD244` to gb_memmap.inc, rerun
   `check_ram_collisions.py` + `audit_memmap.py`.
 - **Stale-comment sweep (found 2026-08-20)**: gb_memmap.inc:1266-1278 echo-RAM
   layout comment and the "end = $F100" note above the `wOverworldMap` define
   still describe the pre-expansion $E800 location (CLAUDE.md's clamp paragraph
   too — flag to maintainer; CLAUDE.md edits are theirs). Fix while editing that
-  region for `wcae2`.
+  region for `wPrinterMargins` (`wcae2`).
 
 Generated data (two-tier rule):
 - `tools/generators/gen_printer_strings.py` → `assets/printer_strings.inc`
@@ -149,7 +149,8 @@ Generated data (two-tier rule):
   printer2 `.OT`/`.IDNo`/`.Stats`/`.Blank`). Pointer tables stay hand-written
   `dd` in the `.asm`.
 - Extend `gen_surfing_pikachu.py` (surfing_pikachu_2.2bpp + high_score_1/2
-  tilemaps); new `gen_printer_gfx_inc.py` (gfx/printer/hp.1bpp + lv.1bpp).
+  tilemaps); new `gen_printer_gfx_inc.py` (gfx/printer/hp.1bpp + lv.1bpp ->
+  `PrinterHPTileGFX` / `PrinterLVTileGFX`, formerly `GFX_ea563` / `GFX_ea56b`).
 
 Capture projection: `Printer_CopyTileMapToPrinterTileBuffer` (pret: flat
 360-byte copy) becomes a parameterized 18-row gather (base offset + row-stride
@@ -167,7 +168,7 @@ files.support.epson.com/pdf/general/escp2ref.pdf):
   families — do not generalize it), then per band `ESC * 39 nL nH` (180×180
   dpi, 3 bytes/column, bit 7 = topmost dot) with 320 columns (2×2 scaling of
   the 160-px band ≈ 1.78" strip ≈ real GB Printer width), CR LF; margins via
-  `ESC J` blank lines from the `wcae2` nibbles (fixed documented scale
+  `ESC J` blank lines from the `wPrinterMargins` (formerly `wcae2`) nibbles (fixed documented scale
   constant); final FF ejects deterministically (else the page waits on the
   emulator's `[printer] timeout`). **Avoid m=40/72/73** — reported corrupted
   in DOSBox-X's emulation.
@@ -257,7 +258,7 @@ over renderer state, feeds the device below the seam, invisible to pret code).
   no printer the serial reads $FF → pret deterministically lands on ERROR_2;
   the scenario prints, waits, presses B, dumps GBSTATE. The port runs the same
   keys (its print succeeds — mask transmission-state/status/handshake bytes),
-  comparing the 360-byte `wPrinterTileBuffer` + `wcae2` +
+  comparing the 360-byte `wPrinterTileBuffer` + `wPrinterMargins` (formerly `wcae2`) +
   `wPrinterSettingsTempCopy`. This cross-checks the capture layer against
   ground truth.
 - **Human PDF loop**: `printcheck.sh --ps` → `printoutput=ps, multipage=true`
@@ -273,7 +274,7 @@ over renderer state, feeds the device below the seam, invisible to pret code).
 ## Stages
 
 ### Stage 0 — groundwork (no behavior)
-- [x] Add `%define wcae2 0xD244` to gb_memmap.inc (union comment included);
+- [x] Add `%define wPrinterMargins 0xD244` (formerly `wcae2`) to gb_memmap.inc (union comment included);
       `check_ram_collisions.py` + `audit_memmap.py` clean
 - [x] Sweep the stale pre-expansion wOverworldMap comments
       (gb_memmap.inc:1266-1278 + the "end = $F100" note); flag CLAUDE.md's

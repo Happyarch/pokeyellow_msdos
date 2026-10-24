@@ -21,6 +21,14 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+%ifndef EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE
+%define EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE EVENT_780
+%endif
+%ifndef EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
+%define EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT EVENT_781
+%endif
+
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"
 ; Trainer headers and battle text are DEFINED once, by the single carrier
 ; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
@@ -39,11 +47,17 @@ global SilphCo11FGiovanniAfterBattleScript
 global SilphCo11FGiovanniStartBattleScript
 global SilphCo11FGiovanniText
 global SilphCo11FGiovanniYouRuinedOurPlansText
+global SilphCo11FJamesEncounterRightMovementData
 global SilphCo11FMovementData_622f5
+global SilphCo11FJessieEncounterRightMovementData
 global SilphCo11FMovementData_622fb
+global SilphCo11FJamesEncounterMiddleMovementData
 global SilphCo11FMovementData_62300
+global SilphCo11FJessieEncounterMiddleMovementData
 global SilphCo11FMovementData_62305
+global SilphCo11FJamesEncounterLeftMovementData
 global SilphCo11FMovementData_6230b
+global SilphCo11FJessieEncounterLeftMovementData
 global SilphCo11FMovementData_62311
 global SilphCo11FResetCurScript
 global SilphCo11FRocketText
@@ -57,8 +71,11 @@ global SilphCo11FScript6
 global SilphCo11FScript7
 global SilphCo11FScript8
 global SilphCo11FScript9
+global SilphCo11FBattleGiovanniScript
 global SilphCo11FScript_621c5
+global SilphCo11FSetPlayerDirFacingScript
 global SilphCo11FScript_621ff
+global SilphCo11FEncounterJessieJamesScript
 global SilphCo11FScript_6229c
 global SilphCo11FScript_HideObject
 global SilphCo11FScript_ShowObject
@@ -66,8 +83,11 @@ global SilphCo11FSetCurScript
 global SilphCo11FSetUnlockedDoorEventScript
 global SilphCo11FSilphPresidentText
 global SilphCo11FTeamRocketLeavesScript
+global SilphCoJessieJamesText4
 global SilphCo11FText10
+global SilphCoJessieJamesText2
 global SilphCo11FText9
+global SilphCoJessieJamesText3
 global SilphCo11FText_624c2
 global SilphCo11F_Script
 global SilphCo11F_ScriptPointers
@@ -276,7 +296,7 @@ SilphCo11F_ScriptPointers:
 SilphCo11FDefaultScript:
     CheckEvent EVENT_BEAT_SILPH_CO_11F_JESSIE_JAMES
     jnz .sk_107
-        call SilphCo11FScript_6229c
+        call SilphCo11FEncounterJessieJamesScript
 .sk_107:
     CheckEvent EVENT_782
     jz .nr_109
@@ -284,12 +304,13 @@ SilphCo11FDefaultScript:
 .nr_109:
     CheckEvent EVENT_BEAT_SILPH_CO_GIOVANNI
     jnz .sk_111
-        call SilphCo11FScript_621c5
+        call SilphCo11FBattleGiovanniScript
 .sk_111:
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
+SilphCo11FBattleGiovanniScript:
 SilphCo11FScript_621c5:
     mov esi, .PlayerCoordsArray
     call ArePlayerCoordsInArray
@@ -326,6 +347,7 @@ SilphCo11FScript_621c5:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SilphCo11FSetPlayerDirFacingScript:
 SilphCo11FScript_621ff:
     mov [ebp + wPlayerMovingDirection], al
     mov al, bh
@@ -394,7 +416,7 @@ SilphCo11FGiovanniStartBattleScript:
     mov al, PLAYER_DIR_UP
     mov bh, SPRITE_FACING_DOWN
 .continue:
-    call SilphCo11FScript_621ff
+    call SilphCo11FSetPlayerDirFacingScript
     call Delay3
     xor al, al
     mov [ebp + wJoyIgnore], al
@@ -413,6 +435,7 @@ SilphCo11FGiovanniStartBattleScript:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SilphCo11FEncounterJessieJamesScript:
 SilphCo11FScript_6229c:
     mov al, [ebp + wYCoord]
     cmp al, 0x3
@@ -424,17 +447,17 @@ SilphCo11FScript_6229c:
     jb .nr_225
         ret
 .nr_225:
-    ResetEvents EVENT_780, EVENT_781
+    ResetEvents EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE, EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
     mov al, [ebp + wXCoord]
     cmp al, 0x3
-    jz .asm_622c3
-    SetEventReuseHL EVENT_780
+    jz .got_hallway_column
+    SetEventReuseHL EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE
     mov al, [ebp + wXCoord]
     cmp al, 0x2
-    jz .asm_622c3
-    ResetEventReuseHL EVENT_780
-    SetEventReuseHL EVENT_781
-.asm_622c3:
+    jz .got_hallway_column
+    ResetEventReuseHL EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE
+    SetEventReuseHL EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
+.got_hallway_column:
     call StopAllMusic
     mov bl, 32
     mov al, MUSIC_MEET_JESSIE_JAMES
@@ -459,6 +482,7 @@ SilphCo11FScript_6229c:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SilphCo11FJamesEncounterRightMovementData:
 SilphCo11FMovementData_622f5:
     db 0x5
     db 0x5
@@ -466,18 +490,21 @@ SilphCo11FMovementData_622f5:
     db 0x5
     db 0x5
     db 0xff
+SilphCo11FJessieEncounterRightMovementData:
 SilphCo11FMovementData_622fb:
     db 0x5
     db 0x5
     db 0x5
     db 0x5
     db 0xff
+SilphCo11FJamesEncounterMiddleMovementData:
 SilphCo11FMovementData_62300:
     db 0x5
     db 0x5
     db 0x5
     db 0x5
     db 0xff
+SilphCo11FJessieEncounterMiddleMovementData:
 SilphCo11FMovementData_62305:
     db 0x5
     db 0x5
@@ -485,6 +512,7 @@ SilphCo11FMovementData_62305:
     db 0x5
     db 0x5
     db 0xff
+SilphCo11FJamesEncounterLeftMovementData:
 SilphCo11FMovementData_6230b:
     db 0x5
     db 0x5
@@ -492,6 +520,7 @@ SilphCo11FMovementData_6230b:
     db 0x5
     db 0x5
     db 0xff
+SilphCo11FJessieEncounterLeftMovementData:
 SilphCo11FMovementData_62311:
     db 0x5
     db 0x5
@@ -504,15 +533,15 @@ SilphCo11FMovementData_62311:
 %assign event_byte -1
 %assign event_byte_a -1
 SilphCo11FScript5:
-    mov edi, SilphCo11FMovementData_622f5   ; pret: ld de, SilphCo11FMovementData_622f5 — MoveSprite takes it in EDI
-    CheckEitherEventSet EVENT_780, EVENT_781
+    mov edi, SilphCo11FJamesEncounterRightMovementData   ; pret: ld de, SilphCo11FJamesEncounterRightMovementData — MoveSprite takes it in EDI
+    CheckEitherEventSet EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE, EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
     test al, al
-    jz .asm_6232d
-    mov edi, SilphCo11FMovementData_62300   ; pret: ld de, SilphCo11FMovementData_62300 — MoveSprite takes it in EDI
-    cmp al, 0x1
-    jz .asm_6232d
-    mov edi, SilphCo11FMovementData_6230b   ; pret: ld de, SilphCo11FMovementData_6230b — MoveSprite takes it in EDI
-.asm_6232d:
+    jz .got_movement_data
+    mov edi, SilphCo11FJamesEncounterMiddleMovementData   ; pret: ld de, SilphCo11FJamesEncounterMiddleMovementData — MoveSprite takes it in EDI
+    cmp al, 1 << (EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE % 8)
+    jz .got_movement_data
+    mov edi, SilphCo11FJamesEncounterLeftMovementData   ; pret: ld de, SilphCo11FJamesEncounterLeftMovementData — MoveSprite takes it in EDI
+.got_movement_data:
     mov al, 4
     mov [ebp + hSpriteIndex], al
     call MoveSprite
@@ -537,24 +566,24 @@ SilphCo11FScript7:
     mov [ebp + wSprite04StateData1MovementStatus], al
     mov esi, wSprite04StateData1FacingDirection
     mov byte [ebp + esi], SPRITE_FACING_RIGHT
-    CheckEitherEventSet EVENT_780, EVENT_781
+    CheckEitherEventSet EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE, EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
     test al, al
-    jz .asm_6235e
+    jz .got_facing
     mov byte [ebp + esi], SPRITE_FACING_UP
-.asm_6235e:
+.got_facing:
     call Delay3
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
 SilphCo11FScript8:
-    mov edi, SilphCo11FMovementData_622fb   ; pret: ld de, SilphCo11FMovementData_622fb — MoveSprite takes it in EDI
-    CheckEitherEventSet EVENT_780, EVENT_781
+    mov edi, SilphCo11FJessieEncounterRightMovementData   ; pret: ld de, SilphCo11FJessieEncounterRightMovementData — MoveSprite takes it in EDI
+    CheckEitherEventSet EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE, EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
     test al, al
-    jz .asm_6237b
-    mov edi, SilphCo11FMovementData_62305   ; pret: ld de, SilphCo11FMovementData_62305 — MoveSprite takes it in EDI
-    cmp al, 0x1
-    jz .asm_6237b
-    mov edi, SilphCo11FMovementData_62311   ; pret: ld de, SilphCo11FMovementData_62311 — MoveSprite takes it in EDI
-.asm_6237b:
+    jz .got_movement_data
+    mov edi, SilphCo11FJessieEncounterMiddleMovementData   ; pret: ld de, SilphCo11FJessieEncounterMiddleMovementData — MoveSprite takes it in EDI
+    cmp al, 1 << (EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE % 8)
+    jz .got_movement_data
+    mov edi, SilphCo11FJessieEncounterLeftMovementData   ; pret: ld de, SilphCo11FJessieEncounterLeftMovementData — MoveSprite takes it in EDI
+.got_movement_data:
     mov al, 6
     mov [ebp + hSpriteIndex], al
     call MoveSprite
@@ -581,11 +610,11 @@ SilphCo11FScript10:
     mov [ebp + wSprite06StateData1MovementStatus], al
     mov esi, wSprite06StateData1FacingDirection
     mov byte [ebp + esi], SPRITE_FACING_UP
-    CheckEitherEventSet EVENT_780, EVENT_781
+    CheckEitherEventSet EVENT_SILPH_CO_11_JESSIE_JAMES_ON_MIDDLE, EVENT_SILPH_CO_11_JESSIE_JAMES_ON_LEFT
     test al, al
-    jz .asm_623b1
+    jz .got_facing
     mov byte [ebp + esi], SPRITE_FACING_LEFT
-.asm_623b1:
+.got_facing:
     call Delay3
     mov al, TEXT_SILPHCO11F_TEXT9
     mov [ebp + hTextID], al
@@ -594,8 +623,8 @@ SilphCo11FScript11:
     mov esi, wStatusFlags3
     or byte [ebp + esi], (1 << (BIT_TALKED_TO_TRAINER))
     or byte [ebp + esi], (1 << (BIT_PRINT_END_BATTLE_TEXT))
-    mov esi, SilphCo11FText_624c2
-    mov edx, SilphCo11FText_624c2   ; pret: ld de, SilphCo11FText_624c2 — SaveEndBattleTextPointers takes it in EDX
+    mov esi, SilphCoJessieJamesText3
+    mov edx, SilphCoJessieJamesText3   ; pret: ld de, SilphCoJessieJamesText3 — SaveEndBattleTextPointers takes it in EDX
     call SaveEndBattleTextPointers
     mov al, OPP_ROCKET
     mov [ebp + wCurOpponent], al
@@ -709,12 +738,15 @@ SilphCo11FScript_HideObject:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SilphCoJessieJamesText2:
 SilphCo11FText9:
     text_far _SilphCoJessieJamesText2
     text_end
+SilphCoJessieJamesText3:
 SilphCo11FText_624c2:
     text_far _SilphCoJessieJamesText3
     text_end
+SilphCoJessieJamesText4:
 SilphCo11FText10:
     text_far _SilphCoJessieJamesText4
 

@@ -149,7 +149,7 @@ PrintDev_ConsumePacket:
     jmp .respond
 
 .handle_print:
-    ; 4-byte PRINT payload: sheets, margins, palette, exposure
+    ; 4-byte PRINT payload: sheets, margins (wPrinterMargins / wcae2), palette, exposure (wPrinterSettingsTempCopy)
     mov al, [ebp + wPrinterSendDataSource1 + 0]
     mov [g_print_sheets], al
     mov al, [ebp + wPrinterSendDataSource1 + 1]

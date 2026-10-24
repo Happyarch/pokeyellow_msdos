@@ -864,7 +864,8 @@ extern ClearScreen          ; home/copy2.asm
 extern GBPalWhiteOut        ; src/home/palettes.asm
 extern ReloadMapData        ; home/reload_tiles.asm
 extern DelayFrames          ; src/home/delay.asm — BL = frames
-extern Func_1510            ; home/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
+extern EnableHidePikachuWhileLeavingMap ; home/pikachu.asm — ItemUseEscapeRope's Pikachu refresh
+%define Func_1510 EnableHidePikachuWhileLeavingMap
 extern WaitForTextScrollButtonPress ; src/home/joypad2.asm
 extern ItemUseText00_ref            ; assets/item_text.inc — "<PLAYER> used <ITEM>!"
 extern PrintText        ; home/window.asm — ESI = FLAT TX stream ptr
@@ -3374,7 +3375,7 @@ ItemUseEscapeRope:
     jne .loop
     ; ld hl, wStatusFlags6 / set BIT_FLY_WARP, [hl] / set BIT_ESCAPE_WARP, [hl]
     or  byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
-    call Func_1510                      ; Pikachu: force a sprite-state refresh
+    call EnableHidePikachuWhileLeavingMap ; Pikachu: force a sprite-state refresh
     ; ld hl, wStatusFlags4 / res BIT_NO_BATTLES, [hl]
     and byte [ebp + wStatusFlags4], (~(1 << BIT_NO_BATTLES)) & 0xFF
     ResetEvent EVENT_IN_SAFARI_ZONE     ; pret's compile-time ResetEvent macro

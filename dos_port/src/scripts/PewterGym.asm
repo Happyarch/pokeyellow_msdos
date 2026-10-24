@@ -283,7 +283,7 @@ PewterGymGuideText:
     jnz .PewterGymGuideBeginAdviceText
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
-    jnz .asm_5c3fa
+    jnz .pikachuIsFollowing
     mov esi, PewterGymGuideBeginAdviceText
     call PrintText
     jmp .PewterGymGuideAdviceText
@@ -308,8 +308,9 @@ PewterGymGuideText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+.pikachuIsFollowing:
 .asm_5c3fa:
-    mov esi, PewterGymText_5c41c
+    mov esi, PewterGymGuyPikachuText
     call PrintText
     jmp TextScriptEnd
 
@@ -330,6 +331,9 @@ PewterGymGuideFreeServiceText:
 PewterGymGuidePostBattleText:
     text_far _PewterGymGuidePostBattleText
     text_end
+global PewterGymGuyPikachuText
+global PewterGymText_5c41c
+PewterGymGuyPikachuText:
 PewterGymText_5c41c:
-    text_far _PewterGymGuyText
+    text_far _PewterGymGuyPikachuText
     text_end

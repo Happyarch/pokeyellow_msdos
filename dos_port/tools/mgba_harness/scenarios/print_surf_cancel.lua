@@ -7,7 +7,7 @@
 -- with surfing Pikachu unlocked and choosing to print the high score:
 --   1. Executes SummerBeachHousePrinterText -> Func_f23d0 -> PrintSurfingMinigameHighScore.
 --   2. PrintSurfingMinigameHighScore renders the high score tilemap to wTileMap,
---      sets up transmission (wcae2 = 0x13, wPrinterSettingsTempCopy), and copies
+--      sets up transmission (wPrinterMargins = 0x13, wPrinterSettingsTempCopy), and copies
 --      the 360-byte tilemap into wPrinterTileBuffer.
 --   3. In mGBA with no printer on the serial bus, the transmission loop times out
 --      into PRINTER_ERROR_2 ("CHECK THE CABLE / OR PRINTER MANUAL").
@@ -17,7 +17,7 @@
 --
 -- Compared surfaces:
 --   - wPrinterTileBuffer (360 B): the captured 20x18 tile IDs of the high score page.
---   - wcae2 (1 B): the printer margin/sheet settings byte.
+--   - wPrinterMargins (1 B): the printer margin/sheet settings byte (formerly wcae2).
 --   - wPrinterSettings (1 B): the temporary copy of printer settings.
 --   - Standard video regions (wTileMap, vram_tiles, oam, cgb_palettes) and WRAM game data.
 
@@ -52,7 +52,7 @@ local D_UP = 0x01                -- D-pad UP direction bit
 local function regions()
 	local r = dump.standard_regions(sym)
 	r[#r + 1] = { name = "wPrinterTileBuffer", addr = sym:addr("wPrinterTileBuffer"), size = 360 }
-	r[#r + 1] = { name = "wcae2",             addr = sym:addr("wcae2"),             size = 1 }
+	r[#r + 1] = { name = "wPrinterMargins",    addr = sym:addr("wPrinterMargins"),    size = 1 }
 	r[#r + 1] = { name = "wPrinterSettings",   addr = sym:addr("wPrinterSettingsTempCopy"), size = 1 }
 	return r
 end
@@ -202,7 +202,7 @@ scenario.run(function()
 		dump.write("print_surf_cancel", regions(), {
 			frame = scenario.frame(),
 			description = "Summer Beach House printer high-score print cancelled: " ..
-				"wPrinterTileBuffer (360 B), wcae2, wPrinterSettingsTempCopy captured",
+				"wPrinterTileBuffer (360 B), wPrinterMargins, wPrinterSettingsTempCopy captured",
 		})
 	end)
 end)

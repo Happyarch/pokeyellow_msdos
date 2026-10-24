@@ -1172,7 +1172,7 @@ gbstate_regions:
     ; is legible.)
     gbregion "linkStatus",    hSerialConnectionStatus, 1
     gbregion "linkTimeout",   wLinkTimeoutCounter, 1
-    gbregion "serialCounter", wUnknownSerialCounter, 2
+    gbregion "serialCounter", wUnknownSerialCounter_cc47, 2
     gbregion "menuPollCount", wMenuJoypadPollCount, 1
     gbregion "wPlayerMapPos", wCurMap, 5                 ; wCurMap .. wXCoord
 %endif
@@ -1202,7 +1202,7 @@ gbstate_regions:
 %ifdef DEBUG_PRINT_SURF_CANCEL
     ; --- print_surf_cancel golden (printer plan Stage 3) ---
     gbregion "wPrinterTileBuffer", wPrinterTileBuffer, 360
-    gbregion "wcae2",             wcae2,              1
+    gbregion "wcae2",             wPrinterMargins,    1
     gbregion "wPrinterSettings",   wPrinterSettingsTempCopy, 1
 %endif
 ; The stall-probe regions compile under EITHER the battle-frame photograph

@@ -27,8 +27,11 @@ global Museum2FHikerText
 global Museum2FMoonStoneSignText
 global Museum2FScientistText
 global Museum2FSpaceShuttleSignText
+global Museum2FHikerText1
 global Museum2FText_5c20e
+global Museum2FHikerText2
 global Museum2FText_5c213
+global Museum2FHikerText3
 global Museum2FText_5c218
 global Museum2FYoungsterText
 global Museum2F_Script
@@ -87,39 +90,45 @@ Museum2FBrunetteGirlText:
 Museum2FHikerText:
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (BIT_PIKACHU_SPAWN_STARTER))
-    jnz .asm_5c1f6
-    mov esi, Museum2FText_5c20e
+    jnz .pikachuIsFollowing
+    mov esi, Museum2FHikerText1
     call PrintText
-    jmp .asm_5c20b
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
+.pikachuIsFollowing:
 .asm_5c1f6:
     mov al, [ebp + wPikachuHappiness]
     cmp al, 101
-    jb .asm_5c205
-    mov esi, Museum2FText_5c218
+    jb .pikachuIsUnhappy
+    mov esi, Museum2FHikerText3
     call PrintText
-    jmp .asm_5c20b
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
+.pikachuIsUnhappy:
 .asm_5c205:
-    mov esi, Museum2FText_5c213
+    mov esi, Museum2FHikerText2
     call PrintText
+.done:
 .asm_5c20b:
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+Museum2FHikerText1:
 Museum2FText_5c20e:
-    text_far _Museum2FHikerText
+    text_far _Museum2FHikerText1
     text_end
+Museum2FHikerText2:
 Museum2FText_5c213:
-    text_far _Museum2FPikachuText1
+    text_far _Museum2FHikerText2
     text_end
+Museum2FHikerText3:
 Museum2FText_5c218:
-    text_far _Museum2FPikachuText2
+    text_far _Museum2FHikerText3
     text_end
 Museum2FSpaceShuttleSignText:
     text_far _Museum2FSpaceShuttleSignText

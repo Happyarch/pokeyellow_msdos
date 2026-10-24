@@ -89,6 +89,27 @@ def main():
             continue
         seen.setdefault(name, _shift(addr))
 
+    # Backward compatibility aliases for upstream pret WRAM renames
+    ALIASES = {
+        "wd474": "wCinnabarGymQuizWrongAnswer",
+        "wc6ea": "wPrinterDataHeader",
+        "wcae2": "wPrinterMargins",
+        "wUnknownSerialCounter": "wUnknownSerialCounter_cc47",
+        "wUnknownSerialCounter2": "wLinkByteTimeout",
+        "wd431": "wPikachuSpriteStateYPixelOffset",
+        "wd432": "wPikachuSpriteStateXPixelOffset",
+        "wd433": "wPikachuCollisionUnusedDelta",
+        "wd435": "wPlayerIsTalkingToPikachu",
+        "wd451": "wCurPikaMovementUnusedByte",
+        "wd472": "wPlayerState",
+        "wd479": "wReachedMaxInGameTime",
+        "wUnknownSerialFlag_d499": "wUnknownSerialFlag_d498",
+        "wdef4": "wBattleObjPalID",
+    }
+    for old_name, new_name in ALIASES.items():
+        if old_name not in seen and new_name in seen:
+            seen[old_name] = seen[new_name]
+
     # Skip anything already declared anywhere in the port: gb_memmap.inc carries the
     # deliberate relocations, and src/ still holds per-file declarations. Emitting a
     # second equ for either is a hard NASM error, and silently overriding a relocation

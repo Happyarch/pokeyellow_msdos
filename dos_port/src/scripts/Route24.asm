@@ -21,6 +21,10 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+%ifndef EVENT_GOT_CHARMANDER_ON_ROUTE_24
+%define EVENT_GOT_CHARMANDER_ON_ROUTE_24 EVENT_54F
+%endif
+
 ; Trainer headers and battle text are DEFINED once, by the single carrier
 ; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
 ; assets/trainer_headers.inc here — the asset DEFINES all 1302 symbols, so an
@@ -45,9 +49,13 @@ global Route24CooltrainerM4Text
 global Route24DefaultScript
 global Route24PlayerMovingScript
 global Route24SetDefaultScript
+global Route24DamianText1
 global Route24Text_515de
+global Route24DamianText2
 global Route24Text_515e3
+global Route24DamianText3
 global Route24Text_515e9
+global Route24DamianText4
 global Route24Text_515ee
 global Route24Youngster1Text
 global Route24Youngster2Text
@@ -323,14 +331,14 @@ Route24Youngster2Text:
 %assign event_byte -1
 %assign event_byte_a -1
 Route24CooltrainerM4Text:
-    CheckEvent EVENT_54F
-    jnz .asm_515d5
-    mov esi, Route24Text_515de
+    CheckEvent EVENT_GOT_CHARMANDER_ON_ROUTE_24
+    jnz .got_charmander
+    mov esi, Route24DamianText1
     call PrintText
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
-    jnz .asm_515d0
+    jnz .refused
     mov al, CHARMANDER
     mov [ebp + wNamedObjectIndex], al
     mov [ebp + wCurPartySpecies], al
@@ -347,37 +355,44 @@ Route24CooltrainerM4Text:
 .sk_306:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
-    mov esi, Route24Text_515e3
+    mov esi, Route24DamianText2
     call PrintText
-    SetEvent EVENT_54F
+    SetEvent EVENT_GOT_CHARMANDER_ON_ROUTE_24
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+.refused:
 .asm_515d0:
-    mov esi, Route24Text_515e9
-    jmp .asm_515d8
+    mov esi, Route24DamianText3
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
+.got_charmander:
 .asm_515d5:
-    mov esi, Route24Text_515ee
+    mov esi, Route24DamianText4
+.done:
 .asm_515d8:
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+Route24DamianText1:
 Route24Text_515de:
     text_far _Route24DamianText1
     text_end
+Route24DamianText2:
 Route24Text_515e3:
     text_far _Route24DamianText2
     text_waitbutton
     text_end
+Route24DamianText3:
 Route24Text_515e9:
     text_far _Route24DamianText3
     text_end
+Route24DamianText4:
 Route24Text_515ee:
     text_far _Route24DamianText4
     text_end

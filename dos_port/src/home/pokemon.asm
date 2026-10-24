@@ -82,7 +82,8 @@ extern PartyMenuPrintText               ; src/engine/menus/party_menu.asm — Pr
 extern PrintStatusAilment               ; src/engine/pokemon/status_ailments.asm
 extern IsThisPartyMonStarterPikachu     ; src/engine/pikachu/pikachu_status.asm
 extern CheckPikachuFollowingPlayer      ; src/home/pikachu.asm
-extern PartyMenuText_12cc               ; assets/item_text.inc (_SleepingPikachuText1)
+extern SleepingPikachuText1            ; assets/item_text.inc (_SleepingPikachuText1)
+%define PartyMenuText_12cc SleepingPikachuText1
 extern CryData                          ; assets/cry_data.inc via src/data/pokemon/cries.asm
 extern PlaySound                        ; src/home/audio.asm — AL = sound id
 extern WaitForSoundToFinish             ; src/home/delay.asm — block until channels drain
@@ -408,11 +409,12 @@ HandlePartyMenuInput:
     ; call BankswitchBack — flat memory: nothing to restore
     clc                                         ; and a
     ret
+.pikachuNotFollowing:
 .asm_128f:
     ; The starter Pikachu is walking with us — it can't be selected from the menu.
     ; "There isn't any response..." (_SleepingPikachuText1).
     pop eax                                     ; pop af — drop the pressed keys
-    mov esi, PartyMenuText_12cc                 ; ld hl, PartyMenuText_12cc
+    mov esi, SleepingPikachuText1               ; ld hl, SleepingPikachuText1 (formerly PartyMenuText_12cc)
     ; DEVIATION{class=projection; pret=home/pokemon.asm:HandlePartyMenuInput; behavior=route the sleeping-Pikachu text through the party message-box projection; evidence=pret bare PrintText call plus port party screen stride-20 window ownership; lifetime=permanent window-compositor boundary}
     ; pret's bare `call PrintText` lands in the GB dialog
     ; rows, which ARE this screen's message area. The port draws the party screen on

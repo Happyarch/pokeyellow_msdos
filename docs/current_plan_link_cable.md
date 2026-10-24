@@ -169,7 +169,7 @@ sketch lives in this section's git history (c86733f).
    (`LINKLOG.BIN`) and the harness asserts A.sent == B.recv both ways.
 5. **Disconnect escape hatch** (pret spins forever post-club — a new
    `DEVIATION{class=HAL}`): transport death (keepalive misses / ARQ
-   exhaustion / TCP reset) forces `wUnknownSerialCounter*` to expiry so
+   exhaustion / TCP reset) forces `wUnknownSerialCounter_cc47` / `wLinkByteTimeout` (formerly `wUnknownSerialCounter*`) to expiry so
    pret's own timeout text fires where it exists; where none exists, a
    hold-B abort routes into `CloseLinkConnection` + link-error text.
 
@@ -275,7 +275,9 @@ blocks in `src/engine/menus/naming_screen.asm`.
       $FFA9, `hSerialIgnoringInitialData` $FFAB (contiguous pret HRAM block),
       `wSerialExchangeNybbleTempReceiveData` $D78B (pret union),
       `wLinkTimeoutCounter` $D795 (pret same-byte declaration),
-      `wUnknownSerialCounter2` $DE41 (pret union w/ Bide),
+      `wLinkByteTimeout` (formerly `wUnknownSerialCounter2`) $DE41 (pret union w/ Bide),
+      `wUnknownSerialCounter_cc47` (formerly `wUnknownSerialCounter`) $CC47,
+      `wUnknownSerialFlag_d498` (formerly `wUnknownSerialFlag_d499`) $D498,
       `wPrinterConnectionOpen` $E267 (contiguous run E265-E269);
       `check_ram_collisions` + `check_ram_addresses` + `audit_memmap` +
       `check_ram_straddle` all clean
@@ -313,7 +315,7 @@ blocks in `src/engine/menus/naming_screen.asm`.
 - [x] Gates: faithdiff per label run 2026-08-21 (all findings are the
       annotated HAL boundary: NetHAL_* calls, virtual IO_SB/IO_SC stores, and
       faithdiff's documented pointer-indirect-store blind spot on
-      wUnknownSerialCounter / the receive buffers); lint 0 in both modes;
+      `wUnknownSerialCounter_cc47` (formerly `wUnknownSerialCounter`) / the receive buffers); lint 0 in both modes;
       full build links; `fidelity-serial` core tier 16/16 PASS 2026-08-21
       AND `fidelity-full-serial` 87/87 PASS 2026-08-22 (zero single-player
       drift with the DelayFrame pump call in place; both run AFTER fixing

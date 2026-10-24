@@ -126,7 +126,24 @@ extern SpecialEnterMap          ; engine/menus/main_menu.asm       (jpfar target
 
 ; --- cup-eligibility dependencies (PokeCup/PikaCup/PetitCup, below) ----------
 extern GetMonName               ; home/names.asm — in: wNamedObjectIndex -> wNameBuffer
-extern Func_3b10f               ; engine/pokemon/evos_moves.asm — species-evolves-into check
+extern FindPreEvolution          ; engine/pokemon/evos_moves.asm — species-evolves-into check
+%define Func_3b10f FindPreEvolution
+
+%ifndef wUnknownSerialFlag_d498
+%ifdef wUnknownSerialFlag_d499
+%define wUnknownSerialFlag_d498 wUnknownSerialFlag_d499
+%else
+%define wUnknownSerialFlag_d498 0xE266
+%endif
+%endif
+
+%ifndef wUnknownSerialCounter_cc47
+%ifdef wUnknownSerialCounter
+%define wUnknownSerialCounter_cc47 wUnknownSerialCounter
+%else
+%define wUnknownSerialCounter_cc47 0xD795
+%endif
+%endif
 ; PokedexEntryPointers — assets/dex_entries.inc (DO NOT %include the data file
 ; here: engine/menus/pokedex.asm owns the %include/embed; duplicate-including it
 ; would double-define every DexEntry label at link time). `dd` flat 32-bit .data
@@ -367,9 +384,9 @@ Func_f531b:
     ; ld c,$14 / call DelayFrames
     mov bl, 0x14
     call DelayFrames
-    ; ld a,$1 / ld [wBuffer],a ; xor a / ld [wUnknownSerialFlag_d499],a
+    ; ld a,$1 / ld [wBuffer],a ; xor a / ld [wUnknownSerialFlag_d498],a
     mov byte [ebp + wBuffer], 1
-    mov byte [ebp + wUnknownSerialFlag_d499], 0
+    mov byte [ebp + wUnknownSerialFlag_d498], 0
     mov dword [text_row_stride], LM_STRIDE
     ; hlcoord 0,0 / lb bc,4,5 / TextBoxBorder — View/Rules box (interior 5x4)
     mov esi, CUP(0, 0)
@@ -529,7 +546,7 @@ Func_f531b:
     cmp al, 3                       ; CANCEL?
     je asm_f547f
     inc al
-    mov [ebp + wUnknownSerialFlag_d499], al
+    mov [ebp + wUnknownSerialFlag_d498], al
     ; hl = PointerTable_f5488[currentMenuItem]; call it (returns eligibility in AL).
     movzx ecx, byte [ebp + wCurrentMenuItem]
     mov esi, PointerTable_f5488
@@ -537,7 +554,7 @@ Func_f531b:
     call esi                        ; -> pret .returnaddress
 .returnaddress:
     mov [ebp + wLinkMenuSelectionSendBuffer], al ; local eligibility result
-    mov word [ebp + wUnknownSerialCounter], 0
+    mov word [ebp + wUnknownSerialCounter_cc47], 0
     call Serial_SyncAndExchangeNybble   ; no-link hatch -> $ff (remote-ineligible path)
     ; local ineligible? (send buffer != 0)
     mov al, [ebp + wLinkMenuSelectionSendBuffer]
@@ -548,7 +565,7 @@ Func_f531b:
     and al, al
     jnz Func_f5476
     ; both eligible -> return CF=0 (proceed).
-    mov word [ebp + wUnknownSerialCounter], 0
+    mov word [ebp + wUnknownSerialCounter_cc47], 0
     xor al, al                      ; and a -> CF=0
     ret
 
@@ -562,7 +579,7 @@ asm_f547c:
     jmp Func_f531b
 
 asm_f547f:
-    mov word [ebp + wUnknownSerialCounter], 0
+    mov word [ebp + wUnknownSerialCounter_cc47], 0
     stc                             ; scf -> CF=1 (cancel)
     ret
 
@@ -735,21 +752,21 @@ PetitCup:
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
     push esi                            ; pret push/pop hl around the farcall
-    call Func_3b10f
+    call FindPreEvolution
     pop esi                             ; esi -> current mon species byte
     jc asm_f56ad                        ; CF=1: mon is an evolved form
     inc esi                             ; esi -> mon2 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
     push esi
-    call Func_3b10f
+    call FindPreEvolution
     pop esi
     jc asm_f56ad
     inc esi                             ; esi -> mon3 address
     mov al, [ebp + esi]
     mov [ebp + wCurPartySpecies], al
     push esi
-    call Func_3b10f
+    call FindPreEvolution
     pop esi
     jc asm_f56ad
     dec esi
@@ -1321,7 +1338,7 @@ LinkMenu:
     jnz .drain2
     jmp .asm_f59d6
 .asm_f59b2:
-    mov word [ebp + wUnknownSerialCounter], 0
+    mov word [ebp + wUnknownSerialCounter_cc47], 0
     mov al, [ebp + wNamedObjectIndex]
     and al, al
     jz .asm_f59cd

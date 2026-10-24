@@ -269,7 +269,7 @@ PrepareOAMData:
     ja .clearUnused
 
     ; --- draw the sprite's OAM entries ---
-    call Func_4a7b                       ; AL = VRAM base tile from image index
+    call GetSpriteImageIndex             ; AL = VRAM base tile from image index
     mov [ebp + wSavedSpriteImageIndex], al
 
     ; Compute 32-bit DOS base position for extended 320×200 viewport.
@@ -525,11 +525,12 @@ GetSpriteScreenXY:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_4a7b — map the saved image index's high nibble (which sprite) to its
+; GetSpriteImageIndex (formerly Func_4a7b) — map the saved image index's high nibble (which sprite) to its
 ; VRAM base tile (sprite n occupies 12 tiles; sprites $a/$b use only 4).
-; Pret ref: engine/gfx/sprite_oam.asm:Func_4a7b.
+; Pret ref: engine/gfx/sprite_oam.asm:GetSpriteImageIndex.
 ; In: wSavedSpriteImageIndex. Out: AL = VRAM base tile. Clobbers EAX, ECX.
 ; ---------------------------------------------------------------------------
+GetSpriteImageIndex:
 Func_4a7b:
     mov al, [ebp + wSavedSpriteImageIndex]
     ror al, 4                            ; swap a — high nibble = sprite number

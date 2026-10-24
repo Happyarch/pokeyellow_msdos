@@ -21,6 +21,8 @@ bits 32
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_macros.inc"
+%undef SFX_SURFING_UNUSED
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"   ; SFX_COLLISION / MUSIC_* (audio engine is live)
 %include "assets/map_dims.inc"          ; map-id + tileset-id constants (OAKS_LAB/CINNABAR_GYM/SHIP_PORT, OW-A.6)
 %include "assets/event_constants.inc"   ; EVENT_* bit indices (EVENT_2A7, OW-A.6)
@@ -150,7 +152,7 @@ extern _GetTileAndCoordsInFrontOfPlayer   ; src/engine/overworld/player_state.as
 extern CheckPikachuFollowingPlayer        ; src/home/pikachu.asm — ZF as bit 1,[hl] (ZF=1 => following)
 extern IsNextTileShoreOrWater             ; src/engine/items/item_effects.asm
 extern IsPlayerStandingOnDoorTileOrWarpTile ; src/engine/overworld/player_state.asm
-extern IsPlayerTalkingToPikachu            ; src/engine/pikachu/pikachu_emotions.asm
+extern _IsPlayerTalkingToPikachu           ; src/engine/pikachu/pikachu_emotions.asm
 extern LoadSpinnerArrowTiles               ; src/engine/overworld/spinners.asm (IsSpinning tail)
 extern MarkTownVisitedAndLoadToggleableObjects ; src/engine/overworld/toggleable_objects.asm
 extern LoadToggleableObjectData            ; src/engine/overworld/unused_load_toggleable_object_data.asm
@@ -1919,7 +1921,7 @@ OverworldLoopLessDelay:                      ; pret: home/overworld.asm:Overworl
     call CheckForHiddenEventOrBookshelfOrCardKeyDoor
     cmp byte [ebp + hItemAlreadyFound], 0
     je OverworldLoop                             ; pret: jp z, OverworldLoop (handled)
-    mov byte [ebp + wd435], 0                    ; xor a / ld [wd435],a
+    mov byte [ebp + wPlayerIsTalkingToPikachu], 0 ; xor a / ld [wPlayerIsTalkingToPikachu],a
     call IsSpriteOrSignInFrontOfPlayer
     call Func_0ffe
     mov al, [ebp + hTextID]
@@ -2553,7 +2555,9 @@ global GetSimulatedInput
 global RunMapScript
 global DefaultMapScript
 global LoadWalkingPlayerSpriteGraphics
+global LoadSurfingPlayerSpriteGraphicsByState
 global LoadSurfingPlayerSpriteGraphics2
+global LoadSurfingPikachuSpriteGraphics
 global LoadSurfingPlayerSpriteGraphics
 global LoadBikePlayerSpriteGraphics
 global LoadPlayerSpriteGraphicsCommon
@@ -3131,7 +3135,7 @@ LoadPlayerSpriteGraphics:
     dec al
     jz LoadBikePlayerSpriteGraphics          ; 1 → biking
     dec al
-    jz LoadSurfingPlayerSpriteGraphics2      ; 2 → surfing
+    jz LoadSurfingPlayerSpriteGraphicsByState ; 2 → surfing
     jmp LoadWalkingPlayerSpriteGraphics      ; fallback
 IsBikeRidingAllowed:
     mov al, [ebp + wCurMap]
@@ -3528,8 +3532,8 @@ IsSpriteInFrontOfPlayer2:
     ; pret re-reads hSpriteIndex here ("possible useless read because a already has
     ; the value") — elided; AL already holds it.
     cmp al, PIKACHU_SPRITE_INDEX
-    jne .dontwritetowd436            ; pret's label typo (.dontwritetowd436 → wd435) kept
-    mov byte [ebp + wd435], 0xFF
+    jne .dontwritetowd436            ; pret's label typo (.dontwritetowd436 → wPlayerIsTalkingToPikachu) kept
+    mov byte [ebp + wPlayerIsTalkingToPikachu], 0xFF
 .dontwritetowd436:
     stc                              ; scf: found
     ret
@@ -4366,6 +4370,7 @@ LoadWalkingPlayerSpriteGraphics:
     mov byte [ebp + W_D472], 0
     mov esi, player_sprite                  ; RedSprite (walking) — DE in pret
     jmp LoadPlayerSpriteGraphicsCommon
+LoadSurfingPlayerSpriteGraphicsByState:
 LoadSurfingPlayerSpriteGraphics2:
     mov al, [ebp + W_D472]
     test al, al
@@ -4373,10 +4378,11 @@ LoadSurfingPlayerSpriteGraphics2:
     dec al
     jz LoadSurfingPlayerSpriteGraphics      ; d472 == 1
     dec al
-    jz .surfPikachu                         ; d472 == 2
+    jz LoadSurfingPikachuSpriteGraphics     ; d472 == 2
 .checkPikachu:
     test byte [ebp + W_PIKACHU_SPAWN_STATE_FLAGS], (1 << BIT_PIKACHU_SPAWN_SURFING)
     jz LoadSurfingPlayerSpriteGraphics
+LoadSurfingPikachuSpriteGraphics:
 .surfPikachu:
     mov esi, SurfingPikachuSprite
     jmp LoadPlayerSpriteGraphicsCommon
@@ -5138,7 +5144,7 @@ global IsSpriteInFrontOfPlayer2              ; long-range entry — counter bran
 ; linchpin of pret's contract): SignLoop stores the sign's text id, the sprite
 ; scan stores the slot number. Out: CF=1 if a sign or sprite faces the player;
 ; CF=0 and [hTextID]=0 otherwise. The caller distinguishes sign vs sprite by
-; id <= [wNumSprites] (pret DisplayTextID's rule) and zeroes wd435 first
+; id <= [wNumSprites] (pret DisplayTextID's rule) and zeroes wPlayerIsTalkingToPikachu first
 ; (pret OverworldLoop does both).
 ;
 ; A counter-tile match enters the scan at IsSpriteInFrontOfPlayer2 with
@@ -5211,11 +5217,13 @@ IsSpinning:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_0ffe — pret home/overworld.asm:2131 (jpfar IsPlayerTalkingToPikachu)
+; IsPlayerTalkingToPikachu — pret home/overworld.asm:2134 (jpfar _IsPlayerTalkingToPikachu)
 ; ---------------------------------------------------------------------------
+global IsPlayerTalkingToPikachu
 global Func_0ffe
+IsPlayerTalkingToPikachu:
 Func_0ffe:
-    jmp IsPlayerTalkingToPikachu
+    jmp _IsPlayerTalkingToPikachu
 
 global InitSprites
 global ZeroSpriteStateData

@@ -229,7 +229,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `DrawFrameBlock` (all four `wSubAnimTransform` branches),
       `LoadMoveAnimationTiles` + `MoveAnimationTilesPointers` +
       `MoveAnimationTiles0/2`, `AnimationCleanOAM`, `DoSpecialEffectByAnimationId`,
-      `GetMoveSound` / `IsCryMove` / `PlayApplyingAttackSound`, `Func_78e98` /
+      `GetMoveSound` / `IsCryMove` / `PlayApplyingAttackSound`, `SaveScreenTilesAndTransferBGMap` (formerly `Func_78e98`) /
       `BattleAnimCopyTileMapToVRAM` / `WriteLowerByteOfBGMapAndEnableBGTransfer`,
       `CallWithTurnFlipped`, `AnimationDelay10`. Flat-pointer model documented in a
       `class=data-model` DEVIATION (dd tables → ×4 index / 5-byte dispatch entries;
@@ -270,7 +270,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
 - [x] Retire the 4 dispatcher stubs with real bodies in the `effects.asm`
       mirror (`PlayCurrentMoveAnimation(2)`, `PlayBattleAnimation(2)` +
       `PlayBattleAnimationGotID`); core.asm `PlayMoveAnimation` = faithful pret
-      body (`wAnimationID` / Delay3 / MoveAnimation / Func_78e98). DONE
+      body (`wAnimationID` / Delay3 / MoveAnimation / `SaveScreenTilesAndTransferBGMap` [formerly `Func_78e98`]). DONE
       2026-08-08 — faithdiff clean on all 6 labels, lint 0 both modes.
 - [x] `DEBUG_ANIM_DEMO=1` harness. DONE 2026-08-08. Makefile gate → NASMFLAGS
       `-D DEBUG_ANIM_DEMO -D DEBUG_BATTLE_GOLDEN -D DEBUG_BATTLE`; the harness
@@ -493,11 +493,11 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       states distinct from a `POUND` baseline (9 and 16 differing entries).
 - [x] HUD shake + OAM helpers: `AnimationShakeEnemyHUD`,
       `ShakeEnemyHUD_ShakeBG`, `ShakeEnemyHUD_WritePlayerMonPicOAM`,
-      `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `Func_79929`.
+      `BattleAnimWriteOAMEntry`, `InitMultipleObjectsOAM`, `AnimateSubstituteBreaking` (formerly `Func_79929`).
       **DONE 2026-08-08 for five of the six** (`BattleAnimWriteOAMEntry` /
       `InitMultipleObjectsOAM` in Stage 4e; the three HUD-shake labels in 4g).
-      `Func_79929` was genuinely BLOCKED on `AnimationFlashMonPic` ->
-      `ChangeMonPic`; **both landed in Stage 5c (2026-08-08), so `Func_79929` is
+      `AnimateSubstituteBreaking` (formerly `Func_79929`) was genuinely BLOCKED on `AnimationFlashMonPic` ->
+      `ChangeMonPic`; **both landed in Stage 5c (2026-08-08), so `AnimateSubstituteBreaking` (`Func_79929`) is
       now real and this box is fully closed.**
       **`AnimationShakeEnemyHUD`'s mechanism does not transfer, and this is the
       one Stage 4 decision a reviewer should look at first.** On the GB the
@@ -590,7 +590,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       `move_effects/transform.asm:66`.
       **DONE 2026-08-08 (Stage 5c + 5d).** `CopyTempPicToMonPic` was pulled
       forward in Stage 4d; `ChangeMonPic` / `AnimationTransformMon` landed in 5c
-      (which also closed Stage 4's last label, `Func_79929`); the substitute
+      (which also closed Stage 4's last label, `AnimateSubstituteBreaking` [formerly `Func_79929`]); the substitute
       family in 5d. Both `FLAG FOR MASTER` comments swept — and both were
       **stale, not actionable**: `AnimationSubstitute` has a real body now (the
       note asked for a ret-stub that has since been written *and* retired), and

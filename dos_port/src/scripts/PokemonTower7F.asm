@@ -21,13 +21,17 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+%undef SFX_SURFING_UNUSED
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
 
 global PokemonTower7FScript0
 global PokemonTower7FJessieJamesEndBattleText
 global PokemonTower7FJessieJamesText
+global PokemonTower7FJessieJamesEncounterLeftMovementData
 global PokemonTower7FMovementData_60d7a
+global PokemonTower7FJessieJamesEncounterRightMovementData
 global PokemonTower7FMovementData_60d7b
 global PokemonTower7FMrFujiText
 global PokemonTower7FScript1
@@ -40,6 +44,7 @@ global PokemonTower7FScript6
 global PokemonTower7FScript7
 global PokemonTower7FScript8
 global PokemonTower7FScript9
+global PokemonTower7FEncounterJessieJamesScript
 global PokemonTower7FScript_60d2a
 global PokemonTower7FScript_HideObject
 global PokemonTower7FScript_ShowObject
@@ -140,12 +145,13 @@ PokemonTower7F_ScriptPointers:
 PokemonTower7FScript0:
     CheckEvent EVENT_BEAT_POKEMONTOWER_7_JESSIE_JAMES
     jnz .sk_36
-        call PokemonTower7FScript_60d2a
+        call PokemonTower7FEncounterJessieJamesScript
 .sk_36:
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
+PokemonTower7FEncounterJessieJamesScript:
 PokemonTower7FScript_60d2a:
     mov al, [ebp + wYCoord]
     cmp al, 0xc
@@ -155,13 +161,14 @@ PokemonTower7FScript_60d2a:
     ResetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
     mov al, [ebp + wXCoord]
     cmp al, 0xa
-    jz .asm_60d47
+    jz .got_side
     mov al, [ebp + wXCoord]
     cmp al, 0xb
     jz .nr_49
         ret
 .nr_49:
     SetEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
+.got_side:
 .asm_60d47:
     call StopAllMusic
     mov bl, 32
@@ -188,8 +195,10 @@ PokemonTower7FScript_60d2a:
 
 %assign event_byte -1
 %assign event_byte_a -1
+PokemonTower7FJessieJamesEncounterLeftMovementData:
 PokemonTower7FMovementData_60d7a:
     db 0x4
+PokemonTower7FJessieJamesEncounterRightMovementData:
 PokemonTower7FMovementData_60d7b:
     db 0x4
     db 0x4
@@ -199,10 +208,11 @@ PokemonTower7FMovementData_60d7b:
 %assign event_byte -1
 %assign event_byte_a -1
 PokemonTower7FScript1:
-    mov edi, PokemonTower7FMovementData_60d7b   ; pret: ld de, PokemonTower7FMovementData_60d7b — MoveSprite takes it in EDI
+    mov edi, PokemonTower7FJessieJamesEncounterRightMovementData   ; pret: ld de, PokemonTower7FJessieJamesEncounterRightMovementData — MoveSprite takes it in EDI
     CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-    jz .asm_60d8c
-    mov edi, PokemonTower7FMovementData_60d7a   ; pret: ld de, PokemonTower7FMovementData_60d7a — MoveSprite takes it in EDI
+    jz .got_side
+    mov edi, PokemonTower7FJessieJamesEncounterLeftMovementData   ; pret: ld de, PokemonTower7FJessieJamesEncounterLeftMovementData — MoveSprite takes it in EDI
+.got_side:
 .asm_60d8c:
     mov al, 1
     mov [ebp + hSpriteIndex], al
@@ -227,17 +237,19 @@ PokemonTower7FScript3:
     mov al, SPRITE_FACING_DOWN
     mov [ebp + wSprite01StateData1FacingDirection], al
     CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-    jz .asm_60dba
+    jz .got_facing
     mov al, SPRITE_FACING_RIGHT
     mov [ebp + wSprite01StateData1FacingDirection], al
+.got_facing:
 .asm_60dba:
     mov al, 0x2
     mov [ebp + wSprite01StateData1MovementStatus], al
 PokemonTower7FScript4:
-    mov edi, PokemonTower7FMovementData_60d7a   ; pret: ld de, PokemonTower7FMovementData_60d7a — MoveSprite takes it in EDI
+    mov edi, PokemonTower7FJessieJamesEncounterLeftMovementData   ; pret: ld de, PokemonTower7FJessieJamesEncounterLeftMovementData — MoveSprite takes it in EDI
     CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-    jz .asm_60dcc
-    mov edi, PokemonTower7FMovementData_60d7b   ; pret: ld de, PokemonTower7FMovementData_60d7b — MoveSprite takes it in EDI
+    jz .got_side
+    mov edi, PokemonTower7FJessieJamesEncounterRightMovementData   ; pret: ld de, PokemonTower7FJessieJamesEncounterRightMovementData — MoveSprite takes it in EDI
+.got_side:
 .asm_60dcc:
     mov al, 2
     mov [ebp + hSpriteIndex], al
@@ -264,9 +276,10 @@ PokemonTower7FScript6:
     mov al, SPRITE_FACING_LEFT
     mov [ebp + wSprite02StateData1FacingDirection], al
     CheckEvent EVENT_POKEMONTOWER_7_JESSIE_JAMES_ON_LEFT
-    jz .asm_60dff
+    jz .got_facing
     mov al, SPRITE_FACING_DOWN
     mov [ebp + wSprite02StateData1FacingDirection], al
+.got_facing:
 .asm_60dff:
     call Delay3
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD

@@ -767,7 +767,7 @@ gate retirement landed in the "wild-live promotion" follow-up below, also 2026-0
 
 - Status-4 dispatch silently dropped (`UpdateNonPlayerSprite`, pret `movement.asm:134-5`):
   add the `cp 4` case + port `Func_5357` (item-ball-emerge/STAY-and-face, pret
-  `movement.asm:1018-1075`; uses already-ported `Func_5274`/`Random`). S. (Same
+  `movement.asm:1018-1075`; uses already-ported `AdvanceScriptedNPCIntraAnimFrameCounter` [formerly `Func_5274`]/`Random`). S. (Same
   `Func_5357` also listed in OW-2.1's absent-chain; do it here — cheap + independent.)
 - `CanWalkOntoTile` missing pret's off-screen pixel bound (`cp $80`/`cp $90`, pret
   `:581-590`) → WALK/STAY NPCs have NO east/south wander bound at all. Add the guard. S.
@@ -1078,7 +1078,7 @@ adds to `GAME_SRCS` (or `OVERWORLD_CHECK_SRCS` if closure unresolved), runs
         `InitScriptedNPCMovement`, `GetSpriteScreenYPointer`/`GetSpriteScreenXPointer`/
         `GetSpriteScreenXYPointerCommon`, `AnimScriptedNPCMovement`,
         `AdvanceScriptedNPCAnimFrameCounter` (all real globals in movement.asm).
-        `Func_5337`/`Func_5349`/`Func_5357`/`Func_5274` already existed (OW-A.7).
+        `Func_5337`/`Func_5349`/`Func_5357`/`AdvanceScriptedNPCIntraAnimFrameCounter` (formerly `Func_5274`) already existed (OW-A.7).
   - [x] **Dispatch-gate rebuild:** replaced the port's bespoke global
         `BIT_SCRIPTED_NPC_MOVEMENT` (bit-0) gate with pret's per-slot
         `wNPCMovementScriptSpriteOffset == hCurrentSpriteOffset` compare

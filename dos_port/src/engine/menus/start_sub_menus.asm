@@ -158,7 +158,8 @@ extern CheckIfInOutsideMap           ; src/home/overworld.asm — ZF=1 if outsid
 extern IsSurfingAllowed              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern PrintStrengthText              ; engine/overworld/field_move_messages.asm (now LINKED)
 extern UsedCut                        ; engine/overworld/cut.asm — predef UsedCut (.cut)
-extern Func_1510                     ; home/pikachu.asm
+extern EnableHidePikachuWhileLeavingMap ; home/pikachu.asm
+%define Func_1510 EnableHidePikachuWhileLeavingMap
 extern ChooseFlyDestination          ; home/reload_tiles.asm — Town Map Fly UI wrapper
 extern DelayFrames                   ; src/home/delay.asm — BL = frame count
 extern Divide                        ; home/math.asm — hDividend/hDivisor, BH = byte count
@@ -218,7 +219,17 @@ section .text
 %endif
 %ifndef ESCAPE_ROPE
 %endif
-%ifndef wd472
+%ifndef wPlayerState
+%ifdef wd472
+%define wPlayerState wd472
+%else
+%define wPlayerState 0xE240
+%endif
+%endif
+%ifndef PLAYER_NORMAL
+%define PLAYER_NORMAL 0
+%define PLAYER_SURF 1
+%define PLAYER_SURF_PIKA 2
 %endif
 ; BIT_UNKNOWN_4_1 (wStatusFlags4 bit 1, constants/ram_constants.asm) is canonical in
 ; gb_memmap.inc as of 2026-07-27; the local %ifndef copy that lived here is gone.
@@ -407,7 +418,7 @@ StartMenu_Pokemon:
     or byte [ebp + wStatusFlags4], (1 << BIT_UNKNOWN_4_1)  ; set BIT_UNKNOWN_4_1,[wStatusFlags4]
     jmp StartMenu_Pokemon               ; jp StartMenu_Pokemon
 .flyChosen:                             ; pret .asm_5d4c — destination armed
-    call Func_1510                      ; call Func_1510
+    call EnableHidePikachuWhileLeavingMap ; call EnableHidePikachuWhileLeavingMap
     jmp .goBackToMap                    ; jp .goBackToMap
 
 .cut:
@@ -442,12 +453,12 @@ StartMenu_Pokemon:
     mov al, [ebp + wCurPartySpecies]
     cmp al, STARTER_PIKACHU
     jz .surfingPikachu
-    mov al, 1
+    mov al, PLAYER_SURF
     jmp .continue
 .surfingPikachu:
-    mov al, 2                           ; Pikachu rides on the surfboard, not in it
+    mov al, PLAYER_SURF_PIKA            ; Pikachu rides on the surfboard, not in it
 .continue:
-    mov [ebp + wd472], al
+    mov [ebp + wPlayerState], al
     mov al, SURFBOARD
     mov [ebp + wCurItem], al
     mov [ebp + wPseudoItemID], al
@@ -459,7 +470,7 @@ StartMenu_Pokemon:
     call GBPalWhiteOutWithDelay3
     jmp .goBackToMap
 .reloadNormalSprite:
-    mov byte [ebp + wd472], 0           ; xor a / ld [wd472],a
+    mov byte [ebp + wPlayerState], PLAYER_NORMAL ; xor a / ld [wPlayerState],a
     jmp .loop
 
 .strength:
@@ -511,7 +522,7 @@ StartMenu_Pokemon:
     call PrintText
     ; set BIT_FLY_WARP / set BIT_ESCAPE_WARP, [wStatusFlags6]
     or byte [ebp + wStatusFlags6], (1 << BIT_FLY_WARP) | (1 << BIT_ESCAPE_WARP)
-    call Func_1510
+    call EnableHidePikachuWhileLeavingMap
     ; set BIT_UNKNOWN_4_1 / res BIT_NO_BATTLES, [wStatusFlags4]
     or byte [ebp + wStatusFlags4], (1 << BIT_UNKNOWN_4_1)
     and byte [ebp + wStatusFlags4], ~(1 << BIT_NO_BATTLES) & 0xFF

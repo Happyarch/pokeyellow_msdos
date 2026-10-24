@@ -195,14 +195,15 @@ def emit_cry_data(cries) -> str:
 def main():
     rom = AudioROM(ROOT)
     consts, bounds = parse_music_constants()
-    # SFX_UNKNOWN_802CC_4 -> SFX_802cc_4 dangles even in pret (music_const
-    # is a lazy EQUS and nothing ever expands it; the header label is
-    # actually SFX_Unknown_802cc). Skip unresolvable names.
+    # Upstream renamed SFX_UNKNOWN_802CC_4 -> SFX_SURFING_UNUSED (SFX_Surfing_Unused,
+    # formerly SFX_Unknown_802cc) which resolves properly in rom.symtab.
     ids = {name: sound_id(rom, label)
            for name, label in consts.items() if label in rom.symtab}
     skipped = [n for n, l in consts.items() if l not in rom.symtab]
-    if skipped != ["SFX_UNKNOWN_802CC_4"]:
+    if skipped and skipped != ["SFX_UNKNOWN_802CC_4"]:
         raise KeyError(f"unexpected unresolvable music consts: {skipped}")
+    if "SFX_SURFING_UNUSED" in ids and "SFX_UNKNOWN_802CC_4" not in ids:
+        ids["SFX_UNKNOWN_802CC_4"] = ids["SFX_SURFING_UNUSED"]
 
     (ASSETS / "audio_rom.inc").write_text(emit_audio_rom(rom))
     music_banks = {name: rom.sym_bank[label]

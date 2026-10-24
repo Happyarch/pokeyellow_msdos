@@ -111,6 +111,7 @@ TIME_SEP    equ 0x6D          ; ':' hours/minutes separator glyph (pret ld [hl],
 
 global MainMenu
 global InitOptions
+global CheckEnoughYellowVersionMemory
 global Func_5cc1
 global StartNewGame
 global StartNewGameDebug
@@ -369,11 +370,12 @@ InitOptions:
 ; "NotEnoughMemoryText is a bank-far text stream with no port far-text infra" —
 ; false (text_far + PrintText is exactly how pc.asm/oaks_pc.asm print). See M-95.
 ; ===========================================================================
+CheckEnoughYellowVersionMemory:
 Func_5cc1:
     mov al, 0x6D
     cmp al, 0x80
     jc .done                                    ; ret c — always executed
-    ; DEVIATION{class=projection; pret=main_menu.asm:Func_5cc1; behavior=select the dialog projection before PrintText; evidence=pret Func_5cc1 PrintText call plus port text_msgbox descriptor contract; lifetime=permanent window-compositor boundary}
+    ; DEVIATION{class=projection; pret=main_menu.asm:CheckEnoughYellowVersionMemory; behavior=select the dialog projection before PrintText; evidence=pret CheckEnoughYellowVersionMemory PrintText call plus port text_msgbox descriptor contract; lifetime=permanent window-compositor boundary}
     ; PrintText needs the box projection published.
     mov dword [text_msgbox], msgbox_dialog
     mov esi, NotEnoughMemoryText                ; ld hl, NotEnoughMemoryText
@@ -429,7 +431,7 @@ SpecialEnterMap:
     call ResetPlayerSpriteData
     mov bl, 20
     call DelayFrames
-    call Func_5cc1
+    call CheckEnoughYellowVersionMemory
     mov al, [ebp + wEnteringCableClub]
     test al, al                                 ; and a
     jnz .ret                                    ; ret nz

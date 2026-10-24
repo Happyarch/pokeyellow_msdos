@@ -36,6 +36,8 @@ bits 32
 %include "events.inc"                   ; CheckEvent (clobbers AL, sets ZF)
 %include "gb_constants.inc"
 %include "gb_text.inc"                  ; text_far / text_pause / text_end
+%undef SFX_SURFING_UNUSED
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"   ; SFX_SAVE
 
 global CableClubNPC
@@ -163,18 +165,18 @@ CableClubNPC:
     call PlaySoundWaitForCurrent
     mov esi, CableClubNPCPleaseWaitText
     call PrintText
-    ; wUnknownSerialCounter := $0003 (lo=3, hi=0) — the rendezvous watchdog
-    mov byte [ebp + wUnknownSerialCounter], 3
+    ; wUnknownSerialCounter_cc47 := $0003 (lo=3, hi=0) — the rendezvous watchdog
+    mov byte [ebp + wUnknownSerialCounter_cc47], 3
     xor al, al
-    mov [ebp + wUnknownSerialCounter + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
     mov [ebp + hSerialReceivedNewData], al
     mov [ebp + wSerialExchangeNybbleSendData], al
     call Serial_SyncAndExchangeNybble
     ; watchdog expired ($ffff) = the partner went silent
-    mov al, [ebp + wUnknownSerialCounter]
+    mov al, [ebp + wUnknownSerialCounter_cc47]
     inc al
     jnz .connected
-    mov al, [ebp + wUnknownSerialCounter + 1]
+    mov al, [ebp + wUnknownSerialCounter_cc47 + 1]
     inc al
     jnz .connected
     mov bh, 10                          ; ld b,10
@@ -197,16 +199,16 @@ CableClubNPC:
     call PrintText
 .didNotConnect:
     xor al, al
-    mov [ebp + wUnknownSerialCounter], al
-    mov [ebp + wUnknownSerialCounter + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
     and byte [ebp + wStatusFlags4], ~(1 << BIT_LINK_CONNECTED) & 0xFF
     xor al, al
     mov [ebp + wMenuJoypadPollCount], al
     ret
 .connected:
     xor al, al                          ; xor a / ld [hld],a / ld [hl],a
-    mov [ebp + wUnknownSerialCounter + 1], al
-    mov [ebp + wUnknownSerialCounter], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47], al
     mov al, [ebp + wLetterPrintingDelayFlags]
     push eax                            ; push af
     call LinkMenu                       ; pret callfar (deviation above)
@@ -218,7 +220,7 @@ CableClubNPC:
 ; Serial_SyncAndExchangeNybbleDouble — pret engine/link/cable_club_npc.asm:133
 ; ("seems to be similar of Serial_SyncAndExchangeNybble" — no linked caller
 ; in pret Yellow either; translated for completeness). Unlike its home/
-; sibling this one decrements wUnknownSerialCounter UNCONDITIONALLY each
+; sibling this one decrements wUnknownSerialCounter_cc47 UNCONDITIONALLY each
 ; iteration, so it self-terminates; the entry hatch below still short-cuts
 ; the no-session case rather than counting down for up to ~18 minutes.
 ;
@@ -232,10 +234,10 @@ Serial_SyncAndExchangeNybbleDouble:
     call Serial_ExchangeNybble
     call DelayFrame
     push esi                            ; push hl (mirrors pret)
-    ; ld hl, wUnknownSerialCounter+1 / dec [hl] / jr nz / dec hl / dec [hl]
-    dec byte [ebp + wUnknownSerialCounter + 1]
+    ; ld hl, wUnknownSerialCounter_cc47+1 / dec [hl] / jr nz / dec hl / dec [hl]
+    dec byte [ebp + wUnknownSerialCounter_cc47 + 1]
     jnz .next
-    dec byte [ebp + wUnknownSerialCounter]
+    dec byte [ebp + wUnknownSerialCounter_cc47]
     jnz .next
     pop esi
     jmp .setUnknownSerialCounterToFFFF
@@ -267,8 +269,8 @@ Serial_SyncAndExchangeNybbleDouble:
     ret
 .setUnknownSerialCounterToFFFF:
     mov al, 0xFF
-    mov [ebp + wUnknownSerialCounter], al
-    mov [ebp + wUnknownSerialCounter + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
     ret
 .noLink:
     mov byte [ebp + wSerialSyncAndExchangeNybbleReceiveData], 0xFF
@@ -350,7 +352,7 @@ CableClubReceptionistScript:
     ; cable_club_nolink golden photograph: CableClubNPC has just returned from
     ; the no-peer path — the failure text's last page is still on screen and
     ; .didNotConnect's WRAM aftermath is latched (hSerialConnectionStatus $FF,
-    ; wUnknownSerialCounter zeroed, wMenuJoypadPollCount zeroed). One DelayFrame
+    ; wUnknownSerialCounter_cc47 zeroed, wMenuJoypadPollCount zeroed). One DelayFrame
     ; lets the compositor draw the final reveal, then dump-and-exit.
     call DelayFrame
     call DumpBackbuffer                     ; FRAME.BIN + GBSTATE.BIN, then exits

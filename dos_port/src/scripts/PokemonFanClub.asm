@@ -28,6 +28,7 @@ global PokemonFanClubPikachuMovementData
 global PokemonFanClubReceptionistText
 global PokemonFanClubScript0
 global PokemonFanClubScript1
+global PokemonFanClubPikachuRunsToClefairyScript
 global PokemonFanClubScript_59a39
 global PokemonFanClubScript_59a44
 global PokemonFanClubSeelFanText
@@ -109,7 +110,7 @@ PokemonFanClubScript0:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     jnz .sk_16
-        call PokemonFanClubScript_59a44
+        call PokemonFanClubPikachuRunsToClefairyScript
 .sk_16:
     mov esi, wPikachuMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
@@ -121,7 +122,7 @@ PokemonFanClubScript1:
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
     jnz .sk_24
-        call PokemonFanClubScript_59a39
+        call .maybe_run_to_clefairy
 .sk_24:
     mov esi, wPikachuMapScriptFlags
     or byte [ebp + esi], (1 << (BIT_PIKACHU_MAP_SCRIPT_ACTIVE))
@@ -129,17 +130,19 @@ PokemonFanClubScript1:
 
 %assign event_byte -1
 %assign event_byte_a -1
+.maybe_run_to_clefairy:
 PokemonFanClubScript_59a39:
     call Random
     mov al, [ebp + hRandomAdd]
     cmp al, 25
     jae .sk_33
-        call PokemonFanClubScript_59a44
+        call PokemonFanClubPikachuRunsToClefairyScript
 .sk_33:
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
+PokemonFanClubPikachuRunsToClefairyScript:
 PokemonFanClubScript_59a44:
     mov al, [ebp + wPikachuSpawnStateFlags]
     setc ah                     ; SM83 `bit` preserves C — stash it
@@ -314,13 +317,13 @@ PokemonFanClubChairmanText:
     mov esi, wEventFlags + EVENT_BYTE(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     test byte [ebp + esi], EVENT_MASK(EVENT_LEFT_FANCLUB_AFTER_BIKE_VOUCHER)
     jz .check_bike_voucher
-    mov esi, Text_59c1f
+    mov esi, .PrintText1
     call PrintText
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
     jz .select_mon_to_print
-    mov esi, Text_59c24
+    mov esi, .PrintText2
     jmp .gbpals_print_text
 
 %assign event_byte -1
@@ -386,7 +389,7 @@ PokemonFanClubChairmanText:
     mov dword [g_window_count], 0
     mov dword [g_bg_whiteout], 0
     mov dword [g_obj_over_window], 0
-    mov esi, Text_59c24
+    mov esi, .PrintText2
     jmp .gbpals_print_text
 
 %assign event_byte -1
@@ -411,11 +414,11 @@ PokemonFanClubChairmanText:
     mov dword [g_window_count], 0
     mov dword [g_bg_whiteout], 0
     mov dword [g_obj_over_window], 0
-    mov esi, Text_59c2e
+    mov esi, .PrintText4
     mov al, [ebp + hOaksAideResult]
     test al, al
     jnz .gbpals_print_text
-    mov esi, Text_59c29
+    mov esi, .PrintText3
     jmp .gbpals_print_text
 
 %assign event_byte -1
@@ -440,18 +443,23 @@ PokemonFanClubChairmanText:
 .BagFullText:
     text_far _PokemonFanClubBagFullText
     text_end
-Text_59c1f:
+.PrintText1:
     text_far FanClubChairPrintText1
     text_end
-Text_59c24:
+.PrintText2:
     text_far FanClubChairPrintText2
     text_end
-Text_59c29:
+.PrintText3:
     text_far FanClubChairPrintText3
     text_end
-Text_59c2e:
+.PrintText4:
     text_far FanClubChairPrintText4
     text_end
+
+Text_59c1f equ PokemonFanClubChairmanText.PrintText1
+Text_59c24 equ PokemonFanClubChairmanText.PrintText2
+Text_59c29 equ PokemonFanClubChairmanText.PrintText3
+Text_59c2e equ PokemonFanClubChairmanText.PrintText4
 PokemonFanClubReceptionistText:
     text_far _PokemonFanClubReceptionistText
     text_end

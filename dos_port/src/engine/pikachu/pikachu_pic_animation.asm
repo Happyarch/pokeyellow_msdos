@@ -139,16 +139,16 @@ extern PikaPicAnimBGFramesPointers      ; src/data/pikachu/pikachu_pic_objects.a
 extern PikaPicTilemapPointers           ; src/data/pikachu/pikachu_pic_tilemaps.asm
 extern PikaPicAnimGFXHeaders            ; src/data/pikachu/pikachu_pic_animation.asm
 extern PikaPicAnimThunderboltPals
-extern PikaPicAnimScript0,  PikaPicAnimScript1,  PikaPicAnimScript2
-extern PikaPicAnimScript3,  PikaPicAnimScript4,  PikaPicAnimScript5
-extern PikaPicAnimScript6,  PikaPicAnimScript7,  PikaPicAnimScript8
-extern PikaPicAnimScript9,  PikaPicAnimScript10, PikaPicAnimScript11
-extern PikaPicAnimScript12, PikaPicAnimScript13, PikaPicAnimScript14
-extern PikaPicAnimScript15, PikaPicAnimScript16, PikaPicAnimScript17
-extern PikaPicAnimScript18, PikaPicAnimScript19, PikaPicAnimScript20
-extern PikaPicAnimScript21, PikaPicAnimScript22, PikaPicAnimScript23
-extern PikaPicAnimScript24, PikaPicAnimScript25, PikaPicAnimScript26
-extern PikaPicAnimScript27, PikaPicAnimScript28, PikaPicAnimScript29
+extern PikaPicAnimScript_Blink1, PikaPicAnimScript_Blink2, PikaPicAnimScript_Excited
+extern PikaPicAnimScript_EarTwitch, PikaPicAnimScript_Happy, PikaPicAnimScript_Sad
+extern PikaPicAnimScript_SideBlink, PikaPicAnimScript_Jump, PikaPicAnimScript_Smile
+extern PikaPicAnimScript_BackTurn, PikaPicAnimScript_Joy, PikaPicAnimScript_Sleep
+extern PikaPicAnimScript_Bored, PikaPicAnimScript_Side, PikaPicAnimScript_AngryBolt
+extern PikaPicAnimScript_FistPump, PikaPicAnimScript_Heart, PikaPicAnimScript_Mad
+extern PikaPicAnimScript_Wink, PikaPicAnimScript_2Hearts, PikaPicAnimScript_Love
+extern PikaPicAnimScript_Bucket, PikaPicAnimScript_Scared, PikaPicAnimScript_Confused
+extern PikaPicAnimScript_HeadShake, PikaPicAnimScript_Lightning, PikaPicAnimScript_WakeUp
+extern PikaPicAnimScript_Surprised, PikaPicAnimScript_Cry, PikaPicAnimScript_Blink3
 extern OpenSRAM                         ; src/home/bankswitch2.asm
 extern CloseSRAM                        ; src/home/bankswitch2.asm
 
@@ -171,6 +171,7 @@ global ExecutePikaPicAnimScript
 global PikaPicAnimTimerAndJoypad
 global CheckPikaPicAnimTimer
 global DummyFunction_fdad5
+global PikaPicAnimDummyFunction
 global AnimateCurrentPikaPicAnimFrame
 global PikaPicAnimCommand_object
 global PikaPicAnimCommand_deleteobject
@@ -254,16 +255,36 @@ PikaPicAnimationScriptPointerLookupTable:
 ; pret builds this with the `pikapic_def` macro (dw per entry).  Flat `dd` here:
 ; LoadCurrentPikaPicAnimScriptPointer indexes it by 4, not pret's 2.
 PikaPicAnimPointers:
-    dd PikaPicAnimScript0,  PikaPicAnimScript1,  PikaPicAnimScript2
-    dd PikaPicAnimScript3,  PikaPicAnimScript4,  PikaPicAnimScript5
-    dd PikaPicAnimScript6,  PikaPicAnimScript7,  PikaPicAnimScript8
-    dd PikaPicAnimScript9,  PikaPicAnimScript10, PikaPicAnimScript11
-    dd PikaPicAnimScript12, PikaPicAnimScript13, PikaPicAnimScript14
-    dd PikaPicAnimScript15, PikaPicAnimScript16, PikaPicAnimScript17
-    dd PikaPicAnimScript18, PikaPicAnimScript19, PikaPicAnimScript20
-    dd PikaPicAnimScript21, PikaPicAnimScript22, PikaPicAnimScript23
-    dd PikaPicAnimScript24, PikaPicAnimScript25, PikaPicAnimScript26
-    dd PikaPicAnimScript27, PikaPicAnimScript28, PikaPicAnimScript29
+    dd PikaPicAnimScript_Blink1        ; 00, unused
+    dd PikaPicAnimScript_Blink2        ; 01
+    dd PikaPicAnimScript_Excited       ; 02
+    dd PikaPicAnimScript_EarTwitch     ; 03
+    dd PikaPicAnimScript_Happy         ; 04
+    dd PikaPicAnimScript_Sad           ; 05
+    dd PikaPicAnimScript_SideBlink     ; 06
+    dd PikaPicAnimScript_Jump          ; 07
+    dd PikaPicAnimScript_Smile         ; 08
+    dd PikaPicAnimScript_BackTurn      ; 09
+    dd PikaPicAnimScript_Joy           ; 0a
+    dd PikaPicAnimScript_Sleep         ; 0b
+    dd PikaPicAnimScript_Bored         ; 0c
+    dd PikaPicAnimScript_Side          ; 0d
+    dd PikaPicAnimScript_AngryBolt     ; 0e
+    dd PikaPicAnimScript_FistPump      ; 0f
+    dd PikaPicAnimScript_Heart         ; 10
+    dd PikaPicAnimScript_Mad           ; 11
+    dd PikaPicAnimScript_Wink          ; 12
+    dd PikaPicAnimScript_2Hearts       ; 13
+    dd PikaPicAnimScript_Love          ; 14
+    dd PikaPicAnimScript_Bucket        ; 15
+    dd PikaPicAnimScript_Scared        ; 16
+    dd PikaPicAnimScript_Confused      ; 17
+    dd PikaPicAnimScript_HeadShake     ; 18
+    dd PikaPicAnimScript_Lightning     ; 19
+    dd PikaPicAnimScript_WakeUp        ; 1a
+    dd PikaPicAnimScript_Surprised     ; 1b
+    dd PikaPicAnimScript_Cry           ; 1c
+    dd PikaPicAnimScript_Blink3        ; 1d, unused
 
 ; RunPikaPicAnimSetupScript's command dispatch.  pret's `dw` + JumpToAddress
 ; becomes an indirect `call` through a flat table.
@@ -413,9 +434,9 @@ ExecutePikaPicAnimScript:
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al
     call RunPikaPicAnimSetupScript
-    call DummyFunction_fdad5
+    call PikaPicAnimDummyFunction
     call AnimateCurrentPikaPicAnimFrame
-    call DummyFunction_fdad5
+    call PikaPicAnimDummyFunction
     mov byte [ebp + hAutoBGTransferEnabled], 1
     call pikapic_mirror                     ; PORT-ONLY: see the presentation header
     call PikaPicAnimTimerAndJoypad
@@ -455,6 +476,7 @@ CheckPikaPicAnimTimer:
     ret
 
 DummyFunction_fdad5:
+PikaPicAnimDummyFunction:
     ret
 
 ; ===========================================================================

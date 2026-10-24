@@ -773,14 +773,14 @@ Func_fc862:
     add esi, ebx
     mov byte [ebp + esi], 0x06
     xor al, al
-    mov [ebp + wd431], al
-    mov [ebp + wd432], al
+    mov [ebp + wPikachuSpriteStateYPixelOffset], al
+    mov [ebp + wPikachuSpriteStateXPixelOffset], al
     mov esi, (wSpriteStateData2 + SPRITESTATEDATA2_WALKANIMCOUNTER) - wSpriteStateData1
     add esi, ebx
     mov byte [ebp + esi], 0x11
 asm_fc87f:
-    mov dl, [ebp + wd431]               ; e
-    mov dh, [ebp + wd432]               ; d
+    mov dl, [ebp + wPikachuSpriteStateYPixelOffset]   ; e
+    mov dh, [ebp + wPikachuSpriteStateXPixelOffset]   ; d
     call Func_fc82e
     jc Func_fc8c7
     call SetPikachuOverworldStateFlag2
@@ -796,12 +796,12 @@ asm_fc87f:
     movzx edx, byte [ebp + esi]
     dec dl                              ; dec a
     mov al, [Pointer_fc8d6 + edx*2]
-    mov [ebp + wd431], al
+    mov [ebp + wPikachuSpriteStateYPixelOffset], al
     add al, cl
     mov [ebp + ebx + SPRITESTATEDATA1_YPIXELS], al
 
     mov al, [Pointer_fc8d6 + edx*2 + 1]
-    mov [ebp + wd432], al
+    mov [ebp + wPikachuSpriteStateXPixelOffset], al
     add al, ch
     mov [ebp + ebx + SPRITESTATEDATA1_XPIXELS], al
 

@@ -565,7 +565,7 @@ PRINT_SRCS := \
 AUDIO_SRCS := \
     src/data/audio_data.asm \
     src/data/pokemon/cries.asm \
-    src/data/pokemon/unknown_list.asm \
+    src/data/pokemon/debug_ignore_lv1.asm \
     src/home/audio.asm \
     src/home/fade_audio.asm \
     src/audio/audio_hal.asm \
@@ -4276,9 +4276,9 @@ assets/hall_of_fame_text.inc: assets/gb_charmap.txt tools/generators/gen_hall_of
         tools/generators/gen_battle_text.py ../engine/movie/hall_of_fame.asm
 	python3 tools/generators/gen_hall_of_fame_text.py
 
-# Pointer_3b0ee — pret data/pokemon/unknown_list.asm, read only by the unreferenced
-# evos_moves.asm:Func_3b0a2. Transcribed so a 32-entry species list cannot drift.
-assets/unknown_list.inc: ../data/pokemon/unknown_list.asm assets/script_constants.inc \
+# IgnoreLevel1LearnsetMons (formerly Pointer_3b0ee) — pret data/pokemon/debug_ignore_lv1.asm,
+# read only by the unreferenced evos_moves.asm:Func_3b0a2. Transcribed so a 32-entry species list cannot drift.
+assets/debug_ignore_lv1.inc: ../data/pokemon/debug_ignore_lv1.asm assets/script_constants.inc \
         tools/generators/gen_unknown_list.py
 	python3 tools/generators/gen_unknown_list.py
 
@@ -4644,8 +4644,8 @@ src/engine/movie/intro.o: assets/gamefreak_intro_2bpp.inc
 assets/yellow_intro_1_2bpp.inc assets/yellow_intro_2_2bpp.inc \
 assets/yellow_intro_clouds_2bpp.inc assets/yellow_intro_tilemaps.inc &: \
 		../gfx/intro/yellow_intro_1.png ../gfx/intro/yellow_intro_2.png \
-		../gfx/intro/clouds.png ../gfx/intro/unknown_f9b6e.tilemap \
-		../gfx/intro/unknown_f9be6.tilemap ../gfx/intro/unknown_f9bf2.tilemap \
+		../gfx/intro/clouds.png ../gfx/intro/clouds.tilemap \
+		../gfx/intro/cloud_pair.tilemap ../gfx/intro/small_cloud.tilemap \
 		tools/generators/gen_intro_gfx_inc.py
 	python3 tools/generators/gen_intro_gfx_inc.py
 
@@ -4729,6 +4729,7 @@ src/data/pikachu/pikachu_pic_animation.o: assets/pikachu_pic_animation.inc \
 src/home/trainers.o: assets/trainer_text.inc assets/audio_constants.inc
 src/engine/battle/used_move_text.o: assets/used_move_text.inc
 src/engine/movie/hall_of_fame.o: assets/hall_of_fame_text.inc assets/audio_constants.inc assets/event_constants.inc
+src/data/pokemon/debug_ignore_lv1.o: assets/debug_ignore_lv1.inc
 src/data/pokemon/unknown_list.o: assets/unknown_list.inc
 src/engine/movie/credits.o: assets/credits_data.inc assets/the_end_2bpp.inc assets/audio_constants.inc
 src/engine/movie/oak_speech/clear_save.o: assets/clear_save_text.inc

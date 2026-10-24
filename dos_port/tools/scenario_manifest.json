@@ -2920,7 +2920,7 @@
                 "projection": "golden_diff.SCENARIOS",
                 "masks": "golden_diff.SCENARIOS"
             },
-            "verification": "Game Boy Printer capture layer and transmission/cancel test (docs/current_plan_printer.md Stage 3): interacts with the Summer Beach House printer (bg_event 13, 1) with surfing Pikachu unlocked and selects YES to print the high score. Runs SummerBeachHousePrinterText -> Func_f23d0 -> PrintSurfingMinigameHighScore, which renders the 20x18 high score screen, sets wcae2=0x13, and captures the 360-byte tilemap into wPrinterTileBuffer. The mGBA golden encounters no printer on serial, enters PRINTER_ERROR_2, cancels on B, and returns to overworld; the DOS port consumes the packets with PrintDev_ConsumePacket and returns to overworld. Compared surfaces assert wPrinterTileBuffer, wcae2, and wPrinterSettingsTempCopy alongside standard overworld state."
+            "verification": "Game Boy Printer capture layer and transmission/cancel test (docs/current_plan_printer.md Stage 3): interacts with the Summer Beach House printer (bg_event 13, 1) with surfing Pikachu unlocked and selects YES to print the high score. Runs SummerBeachHousePrinterText -> Func_f23d0 -> PrintSurfingMinigameHighScore, which renders the 20x18 high score screen, sets wPrinterMargins=0x13, and captures the 360-byte tilemap into wPrinterTileBuffer. The mGBA golden encounters no printer on serial, enters PRINTER_ERROR_2, cancels on B, and returns to overworld; the DOS port consumes the packets with PrintDev_ConsumePacket and returns to overworld. Compared surfaces assert wPrinterTileBuffer, wPrinterMargins, and wPrinterSettingsTempCopy alongside standard overworld state."
         },
         {
             "name": "print_beach_house",

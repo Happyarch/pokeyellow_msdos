@@ -482,7 +482,7 @@ flag is set correctly for a trainer-containing map when one is reached.
 
 - [x] **Walking leg animation**: NPC walk-tile assets now emitted as full 384-byte sheets
   by `gen_all_assets.py`; `LoadNPCSpriteTiles` copies walk tiles to `GB_VFONT` slot.
-  `Func_5274` already runs for NPC slots. Done — commit c8d82400.
+  `AdvanceScriptedNPCIntraAnimFrameCounter` (formerly `Func_5274`) already runs for NPC slots. Done — commit c8d82400.
 - [x] **NPC-NPC tile collision**: `CanWalkOntoTile` calls `DetectCollisionBetweenSprites`
   and gates on `COLLISIONDATA & direction_bit`. Wired as part of commit 59d55835. The
   plan note "not called in the NPC walk path" was written before that commit.

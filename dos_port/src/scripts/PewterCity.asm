@@ -63,7 +63,8 @@ extern SetSpriteFacingDirectionAndDelay   ; NOT YET DEFINED IN THE PORT
 extern SetSpritePosition1
 extern SetSpritePosition2
 extern ShowObject
-extern SpriteFunc_34a1   ; NOT YET DEFINED IN THE PORT
+extern SetSpriteImageIndex
+SpriteFunc_34a1 equ SetSpriteImageIndex
 extern TextScriptEnd
 extern YesNoChoice
 
@@ -171,7 +172,7 @@ PewterCitySuperNerd1ShowsPlayerMuseumScript:
     call SetSpriteFacingDirectionAndDelay
     mov al, SPRITE_FACING_UP
     mov [ebp + hSpriteImageIndex], al
-    call SpriteFunc_34a1
+    call SetSpriteImageIndex
     call PlayDefaultMusic
     mov esi, wMiscFlags
     or byte [ebp + esi], (1 << (BIT_NO_SPRITE_UPDATES))
@@ -249,8 +250,8 @@ PewterCityYoungsterShowsPlayerGymScript:
     mov al, 5
     mov [ebp + hSpriteIndex], al
     mov al, SPRITE_FACING_LEFT
-    mov [ebp + hSpriteFacingDirection], al
-    call SpriteFunc_34a1
+    mov [ebp + hSpriteImageIndex], al
+    call SetSpriteImageIndex
     call PlayDefaultMusic
     mov esi, wMiscFlags
     or byte [ebp + esi], (1 << (BIT_NO_SPRITE_UPDATES))

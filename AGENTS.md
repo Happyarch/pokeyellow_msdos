@@ -268,10 +268,10 @@ screen and whose OBJ belong on top of it (party menu, naming screen) sets
 `g_obj_over_window` to get the hardware order back; `ClearSprites` clears it again.
 
 The `UpdatePlayerOAM` scaffold has been replaced by the **faithful sprite
-engine**: `PrepareOAMData` (`src/engine/gfx/sprite_oam.asm`) builds shadow OAM from the
+engine**: `PrepareOAMData` (`src/engine/gfx/sprite_oam.asm`, using `GetSpriteImageIndex`, formerly `Func_4a7b`) builds shadow OAM from the
 16-slot `wSpriteStateData1/2` arrays (facing/animation table, under-grass
 priority, OBP→CGB palette mapping, `$80+` tile path), and `UpdateSprites`
-(`src/engine/overworld/movement.asm`, with `UpdatePlayerSprite`/`Func_4e32`/`Func_5274`)
+(`src/engine/overworld/movement.asm`, with `UpdatePlayerSprite`, `.setImageIndex` [formerly `Func_4e32`], and `AdvanceScriptedNPCIntraAnimFrameCounter` [formerly `Func_5274`])
 advances the player's facing and walk-frame leg animation each `OverworldLoop`
 iteration. `vblank.asm:update_oam` runs `PrepareOAMData` and DMA-copies shadow OAM
 → `$FE00` in the `DelayFrame` pipeline (gated on `wUpdateSpritesEnabled`).
@@ -281,7 +281,7 @@ vChars1 with the font, as on the GB). NPC implementation is complete: `InitSprit
 (`src/home/overworld.asm`, from `LoadMapHeader`) populates slots 1–15 from the map
 object binary, and the sprite-set TILE loading is the separate
 `InitMapSprites` (the pret home/palettes.asm wrapper, `src/home/palettes.asm`) ->
-`_InitMapSprites` (`src/engine/overworld/map_sprites.asm`) path; WALK/STAY movement and leg animation run via `UpdateNonPlayerSprite`;
+`_InitMapSprites` (`src/engine/overworld/map_sprites.asm`) path; WALK/STAY movement and leg animation run via `UpdateNonPlayerSprite` (using `SetSpriteImageIndex`, formerly `SpriteFunc_34a1`);
 `CheckNPCInteraction` does the MAPY/MAPX block scan, calls `MakeNPCFacePlayer`,
 and runs `PrintText` with per-character reveal and multi-page scroll; player-NPC
 collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC

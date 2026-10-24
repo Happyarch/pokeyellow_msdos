@@ -66,6 +66,7 @@ global GetPointerWithinSpriteStateData2
 global SetSpriteImageIndexAfterSettingFacingDirection
 global SetSpriteFacingDirection
 global SetSpriteFacingDirectionAndDelay
+global SetSpriteImageIndex
 global SpriteFunc_34a1
 global DisplayPokedex
 
@@ -486,12 +487,13 @@ SetSpriteImageIndexAfterSettingFacingDirection:
     ret
 
 ; ---------------------------------------------------------------------------
-; SpriteFunc_34a1 — pret home/map_objects.asm:SpriteFunc_34a1
+; SetSpriteImageIndex (formerly SpriteFunc_34a1) — pret home/map_objects.asm:SetSpriteImageIndex
 ; Computes sprite VRAM/image index offset based on sprite's image base offset
 ; in wSpriteStateData2 and stores into wSpriteStateData1 image index.
 ; Reads [hSpriteIndex] ($FF8C, aliased as hSpriteHeight in pret union) and
 ; [hSpriteImageIndex] ($FF8D, aliased as hSpriteOffset in pret union).
 ; ---------------------------------------------------------------------------
+SetSpriteImageIndex:
 SpriteFunc_34a1:
     mov al, [ebp + hSpriteIndex]        ; ldh a, [hSpriteIndex]
     rol al, 4                           ; swap a

@@ -33,7 +33,7 @@ PIKACHU_EMOTION33_INDEX equ (PikachuEmotion33_id - PikachuEmotionTable) / 4
 
 section .text
 
-global IsPlayerTalkingToPikachu
+global _IsPlayerTalkingToPikachu
 global InitializePikachuTextID
 global DoStarterPikachuEmotions
 global StarterPikachuEmotionsJumptable
@@ -119,10 +119,11 @@ extern PikachuEmotion31                                 ; src/data/pikachu/pikac
 extern PikachuEmotion32                                 ; src/data/pikachu/pikachu_emotions.asm
 
 ; ---------------------------------------------------------------------------
-; IsPlayerTalkingToPikachu — pret engine/pikachu/pikachu_emotions.asm:1
+; _IsPlayerTalkingToPikachu — pret engine/pikachu/pikachu_emotions.asm:1
 ; ---------------------------------------------------------------------------
-IsPlayerTalkingToPikachu:
-    mov al, [ebp + wd435]
+global _IsPlayerTalkingToPikachu
+_IsPlayerTalkingToPikachu:
+    mov al, [ebp + wPlayerIsTalkingToPikachu]
     test al, al
     jz .done
     mov al, [ebp + hSpriteIndex]
@@ -131,7 +132,7 @@ IsPlayerTalkingToPikachu:
     call InitializePikachuTextID
     xor al, al
     mov [ebp + hSpriteIndex], al
-    mov [ebp + wd435], al
+    mov [ebp + wPlayerIsTalkingToPikachu], al
 .done:
     ret
 

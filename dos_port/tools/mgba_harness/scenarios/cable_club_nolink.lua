@@ -13,7 +13,7 @@
 -- and the "This area is / reserved for 2 / friends who are / linked by cable."
 -- text — whose two `cont` page waits both sides answer with A. The dump lands
 -- with the LAST page on screen and .didNotConnect's WRAM aftermath latched:
--- hSerialConnectionStatus $FF, wUnknownSerialCounter zeroed, poll count zeroed.
+-- hSerialConnectionStatus $FF, wUnknownSerialCounter_cc47 zeroed, poll count zeroed.
 --
 -- SCOPE, stated so it is not inferred: this is the receptionist's TIMEOUT path
 -- only. The connected path (save prompt -> Serial_SyncAndExchangeNybble ->
@@ -64,7 +64,7 @@ local function regions()
 	for _, extra in ipairs({
 		{ name = "linkStatus",    addr = sym:addr("hSerialConnectionStatus"), size = 1 },
 		{ name = "linkTimeout",   addr = sym:addr("wLinkTimeoutCounter"),     size = 1 },
-		{ name = "serialCounter", addr = sym:addr("wUnknownSerialCounter"),   size = 2 },
+		{ name = "serialCounter", addr = sym:addr("wUnknownSerialCounter_cc47"), size = 2 },
 		{ name = "menuPollCount", addr = sym:addr("wMenuJoypadPollCount"),    size = 1 },
 		{ name = "wPlayerMapPos", addr = sym:addr("wCurMap"),                 size = 5 },
 	}) do

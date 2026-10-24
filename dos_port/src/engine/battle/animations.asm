@@ -40,6 +40,7 @@ bits 32
 %define TILE_BLANK 0x7F                  ; charmap " " (same define as src/home/copy2.asm)
 %include "coords.inc"                    ; BCOORD — battle-frame tilemap projection (+10 col, +3 row)
 %include "data_macros.inc"               ; dc — pret macros/data.asm "crumbs" (FlashScreenLong* tables)
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"    ; SFX_DAMAGE / SFX_SUPER_EFFECTIVE / SFX_NOT_VERY_EFFECTIVE
 
 %ifndef OBJ_SIZE
@@ -47,6 +48,14 @@ OBJ_SIZE                 equ 4     ; constants/hardware.inc — bytes per OAM en
 %endif
 %ifndef SCREEN_HEIGHT_PX
 SCREEN_HEIGHT_PX         equ 144   ; constants/hardware.inc
+%endif
+
+%ifndef wBattleObjPalID
+%ifdef wBattleObjPalID
+%define wBattleObjPalID wBattleObjPalID
+%else
+%define wBattleObjPalID 0xECC2
+%endif
 %endif
 ; WavyScreenLineOffsets entry count (pret's table before its $80 terminator).
 ; MUST be a power of two — WavyScreen_SetSCX wraps the phase with AND, not MOD.
@@ -116,6 +125,7 @@ global GetSubanimationTransform2
 global LoadMoveAnimationTiles
 global MoveAnimation
 global ShareMoveAnimations
+global SaveScreenTilesAndTransferBGMap
 global Func_78e98
 global WriteLowerByteOfBGMapAndEnableBGTransfer
 global BattleAnimCopyTileMapToVRAM
@@ -225,7 +235,7 @@ DrawFrameBlock:
     mov al, [ebp + wFBTileCounter]
     inc al                                   ; 8-bit (frame-block count bound)
     mov [ebp + wFBTileCounter], al
-    mov byte [ebp + wdef4], 2                ; ld a,$2 / ld [wdef4],a
+    mov byte [ebp + wBattleObjPalID], 2                ; ld a,$2 / ld [wBattleObjPalID],a
     mov al, [ebp + wSubAnimTransform]
     dec al
     jz .flipHorizontalAndVertical            ; SUBANIMTYPE_HVFLIP
@@ -259,7 +269,7 @@ DrawFrameBlock:
     mov [ebp + edx], al                      ; store X
     cmp al, 88
     jb .noHalfAdjust1
-    inc byte [ebp + wdef4]
+    inc byte [ebp + wBattleObjPalID]
 .noHalfAdjust1:
     inc esi
     inc edx
@@ -271,7 +281,7 @@ DrawFrameBlock:
     mov al, [esi]                            ; ld a,[hli] — attr flags
     inc esi
     mov bl, al                               ; ld b,a
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     or al, bl
     mov [ebp + edx], al                      ; store flags
     inc edx
@@ -293,7 +303,7 @@ DrawFrameBlock:
     mov [ebp + edx], al                      ; store X
     cmp al, 88
     jb .noHalfAdjust2
-    inc byte [ebp + wdef4]
+    inc byte [ebp + wBattleObjPalID]
 .noHalfAdjust2:
     inc esi
     inc edx
@@ -316,7 +326,7 @@ DrawFrameBlock:
     jz .storeFlags1
     mov bl, 0
 .storeFlags1:
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     or al, bl
     mov [ebp + edx], al
     inc edx
@@ -336,7 +346,7 @@ DrawFrameBlock:
     mov [ebp + edx], al                      ; store X
     cmp al, 88
     jb .noHalfAdjust3
-    inc byte [ebp + wdef4]
+    inc byte [ebp + wBattleObjPalID]
 .noHalfAdjust3:
     inc esi
     inc edx
@@ -356,7 +366,7 @@ DrawFrameBlock:
     and al, ~OAM_XFLIP & 0xFF                ; res B_OAM_XFLIP,a
 .storeFlags2:
     mov bl, al
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     or al, bl
     mov [ebp + edx], al
     inc edx
@@ -860,9 +870,10 @@ WavyScreen_SetSCX:
     ret
 
 ; ===========================================================================
-; Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
-; DEVIATION{class=HAL; pret=engine/battle/animations.asm:Func_78e98; behavior=the intermediate ClearScreen and blank-staging Delay3 are omitted, directly keeping wTileMap intact; evidence=on the Game Boy LCDC scanned the alternate vBGMap while wTileMap was cleared and transferred to the other VRAM map in the background without visible blanking, whereas the software compositor renders wTileMap directly on every frame so clearing wTileMap produced a 3-frame blank screen; lifetime=permanent, part of the software video HAL}
+; SaveScreenTilesAndTransferBGMap / Func_78e98 / WriteLowerByteOfBGMapAndEnableBGTransfer — pret animations.asm.
+; DEVIATION{class=HAL; pret=engine/battle/animations.asm:SaveScreenTilesAndTransferBGMap; behavior=the intermediate ClearScreen and blank-staging Delay3 are omitted, directly keeping wTileMap intact; evidence=on the Game Boy LCDC scanned the alternate vBGMap while wTileMap was cleared and transferred to the other VRAM map in the background without visible blanking, whereas the software compositor renders wTileMap directly on every frame so clearing wTileMap produced a 3-frame blank screen; lifetime=permanent, part of the software video HAL}
 ; ===========================================================================
+SaveScreenTilesAndTransferBGMap:
 Func_78e98:
     call SaveScreenTilesToBuffer2
     call LoadScreenTilesFromBuffer2
@@ -1433,7 +1444,7 @@ SetAnimationBGPalette:
 global BattleAnimWriteOAMEntry
 BattleAnimWriteOAMEntry:
     mov al, 1
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
     mov al, dl                               ; ld a, e
     add al, 8
     mov dl, al                               ; ld e, a
@@ -1441,23 +1452,23 @@ BattleAnimWriteOAMEntry:
     inc esi
     cmp al, 40
     jb .yInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     inc al
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .yInRange:
     mov al, [ebp + wBaseCoordX]
     mov [ebp + esi], al                      ; X
     inc esi
     cmp al, 88
     jb .xInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     add al, 2
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .xInRange:
     mov al, dh                               ; ld a, d — tile
     mov [ebp + esi], al
     inc esi
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     mov [ebp + esi], al                      ; attributes
     inc esi
     ret
@@ -1514,7 +1525,7 @@ AnimationSpiralBallsInward:
     cmp al, 0xFF
     jz .done
     mov al, 2
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
     mov al, [ebp + wSpiralBallsBaseY]
     add al, [esi]
     mov [ebp + edx], al                      ; Y
@@ -1526,7 +1537,7 @@ AnimationSpiralBallsInward:
     cmp al, 88
     jb .xInRange
     mov al, 3
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .xInRange:
     inc esi
     inc edx
@@ -1534,7 +1545,7 @@ AnimationSpiralBallsInward:
     mov al, [ebp + edx]
     and al, 0xF0
     mov bh, al                               ; ld b, a
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     or al, bh
     mov [ebp + edx], al
     inc edx
@@ -1725,15 +1736,15 @@ _AnimationWaterDroplets:
     mov esi, wShadowOAM
 .loop:
     mov al, 1
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
     mov al, [ebp + wBaseCoordY]
     mov [ebp + esi], al                      ; Y
     inc esi
     cmp al, 40
     jb .yInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     inc al
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .yInRange:
     mov al, [ebp + wBaseCoordX]
     add al, 27
@@ -1742,15 +1753,15 @@ _AnimationWaterDroplets:
     inc esi
     cmp al, 88
     jb .xInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     add al, 2
     and al, 3
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .xInRange:
     mov al, [ebp + wDropletTile]
     mov [ebp + esi], al                      ; tile
     inc esi
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     mov [ebp + esi], al                      ; attribute
     inc esi
     mov al, [ebp + wBaseCoordX]
@@ -1837,7 +1848,7 @@ FallingObjects_UpdateOAMEntry:
     mov esi, wShadowOAM
     add esi, edx
     mov al, 1
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
     mov al, [ebp + esi]
     inc al
     inc al
@@ -1849,9 +1860,9 @@ FallingObjects_UpdateOAMEntry:
     inc esi
     cmp al, 40
     jb .yInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     inc al
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .yInRange:
     mov al, [ebp + wFallingObjectMovementByte]
     mov bh, al                               ; ld b, a
@@ -1869,10 +1880,10 @@ FallingObjects_UpdateOAMEntry:
     inc esi
     cmp al, 88
     jb .rightInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     add al, 2
     and al, 3
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .rightInRange:
     inc esi
     xor al, al                               ; no horizontal flip
@@ -1886,16 +1897,16 @@ FallingObjects_UpdateOAMEntry:
     inc esi
     cmp al, 88
     jb .leftInRange
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     add al, 2
     and al, 3
-    mov [ebp + wdef4], al
+    mov [ebp + wBattleObjPalID], al
 .leftInRange:
     inc esi
     mov al, OAM_XFLIP
 .next2:
     mov bh, al                               ; ld b, a
-    mov al, [ebp + wdef4]
+    mov al, [ebp + wBattleObjPalID]
     or al, bh
     mov [ebp + esi], al                      ; attribute
     ret
@@ -2174,7 +2185,11 @@ ChangeMonPic:
     mov bh, SET_PAL_BATTLE                   ; ld b, SET_PAL_BATTLE
     jmp RunPaletteCommand
 
+global AnimateSubstituteBreaking
+global BattleAnim_CopyFrontpicTilesToVRAM
 global Func_79929
+AnimateSubstituteBreaking:
+BattleAnim_CopyFrontpicTilesToVRAM:
 Func_79929:
     mov esi, wPlayerMonMinimized
     mov al, [ebp + hWhoseTurn]

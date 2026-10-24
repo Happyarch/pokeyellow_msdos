@@ -61,16 +61,16 @@ Printer_GetMonStats:
     call GBPalWhiteOutWithDelay3
     call ClearScreen
     call LoadHpBarAndStatusTilePatterns
-    mov edx, GFX_ea563
+    mov edx, PrinterHPTileGFX
     mov esi, vChars2 + 0x710
-    mov bh, 0                            ; BANK(GFX_ea563) unused
-    mov bl, (GFX_ea563End - GFX_ea563) / 8
+    mov bh, 0                            ; BANK(PrinterHPTileGFX) unused
+    mov bl, (PrinterHPTileGFXEnd - PrinterHPTileGFX) / 8
     call CopyVideoDataDouble
 
-    mov edx, GFX_ea56b
+    mov edx, PrinterLVTileGFX
     mov esi, vChars2 + 0x6E0
-    mov bh, 0                            ; BANK(GFX_ea56b) unused
-    mov bl, (GFX_ea56bEnd - GFX_ea56b) / 8
+    mov bh, 0                            ; BANK(PrinterLVTileGFX) unused
+    mov bl, (PrinterLVTileGFXEnd - PrinterLVTileGFX) / 8
     call CopyVideoDataDouble
 
     xor al, al

@@ -30,15 +30,25 @@ global CeladonMansion1FNidoranFText
 global CeladonMansion1FPrintGrannyText
 global CeladonMansion1F_Script
 global CeladonMansion1F_TextPointers
+global CeladonMansion1Text2
 global CeladonMansion1Text_f1e96
+global CeladonMansion1Text7
 global CeladonMansion1Text_f1ed5
+global CeladonMansion1Text8
 global CeladonMansion1Text_f1eda
+global CeladonMansion1Text9
 global CeladonMansion1Text_f1edf
+global CeladonMansion1Text10
 global CeladonMansion1Text_f1ee4
+global CeladonMansion1Text11
 global CeladonMansion1Text_f1ee9
+global CeladonMansion1Text12
 global CeladonMansion1Text_f1eee
+global CeladonMansion1Text6
 global CeladonMansionText_f1e9c
+global GetPikachuHappinessText
 global Func_f1ea2
+global PikachuHappinessThresholds
 global PikachuHappinessThresholds_f1eb9
 
 extern Bankswitch
@@ -92,12 +102,13 @@ CeladonMansion1FGrannyText:
     call CeladonMansion1FPrintGrannyText
     mov al, [ebp + wPikachuHappiness]
     cmp al, 251
-    jb .asm_485d9
+    jb .noPikachuCry
     mov bl, 50   ; pret: ld c, 50
     call DelayFrames
     mov dl, 22   ; pret: ldpikacry e, PikachuCry23 (0-based clip index)
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call PlayPikachuSoundClip
+.noPikachuCry:
 .asm_485d9:
     jmp TextScriptEnd
 
@@ -134,27 +145,29 @@ CeladonMansion1FManagersSuiteSignText:
 CeladonMansion1FPrintGrannyText:
     mov al, 0x1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
-    mov esi, CeladonMansion1Text_f1e96
+    mov esi, CeladonMansion1Text2
     call PrintText
 ; DEVIATION{class=banking; pret=macros/farcall.asm:callfar; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
     call IsStarterPikachuAliveInOurParty
     jb .nr_7
         ret
 .nr_7:
-    mov esi, CeladonMansionText_f1e9c
+    mov esi, CeladonMansion1Text6
     call PrintText
     mov al, 0x0
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
-    call Func_f1ea2
+    call GetPikachuHappinessText
     call PrintText
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
+CeladonMansion1Text2:
 CeladonMansion1Text_f1e96:
     text_far _CeladonMansion1Text2
     text_waitbutton
     text_end
+CeladonMansion1Text6:
 CeladonMansionText_f1e9c:
     text_far _CeladonMansion1Text6
     text_promptbutton
@@ -162,49 +175,59 @@ CeladonMansionText_f1e9c:
 
 %assign event_byte -1
 %assign event_byte_a -1
+GetPikachuHappinessText:
 Func_f1ea2:
-    mov esi, PikachuHappinessThresholds_f1eb9
+    mov esi, PikachuHappinessThresholds
+.loop:
 .asm_f1ea5:
     mov eax, [esi]
     add esi, 4   ; pret: ld a, [hli] / inc hl — advance ESI to point to text pointer (+4)
     test al, al  ; pret: and a — check for terminator sentinel (-256 has low byte 0)
-    jz .asm_f1eb5
+    jz .got_text
     mov bh, al   ; pret: ld b, a — threshold value (B = BH)
     mov al, [ebp + wPikachuHappiness]
     cmp al, bh   ; pret: cp b
-    jb .asm_f1eb5
+    jb .got_text
     add esi, 4   ; pret: inc hl / inc hl — advance past 4-byte text pointer to next entry
-    jmp .asm_f1ea5
+    jmp .loop
 
+.got_text:
 .asm_f1eb5:
     mov esi, [esi]   ; pret: ld a, [hli] / ld h, [hl] / ld l, a (dw->dd stride: dereference 32-bit pointer)
     ret
 
 %assign event_byte -1
 %assign event_byte_a -1
+PikachuHappinessThresholds:
 PikachuHappinessThresholds_f1eb9:
-    dd 51, CeladonMansion1Text_f1ed5
-    dd 101, CeladonMansion1Text_f1eda
-    dd 131, CeladonMansion1Text_f1edf
-    dd 161, CeladonMansion1Text_f1ee4
-    dd 201, CeladonMansion1Text_f1ee9
-    dd 255, CeladonMansion1Text_f1eee
-    dd -256, CeladonMansion1Text_f1eee
+    dd 51, CeladonMansion1Text7
+    dd 101, CeladonMansion1Text8
+    dd 131, CeladonMansion1Text9
+    dd 161, CeladonMansion1Text10
+    dd 201, CeladonMansion1Text11
+    dd 255, CeladonMansion1Text12
+    dd -256, CeladonMansion1Text12
+CeladonMansion1Text7:
 CeladonMansion1Text_f1ed5:
     text_far _CeladonMansion1Text7
     text_end
+CeladonMansion1Text8:
 CeladonMansion1Text_f1eda:
     text_far _CeladonMansion1Text8
     text_end
+CeladonMansion1Text9:
 CeladonMansion1Text_f1edf:
     text_far _CeladonMansion1Text9
     text_end
+CeladonMansion1Text10:
 CeladonMansion1Text_f1ee4:
     text_far _CeladonMansion1Text10
     text_end
+CeladonMansion1Text11:
 CeladonMansion1Text_f1ee9:
     text_far _CeladonMansion1Text11
     text_end
+CeladonMansion1Text12:
 CeladonMansion1Text_f1eee:
     text_far _CeladonMansion1Text12
     text_end

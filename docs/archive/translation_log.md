@@ -7871,3 +7871,36 @@ print_waiting_text.asm, Stage 3 — needs the trade-screen projection);
 `TODO-HW: network HAL` sites are swept, including restoring the
 `.doneChoosingMenuSelection` `rSC = SC_START|SC_INTERNAL` write pret has and
 the stub era dropped.
+
+## 2026-10-24 — Upstream pret sync through commit 4cda94cf3: placeholder symbol retirement
+
+Synchronized pret disassembly updates through upstream commit `4cda94cf3` ("Use correct address suffixes to keep two unknown serial WRAM variables unnamed"). Multiple legacy placeholder symbols (`Func_*`, `SpriteFunc_*`, `GFX_*`, `wUnknown*`, `Pointer_*`) were identified and renamed upstream, and documentation/plans across the port were updated to match:
+
+- **Overworld & Sprite Engine**:
+  - `engine/overworld/movement.asm:Func_4e32` -> `.setImageIndex`
+  - `engine/overworld/movement.asm:Func_5274` -> `AdvanceScriptedNPCIntraAnimFrameCounter`
+  - `engine/gfx/sprite_oam.asm:Func_4a7b` -> `GetSpriteImageIndex`
+  - `home/map_objects.asm:SpriteFunc_34a1` -> `SetSpriteImageIndex`
+  - `engine/events/pokecenter.asm:Func_6eaa` -> `PokemonCenterNurseFacesUp`
+  - `engine/events/pokecenter.asm:Func_6ebb` -> `PokemonCenterUpdateSpriteImageIndex`
+
+- **Serial & Link WRAM Variables**:
+  - `ram/wram.asm:wUnknownSerialCounter` -> `wUnknownSerialCounter_cc47` (address suffix to disambiguate unnamed WRAM)
+  - `ram/wram.asm:wUnknownSerialCounter2` -> `wLinkByteTimeout` (identified timeout watchdog counter)
+  - `ram/wram.asm:wUnknownSerialFlag_d499` -> `wUnknownSerialFlag_d498` (corrected address suffix matching symbol table)
+
+- **Game Boy Printer Engine**:
+  - `ram/wram.asm:wcae2` -> `wPrinterMargins` (printer margin/sheet byte)
+  - `engine/printer/printer2.asm:GFX_ea563` -> `PrinterHPTileGFX`
+  - `engine/printer/printer2.asm:GFX_ea56b` -> `PrinterLVTileGFX`
+  - `engine/printer/printer2.asm:GFX_ea597` -> `Printer01TilesGFX`
+  - `engine/printer/printer2.asm:Func_ea606` et al. -> `Printer2_Next`, `Printer2_Back`, `Printer2_Quit`, `Printer2_InitSerial`, `Printer2_StartTransmittingTilemap`, `Printer2_EndTilemapTransmission`, etc.
+
+- **Battle & Pokémon Behavior**:
+  - `engine/battle/animations.asm:Func_78e98` -> `SaveScreenTilesAndTransferBGMap`
+  - `engine/battle/animations.asm:Func_79929` -> `AnimateSubstituteBreaking`
+  - `engine/pokemon/evos_moves.asm:Func_3b079` -> `CheckAnyStageCanLearnMove`
+  - `engine/pokemon/evos_moves.asm:Func_3b0a2` -> `CheckCanLearnMove`
+  - `engine/pokemon/evos_moves.asm:Func_3b10f` -> `FindPreEvolution`
+  - `data/pokemon/unknown_list.asm:Pointer_3b0ee` -> `IgnoreLevel1LearnsetMons` (`data/pokemon/debug_ignore_lv1.asm`)
+

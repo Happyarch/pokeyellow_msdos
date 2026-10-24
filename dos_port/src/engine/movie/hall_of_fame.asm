@@ -68,6 +68,8 @@ RED_PIC_LEN    equ 255               ; gfx/player/red.pic byte length (as oak_sp
 global AnimateHallOfFame
 global HoFShowMonOrPlayer
 global HoFDisplayAndRecordMonInfo
+global FinishLeaguePCShowMon
+global ResetHallOfFameDisplayTileMap
 global Func_7033f
 global HoFDisplayMonInfo
 global HoFLoadPlayerPics
@@ -334,10 +336,11 @@ HoFDisplayAndRecordMonInfo:
     jmp HoFRecordMonInfo
 
 ; ---------------------------------------------------------------------------
-; Func_7033f — pret :164. The LEAGUE PC's per-mon half of the above: info box and
-; cry, no recording. RETIRES the ret-only seam stub that stood in
-; engine/menus/league_pc_stubs.asm; LeaguePCShowMon jmps here.
+; FinishLeaguePCShowMon / ResetHallOfFameDisplayTileMap / Func_7033f — pret :164.
+; The LEAGUE PC's per-mon half of the above: info box and cry, no recording.
 ; ---------------------------------------------------------------------------
+FinishLeaguePCShowMon:
+ResetHallOfFameDisplayTileMap:
 Func_7033f:
     call HoFDisplayMonInfo
     mov al, [ebp + wHoFMonSpecies]

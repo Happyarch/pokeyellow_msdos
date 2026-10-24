@@ -96,7 +96,7 @@ _GivePokemon:
 
 .addToParty:
     call SetPokedexOwnedFlag                    ; call SetPokedexOwnedFlag
-    mov esi, UnknownTerminator_f6794            ; ld hl, UnknownTerminator_f6794
+    mov esi, AddedPartyMonDummyText             ; ld hl, AddedPartyMonDummyText (formerly UnknownTerminator_f6794)
     call PrintText                              ; call PrintText
     call AddPartyMon                            ; call AddPartyMon
     mov al, 1                                   ; ld a, 1

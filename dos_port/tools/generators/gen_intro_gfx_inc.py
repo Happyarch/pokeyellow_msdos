@@ -8,9 +8,9 @@ png_to_2bpp core is shared with gen_title_gfx_inc.py and is verified byte-exact
 against the committed gfx/intro/*.2bpp binaries.
 """
 from pathlib import Path
+import sys
 
 from gen_globals import insert_globals
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_title_gfx_inc import png_to_2bpp
@@ -42,16 +42,27 @@ def write_2bpp(dst: Path, label: str, data: bytes, comment: str,
 
 
 def write_tilemaps(dst: Path, entries):
-    """entries: list of (label, filename, width, height)."""
+    """entries: list of (primary_label, legacy_label, filename, width, height)."""
     lines = [HDR.format(n=dst.name),
              "; Yellow-intro tilemaps (scene 10, flying Pikachu). Row-major.", ""]
-    for label, fname, w, h in entries:
-        data = (GFX / fname).read_bytes()
+    globals_list = []
+    for primary_label, legacy_label, fname, w, h in entries:
+        src = GFX / fname
+        if not src.exists():
+            sys.exit(f"Missing source file: {src}")
+        data = src.read_bytes()
         assert len(data) == w * h, f"{fname}: {len(data)} != {w}x{h}"
-        lines += [f"; {w}x{h}", f"{label}:"]
+        lines += [f"; {w}x{h}", f"{primary_label}:"]
+        globals_list.append(primary_label)
+        if legacy_label:
+            lines += [f"{legacy_label}:"]
+            globals_list.append(legacy_label)
         lines += _db_lines(data)
-        lines += [f"{label}End:", ""]
-    insert_globals(lines, [e[0] for e in entries], anchor=None)
+        lines += [f"{primary_label}End:"]
+        if legacy_label:
+            lines += [f"{legacy_label}End:"]
+        lines += [""]
+    insert_globals(lines, globals_list, anchor=None)
     dst.write_text("\n".join(lines) + "\n")
     print(f"  wrote {dst.name} ({len(entries)} tilemaps)")
 
@@ -66,9 +77,9 @@ def main():
     write_2bpp(ASSETS / "yellow_intro_clouds_2bpp.inc", "YellowIntroCloudGFX",
                png_to_2bpp(GFX / "clouds.png"), "cloud tiles", make_global=True)
     write_tilemaps(ASSETS / "yellow_intro_tilemaps.inc", [
-        ("Unkn_f9b6e", "unknown_f9b6e.tilemap", 20, 6),
-        ("Unkn_f9be6", "unknown_f9be6.tilemap", 4, 3),
-        ("Unkn_f9bf2", "unknown_f9bf2.tilemap", 2, 2),
+        ("YellowIntroCloudsTilemap", "Unkn_f9b6e", "clouds.tilemap", 20, 6),
+        ("YellowIntroCloudPairTilemap", "Unkn_f9be6", "cloud_pair.tilemap", 4, 3),
+        ("YellowIntroSmallCloudTilemap", "Unkn_f9bf2", "small_cloud.tilemap", 2, 2),
     ])
 
 

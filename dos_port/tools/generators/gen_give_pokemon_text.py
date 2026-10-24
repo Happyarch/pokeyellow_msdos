@@ -33,7 +33,7 @@ OUT = ROOT / "dos_port" / "assets" / "give_pokemon_text.inc"
 
 GIVE_POKEMON_SRC = ["engine/events/give_pokemon.asm"]
 
-WANT = {"GotMonText", "SentToBoxText", "BoxIsFullText", "UnknownTerminator_f6794"}
+WANT = {"GotMonText", "SentToBoxText", "BoxIsFullText", "AddedPartyMonDummyText", "UnknownTerminator_f6794"}
 
 
 def existing_labels() -> set:
@@ -55,7 +55,9 @@ def main() -> int:
     gbt.BATTLE_SRC = GIVE_POKEMON_SRC
     wrappers = gbt.collect_wrappers(charmap, memmap, far_db)
 
-    # UnknownTerminator_f6794 is just text_end
+    # AddedPartyMonDummyText (formerly UnknownTerminator_f6794) is just text_end
+    if "AddedPartyMonDummyText" not in wrappers:
+        wrappers["AddedPartyMonDummyText"] = [gbt.TX_END]
     if "UnknownTerminator_f6794" not in wrappers:
         wrappers["UnknownTerminator_f6794"] = [gbt.TX_END]
 

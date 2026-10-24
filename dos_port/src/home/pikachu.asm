@@ -24,7 +24,9 @@ extern BankswitchCommon                 ; src/home/bankswitch2.asm
 extern _SpawnPikachu                    ; src/engine/pikachu/pikachu_follow.asm — pret SpawnPikachu_
 
 global SpawnPikachu
+global EnableHidePikachuWhileLeavingMap
 global Func_1510
+global DisableHidePikachuWhileLeavingMap
 global Func_151d
 global EnablePikachuOverworldSpriteDrawing
 global DisablePikachuOverworldSpriteDrawing
@@ -54,14 +56,17 @@ BANK_PikachuOverworld                equ 0x3F  ; pret "Overworld Pikachu" bank; 
 ; the flags via [ebp+SYM] and never touch ESI, so no save/restore is needed.
 ; ===========================================================================
 
-; Func_1510 — pret home/pikachu.asm:Func_1510. Set hide-bit 7 and blank the
-; sprite image index ($ff = off screen).
+; EnableHidePikachuWhileLeavingMap (formerly Func_1510) — pret home/pikachu.asm:EnableHidePikachuWhileLeavingMap.
+; Set hide-bit 7 and blank the sprite image index ($ff = off screen).
+EnableHidePikachuWhileLeavingMap:
 Func_1510:
     or  byte [ebp + wPikachuOverworldStateFlags], 0x80          ; set 7, [hl]
     mov byte [ebp + wSpritePikachuStateData1ImageIndex], 0xFF   ; ld [hl], $ff
     ret
 
-; Func_151d — pret home/pikachu.asm:Func_151d. Clear hide-bit 7.
+; DisableHidePikachuWhileLeavingMap (formerly Func_151d) — pret home/pikachu.asm:DisableHidePikachuWhileLeavingMap.
+; Clear hide-bit 7.
+DisableHidePikachuWhileLeavingMap:
 Func_151d:
     and byte [ebp + wPikachuOverworldStateFlags], 0x7F          ; res 7, [hl]
     ret

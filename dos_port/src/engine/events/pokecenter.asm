@@ -21,6 +21,7 @@ bits 32
 %include "assets/script_constants.inc"; shared constants (%define: emits no COFF symbol)
 %include "gb_constants.inc"
 %include "gb_text.inc"
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"
 %include "assets/map_dims.inc"
 
@@ -30,7 +31,11 @@ bits 32
 section .text
 
 global DisplayPokemonCenterDialogue_
+global PokeCenter_FadeOut
+global PokemonCenterNurseFacesUp
 global Func_6eaa
+global PokeCenter_FadeIn
+global PokemonCenterUpdateSpriteImageIndex
 global Func_6ebb
 global PokemonCenterWelcomeText
 global ShallWeHealYourPokemonText
@@ -58,7 +63,8 @@ extern AnimateHealingMachine                   ; src/engine/overworld/healing_ma
 extern HealParty                               ; src/engine/events/heal_party.asm
 extern PlaySound                               ; src/home/audio.asm
 extern ReloadWalkingTilePatterns               ; src/engine/overworld/map_sprites.asm
-extern SpriteFunc_34a1                         ; src/home/map_objects.asm
+extern SetSpriteImageIndex                     ; src/home/map_objects.asm
+extern SpriteFunc_34a1                         ; src/home/map_objects.asm (alias)
 extern LoadFontTilePatterns                    ; src/home/load_font.asm
 extern SetSpriteFacingDirectionAndDelay        ; src/home/map_objects.asm
 
@@ -111,13 +117,13 @@ DisplayPokemonCenterDialogue_:
     jnz .playerPikachuNotOnScreen              ; jr nz, .playerPikachuNotOnScreen
     call DisablePikachuOverworldSpriteDrawing   ; call DisablePikachuOverworldSpriteDrawing
     call IsStarterPikachuAliveInOurParty        ; callfar IsStarterPikachuAliveInOurParty
-    jnc .playerPikachuNotOnScreen              ; call c, Func_6eaa
-    call Func_6eaa
+    jnc .playerPikachuNotOnScreen              ; call c, PokeCenter_FadeOut
+    call PokeCenter_FadeOut
 
 .playerPikachuNotOnScreen:
     mov bh, 1                                  ; lb bc, 1, 8
     mov bl, 8
-    call Func_6ebb                             ; call Func_6ebb
+    call PokeCenter_FadeIn                     ; call PokeCenter_FadeIn
     mov bl, 30                                 ; ld c, 30
     call DelayFrames                           ; call DelayFrames
     call AnimateHealingMachine                 ; farcall AnimateHealingMachine
@@ -133,8 +139,8 @@ DisplayPokemonCenterDialogue_:
     call CheckPikachuFollowingPlayer           ; call CheckPikachuFollowingPlayer
     jnz .doNotReturnPikachu                    ; jr nz, .doNotReturnPikachu
     call IsStarterPikachuAliveInOurParty        ; callfar IsStarterPikachuAliveInOurParty
-    jnc .skipFunc_6eaa2                        ; call c, Func_6eaa
-    call Func_6eaa
+    jnc .skipFunc_6eaa2                        ; call c, PokeCenter_FadeOut
+    call PokeCenter_FadeOut
 .skipFunc_6eaa2:
     mov byte [ebp + wPikachuSpawnState], 5     ; ld a, $5 / ld [wPikachuSpawnState], a
     call EnablePikachuOverworldSpriteDrawing    ; call EnablePikachuOverworldSpriteDrawing
@@ -142,14 +148,14 @@ DisplayPokemonCenterDialogue_:
 .doNotReturnPikachu:
     mov bh, 1                                  ; lb bc, 1, 0
     mov bl, 0
-    call Func_6ebb                             ; call Func_6ebb
+    call PokeCenter_FadeIn                     ; call PokeCenter_FadeIn
     mov esi, PokemonFightingFitText            ; ld hl, PokemonFightingFitText
     call PrintText                             ; call PrintText
     call IsStarterPikachuAliveInOurParty        ; callfar IsStarterPikachuAliveInOurParty
     jnc .notInParty                            ; jr nc, .notInParty
     mov bh, 15                                 ; lb bc, 15, 0
     mov bl, 0
-    call Func_6ebb                             ; call Func_6ebb
+    call PokeCenter_FadeIn                     ; call PokeCenter_FadeIn
 
 .notInParty:
     call LoadCurrentMapView                    ; call LoadCurrentMapView
@@ -158,7 +164,7 @@ DisplayPokemonCenterDialogue_:
     call ReloadWalkingTilePatterns             ; callfar ReloadWalkingTilePatterns
     mov byte [ebp + hSpriteIndex], 1           ; ld a, $1 / ldh [hSpriteIndex], a
     mov byte [ebp + hSpriteImageIndex], 1      ; ld a, $1 / ldh [hSpriteImageIndex], a
-    call SpriteFunc_34a1                       ; call SpriteFunc_34a1
+    call SetSpriteImageIndex                   ; call SetSpriteImageIndex
     mov bl, 40                                 ; ld c, 40
     call DelayFrames                           ; call DelayFrames
     call UpdateSprites                         ; call UpdateSprites
@@ -175,18 +181,22 @@ DisplayPokemonCenterDialogue_:
     ret
 
 ; ---------------------------------------------------------------------------
-; Func_6eaa — pret engine/events/pokecenter.asm:Func_6eaa
+; PokeCenter_FadeOut / PokemonCenterNurseFacesUp (formerly Func_6eaa) — pret engine/events/pokecenter.asm:PokemonCenterNurseFacesUp
 ; ---------------------------------------------------------------------------
+PokeCenter_FadeOut:
+PokemonCenterNurseFacesUp:
 Func_6eaa:
     mov byte [ebp + hSpriteIndex], 1           ; ld a, $1 / ldh [hSpriteIndex], a
     mov byte [ebp + hSpriteImageIndex], 4      ; ld a, $4 / ldh [hSpriteImageIndex], a
-    call SpriteFunc_34a1                       ; call SpriteFunc_34a1
+    call SetSpriteImageIndex                   ; call SetSpriteImageIndex
     mov bl, 64                                 ; ld c, 64
     jmp DelayFrames                            ; call DelayFrames / ret (tail call)
 
 ; ---------------------------------------------------------------------------
-; Func_6ebb — pret engine/events/pokecenter.asm:Func_6ebb
+; PokeCenter_FadeIn / PokemonCenterUpdateSpriteImageIndex (formerly Func_6ebb) — pret engine/events/pokecenter.asm:PokemonCenterUpdateSpriteImageIndex
 ; ---------------------------------------------------------------------------
+PokeCenter_FadeIn:
+PokemonCenterUpdateSpriteImageIndex:
 Func_6ebb:
     mov [ebp + hSpriteIndex], bh               ; ld a, b / ldh [hSpriteIndex], a
     mov [ebp + hSpriteImageIndex], bl          ; ld a, c / ldh [hSpriteImageIndex], a
@@ -195,7 +205,7 @@ Func_6ebb:
     pop ebx                                    ; pop bc
     mov [ebp + hSpriteIndex], bh               ; ld a, b / ldh [hSpriteIndex], a
     mov [ebp + hSpriteImageIndex], bl          ; ld a, c / ldh [hSpriteImageIndex], a
-    call SpriteFunc_34a1                       ; call SpriteFunc_34a1
+    call SetSpriteImageIndex                   ; call SetSpriteImageIndex
     ret
 
 ; ---------------------------------------------------------------------------

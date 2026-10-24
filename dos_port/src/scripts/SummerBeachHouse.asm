@@ -21,6 +21,7 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+global SummerBeachHousePrintHighScoreScript
 global Func_f23d0
 global SummerBeachHousePikachuText
 global SummerBeachHousePoster1Text
@@ -30,7 +31,9 @@ global SummerBeachHousePrinterText
 global SummerBeachHouseSurfinDudeText
 global SummerBeachHouse_Script
 global SummerBeachHouse_TextPointers
+global SummerBeachHousePrinterText5
 global Text_f240c
+global SummerBeachHousePrinterText6
 global Text_f2412
 
 extern Bankswitch
@@ -115,7 +118,7 @@ SummerBeachHouseSurfinDudeText:
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
-    jnz .asm_f226b
+    jnz .refused
     mov al, 1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
 ; DEVIATION{class=banking; pret=macros/farcall.asm:farcall; behavior=bank switch dropped, call goes straight to the target; evidence=the DPMI model is flat so every routine is always addressable, and Bankswitch has no port counterpart; lifetime=permanent}
@@ -126,6 +129,7 @@ SummerBeachHouseSurfinDudeText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+.refused:
 .asm_f226b:
     mov esi, .SurfinDudeText2
     call PrintText
@@ -233,7 +237,7 @@ SummerBeachHousePrinterText:
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov al, [ebp + wPikachuSpawnStateFlags]
     test al, (1 << (6))
-    jz .asm_f2369
+    jz .cannotPrint
     mov esi, wPikachuMapScriptFlags
     test byte [ebp + esi], (1 << (1))
     jz .next2
@@ -244,7 +248,7 @@ SummerBeachHousePrinterText:
     call PrintText
     mov al, [ebp + wPikachuMapScriptFlags]
     test al, (1 << (1))
-    jz .asm_f236f
+    jz .done
     mov al, 1
     mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
     mov esi, .SummerBeachHousePrinterText3
@@ -252,7 +256,7 @@ SummerBeachHousePrinterText:
     call YesNoChoice
     mov al, [ebp + wCurrentMenuItem]
     test al, al
-    jz Func_f23d0
+    jz SummerBeachHousePrintHighScoreScript
     call SaveScreenTilesToBuffer2
     mov esi, wStatusFlags5
     or byte [ebp + esi], (1 << (BIT_NO_TEXT_DELAY))
@@ -271,13 +275,15 @@ SummerBeachHousePrinterText:
     call GBPalNormal
     mov al, 1
     mov [ebp + wUpdateSpritesEnabled], al
-    jmp .asm_f236f
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
+.cannotPrint:
 .asm_f2369:
     mov esi, .SummerBeachHousePrinterText1
     call PrintText
+.done:
 .asm_f236f:
     jmp TextScriptEnd
 
@@ -300,6 +306,7 @@ SummerBeachHousePrinterText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SummerBeachHousePrintHighScoreScript:
 Func_f23d0:
     call SaveScreenTilesToBuffer2
     xor al, al
@@ -317,11 +324,12 @@ Func_f23d0:
     call Delay3
     call GBPalNormal
     mov byte [ebp + wUpdateSpritesEnabled], 1
-    mov esi, Text_f2412
-    mov al, [ebp + hOaksAideResult]
+    mov esi, SummerBeachHousePrinterText6
+    mov al, [ebp + hCanceledPrinting]
     test al, al
-    jnz .asm_f2406
-    mov esi, Text_f240c
+    jnz .print_canceled
+    mov esi, SummerBeachHousePrinterText5
+.print_canceled:
 .asm_f2406:
     call PrintText
 %ifdef DEBUG_PRINT_SURF_CANCEL
@@ -331,10 +339,12 @@ Func_f23d0:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SummerBeachHousePrinterText5:
 Text_f240c:
     text_far _SummerBeachHousePrinterText5
     text_waitbutton
     text_end
+SummerBeachHousePrinterText6:
 Text_f2412:
     text_far _SummerBeachHousePrinterText6
     text_waitbutton

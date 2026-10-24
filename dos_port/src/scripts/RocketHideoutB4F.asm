@@ -21,6 +21,8 @@ bits 32
 %include "assets/event_constants.inc"
 %include "assets/script_constants.inc"
 
+%undef SFX_SURFING_UNUSED
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"
 ; Trainer headers and battle text are DEFINED once, by the single carrier
 ; src/data/trainer_headers.asm. Declare what this script uses; do NOT %include
@@ -37,7 +39,9 @@ global RocketHideoutB4FBeatGiovanniScript
 global RocketHideoutB4FGiovanniHopeWeMeetAgainText
 global RocketHideoutB4FGiovanniText
 global RocketHideoutB4FJessieJamesEndBattleText
+global RocketHideoutB4FJessieJamesEncounterRightMovementData
 global RocketHideoutB4FJessieJamesMovementData_45605
+global RocketHideoutB4FJessieJamesEncounterLeftMovementData
 global RocketHideoutB4FJessieJamesMovementData_45606
 global RocketHideoutB4FResetScripts
 global RocketHideoutB4FRocketText
@@ -51,6 +55,7 @@ global RocketHideoutB4FScript6
 global RocketHideoutB4FScript7
 global RocketHideoutB4FScript8
 global RocketHideoutB4FScript9
+global RocketHideoutB4FEncounterJessieJamesScript
 global RocketHideoutB4FScript_455a5
 global RocketHideoutB4FScript_HideJessieJames
 global RocketHideoutB4FScript_HideObject
@@ -210,7 +215,7 @@ RocketHideoutB4FBeatGiovanniScript:
 RocketHideoutB4FDefaultScript:
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_4_JESSIE_JAMES
     jnz .sk_78
-        call RocketHideoutB4FScript_455a5
+        call RocketHideoutB4FEncounterJessieJamesScript
 .sk_78:
     CheckEvent EVENT_BEAT_ROCKET_HIDEOUT_4_TRAINER_2
     jnz .sk_80
@@ -220,6 +225,7 @@ RocketHideoutB4FDefaultScript:
 
 %assign event_byte -1
 %assign event_byte_a -1
+RocketHideoutB4FEncounterJessieJamesScript:
 RocketHideoutB4FScript_455a5:
     mov al, [ebp + wYCoord]
     cmp al, 0xe
@@ -229,13 +235,14 @@ RocketHideoutB4FScript_455a5:
     ResetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
     mov al, [ebp + wXCoord]
     cmp al, 0x18
-    jz .asm_455c2
+    jz .got_side
     mov al, [ebp + wXCoord]
     cmp al, 0x19
     jz .nr_93
         ret
 .nr_93:
     SetEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
+.got_side:
 .asm_455c2:
     xor al, al
     mov [ebp + hJoyHeld], al
@@ -268,8 +275,10 @@ RocketHideoutB4FScript_455a5:
 
 %assign event_byte -1
 %assign event_byte_a -1
+RocketHideoutB4FJessieJamesEncounterRightMovementData:
 RocketHideoutB4FJessieJamesMovementData_45605:
     db 0x4
+RocketHideoutB4FJessieJamesEncounterLeftMovementData:
 RocketHideoutB4FJessieJamesMovementData_45606:
     db 0x4
     db 0x4
@@ -279,10 +288,11 @@ RocketHideoutB4FJessieJamesMovementData_45606:
 %assign event_byte -1
 %assign event_byte_a -1
 RocketHideoutB4FScript4:
-    mov edi, RocketHideoutB4FJessieJamesMovementData_45605   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45605 — MoveSprite takes it in EDI
+    mov edi, RocketHideoutB4FJessieJamesEncounterRightMovementData   ; pret: ld de, RocketHideoutB4FJessieJamesEncounterRightMovementData — MoveSprite takes it in EDI
     CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-    jz .asm_45617
-    mov edi, RocketHideoutB4FJessieJamesMovementData_45606   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45606 — MoveSprite takes it in EDI
+    jz .got_side
+    mov edi, RocketHideoutB4FJessieJamesEncounterLeftMovementData   ; pret: ld de, RocketHideoutB4FJessieJamesEncounterLeftMovementData — MoveSprite takes it in EDI
+.got_side:
 .asm_45617:
     mov al, 2
     mov [ebp + hSpriteIndex], al
@@ -309,18 +319,20 @@ RocketHideoutB4FScript6:
     mov al, SPRITE_FACING_LEFT
     mov [ebp + wSprite02StateData1FacingDirection], al
     CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-    jz .asm_4564a
+    jz .got_facing
     mov al, SPRITE_FACING_DOWN
     mov [ebp + wSprite02StateData1FacingDirection], al
+.got_facing:
 .asm_4564a:
     call Delay3
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
 RocketHideoutB4FScript7:
-    mov edi, RocketHideoutB4FJessieJamesMovementData_45606   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45606 — MoveSprite takes it in EDI
+    mov edi, RocketHideoutB4FJessieJamesEncounterLeftMovementData   ; pret: ld de, RocketHideoutB4FJessieJamesEncounterLeftMovementData — MoveSprite takes it in EDI
     CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-    jz .asm_4565f
-    mov edi, RocketHideoutB4FJessieJamesMovementData_45605   ; pret: ld de, RocketHideoutB4FJessieJamesMovementData_45605 — MoveSprite takes it in EDI
+    jz .got_side
+    mov edi, RocketHideoutB4FJessieJamesEncounterRightMovementData   ; pret: ld de, RocketHideoutB4FJessieJamesEncounterRightMovementData — MoveSprite takes it in EDI
+.got_side:
 .asm_4565f:
     mov al, 3
     mov [ebp + hSpriteIndex], al
@@ -349,9 +361,10 @@ RocketHideoutB4FScript9:
     mov al, SPRITE_FACING_DOWN
     mov [ebp + wSprite03StateData1FacingDirection], al
     CheckEvent EVENT_ROCKET_HIDEOUT_4_JESSIE_JAMES_ON_LEFT
-    jz .asm_45697
+    jz .got_facing
     mov al, SPRITE_FACING_RIGHT
     mov [ebp + wSprite03StateData1FacingDirection], al
+.got_facing:
 .asm_45697:
     call Delay3
     mov al, TEXT_ROCKETHIDEOUTB4F_TEXT12

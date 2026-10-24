@@ -35,7 +35,9 @@ global CeladonMansion3FProgrammerText
 global CeladonMansion3FWriterText
 global CeladonMansion3F_Script
 global CeladonMansion3F_TextPointers
+global CeladonMansion3FProgrammerText1
 global CeladonMansion3Text_486f0
+global CeladonMansion3FProgrammerText2
 global CeladonMansion3Text_486f5
 global CeladonMansion3_PokedexCount
 
@@ -99,18 +101,20 @@ CeladonMansion3F_TextPointers:
 CeladonMansion3FProgrammerText:
     call CeladonMansion3_PokedexCount
     cmp al, 151 - 1
-    mov esi, CeladonMansion3Text_486f5
+    mov esi, CeladonMansion3FProgrammerText2
     jae .print
-    mov esi, CeladonMansion3Text_486f0
+    mov esi, CeladonMansion3FProgrammerText1
 .print:
     call PrintText
     jmp TextScriptEnd
 
 %assign event_byte -1
 %assign event_byte_a -1
+CeladonMansion3FProgrammerText1:
 CeladonMansion3Text_486f0:
     text_far _CeladonMansion3FProgrammerText
     text_end
+CeladonMansion3FProgrammerText2:
 CeladonMansion3Text_486f5:
     text_far _CeladonMansion3FProgrammerText2
     text_end

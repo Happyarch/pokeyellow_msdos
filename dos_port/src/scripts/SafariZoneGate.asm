@@ -20,20 +20,30 @@ bits 32
 %include "events.inc"
 %include "assets/event_constants.inc"
 
+%undef SFX_SURFING_UNUSED
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"
 
+global SafariZoneLowCostTextPointers
 global Pointers_f2100
 global SafariZoneEntranceAutoWalk
 global SafariZoneEntranceAutoWalk2
 global SafariZoneEntranceCalculateLowCostAdmission
 global SafariZoneEntranceConvertBCDtoNumber
 global SafariZoneEntranceGetLowCostAdmissionText
+global SafariZoneLowCostText1
 global SafariZoneEntranceText_f20c4
+global SafariZoneLowCostText2
 global SafariZoneEntranceText_f20c9
+global SafariZoneEntranceGiveOneBallText
 global SafariZoneEntranceText_f20f6
+global SafariZoneLowCostText5
 global SafariZoneEntranceText_f210a
+global SafariZoneLowCostText6
 global SafariZoneEntranceText_f210f
+global SafariZoneLowCostText7
 global SafariZoneEntranceText_f2114
+global SafariZoneLowCostText8
 global SafariZoneEntranceText_f2119
 global SafariZoneGateDefaultScript
 global SafariZoneGateLeavingSafariScript
@@ -528,12 +538,12 @@ SafariZoneEntranceCalculateLowCostAdmission:
     xor al, al
     mov bx, 0x3
     call FillMemory
-    mov esi, SafariZoneEntranceText_f20c4
+    mov esi, SafariZoneLowCostText1
     call PrintText_NoCreatingTextBox
     mov al, MONEY_BOX
     mov [ebp + wTextBoxID], al
     call DisplayTextBoxID
-    mov esi, SafariZoneEntranceText_f20c9
+    mov esi, SafariZoneLowCostText2
     call PrintText
     pop eax
     popfd
@@ -550,9 +560,11 @@ SafariZoneEntranceCalculateLowCostAdmission:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SafariZoneLowCostText1:
 SafariZoneEntranceText_f20c4:
     text_far _SafariZoneLowCostText1
     text_end
+SafariZoneLowCostText2:
 SafariZoneEntranceText_f20c9:
     text_far _SafariZoneLowCostText2
     text_end
@@ -565,7 +577,7 @@ SafariZoneEntranceGetLowCostAdmissionText:
     push eax
     inc byte [ebp + esi]
     movzx edx, al
-    mov esi, [Pointers_f2100 + edx * 4]   ; stride 4 into dd table
+    mov esi, [SafariZoneLowCostTextPointers + edx * 4]   ; stride 4 into dd table
     call PrintText
     pop eax
     cmp al, 3
@@ -576,7 +588,7 @@ SafariZoneEntranceGetLowCostAdmissionText:
 %assign event_byte -1
 %assign event_byte_a -1
 .give_one_ball:
-    mov esi, SafariZoneEntranceText_f20f6
+    mov esi, SafariZoneEntranceGiveOneBallText
     call PrintText_NoCreatingTextBox
     mov al, 0x1
     mov esi, 502
@@ -585,26 +597,32 @@ SafariZoneEntranceGetLowCostAdmissionText:
 
 %assign event_byte -1
 %assign event_byte_a -1
+SafariZoneEntranceGiveOneBallText:
 SafariZoneEntranceText_f20f6:
     text_far _SafariZoneLowCostText3
     sound_get_item_1
     text_far _SafariZoneLowCostText4
     text_end
+SafariZoneLowCostTextPointers:
 Pointers_f2100:
-    dd SafariZoneEntranceText_f210a
-    dd SafariZoneEntranceText_f210f
-    dd SafariZoneEntranceText_f2114
-    dd SafariZoneEntranceText_f2119
-    dd SafariZoneEntranceText_f2119
+    dd SafariZoneLowCostText5
+    dd SafariZoneLowCostText6
+    dd SafariZoneLowCostText7
+    dd SafariZoneLowCostText8
+    dd SafariZoneLowCostText8
+SafariZoneLowCostText5:
 SafariZoneEntranceText_f210a:
     text_far _SafariZoneLowCostText5
     text_end
+SafariZoneLowCostText6:
 SafariZoneEntranceText_f210f:
     text_far _SafariZoneLowCostText6
     text_end
+SafariZoneLowCostText7:
 SafariZoneEntranceText_f2114:
     text_far _SafariZoneLowCostText7
     text_end
+SafariZoneLowCostText8:
 SafariZoneEntranceText_f2119:
     text_far _SafariZoneLowCostText8
     text_end

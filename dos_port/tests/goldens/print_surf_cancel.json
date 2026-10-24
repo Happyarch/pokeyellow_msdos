@@ -1,5 +1,5 @@
 {
-  "description": "Summer Beach House printer high-score print cancelled: wPrinterTileBuffer (360 B), wcae2, wPrinterSettingsTempCopy captured",
+  "description": "Summer Beach House printer high-score print cancelled: wPrinterTileBuffer (360 B), wPrinterMargins, wPrinterSettingsTempCopy captured",
   "frame": 5743,
   "regions": [
     {
@@ -113,7 +113,7 @@
     {
       "file_offset": 7784,
       "gb_addr": "0xCAE2",
-      "name": "wcae2",
+      "name": "wPrinterMargins",
       "size": 1
     },
     {

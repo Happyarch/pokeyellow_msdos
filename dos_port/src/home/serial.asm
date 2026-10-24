@@ -18,7 +18,7 @@
 ; GB's no-partner terminations all live in the CALLERS (CableClubNPC's
 ; 90-frame race, LinkMenu's b=$78 loop). With no partner the primitives'
 ; own wait loops have no exit (hSerialReceivedNewData is interrupt-set;
-; wUnknownSerialCounter is zeroed = disabled by LinkMenu's sites), so each
+; wUnknownSerialCounter_cc47 is zeroed = disabled by LinkMenu's sites), so each
 ; exchange primitive takes an annotated no-link escape hatch at entry
 ; (NetHAL_LinkAlive, ZF=1 = dead) that reproduces the documented stub
 ; contract and keeps the menus on pret TERMINAL paths:
@@ -175,7 +175,7 @@ Serial:
 ; pret's register/WRAM exit contract is reproduced exactly: HL and DE advanced
 ; past the block, BC = 0 with ZF set, hSerialIgnoringInitialData written at
 ; entry as pret does (nothing else reads it between here and the next
-; exchange). The 48-iteration inter-byte spin and the wUnknownSerialCounter2
+; exchange). The 48-iteration inter-byte spin and the wLinkByteTimeout
 ; block-mode watchdog are per-byte pacing with no block-level counterpart;
 ; codec death (net_frame NF_DEATH_TICKS) bounds the wait instead.
 ; ---------------------------------------------------------------------------
@@ -232,10 +232,10 @@ Serial_ExchangeByte:
     jz .doNotIncrementUnknownCounter
     call WaitLoop_15Iterations
     push esi                        ; push hl
-    ; ld hl,wUnknownSerialCounter+1 / inc [hl] / jr nz / dec hl / inc [hl]
-    inc byte [ebp + wUnknownSerialCounter + 1]
+    ; ld hl,wUnknownSerialCounter_cc47+1 / inc [hl] / jr nz / dec hl / inc [hl]
+    inc byte [ebp + wUnknownSerialCounter_cc47 + 1]
     jnz .noCarry
-    inc byte [ebp + wUnknownSerialCounter]
+    inc byte [ebp + wUnknownSerialCounter_cc47]
 .noCarry:
     pop esi                         ; pop hl
     call IsUnknownCounterZero
@@ -248,14 +248,14 @@ Serial_ExchangeByte:
     and al, IE_SERIAL | IE_TIMER | IE_STAT | IE_VBLANK
     cmp al, IE_SERIAL
     jne .loop
-    ; free-running block-exchange mode: run the wUnknownSerialCounter2 watchdog
-    mov al, [ebp + wUnknownSerialCounter2]
+    ; free-running block-exchange mode: run the wLinkByteTimeout watchdog
+    mov al, [ebp + wLinkByteTimeout]
     dec al
-    mov [ebp + wUnknownSerialCounter2], al
+    mov [ebp + wLinkByteTimeout], al
     jnz .loop
-    mov al, [ebp + wUnknownSerialCounter2 + 1]
+    mov al, [ebp + wLinkByteTimeout + 1]
     dec al
-    mov [ebp + wUnknownSerialCounter2 + 1], al
+    mov [ebp + wLinkByteTimeout + 1], al
     jnz .loop
     mov al, [ebp + hSerialConnectionStatus]
     cmp al, USING_EXTERNAL_CLOCK
@@ -273,9 +273,9 @@ Serial_ExchangeByte:
     and al, IE_SERIAL | IE_TIMER | IE_STAT | IE_VBLANK
     sub al, IE_SERIAL
     jnz .skipReloadingUnknownCounter2
-    mov [ebp + wUnknownSerialCounter2], al          ; a = 0 here
+    mov [ebp + wLinkByteTimeout], al          ; a = 0 here
     mov al, 0x50
-    mov [ebp + wUnknownSerialCounter2 + 1], al
+    mov [ebp + wLinkByteTimeout + 1], al
 .skipReloadingUnknownCounter2:
     mov al, [ebp + hSerialReceiveData]
     cmp al, SERIAL_NO_DATA_BYTE
@@ -285,13 +285,13 @@ Serial_ExchangeByte:
     call IsUnknownCounterZero
     jz .done
     push esi                        ; push hl
-    ; 16-bit borrow-chain decrement of wUnknownSerialCounter, byte order as pret
-    mov al, [ebp + wUnknownSerialCounter + 1]
+    ; 16-bit borrow-chain decrement of wUnknownSerialCounter_cc47, byte order as pret
+    mov al, [ebp + wUnknownSerialCounter_cc47 + 1]
     dec al
-    mov [ebp + wUnknownSerialCounter + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
     inc al                          ; original value; Z = it was 0 -> borrow
     jnz .noBorrow
-    dec byte [ebp + wUnknownSerialCounter]
+    dec byte [ebp + wUnknownSerialCounter_cc47]
 .noBorrow:
     pop esi                         ; pop hl
     call IsUnknownCounterZero
@@ -331,12 +331,12 @@ WaitLoop_15Iterations:
 
 ; ---------------------------------------------------------------------------
 ; IsUnknownCounterZero — pret home/serial.asm:187.
-; Out: ZF=1 (and AL=0) iff both bytes of wUnknownSerialCounter are zero.
+; Out: ZF=1 (and AL=0) iff both bytes of wUnknownSerialCounter_cc47 are zero.
 ; ---------------------------------------------------------------------------
 IsUnknownCounterZero:
     push esi                        ; push hl (mirrors pret; esi untouched here)
-    mov al, [ebp + wUnknownSerialCounter]
-    or al, [ebp + wUnknownSerialCounter + 1]
+    mov al, [ebp + wUnknownSerialCounter_cc47]
+    or al, [ebp + wUnknownSerialCounter_cc47 + 1]
     pop esi
     ret
 
@@ -346,8 +346,8 @@ IsUnknownCounterZero:
 ; ---------------------------------------------------------------------------
 SetUnknownCounterToFFFF:
     dec al
-    mov [ebp + wUnknownSerialCounter], al
-    mov [ebp + wUnknownSerialCounter + 1], al
+    mov [ebp + wUnknownSerialCounter_cc47], al
+    mov [ebp + wUnknownSerialCounter_cc47 + 1], al
     ret
 
 ; ---------------------------------------------------------------------------
@@ -400,13 +400,13 @@ Serial_PrintWaitingTextAndSyncAndExchangeNybble:
 ; ---------------------------------------------------------------------------
 ; Serial_SyncAndExchangeNybble — pret home/serial.asm:235.
 ; Rendezvous: repeat Serial_ExchangeNybble until the partner's nybble arrives
-; (wUnknownSerialCounter, when armed, bounds the wait), then drain 10 + 10
+; (wUnknownSerialCounter_cc47, when armed, bounds the wait), then drain 10 + 10
 ; frames and publish the result to wSerialSyncAndExchangeNybbleReceiveData.
 ; The drain loops stay as LOCAL frame delays (game feel); they generate no
 ; wire traffic beyond the nybble re-sends, exactly as pret paces them.
 ; (Non-VC branch: b=10; the _YELLOW_VC vc_patch 26-frame variants are VC-only.)
 ;
-; DEVIATION{class=HAL; pret=home/serial.asm:Serial_SyncAndExchangeNybble; behavior=writes $ff to wSerialSyncAndExchangeNybbleReceiveData and returns when no link session is up at entry or when it dies mid-rendezvous instead of continuing the rendezvous loop; evidence=with no partner the nybble never arrives and LinkMenu's call sites zero wUnknownSerialCounter which disables the bounding watchdog so loop1 has no exit, and $ff is the measured serial_stubs value that routes Func_f531b to its remote-ineligible retry path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
+; DEVIATION{class=HAL; pret=home/serial.asm:Serial_SyncAndExchangeNybble; behavior=writes $ff to wSerialSyncAndExchangeNybbleReceiveData and returns when no link session is up at entry or when it dies mid-rendezvous instead of continuing the rendezvous loop; evidence=with no partner the nybble never arrives and LinkMenu's call sites zero wUnknownSerialCounter_cc47 which disables the bounding watchdog so loop1 has no exit, and $ff is the measured serial_stubs value that routes Func_f531b to its remote-ineligible retry path; lifetime=permanent no-partner boundary alongside live transports from Stage 2}
 ; ---------------------------------------------------------------------------
 Serial_SyncAndExchangeNybble:
     call NetHAL_LinkAlive
@@ -420,10 +420,10 @@ Serial_SyncAndExchangeNybble:
     call IsUnknownCounterZero
     jz .next1
     push esi                        ; push hl
-    ; ld hl,wUnknownSerialCounter+1 / dec [hl] / jr nz / dec hl / dec [hl]
-    dec byte [ebp + wUnknownSerialCounter + 1]
+    ; ld hl,wUnknownSerialCounter_cc47+1 / dec [hl] / jr nz / dec hl / dec [hl]
+    dec byte [ebp + wUnknownSerialCounter_cc47 + 1]
     jnz .next2
-    dec byte [ebp + wUnknownSerialCounter]
+    dec byte [ebp + wUnknownSerialCounter_cc47]
     jnz .next2
     pop esi                         ; pop hl
     xor al, al

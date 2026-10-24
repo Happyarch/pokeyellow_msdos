@@ -52,6 +52,7 @@ bits 32
 %include "gb_macros.inc"
 %include "gb_text.inc"                        ; text_far / text_end
 %include "gfx_macros.inc"                     ; dbsprite
+%undef SFX_UNKNOWN_802CC_4
 %include "assets/audio_constants.inc"         ; SFX_TELEPORT_*/SFX_FLY
 
 ; --- symbols not yet in the shared headers (golden sym-verified) ---
@@ -114,8 +115,10 @@ extern UpdateSprites                  ; src/home/update_sprites.asm (linked)
 extern DelayFrames                ; src/home/delay.asm
 extern GBFadeInFromWhite          ; home/fade.asm
 extern GBFadeOutToWhite           ; home/fade.asm
-extern Func_151d                  ; src/home/pikachu.asm — was misattributed to engine/overworld/pikachu.asm
-extern Func_1510                  ; src/home/pikachu.asm — was misattributed to engine/overworld/pikachu.asm
+extern DisableHidePikachuWhileLeavingMap  ; src/home/pikachu.asm (pret DisableHidePikachuWhileLeavingMap)
+extern Func_151d                  ; alias for DisableHidePikachuWhileLeavingMap
+extern EnableHidePikachuWhileLeavingMap   ; src/home/pikachu.asm (pret EnableHidePikachuWhileLeavingMap)
+extern Func_1510                  ; alias for EnableHidePikachuWhileLeavingMap
 extern LoadPlayerSpriteGraphics   ; engine/overworld/overworld.asm
 extern PlaySound                  ; home/audio.asm (LIVE)
 extern PlayDefaultMusic           ; home/audio.asm (LIVE)
@@ -178,7 +181,7 @@ EnterMapAnim:
 .restoreDefaultMusic:
     call PlayDefaultMusic
 .done:
-    call Func_151d
+    call DisableHidePikachuWhileLeavingMap
     jmp RestoreFacingDirectionAndYScreenPos
 .dungeonWarpAnimation:
     mov bl, 50                                ; ld c, 50
@@ -232,7 +235,7 @@ PlayerSpinWhileMovingDown:
 ; _LeaveMapAnim — pret engine/overworld/player_animations.asm:_LeaveMapAnim
 ; ---------------------------------------------------------------------------
 _LeaveMapAnim:
-    call Func_1510
+    call EnableHidePikachuWhileLeavingMap
     ; DEVIATION{class=projection; pret=engine/overworld/player_animations.asm:_LeaveMapAnim; behavior=force the player to a standing pose (image index = facing dir, anim frame 0) before InitFacingDirectionList, matching the port precedent in map_sprites.asm CheckNPCInteraction and start_menu.asm DisplayStartMenu; evidence=InitFacingDirectionList scans wFacingDirectionList unbounded assuming a facing image index, but the port can enter a special-warp leave (Fly/Teleport/Dig) with wSpritePlayerStateData1ImageIndex left non-facing (a hidden 0xFF from UpdatePlayerSprite.disable over a menu-poisoned tilemap) where the GB keeps the player standing, so the scan walked off GB memory into a page fault; lifetime=permanent, the port sprite model can present a hidden or animating player image index at points pret guarantees a standing pose}
     mov al, [ebp + W_SPRITE_PLAYER_FACING_DIR]
     mov [ebp + wSpritePlayerStateData1ImageIndex], al

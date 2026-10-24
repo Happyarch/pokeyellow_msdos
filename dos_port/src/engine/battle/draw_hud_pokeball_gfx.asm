@@ -22,6 +22,14 @@ bits 32
 %include "gb_memmap.inc"
 %include "gb_constants.inc"           ; PARTY_LENGTH, PARTYMON_STRUCT_LENGTH, MON_STATUS
 
+%ifndef wBattleObjPalID
+%ifdef wBattleObjPalID
+%define wBattleObjPalID wBattleObjPalID
+%else
+%define wBattleObjPalID 0xECC2
+%endif
+%endif
+
 ; Ball tile ids, pret's own ($31-$34). They lived in the port-only pokeballs.asm
 ; while the tile-choosing logic did; they belong with PickPokeball, which is now
 ; here under pret's name.
@@ -269,7 +277,7 @@ PickPokeball:
 ; FORK RETIREMENT, step 3 (battle plan 4c). This was the second half of the
 ; port-only `build_ball_row`: an OAM loop driven by file-local pb_x / pb_y /
 ; pb_step scratch. It is pret's own loop now, reading pret's own WRAM variables
-; (wBaseCoordX / wBaseCoordY / wHUDPokeballGfxOffsetX / wdef4) and consuming the
+; (wBaseCoordX / wBaseCoordY / wHUDPokeballGfxOffsetX / wBattleObjPalID) and consuming the
 ; wBuffer tiles SetupPokeballs wrote.
 ;
 ; DEVIATION{class=projection; pret=engine/battle/draw_hud_pokeball_gfx.asm:WritePokeballOAMData; behavior=the routine is literal but its callers seed wBaseCoordX/wBaseCoordY with the port's widescreen OAM coordinates from the generated battle layout instead of pret's $60/$60 and $48/$20; evidence=the port composites a 40-tile-wide canvas so every battle element carries a projected coordinate and the golden differ reconciles the two sides through its oam_window projection which is why battle_intro compares OAM and passes with the projected values; lifetime=retire if the port ever composites at the GB's 20-tile width}
@@ -290,7 +298,7 @@ WritePokeballOAMData:
     mov al, [ebp + edx]                  ; ld a, [de]  — the tile PickPokeball chose
     mov [ebp + esi], al                  ; ld [hli], a
     lea esi, [esi + 1]
-    mov al, [ebp + wdef4]                ; ld a, [wdef4] — OAM attribute
+    mov al, [ebp + wBattleObjPalID]                ; ld a, [wBattleObjPalID] — OAM attribute
     mov [ebp + esi], al                  ; ld [hli], a
     lea esi, [esi + 1]
     mov al, [ebp + wBaseCoordX]          ; ld a, [wBaseCoordX]
@@ -379,7 +387,7 @@ SetupOwnPartyPokeballs:
     mov byte [ebp + wBaseCoordX], PB_X   ; PROJ — pret ld a, $60 / ld [hli], a
     mov byte [ebp + wBaseCoordY], PB_Y   ; PROJ — pret ld [hl], a
     mov byte [ebp + wHUDPokeballGfxOffsetX], 8
-    mov byte [ebp + wdef4], 0            ; xor a / ld [wdef4], a
+    mov byte [ebp + wBattleObjPalID], 0            ; xor a / ld [wBattleObjPalID], a
     mov esi, GB_OAM                      ; PROJ — pret ld hl, wShadowOAM
     jmp WritePokeballOAMData             ; jp WritePokeballOAMData
 
@@ -392,7 +400,7 @@ SetupEnemyPartyPokeballs:
     mov byte [ebp + wBaseCoordX], EB_X   ; PROJ — pret ld a, $48
     mov byte [ebp + wBaseCoordY], EB_Y   ; PROJ — pret ld [hl], $20
     mov byte [ebp + wHUDPokeballGfxOffsetX], -8
-    mov byte [ebp + wdef4], 1            ; ld a, $1 / ld [wdef4], a
+    mov byte [ebp + wBattleObjPalID], 1            ; ld a, $1 / ld [wBattleObjPalID], a
     mov esi, GB_OAM + 6 * 4              ; PROJ — pret ld hl, wShadowOAMSprite06
     jmp WritePokeballOAMData             ; jp WritePokeballOAMData
 
@@ -410,7 +418,7 @@ SetupPlayerAndEnemyPokeballs:
     mov byte [ebp + wBaseCoordX], 0xA0   ; PROJ — pret ld a, $50 / ld [hli], a ($50+80=160=$A0)
     mov byte [ebp + wBaseCoordY], 0x58   ; PROJ — pret ld [hl], $40 ($40+24=88=$58)
     mov byte [ebp + wHUDPokeballGfxOffsetX], 8
-    mov byte [ebp + wdef4], 0            ; xor a / ld [wdef4], a
+    mov byte [ebp + wBattleObjPalID], 0            ; xor a / ld [wBattleObjPalID], a
     mov esi, GB_OAM                      ; PROJ — pret ld hl, wShadowOAM
     call WritePokeballOAMData
     mov esi, wEnemyMons                  ; ld hl, wEnemyMons
@@ -419,7 +427,7 @@ SetupPlayerAndEnemyPokeballs:
     mov byte [ebp + wBaseCoordX], 0xA0   ; PROJ — pret ld a, $50
     mov byte [ebp + wBaseCoordY], 0x80   ; PROJ — pret ld [hl], $68 ($68+24=128=$80)
     mov byte [ebp + wHUDPokeballGfxOffsetX], 8
-    mov byte [ebp + wdef4], 1            ; ld a, $1 / ld [wdef4], a
+    mov byte [ebp + wBattleObjPalID], 1            ; ld a, $1 / ld [wBattleObjPalID], a
     mov esi, GB_OAM + 6 * 4              ; PROJ — pret ld hl, wShadowOAMSprite06
     call WritePokeballOAMData
     mov ecx, 12

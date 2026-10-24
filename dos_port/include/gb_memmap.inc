@@ -521,7 +521,8 @@
 %define wEnemyDisabledMove           0xDE3F
 %define wPlayerBideAccumulatedDamage 0xDE41
 %define wPlayerNumHits               0xDE41
-%define wUnknownSerialCounter2       0xDE41   ; wram.asm:1506 (dw; pret unions it with wPlayerBideAccumulatedDamage/wPlayerNumHits — link-battle serial watchdog, disjoint lifetime from Bide)
+%define wLinkByteTimeout             0xDE41   ; wram.asm:1503 (dw; pret unions it with wPlayerBideAccumulatedDamage/wPlayerNumHits — link-battle serial watchdog, disjoint lifetime from Bide)
+%define wUnknownSerialCounter2       wLinkByteTimeout ; backwards-compatibility alias
 
 %define wDamage                      0xDEA4   ; word, big-endian
 %define wTypeEffectiveness           0xDEEB   ; shared scratch byte (=wPokedexNum union)
@@ -614,7 +615,8 @@
 %define wTempTilesetNumTiles         0xDE4A   ; tile count for LoadMoveAnimationTiles' CopyVideoData
 %define wBaseCoordX                  0xDE4E   ; current frame block base X (GB pixel space)
 %define wBaseCoordY                  0xDE4F   ; current frame block base Y (GB pixel space)
-%define wdef4                        0xECC2   ; DrawFrameBlock off-screen-adjust scratch (pret's address-named placeholder label, kept verbatim)
+%define wBattleObjPalID              0xECC2   ; DrawFrameBlock off-screen-adjust scratch (pret ram/wram.asm:2516, $DEF4)
+%define wdef4                        wBattleObjPalID ; alias
 %define wFBTileCounter               0xDE51   ; DrawFrameBlock per-entry loop counter
 %define wSubAnimFrameDelay           0xDE53   ; frames between frame blocks (command byte bits 0-5)
 %define wSubAnimCounter              0xDE54   ; remaining subentries in the current subanimation
@@ -983,7 +985,8 @@
 %define wSerialExchangeNybbleReceiveData 0xD78C   ; wram.asm:439 (db)
 %define wLinkMenuSelectionSendBuffer 0xD790   ; wram.asm:428 (dw)
 %define wSerialExchangeNybbleSendData 0xD790   ; wram.asm:442 (db; aliases send buf)
-%define wUnknownSerialCounter        0xD795   ; wram.asm:444 (dw; aliases wEnteringCableClub)
+%define wUnknownSerialCounter_cc47   0xD795   ; wram.asm:441 (dw; aliases wEnteringCableClub)
+%define wUnknownSerialCounter        wUnknownSerialCounter_cc47 ; backwards-compatibility alias
 %define wEnteringCableClub           0xD795   ; wram.asm:430 (db; sym 00:cc47)
 %define wLinkTimeoutCounter          0xD795   ; wram.asm:435 (db; pret declares it on the same byte as wEnteringCableClub — cable_club_npc.asm's establish-timeout counter)
 %define wUnusedLinkMenuByte          0xD885   ; wram.asm:754 (db; was worker 0xCC83)
@@ -1217,6 +1220,8 @@
 ; Title-screen state ($CD3D)
 %define wTitleScreenScene            0xD88B   ; wTitleScreenScene (byte; +1 = timer)
 %define wTitleScreenTimer            0xD88C   ; wTitleScreenTimer
+%define wTitleScreenResetCounter     0xD88D   ; pret ram/wram.asm ($CD3F)
+%define wTitleScreenPikachuCry       0xD88F   ; pret ram/wram.asm ($CD41)
 
 ; Name buffers (WRAM1) — sym-verified
 %define wRivalName                   0xE117   ; wRivalName  — 11 bytes, '@'-terminated
@@ -1394,7 +1399,9 @@
 %define wOverworldMap                0xCE4A   ; wOverworldMap
 %define W_OVERWORLD_MAP_SIZE         0x900   ; wOverworldMapEnd − wOverworldMap (2304 bytes)
 %define W_PRINTER_DATA_SIZE          0x40D   ; wPrinterDataEnd − wPrinterData (1037 bytes)
-%define wcae2                        0xD244   ; printer margin/sheet byte (pret wram.asm:321, in wPrinterData union)
+%define wPrinterMargins              0xD244   ; printer margin/sheet byte (pret wram.asm:319, in wPrinterData union)
+%define wcae2                        wPrinterMargins ; backwards-compatibility alias
+%define wPrinterObjectBuffer         0xD33E   ; pret wram.asm:329 (2 tiles)
 
 ; Turn-delay state (pret: wCheckFor180DegreeTurn / wPlayerLastStopDirection)
 ; W_CHECK_FOR_TURN=1 means "first direction press changes facing only; walk starts on hold".
@@ -1497,7 +1504,6 @@
 %define wXCoord                      0xE12F   ; wXCoord (player map X, in tiles)
 %define wYBlockCoord                 0xE130   ; wYBlockCoord
 %define wXBlockCoord                 0xE131   ; wXBlockCoord
-%define W_D433                       0xE201   ; wd433 — Pikachu collision direction (set by sprite collision engine)
 ; --- Overworld-Pikachu WRAM block (OW-A.11: promoted from pikachu.asm file-local placeholders).
 ; pokeyellow-real addresses, consistent with the existing Pikachu symbols here (W_D433,
 ; wPikachuHappiness $D46F, wPikachuMood $D470). Absolute anchoring rides the deferred gb_memmap
@@ -1505,19 +1511,28 @@
 ; (correct relative offsets) so it moves as a unit if the layout is ever re-anchored.
 %define wPikachuOverworldStateFlags  0xE1FD   ; bit1=following, bit2=moved, bit3=draw-disabled, bit5/7=hide
 %define wPikachuSpawnState           0xE1FE   ; where/how Pikachu (re)spawns next (golden 00:d430; promoted from player_animations.asm local, OW-A.6)
+%define wPikachuSpriteStateYPixelOffset 0xE1FF ; pret ram/wram.asm:2011 ($D431)
+%define wd431                        wPikachuSpriteStateYPixelOffset ; alias
+%define wPikachuSpriteStateXPixelOffset 0xE200 ; pret ram/wram.asm:2012 ($D432)
+%define wd432                        wPikachuSpriteStateXPixelOffset ; alias
+%define wPikachuCollisionUnusedDelta 0xE201   ; pret ram/wram.asm:2013 ($D433)
+%define wd433                        wPikachuCollisionUnusedDelta ; alias
+%define W_D433                       wPikachuCollisionUnusedDelta ; legacy alias
 %define wPikachuCollisionCounter     0xE202   ; post-turn grace frames before Pikachu-collision reactions (golden 00:d434)
+%define wPlayerIsTalkingToPikachu    0xE203   ; pret ram/wram.asm:2015 ($D435)
+%define wd435                        wPlayerIsTalkingToPikachu ; alias
 ; Pikachu follow-command ring, pret ram/wram.asm:2022-2023. Addresses read from
 ; pokeyellow.sym, not inferred. Promoted here 2026-08-18 from nine file-local
 ; `equ`s that each re-typed the same address.
 %define wPikachuFollowCommandBufferSize 0xE204
 %define wPikachuFollowCommandBuffer  0xE205   ; ds 16
-%define wd435                        0xE203   ; golden 00:d435; unnamed in pret. Set to $ff by
-                                        ; IsSpriteInFrontOfPlayer when the sprite faced is Pikachu.
 %define wExpressionNumber            0xE215   ; pret ram/wram.asm:2025
 %define wPikaPicAnimNumber           0xE216   ; pret ram/wram.asm:2026
 
 %define wPikachuMovementScriptBank   0xE217   ; ROM bank of the active Pikachu movement script
 %define wPikachuMovementScriptAddress 0xE218   ; dw: cursor into the movement script
+%define wCurPikaMovementUnusedByte   0xE21F   ; pret ram/wram.asm:2034 ($D451)
+%define wd451                        wCurPikaMovementUnusedByte ; alias
 %define wSpritePikachuStateData1MovementStatus 0xC1F1   ; slot-15 data1+1 (wSpriteStateData1 $C100 + 15*$10 +1)
 %define wSpritePikachuStateData1ImageIndex 0xC1F2   ; slot-15 data1+2 ($ff = off screen/hidden)
 %define wLastMap                     0xE132   ; wLastMap
@@ -1689,7 +1704,8 @@
 %define wNumberOfWarps               0xE17B   ; wNumberOfWarps
 %define wWarpEntries                 0xE17C   ; wWarpEntries (MAX_WARP_EVENTS * 4 bytes max)
 %define wDestinationWarpID           0xE1FC   ; pret alias of wDestinationWarpID
-%define wUnknownSerialFlag_d499      0xE266   ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port)
+%define wUnknownSerialFlag_d498      0xE266   ; GB-Stadium-link flag; restricts Sleep counter reroll range when set (0 on real HW/this port, pret ram/wram.asm:2081 $D498)
+%define wUnknownSerialFlag_d499      wUnknownSerialFlag_d498 ; alias
 %define wPrinterConnectionOpen       0xE267   ; wram.asm:2090 (db; bit 0 routes the Serial ISR to PrinterSerial__ — retained dead branch in the port, printer plan cuts inside the printer engine). Derived: contiguous pret run wPrinterSettings d497→E265 .. wPikachuEmotionModifier d49b→E269 (see those defines)
 
 ; Sign/BG event data
@@ -2401,6 +2417,12 @@
 %define wEvolutionOccurred           0xDEEE   ; set when a mon evolved this EvolutionAfterBattle
 %define wPikachuMood                 0xE23E
 %define wPikachuSpawnStateFlags      0xE23F   ; pret ram/wram.asm:2075 (golden 00:d471)
+%define wPlayerState                 0xE240   ; pret ram/wram.asm:2070 ($D472)
+%define wd472                        wPlayerState ; alias
+%define wCinnabarGymQuizWrongAnswer  0xE242   ; pret ram/wram.asm:2072 ($D474)
+%define wd474                        wCinnabarGymQuizWrongAnswer ; alias
+%define wReachedMaxInGameTime        0xE247   ; pret ram/wram.asm:2074 ($D479)
+%define wd479                        wReachedMaxInGameTime ; alias
 %define wPikachuMapScriptFlags       0xE260
 %define wPikachuEmotionModifier      0xE269
 

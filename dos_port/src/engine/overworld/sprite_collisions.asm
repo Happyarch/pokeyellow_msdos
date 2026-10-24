@@ -319,7 +319,7 @@ DetectCollisionBetweenSprites:
     ; pret reaches this at its `ldh a,[hCollidingSpriteOffset] / cp $f / call Func_4d0a`.
     cmp   esi, wSpriteStateData1
     jne   .standard_col
-    mov   byte [ebp + W_D433], 0
+    mov   byte [ebp + wPikachuCollisionUnusedDelta], 0
     cmp   dl, 15
     jne   .standard_col
     ; Func_4d0a now reads hCollidingSpriteTempX/YValue directly (literal HRAM)
@@ -395,7 +395,7 @@ Func_4d0a:
 .apply:
     mov   al, dh               ; ld a, c
     and   al, bl               ; and b
-    mov   byte [ebp + W_D433], al  ; ld [wd433], a
+    mov   byte [ebp + wPikachuCollisionUnusedDelta], al  ; ld [wPikachuCollisionUnusedDelta], a
     ; pret :357 ld a,c / inc l / inc l / ret — two inc l steps on HL cursor (local)
     add   esi, 2
     pop   esi

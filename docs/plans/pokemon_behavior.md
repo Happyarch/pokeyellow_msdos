@@ -90,7 +90,7 @@ surfaced (garbage level-up stats, silently-dropped level-up moves).
 
 ## Stage 0 — Cleanup & symbol alignment (prereq for all) — [x]
 <!-- Done 2026-07-01: evos_moves.asm git rm'd (no external caller of its unique
-     Evolution_FlagAction/Func_3b079/3b0a2/3b10f; GetMonLearnset/WriteMonMoves/
+     Evolution_FlagAction/CheckAnyStageCanLearnMove/CheckCanLearnMove/FindPreEvolution [formerly Func_3b079/3b0a2/3b10f]; GetMonLearnset/WriteMonMoves/
      _ShiftMoveData already provided by the wired write_moves.asm). evolution.asm's
      %ifndef self-aliases deleted; promoted (sym-verified vs origin/symbols) into
      gb_memmap.inc (wLoadedMonHP/HPExp/MaxHP/Stats, wEvolutionOccurred, wPikachuMood,
@@ -105,7 +105,7 @@ surfaced (garbage level-up stats, silently-dropped level-up moves).
   ×2/16-bit-pointer bug the wired copy already fixed), plus `sbc al,bh` (invalid x86 →
   `sbb`), wrong repo-root `%include`, missing `bits 32`, undefined `LearnMove`.
   `evolution.asm` + `write_moves.asm` supersede it. `git rm` it (in no Makefile var);
-  move unique bits (`Evolution_FlagAction`; debug `Func_3b0a2/3b10f/3b079`) into
+  move unique bits (`Evolution_FlagAction`; debug `CheckCanLearnMove/FindPreEvolution/CheckAnyStageCanLearnMove`, formerly `Func_3b0a2/3b10f/3b079`) into
   `evolution.asm` only if a caller needs them.
 - **Promote `evolution.asm`'s `%ifndef` self-aliases** (~lines 55–146:
   `wEvolutionOccurred`, `wMoveNum`, `wPikachuMood`, `wPikachuEmotionModifier`,

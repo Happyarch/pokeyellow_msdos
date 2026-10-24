@@ -38,8 +38,11 @@ global Evolution_ReloadTilesetTilePatterns
 global RenameEvolvedMon
 global CancelledEvolution
 global LearnMoveFromLevelUp
+global CheckAnyStageCanLearnMove
 global Func_3b079
+global CheckCanLearnMove
 global Func_3b0a2
+global FindPreEvolution
 global Func_3b10f
 global WriteMonMoves
 global WriteMonMoves_ShiftMoveData
@@ -97,6 +100,9 @@ extern text_msgbox                      ; src/home/text.asm — active msgbox pr
 extern CanLearnTM                ; engine/items/tms.asm (pret predef) — CL = learnable
 extern IsInArray                 ; home/array2.asm — AL=value ESI=flat base EDX=stride
 extern Pointer_3b0ee             ; generated Tier-1 list, assets/unknown_list.inc
+%ifndef IgnoreLevel1LearnsetMons
+%define IgnoreLevel1LearnsetMons Pointer_3b0ee
+%endif
 
 section .text
 
@@ -600,18 +606,19 @@ Evolution_ReloadTilesetTilePatterns:
 ; wMonHMoves is $DE94 and wMonHGrowthRate is $DE98 in the port too, so the
 ; adjacency pret relies on holds here. Do not "tidy" it into a real sentinel.
 ; ===========================================================================
+CheckAnyStageCanLearnMove:
 Func_3b079:
     mov al, [ebp + wCurPartySpecies]
     push eax                            ; push af
-    call Func_3b0a2
+    call CheckCanLearnMove
     jc .asm_3b09c
-    call Func_3b10f
+    call FindPreEvolution
     jnc .asm_3b096
-    call Func_3b0a2
+    call CheckCanLearnMove
     jc .asm_3b09c
-    call Func_3b10f
+    call FindPreEvolution
     jnc .asm_3b096
-    call Func_3b0a2
+    call CheckCanLearnMove
     jc .asm_3b09c
 .asm_3b096:
     pop eax                             ; pop af
@@ -624,6 +631,7 @@ Func_3b079:
     stc                                 ; scf — CF=1, "yes"
     ret
 
+CheckCanLearnMove:
 Func_3b0a2:
     mov al, [ebp + wTempTMHM]
     mov [ebp + wMoveNum], al
@@ -631,7 +639,7 @@ Func_3b0a2:
     mov al, cl                          ; ld a, c
     test al, al                         ; and a
     jnz .asm_3b0ec
-    mov esi, Pointer_3b0ee              ; ld hl, Pointer_3b0ee (flat Tier-1 table)
+    mov esi, IgnoreLevel1LearnsetMons   ; ld hl, IgnoreLevel1LearnsetMons (flat Tier-1 table)
     mov al, [ebp + wCurPartySpecies]
     mov edx, 1                          ; ld de, $1 — entry stride
     call IsInArray
@@ -667,6 +675,7 @@ Func_3b0a2:
     stc                                 ; scf
     ret
 
+FindPreEvolution:
 Func_3b10f:
     mov bl, 0                           ; ld c, $0 — species index, 0-based
 .asm_3b111:

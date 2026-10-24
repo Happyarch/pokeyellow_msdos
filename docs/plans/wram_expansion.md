@@ -171,7 +171,7 @@ pointer needs its 4 bytes modelled, not inherited from pret's 2).
       known-broken aliases are not carried into the new map:
       `0xCFAE` `wLoadedMonSpeedExp`/`wPlayerLastStopDirection`;
       `0xD093` `wEndBattleTextRomBank`/`wSubAnimAddrPtr`;
-      `0xD499` `wUnknownSerialFlag_d499`/`wPrinterConnectionOpen`;
+      `0xD499` `wUnknownSerialFlag_d499`/`wPrinterConnectionOpen` (upstream pret corrected to `wUnknownSerialFlag_d498` at `0xD498`);
       `0xF500` `wShadowOAMBackup`/`wLYOverrides`;
       `0xFFA9`/`0xFFAA` `hSwapItemID`/`hSwapItemQuantity` on live serial HRAM;
       `0xFFC1` `hVBlankCopyBGSource`/`hSpriteAnimFrameCounter`.
@@ -228,7 +228,7 @@ mistake in three different address ranges.
 | `0xF500` `wShadowOAMBackup`/`wLYOverrides` | none — prefix-sum separates them to `0xC788` / `0xD24C` | free |
 | `0xCFAE` `wPlayerLastStopDirection` | use pret's `0xD528`, measured **unused anywhere in the port** | trivial |
 | `0xFFC1` `hSpriteAnimFrameCounter` | use pret's `0xFFEA`, measured free in `gb_memmap.inc`. Its squatting partner `hVBlankCopyBGSource` is **live** (VBlankCopy is wired into `DelayFrame`), so this is an active alias, not a latent one | trivial |
-| `0xD499` `wUnknownSerialFlag_d499` | `pokeyellow.sym` says `0xD498`; the port used the address embedded in the *name*. Name-vs-symbol-table drift — use `0xD498` | trivial |
+| `0xD498` `wUnknownSerialFlag_d498` (formerly `wUnknownSerialFlag_d499`) | `pokeyellow.sym` says `0xD498`; the port used the address embedded in the *name*. Upstream pret corrected the label to `wUnknownSerialFlag_d498` at `0xD498` | trivial |
 | `0xFFA9`/`0xFFAA` `hSwapItemID`/`hSwapItemQuantity` | pret puts them at `0xFF95`/`0xFF96`, unioned with `hDividend`/`hMultiplicand`. Restore that iff the swap path never calls Divide/Multiply while they are live; otherwise allocate from measured-free HRAM | needs one analysis |
 | `0xD093` `wEndBattleTextRomBank` | the flat-adapted `dw`→`dd` widening shifts it `+2` into a "golden gap". **Its comment asserts "no overlap" citing the two neighbours the author considered and misses `wSubAnimAddrPtr` at pret `0xD093`, inside the very gap it claims.** A 4-byte widening needs port-only space, not a pret gap | real work |
 

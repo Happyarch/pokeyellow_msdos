@@ -35,6 +35,9 @@ global DisplayTownMap
 global LoadTownMap_Fly
 global LoadTownMap_Nest
 global TownMapSpriteBlinkingAnimation
+global TownMap_UpdateTileMap
+global UnusedTownMapPlayPikaCry
+global Func_70f87
 global WriteAsymmetricMonPartySpriteOAM ; pret entry points here (mon_icons.asm externs them)
 global WriteSymmetricMonPartySpriteOAM
 
@@ -263,6 +266,8 @@ DisplayTownMap:
 ; whatever clip the caller left in E. That is pret's behaviour, not an omission:
 ; the routine has no caller to establish the value.
 ; --------------------------------------------------------------------------- #
+TownMap_UpdateTileMap:
+UnusedTownMapPlayPikaCry:
 Func_70f87:
     mov al, [ebp + hJoy5]              ; ldh a, [hJoy5]
     and al, PAD_DOWN | PAD_UP          ; and PAD_DOWN | PAD_UP
