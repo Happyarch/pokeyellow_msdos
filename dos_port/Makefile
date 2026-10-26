@@ -3968,6 +3968,14 @@ assets/sprite_sheet_pointers.inc: tools/generators/gen_all_assets.py \
 # gen_npc_dialogs.py while every Poké Center's generated table still carried the
 # "..." placeholder row, because all_dialogs.inc predated the edit and nothing
 # ever regenerated it. Keep the inputs listed (same rule as map_headers above).
+#
+# src/scripts/*.asm is an INPUT, not decoration: the generator's auto-wire step
+# reads the PORT script file's `global` labels (_port_script_globals) to decide
+# whether a text_asm slot can become a SCRIPT entry. Measured 2026-10-26: porting
+# MtMoonB2FSuperNerdText/MtMoonB2FHelixFossilText changed those slots from the
+# generator's "TRAINER!" stub and a static copy of the question text into real
+# SCRIPT rows, and without this prerequisite the table kept the fallbacks — a
+# softlocking Mt. Moon fossil area from a build that looked perfectly up to date.
 assets/npc_dialogs/all_dialogs.inc: \
     tools/generators/gen_npc_dialogs.py \
     tools/generators/gen_map_headers.py \
@@ -3977,7 +3985,8 @@ assets/npc_dialogs/all_dialogs.inc: \
     $(wildcard ../scripts/*.asm) \
     $(wildcard ../text/*.asm) \
     $(wildcard ../data/maps/headers/*.asm) \
-    $(wildcard ../data/maps/objects/*.asm)
+    $(wildcard ../data/maps/objects/*.asm) \
+    $(wildcard src/scripts/*.asm)
 	python3 tools/generators/gen_npc_dialogs.py
 
 # Toggleable-object (event) flag tables — NPC spawn gating (gen_toggleable_objects.py)
@@ -4000,8 +4009,17 @@ assets/script_constants.inc: tools/generators/gen_script_constants.py
 # text/*.asm (gen_map_text.py). Each is %included by that map's own script, so a
 # stream lives beside the only code that uses it — as pret keeps text/<Map>.asm
 # beside scripts/<Map>.asm. The stamp file stands in for the 162 outputs.
+#
+# The PORT sources are inputs: the generator DISCOVERS which far streams to emit
+# from the `text_far` references in src/scripts/ and src/engine/events/, so a
+# region that bails (or is later hand-ported) changes the output. Measured
+# 2026-10-26: porting MtMoonB2FHelixFossilText added the first reference to
+# _MtMoonB2FHelixFossilYouWantText, nothing re-ran the generator, and the map
+# failed to assemble on an undefined label. The .stamp does not notice a source
+# edit on its own.
 assets/map_text/.stamp: tools/generators/gen_map_text.py \
-                        tools/generators/gen_battle_text.py
+                        tools/generators/gen_battle_text.py \
+                        $(shell find src/scripts src/engine/events -name '*.asm')
 	python3 tools/generators/gen_map_text.py
 	@touch $@
 

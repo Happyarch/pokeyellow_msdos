@@ -60,6 +60,8 @@ global MtMoonB2FJamesEncounterMovementData
 global MovementData_f9e66
 global MtMoonB2FDefeatedSuperNerdScript
 global MtMoonB2FDomeFossilText
+global MtMoonB2FHelixFossilText
+global MtMoonB2FSuperNerdText
 global MtMoonB2FFossilAreaCoords
 global MtMoonB2FJessieJamesEndBattleText
 global MtMoonB2FMoveSuperNerdScript
@@ -124,9 +126,7 @@ extern MtMoon3TrainerHeader0
 extern MtMoon3TrainerHeader1
 extern MtMoon3TrainerHeader2
 extern MtMoon3TrainerHeaders
-extern MtMoonB2FHelixFossilText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2FRocket2BattleText
-extern MtMoonB2FSuperNerdText   ; NOT YET DEFINED IN THE PORT
 extern MtMoonB2F_TextPointers   ; NOT YET DEFINED IN THE PORT
 extern PlayDefaultMusic
 extern PlayMusic
@@ -708,17 +708,30 @@ MtMoonB2FText14:
     call DelayFrames
     jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[event-macro-reuse-a-hint] MtMoonB2FSuperNerdText (scripts/MtMoonB2F.asm:479-485) — at scripts/MtMoonB2F.asm:481: CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL, 1
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	CheckEvent EVENT_BEAT_MT_MOON_EXIT_SUPER_NERD
-; PRET| 	jr z, .beat_super_nerd
-; PRET| 	CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL, 1
-; PRET| 	jr nz, .got_a_fossil
-; PRET| 	ld hl, MtMoonB2fSuperNerdEachTakeOneText
-; PRET| 	call PrintText
-; PRET| 	jr .done
+; Hand-written (was BAIL[event-macro-reuse-a-hint]): pret passes
+; CheckEitherEventSet's optional third argument, its "A already holds the event
+; byte" hint. The port's macro always reloads that byte, so the hint is dropped
+; and the reload reads the same value — same ZF, and A is clobbered either way.
+; The leading `text_asm` byte is NOT emitted because the generated text table
+; gives this slot a SCRIPT entry (0xFFFFFFFF) and DisplayTextID CALLs the
+; routine directly, as for every other ported text_asm script.
+;
+; This routine is what keeps the fossil-area trigger from looping: every time the
+; map script runs with the player standing at (8,13), MtMoonB2FCheckDefeatedSuperNerd
+; re-displays this text, and only EngageMapTrainer + MtMoonB2FSetScript(3) move the
+; state machine on. While this region was a BAIL the slot fell back to the
+; generator's "TRAINER!" stub, so nothing advanced and the player was stuck
+; re-reading it.
+%assign event_byte -1
+%assign event_byte_a -1
+MtMoonB2FSuperNerdText:
+    CheckEvent EVENT_BEAT_MT_MOON_EXIT_SUPER_NERD
+    jz .beat_super_nerd
+    CheckEitherEventSet EVENT_GOT_DOME_FOSSIL, EVENT_GOT_HELIX_FOSSIL
+    jnz .got_a_fossil
+    mov esi, MtMoonB2fSuperNerdEachTakeOneText
+    call PrintText
+    jmp .done
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -798,37 +811,42 @@ MtMoonB2FDomeFossilText:
     text_far _MtMoonB2FDomeFossilYouWantText
     text_end
 
-; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FHelixFossilText (scripts/MtMoonB2F.asm:554-573) — at scripts/MtMoonB2F.asm:556: .YouWantText is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	ld a, $1
-; PRET| 	ld [wDoNotWaitForButtonPressAfterDisplayingText], a
-; PRET| 	ld hl, .YouWantText
-; PRET| 	call PrintText
-; PRET| 	call YesNoChoice
-; PRET| 	ld a, [wCurrentMenuItem]
-; PRET| 	and a
-; PRET| 	jr nz, .done
-; PRET| 	lb bc, HELIX_FOSSIL, 1
-; PRET| 	call GiveItem
-; PRET| 	jp nc, MtMoonB2FYouHaveNoRoomText
-; PRET| 	call MtMoonB2FReceivedFossilText
-; PRET| 	ld a, TOGGLE_MT_MOON_B2F_FOSSIL_2
-; PRET| 	ld [wToggleableObjectIndex], a
-; PRET| 	predef HideObject
-; PRET| 	SetEvent EVENT_GOT_HELIX_FOSSIL
-; PRET| 	ld a, SCRIPT_MTMOONB2F_MOVE_SUPER_NERD
-; PRET| 	call MtMoonB2FSetScript
-; PRET| .done
-; PRET| 	jp TextScriptEnd
+; Hand-written (was BAIL[target-region-bailed] + BAIL[local-label-scope-collision]:
+; the second `.YouWantText` local made the transpiler bail the routine and then
+; its own stream). Only the DOME half of the pair had survived, so talking to the
+; HELIX fossil printed its question and did nothing at all — no item, no
+; EVENT_GOT_HELIX_FOSSIL, and therefore no way to reach the super nerd's
+; "We'll each take one" branch, which tests exactly that event.
+%assign event_byte -1
+%assign event_byte_a -1
+MtMoonB2FHelixFossilText:
+    mov al, 0x1
+    mov [ebp + wDoNotWaitForButtonPressAfterDisplayingText], al
+    mov esi, .YouWantText
+    call PrintText
+    call YesNoChoice
+    mov al, [ebp + wCurrentMenuItem]
+    test al, al
+    jnz .done
+    mov bx, (HELIX_FOSSIL << 8) | 1              ; pret: lb bc, HELIX_FOSSIL, 1
+    call GiveItem
+    jae MtMoonB2FYouHaveNoRoomText
+    call MtMoonB2FReceivedFossilText
+    mov al, TOGGLE_MT_MOON_B2F_FOSSIL_2
+    mov [ebp + wToggleableObjectIndex], al
+; DEVIATION{class=banking; pret=macros/predef.asm:predef; behavior=Predef dispatch replaced by a direct call, and A is left holding whatever the callee left rather than pret's parent ROM bank; evidence=pret Predef saves hLoadedROMBank with push af and restores it with pop af before returning so A holds a BANK NUMBER on return - not the predef id - and the flat DPMI model has no banks for that value to mean anything, plus dataflow shows no direct read of A after this site; lifetime=retired when PredefPointers is ported}
+    call HideObject
+    SetEvent EVENT_GOT_HELIX_FOSSIL
+    mov al, SCRIPT_MTMOONB2F_MOVE_SUPER_NERD
+    call MtMoonB2FSetScript
+.done:
+    jmp TextScriptEnd
 
-; ---------------------------------------------------------------------------
-; BAIL[local-label-scope-collision] MtMoonB2FHelixFossilText.YouWantText (scripts/MtMoonB2F.asm:576-577)
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
-; ---------------------------------------------------------------------------
-; PRET| 	text_far _MtMoonB2FHelixFossilYouWantText
-; PRET| 	text_end
+%assign event_byte -1
+%assign event_byte_a -1
+.YouWantText:
+    text_far _MtMoonB2FHelixFossilYouWantText
+    text_end
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -845,12 +863,12 @@ MtMoonB2FReceivedFossilText:
     text_end
 
 ; ---------------------------------------------------------------------------
-; BAIL[target-region-bailed] MtMoonB2FYouHaveNoRoomText (scripts/MtMoonB2F.asm:590-592) — at scripts/MtMoonB2F.asm:590: .Text is defined in a region that bailed
-; NO SYMBOL IS DEFINED for this region. pret source follows, verbatim.
+; MtMoonB2FYouHaveNoRoomText (pret scripts/MtMoonB2F.asm:590-592) is NOT emitted
+; here. The transpiler bailed the region because its `.Text` stream sat in a bailed
+; sibling, and the label is realised by the SIBLING-DROP REPAIR block below (that
+; region also carries the five SuperNerd text owners). Reachable from both fossil
+; scripts' GiveItem failure path.
 ; ---------------------------------------------------------------------------
-; PRET| 	ld hl, .Text
-; PRET| 	call PrintText
-; PRET| 	jp TextScriptEnd
 
 ; SIBLING-DROP REPAIR: pret region MtMoonB2F.asm:595-654 holds these six non-owned
 ; labels alongside MtMoonB2FRocket2BattleText, which assets/trainer_headers.inc
