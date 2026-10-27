@@ -38,6 +38,8 @@
 global CalcDifference
 global MoveSprite
 global MoveSprite_
+global MoveSprite2
+global IsMoveSprite2Done
 global DivideBytes
 
 ; The three home/map_objects.asm sprite movement-byte accessors this file used to
@@ -99,6 +101,85 @@ MoveSprite_:
     mov byte [ebp + wSimulatedJoypadStatesEnd], 0
     mov byte [ebp + wJoyIgnore], 0xFF                          ; pret: dec a (0 -> $ff)
     mov byte [ebp + wUnusedOverrideSimulatedJoypadStatesIndex], 0xFF
+    ret
+
+; ---------------------------------------------------------------------------
+; MoveSprite2 — dual-tick derivative of MoveSprite (pret's numbered-sibling
+; convention, cf. LoadSAV / LoadSAV0-2, SaveSAVtoSRAM / SaveSAVtoSRAM2).
+;
+; Scope: the Jessie & James pair scenes — the only callers (Mt Moon B2F today;
+; the same pair recurs later in the game).
+;
+; Two NPCs walk at once, one stream each, from the two 90-byte halves of pret's
+; 180-byte wNPCMovementDirections allocation (see gb_memmap.inc). The first
+; walker is armed exactly as MoveSprite arms it (+0, cursor 0, owns
+; BIT_SCRIPTED_NPC_MOVEMENT and wNPCNumScriptedSteps); the second is armed on
+; +90 with its cursor initialised to 90, so the existing per-sprite stepper
+; advances both independently, one byte per ready tick, with no engine change.
+;
+; Both MOVEMENTSTATUS values are forced to 1 so the pair consumes its first
+; byte on the same tick — a sprite left in the status-2 random-delay state
+; could otherwise start up to 127 frames late.
+;
+; Pret ref: home/pathfinding.asm:MoveSprite (the first walker's half IS its
+; body, called rather than copied).
+; In:  hSpriteIndex = first walker (raw slot), EDI = first stream  ($FF-terminated)
+;      BL           = second walker (raw slot), EDX = second stream ($FF-terminated)
+; Out: second stream copied to wNPCMovementDirectionsSecond; both sprites at
+;      MOVEMENTSTATUS 1 with their cursors set. hSpriteIndex = second walker.
+; Clobbers: AL, ECX, ESI, EDI, flags (EBX/EDX preserved)
+; ---------------------------------------------------------------------------
+MoveSprite2:
+    push ebx
+    push edx
+    mov bh, bl                                ; BH = second walker slot
+    call MoveSprite                           ; first walker: pret-identical
+    movzx eax, byte [ebp + hSpriteIndex]
+    shl eax, 4
+    mov byte [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+
+    mov [ebp + hSpriteIndex], bh              ; second walker
+    call SetSpriteMovementBytesToFF
+    movzx eax, byte [ebp + hSpriteIndex]
+    shl eax, 4
+    mov byte [ebp + eax + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], W_NPC_MOVEMENT_DIRECTIONS_HALF
+    mov byte [ebp + eax + wSpriteStateData1 + SPRITESTATEDATA1_MOVEMENTSTATUS], 1
+
+    mov esi, wNPCMovementDirectionsSecond     ; copy the second stream ($FF incl.)
+.loop:
+    mov al, [edx]
+    mov [ebp + esi], al
+    inc edx
+    inc esi
+    cmp al, 0xFF
+    jne .loop
+
+    pop edx
+    pop ebx
+    ret
+
+; ---------------------------------------------------------------------------
+; IsMoveSprite2Done — CF=1 once BOTH walkers of a MoveSprite2 pair consumed
+; their terminator (MOVEMENTBYTE1 == $FF). The shared BIT_SCRIPTED_NPC_MOVEMENT
+; flag cannot answer this: it clears when the FIRST walker finishes, which would
+; cut a slower partner's script off early.
+; In:  AL = first walker slot, BL = second walker slot
+; Out: CF = 1 both done, 0 still walking
+; Clobbers: ECX, flags (EAX/EBX preserved)
+; ---------------------------------------------------------------------------
+IsMoveSprite2Done:
+    movzx ecx, al
+    shl ecx, 4
+    cmp byte [ebp + ecx + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0xFF
+    jne .no
+    movzx ecx, bl
+    shl ecx, 4
+    cmp byte [ebp + ecx + wSpriteStateData2 + SPRITESTATEDATA2_MOVEMENTBYTE1], 0xFF
+    jne .no
+    stc
+    ret
+.no:
+    clc
     ret
 
 ; ---------------------------------------------------------------------------

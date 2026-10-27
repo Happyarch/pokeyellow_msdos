@@ -286,6 +286,25 @@ object binary, and the sprite-set TILE loading is the separate
 and runs `PrintText` with per-character reveal and multi-page scroll; player-NPC
 collision is enforced by `IsNPCAtTargetBlock` in `CollisionCheckOnLand`; NPC
 wall-blocking uses MAPY/MAPX-based tile lookup in `GetTileSpriteStandsOn`.
+
+**Scripted NPC movement can drive the Jessie & James pair.** `MoveSprite`/
+`MoveSprite_` fill pret's 180-byte `wNPCMovementDirections`, and the per-frame
+stepper walks one NPC at a time (scripts wait on `BIT_SCRIPTED_NPC_MOVEMENT`).
+`MoveSprite2` (`src/home/pathfinding.asm`, a pret-style numbered sibling of
+`MoveSprite`) uses that same 180-byte allocation as two 90-byte tables: the
+first walker at `+0` (pret-identical, cursor 0) and the second at `+90` with its
+cursor (`MOVEMENTBYTE1`) initialised to 90, so the unmodified stepper advances
+both, one byte per ready tick, with no extra memory and no change to the boot
+allocation. Its scope is the Jessie & James pair scenes — the only callers: the
+port stages those two further apart than the GB does (Mt Moon B2F: pret's
+start is off the GB screen but inside the 320×200 viewport), so they walk in
+together. `IsMoveSprite2Done` is the matching wait, because the shared flag
+clears when the FIRST walker finishes. pret's aliases inside the span
+(`wNPCMovementDirections2` at +60, `wSimulatedJoypadStatesEnd` at +120) are
+`NEXTU` overlays that pret itself only uses at disjoint times. Scenes that do
+not call `MoveSprite2` are unchanged; the remaining Jessie & James scenes can
+adopt the same call with their own hand-authored streams.
+
 **Open Phase 2 items are NOT enumerated here — query them** (rule adopted
 2026-08-02). This paragraph used to list "scripted NPC movement, trainer battle
 engine, random encounter trigger, battle engine"; by 2026-08-02 scripted NPC

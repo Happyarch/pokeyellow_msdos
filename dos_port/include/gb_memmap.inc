@@ -2108,6 +2108,17 @@
 %define hDivisor2                    0xFFE6   ; hDivisor2
 %define hQuotient2                   0xFFE7   ; hQuotient2
 %define wNPCMovementDirections       0xD7A9   ; wNPCMovementDirections (union base; sim-joypad end/dirs2 overlay it)
+; Port-only dual-walker split (MoveSprite2, src/home/pathfinding.asm). pret's
+; 180-byte list is used as two 90-byte tables: the first walker keeps pret's
+; behaviour at +0, the second walker's table starts at +90 and its cursor
+; (SPRITESTATEDATA2_MOVEMENTBYTE1) is initialised to 90 — the stepper's existing
+; `wNPCMovementDirections + index` addressing already supports that, so the
+; engine needs no change. No other script writes past its own list, so the two
+; halves cannot collide, and the pret NEXTU aliases inside the span
+; (wNPCMovementDirections2 at +60, wSimulatedJoypadStatesEnd at +120) are dead
+; while a scripted walk runs — the same disjointness pret itself relies on.
+%define W_NPC_MOVEMENT_DIRECTIONS_HALF 90
+%define wNPCMovementDirectionsSecond  (wNPCMovementDirections + W_NPC_MOVEMENT_DIRECTIONS_HALF)
 %define wUnusedOverrideSimulatedJoypadStatesIndex 0xD888   ; wUnusedOverrideSimulatedJoypadStatesIndex (golden 00:cd3a; was 0xCC86)
 %define wOverrideSimulatedJoypadStatesMask 0xD889   ; wOverrideSimulatedJoypadStatesMask (golden 00:cd3b; was 0xCC87)
 %define wRLEByteCount                0xD820   ; wRLEByteCount

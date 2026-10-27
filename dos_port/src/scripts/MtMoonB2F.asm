@@ -122,6 +122,8 @@ extern HideObject
 extern InitBattleEnemyParameters
 extern LoadPikachuShadowIntoVRAM   ; NOT YET DEFINED IN THE PORT
 extern MoveSprite
+extern MoveSprite2
+extern IsMoveSprite2Done
 extern MtMoon3TrainerHeader0
 extern MtMoon3TrainerHeader1
 extern MtMoon3TrainerHeader2
@@ -469,6 +471,18 @@ MtMoonB2FScript_49e15:
     mov [ebp + hJoyHeld], al
     mov al, PAD_SELECT | PAD_START | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
+    ; Port-only start position. pret's object list puts Jessie at (9,3) and James
+    ; at (9,4); with the player at (3,5) that is already past the GB's 160px right
+    ; edge, but it is INSIDE the port's 320x200 viewport (OBJ is visible while
+    ; MAPX - wXCoord <= +13), so they popped into view mid-screen instead of
+    ; walking in. Start them 4 tiles further right (object x 9 -> 13, MAPX 13 ->
+    ; 17, one tile past the +13 edge) and give each walk stream 4 leading left
+    ; steps, so the offset cancels and both still end on pret's tiles. Y is
+    ; untouched: the geometry only needs the X shift. Object coord -> sprite
+    ; field is +4; slots are 2 (Jessie) and 6 (James).
+    ; DEVIATION{class=projection; pret=scripts/MtMoonB2F.asm:MtMoonB2FEncounterJessieJamesScript; behavior=Jessie and James start 4 map tiles east of pret's object_event coords (sprite MAPX 17 not 13, MAPY unchanged) and each movement stream gains 4 leading left steps; evidence=the port projects NPC OAM from MAPX/MAPY and tests visibility over MAPX in [wXCoord-6, wXCoord+13] (CheckSpriteAvailability) where pret's 160px screen already has object x 9 off-screen for a player at x 3, so pret's start pops in mid-screen in the 320x200 viewport; lifetime=permanent while the viewport is the 320x200 projection}
+    mov byte [ebp + wSprite02StateData2MapX], 17      ; object x 9 + 4, +4 tiles
+    mov byte [ebp + wSprite06StateData2MapX], 17      ; object x 9 + 4, +4 tiles
     mov al, 109
     call MtMoonB2FScript_ShowObject
     mov al, 110
@@ -495,14 +509,34 @@ MtMoonB2FScript_49e15:
 %assign event_byte_a -1
 MtMoonB2FJessieEncounterMovementData:
 MovementData_f9e65:
-    db 0x06
+    ; Port-only: 4 leading left steps cancel the 4-tile start offset set in
+    ; MtMoonB2FEncounterJessieJamesScript (see the DEVIATION there). Each walker
+    ; now has its own terminated list because MoveSprite2 drives both at once
+    ; from separate buffer halves, so pret's James-falls-through-Jessie sharing
+    ; no longer applies. Steps from MAPX 17: Jessie 4+6 = 10 -> x 3.
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; pret, step 1
+    db 0x06                 ; pret, step 2
+    db 0x06                 ; pret, step 3
+    db 0x06                 ; pret, step 4
+    db 0x06                 ; pret, step 5
+    db 0x06                 ; pret, step 6
+    db 0xFF
 MtMoonB2FJamesEncounterMovementData:
 MovementData_f9e66:
-    db 0x06
-    db 0x06
-    db 0x06
-    db 0x06
-    db 0x06
+    ; Same lead-in; steps from MAPX 17: James 4+5 = 9 -> x 4 (pret's tile).
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; port-only
+    db 0x06                 ; pret, step 1
+    db 0x06                 ; pret, step 2
+    db 0x06                 ; pret, step 3
+    db 0x06                 ; pret, step 4
+    db 0x06                 ; pret, step 5
     db 0xFF
 
 %assign event_byte -1
@@ -516,10 +550,13 @@ MtMoonB2FScript6:
         ret
 .nr_277:
     call Delay3
-    mov al, 2
+    ; DEVIATION{class=timing; pret=scripts/MtMoonB2F.asm:MtMoonB2FScript6; behavior=Jessie and James are armed together by MoveSprite2 and walk one stream each on the same ticks instead of pret walking Jessie to completion in Script6/7 and only then James in Script9/10; evidence=the port shifts their start 4 tiles right for the 320x200 viewport (see the DEVIATION on MtMoonB2FEncounterJessieJamesScript) which makes pret's sequential pair walk 80 plus 72 frames of stop-start, and MoveSprite2 arms the second walker on the second 90-byte half of wNPCMovementDirections so the unmodified per-sprite stepper drives both while Script8 jumps to Script11 to skip pret's now-redundant second half; lifetime=permanent while the pair is staged for the wider viewport}
+    mov al, 2                                   ; Jessie = first walker (owns the flag)
     mov [ebp + hSpriteIndex], al
-    mov edi, MtMoonB2FJessieEncounterMovementData   ; pret: ld de, MtMoonB2FJessieEncounterMovementData — MoveSprite takes it in EDI
-    call MoveSprite
+    mov edi, MtMoonB2FJessieEncounterMovementData
+    mov bl, 6                                   ; James = second walker
+    mov edx, MtMoonB2FJamesEncounterMovementData
+    call MoveSprite2
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     mov al, SCRIPT_MTMOONB2F_SCRIPT7
@@ -531,9 +568,10 @@ MtMoonB2FScript6:
 MtMoonB2FScript7:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
-    mov al, [ebp + wStatusFlags5]
-    test al, (1 << (BIT_SCRIPTED_NPC_MOVEMENT))
-    jz .nr_294
+    mov al, 2                                   ; first walker slot
+    mov bl, 6                                   ; second walker slot
+    call IsMoveSprite2Done
+    jc .nr_294
         ret
 .nr_294:
 MtMoonB2FScript8:
@@ -541,6 +579,10 @@ MtMoonB2FScript8:
     mov [ebp + wSprite02StateData1MovementStatus], al
     mov al, SPRITE_FACING_DOWN
     mov [ebp + wSprite02StateData1FacingDirection], al
+    ; James already walked alongside Jessie (MoveSprite2 in Script6), so pret's
+    ; sequential second half — Script9 arms him, Script10 waits — is skipped.
+    ; Both states stay in source and in the pointer table as pret.
+    jmp MtMoonB2FScript11
 MtMoonB2FScript9:
     mov al, 6
     mov [ebp + hSpriteIndex], al
