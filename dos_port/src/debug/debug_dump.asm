@@ -7961,6 +7961,64 @@ autokey_script:
     dd 3760, 3772, PAD_A
     dd 3920, 3932, PAD_A
     dd  -1,  -1, 0
+%elifdef AUTOKEY_BILLHOUSE
+    ; bills_house_cell_separator: walk into Bill's house, talk to him, then use
+    ; the PC in the cell-separator cutscene. Frame numbers are a first cut and get
+    ; tuned against observed state, then mirrored by the Lua side so both replays
+    ; stay identical.
+    ; Boot -> title -> main menu. The title waits for START; the main menu's
+    ; default entry is CONTINUE, so a following A commits it.
+    dd  400,  406, PAD_START
+    dd  470,  476, PAD_A
+    dd  560,  566, PAD_START
+    dd  640,  646, PAD_A
+    dd  730,  736, PAD_START
+    dd  810,  816, PAD_A
+    ; CONTINUE shows the save-info panel, which needs its own A ~3s later.
+    dd  995, 1003, PAD_A
+    ; then whiteout + DelayFrames 10 + SpecialEnterMap (DelayFrames 20) + map load
+    ;
+    ; TAPS, not holds: a 4-frame press moves exactly one tile and a tap that gets
+    ; EATEN costs nothing (no walking into a wall). This matters here because
+    ; scripts/BillsHouse.asm sets wJoyIgnore = PAD_BUTTONS|PAD_CTRL_PAD in Script2
+    ; (Bill's walk) and in BillsHousePikachuConfused (entry + emote bubbles), so
+    ; held input is dropped for seconds at a time.
+    ;
+    ; Bill stands at (6,5) and PIKACHU RUNS UP TO HIM FROM BELOW, so (6,6) is
+    ; occupied: the talk tile is (5,5) facing RIGHT, i.e. the player approaches
+    ; from the LEFT.
+    dd 1400, 1404, PAD_UP         ; door warp (45,3) -> inside (2,7)
+    dd 1500, 2000, 0              ; WAIT OUT the entry Pikachu confused emote
+    dd 2060, 2064, PAD_RIGHT      ; 3 taps right: (2,7) -> (5,7)
+    dd 2095, 2099, PAD_RIGHT
+    dd 2130, 2134, PAD_RIGHT
+    dd 2200, 2204, PAD_UP         ; (5,7) -> (5,6)
+    dd 2235, 2239, PAD_UP         ; (5,6) -> (5,5)
+    dd 2265, 2269, PAD_RIGHT      ; Bill at (6,5) blocks -> ends facing RIGHT
+    dd 2290, 2298, PAD_A          ; talk to Bill (opens _BillsHouseBillImNotAPokemonText)
+    ; A TRAIN through the whole intro. The text has four <PARA> paragraphs plus the
+    ; YesNoChoice and _BillsHouseBillUseSeparationSystemText, and the typewriter
+    ; page time is not fixed, so a 3s cadence drifts and leaves the game parked on
+    ; YES/NO. One press per 25 frames clears it; at YES/NO the first press takes
+    ; the default YES, and while Bill walks (wJoyIgnore) the rest are ignored.
+%assign AKB 2475
+%rep 60
+    dd AKB, AKB + 4, PAD_A
+%assign AKB AKB + 25
+%endrep
+    dd 4100, 4700, 0              ; Bill walks to the separator + Pikachu emote
+    dd 4800, 4804, PAD_LEFT       ; 4 taps left: (5,5) -> (1,5)
+    dd 4835, 4839, PAD_LEFT
+    dd 4870, 4874, PAD_LEFT
+    dd 4905, 4909, PAD_LEFT
+    dd 4970, 4974, PAD_UP         ; PC at (1,4) blocks -> facing UP at the PC
+    ; cutscene: text pages, then Bill out + the SS Ticket box — same train approach
+%assign AKC 5050
+%rep 60
+    dd AKC, AKC + 4, PAD_A
+%assign AKC AKC + 25
+%endrep
+    dd   -1,   -1, 0            ; terminator: the scanner reads rows until start == -1
 %elifdef AUTOKEY_APRESS
     ; Nothing to navigate: answer every <PROMPT> / button wait the flow raises.
     ; DEBUG_ITEMBALL alone uses B so the live AskName prompt deterministically

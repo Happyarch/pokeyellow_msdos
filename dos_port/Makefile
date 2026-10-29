@@ -2214,6 +2214,22 @@ NASMFLAGS += -D HIDDENOBJ_RUNSCRIPT
 endif
 
 # ---------------------------------------------------------------------------
+# bills_house_cell_separator scenario gate: CONTINUE from the staged save
+# (Route 25, outside Bill's house) and let AUTOKEY_BILLHOUSE drive the walk in,
+# the Bill dialogue and the PC press — the same input the GB side replays.
+# make DEBUG_BILLHOUSE_CUTSCENE=1 [AUTOKEY_DUMP_FRAME=n]
+ifdef DEBUG_BILLHOUSE_CUTSCENE
+# NO SKIP_TITLE and NO save-loader gate on purpose: the scenario must follow the
+# SAME vector a player does — title -> main menu -> CONTINUE -> SpecialEnterMap —
+# so the autokey drives the menu too and the map is set up exactly as in a real
+# continue. The save is staged in PKMN.IMG by goldencheck/pick_save.
+NEED_DEBUG_DUMP := 1
+NASMFLAGS += -D DEBUG_BILLHOUSE_CUTSCENE
+NASMFLAGS += -D DEBUG_AUTOKEY -D AUTOKEY_BILLHOUSE
+AUTOKEY_DUMP_FRAME ?= 4000
+NASMFLAGS += -D AUTOKEY_DUMP_FRAME=$(AUTOKEY_DUMP_FRAME)
+endif
+
 # safari_game_over — the Safari Zone step countdown running out. THE WALKING GATE.
 #
 # Every other overworld gate seeds the player next to the thing under test and
