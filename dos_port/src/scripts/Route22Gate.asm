@@ -171,6 +171,14 @@ Route22GateGuardText:
 %assign event_byte_a -1
 Route22GateGuardNoBoulderbadgeText:
     text_far _Route22GateGuardNoBoulderbadgeText
+    ; pret's `text_asm` BYTE. Required: the guard script reaches this label through
+    ; PrintText (`mov esi, Route22GateGuardNoBoulderbadgeText / call PrintText`),
+    ; not through a SCRIPT table entry, so the byte after TX_FAR's operand is the
+    ; next STREAM byte. Without it the DENIED sound and the "I can't let you pass"
+    ; tail below were both walked as text commands. Same defect class as
+    ; SSAnneCaptainsRoomRubCaptainsBackText — see that site's comment and robitnet
+    ; memory bug-class-text-asm-byte-on-predef-code-row.
+    text_asm
 
 %assign event_byte -1
 %assign event_byte_a -1

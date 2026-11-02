@@ -35,6 +35,7 @@ global SSAnneCaptainsRoomTrashText
 global SSAnneCaptainsRoom_Script
 global SSAnneCaptainsRoom_TextPointers
 
+extern DelayFrame
 extern EnableAutoTextBoxDrawing
 extern GiveItem
 extern PlayDefaultMusic
@@ -42,6 +43,7 @@ extern PlaySound
 extern PrintText
 extern StopAllMusic
 extern TextScriptEnd
+extern g_audio_engine_online
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -117,6 +119,19 @@ SSAnneCaptainsRoomCaptainText:
 %assign event_byte_a -1
 SSAnneCaptainsRoomRubCaptainsBackText:
     text_far _SSAnneCaptainsRoomRubCaptainsBackText
+    ; pret's `text_asm` BYTE, and it is REQUIRED here. The transpiler omits it on
+    ; the text_asm scripts in this file because the generated table files those as
+    ; SCRIPT entries and DisplayTextID CALLs the routine straight at its first
+    ; instruction. THIS label is not a table slot: SSAnneCaptainsRoomCaptainText
+    ; hands it to PrintText (`mov esi, SSAnneCaptainsRoomRubCaptainsBackText /
+    ; call PrintText`), exactly as pret does, so TX_FAR's resume point is the next
+    ; STREAM byte and the hook only runs if that byte is TX_START_ASM.
+    ; Without it (measured 2026-11-02) TextCommandProcessor walked the hook's x86
+    ; opcodes as text commands: the heal jingle never played and the opcode bytes
+    ; were rendered as a garbled run before the next PrintText overpainted them.
+    ; The rule is per-LABEL, never per-file — robitnet memory
+    ; bug-class-text-asm-byte-on-predef-code-row.
+    text_asm
 
 %assign event_byte -1
 %assign event_byte_a -1
@@ -132,9 +147,16 @@ SSAnneCaptainsRoomRubCaptainsBackText:
     mov [ebp + wNewSoundID], al
     call PlaySound
 .loop:
+    ; DEVIATION{class=HAL; pret=scripts/SSAnneCaptainsRoom.asm:SSAnneCaptainsRoomRubCaptainsBackText; behavior=the jingle wait pumps DelayFrame each iteration and is skipped entirely while the audio engine is offline, instead of spinning on wChannelSoundIDs alone; evidence=audio is frame-driven in this port (audio_tick runs from the DelayFrame pipeline) so pret's bare spin never steps the music channels and wChannelSoundIDs never clears - measured 2026-11-02, the loop was still spinning after 2400 frames; lifetime=permanent while audio is frame-driven}
+    ; Same shape, same reason as engine/overworld/healing_machine.asm's
+    ; AnimateHealingMachine.waitLoop2 — the port's canonical heal-jingle wait.
+    cmp byte [g_audio_engine_online], 0
+    je .jingleDone
+    call DelayFrame
     mov al, [ebp + wChannelSoundIDs]
     cmp al, MUSIC_PKMN_HEALED
     jz .loop
+.jingleDone:
     call PlayDefaultMusic
     SetEvent EVENT_RUBBED_CAPTAINS_BACK
     mov esi, wStatusFlags3

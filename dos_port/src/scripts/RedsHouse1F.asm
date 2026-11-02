@@ -34,6 +34,7 @@ global RedsHouse1F_Script
 global RedsHouse1F_TextPointers
 
 extern Bankswitch
+extern DelayFrame
 extern EnableAutoTextBoxDrawing
 extern GBFadeInFromWhite
 extern GBFadeOutToWhite
@@ -42,6 +43,7 @@ extern PlaySound
 extern PrintText
 extern ReloadMapData
 extern TextScriptEnd
+extern g_audio_engine_online
 
 ; Code and data are emitted in pret's SOURCE ORDER, in one section.
 ; That is not cosmetic: a NASM local label binds to the last
@@ -110,9 +112,18 @@ RedsHouse1FMomHealScript:
     mov [ebp + wNewSoundID], al
     call PlaySound
 .next:
+    ; DEVIATION{class=HAL; pret=scripts/RedsHouse1F_2.asm:RedsHouse1FMomHealScript; behavior=the jingle wait pumps DelayFrame each iteration and is skipped entirely while the audio engine is offline, instead of spinning on wChannelSoundIDs alone; evidence=audio is frame-driven in this port (audio_tick runs from the DelayFrame pipeline) so pret's bare spin never steps the music channels and wChannelSoundIDs never clears; lifetime=permanent while audio is frame-driven}
+    ; Same shape, same reason as engine/overworld/healing_machine.asm's
+    ; AnimateHealingMachine.waitLoop2. Without the pump this spin is a permanent
+    ; hang: mom's heal is the second site of the same pret idiom as the S.S. Anne
+    ; captain's rub-his-back jingle (src/scripts/SSAnneCaptainsRoom.asm).
+    cmp byte [g_audio_engine_online], 0
+    je .jingleDone
+    call DelayFrame
     mov al, [ebp + wChannelSoundIDs]
     cmp al, MUSIC_PKMN_HEALED
     jz .next
+.jingleDone:
     mov al, [ebp + wMapMusicSoundID]
     mov [ebp + wNewSoundID], al
     call PlaySound

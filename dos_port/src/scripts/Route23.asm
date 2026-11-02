@@ -359,6 +359,13 @@ Route23PrintOhThatsTheBadgeTextScript:
 %assign event_byte_a -1
 Route23YouDontHaveTheBadgeYetText:
     text_far _Route23YouDontHaveTheBadgeYetText
+    ; pret's `text_asm` BYTE. Required: the gate script reaches this label through
+    ; PrintText, not a SCRIPT table entry, so the byte after TX_FAR's operand is
+    ; the next STREAM byte and the DENIED-sound hook below only runs if it is
+    ; TX_START_ASM. Without it the hook's opcodes were walked as text commands.
+    ; Same defect class as SSAnneCaptainsRoomRubCaptainsBackText — see that site's
+    ; comment and robitnet memory bug-class-text-asm-byte-on-predef-code-row.
+    text_asm
 
 %assign event_byte -1
 %assign event_byte_a -1
