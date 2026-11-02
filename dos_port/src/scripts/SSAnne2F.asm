@@ -266,22 +266,22 @@ SSAnne2FRivalAfterBattleScript:
 ;
 ; Geometry is the maintainer's: he sits one row above the bottom wall, then walks
 ; left from his default column to the viewport's left edge.
-;   straight: (36,4) 6 DOWN -> (36,10), 18 LEFT -> (18,10)   24 steps
-;   around:   RIGHT, 6 DOWN -> (37,10), 19 LEFT -> (18,10)   26 steps
-; Both converge on (18,10) and HideObject fires there.
+;   straight: (36,4) 6 DOWN -> (36,10), 13 LEFT -> (23,10)   19 steps
+;   around:   RIGHT, 6 DOWN -> (37,10), 14 LEFT -> (23,10)   21 steps
+; Both converge on (23,10) and HideObject fires there.
 ; Scripted movement steps the sprite pixel directly with no passability test
 ; (movement.asm DoScriptedNPCMovement), so a wrong row cannot stall the script.
-; DEVIATION{class=projection; pret=scripts/SSAnne2F.asm:SSAnne2FRivalAfterBattleScript; behavior=the exit movement continues past pret's four or five tiles with a 6-down then 18-left sweep before HideObject so the rival walks off the left screen edge instead of vanishing mid-hall; evidence=SS_ANNE_2F is map_const 20x9 blocks = 40x18 tiles and the port viewport is 40x25 tiles so the corridor stays visible past pret's vanish point, and the sweep length is the maintainer's direction; lifetime=permanent viewport decision}
+; DEVIATION{class=projection; pret=scripts/SSAnne2F.asm:SSAnne2FRivalAfterBattleScript; behavior=the exit movement continues past pret's four or five tiles with a 6-down then 13-left sweep before HideObject so the rival walks off the left screen edge instead of vanishing mid-hall; evidence=SS_ANNE_2F is map_const 20x9 blocks = 40x18 tiles and the port viewport is 40x25 tiles so the corridor stays visible past pret's vanish point, and the sweep length is the maintainer's direction; lifetime=permanent viewport decision}
 ; ---------------------------------------------------------------------------
 .RivalExitStraightMovement:
     times 6 db NPC_MOVEMENT_DOWN      ; (36,4) -> (36,10), one row above the bottom wall
-    times 18 db NPC_MOVEMENT_LEFT     ; -> (18,10)
+    times 13 db NPC_MOVEMENT_LEFT     ; -> (23,10)
     db -1
 
 .RivalExitAroundPlayerMovement:       ; pret: RIGHT + DOWN, then around the player
     db NPC_MOVEMENT_RIGHT             ; (36,4) -> (37,4)
     times 6 db NPC_MOVEMENT_DOWN      ; -> (37,10)
-    times 19 db NPC_MOVEMENT_LEFT     ; -> (18,10)
+    times 14 db NPC_MOVEMENT_LEFT     ; -> (23,10)
     db -1
 
 %assign event_byte -1
