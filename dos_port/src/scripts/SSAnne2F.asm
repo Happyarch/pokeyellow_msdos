@@ -264,28 +264,30 @@ SSAnne2FRivalAfterBattleScript:
 ; tiles - exactly the port's 40-tile viewport - so the corridor is visible far
 ; past pret's vanish point and the old exit popped in mid-hall.
 ;
-; Geometry taken from the maintainer's marked-up capture of the room, measured
-; off the overlay: the vertical stroke runs 9 tiles down the corridor the rival
-; is in (canvas rows 12-21) and the horizontal stroke runs 21 tiles left (canvas
-; cols 21-0). So: 9 DOWN from his start row, then 21 LEFT, ending at (15,13)
-; for BOTH branches - about where he leaves the visible corridor.
-;   straight: (36,4) 9 DOWN -> (36,13), 21 LEFT -> (15,13)
-;   around:   RIGHT, 9 DOWN -> (37,13), 22 LEFT -> (15,13)
+; Geometry is the maintainer's, given as a count after two failed guesses of mine
+; (pret's own exit is only 4-5 tiles): 7 tiles DOWN from the door - which lands on
+; the doorway/corridor row - then LEFT until he is off the left screen edge.
+;   straight: (36,4) 7 DOWN -> (36,11), 22 LEFT -> (14,11)   29 steps
+;   around:   RIGHT, 7 DOWN -> (37,11), 23 LEFT -> (14,11)   31 steps
+; Both converge on (14,11). The last step or two happen beyond the screen edge,
+; which is invisible because HideObject fires the moment the stream ends.
+; DO NOT derive this from map data alone: two earlier versions came from the map
+; (the (2,12) stairwell) and from measuring the maintainer's overlay in CANVAS
+; rows, which are not map rows - the camera centres on the player, so a canvas
+; count is not a tile distance. Ask, or measure the camera offset.
 ; Scripted movement steps the sprite pixel directly with no passability test
-; (movement.asm DoScriptedNPCMovement), so a wrong row cannot stall the script -
-; it would only be visible as him crossing furniture. Keep the endpoint on the
-; corridor row if this is ever re-tuned.
-; DEVIATION{class=projection; pret=scripts/SSAnne2F.asm:SSAnne2FRivalAfterBattleScript; behavior=the exit movement continues past pret's four or five tiles with a 9-down then 21-left sweep before HideObject so the rival walks out of the visible corridor instead of vanishing mid-hall; evidence=SS_ANNE_2F is map_const 20x9 blocks = 40x18 tiles and the port viewport is 40x25 tiles so the whole corridor is on screen where the GB 20-tile window ended near his vanish point, and the 9-down-21-left sweep is measured off the maintainer's annotated capture of the room; lifetime=permanent viewport decision}
+; (movement.asm DoScriptedNPCMovement), so a wrong row cannot stall the script.
+; DEVIATION{class=projection; pret=scripts/SSAnne2F.asm:SSAnne2FRivalAfterBattleScript; behavior=the exit movement continues past pret's four or five tiles with a 7-down then ~22-left sweep before HideObject so the rival walks out of the left screen edge instead of vanishing mid-hall; evidence=SS_ANNE_2F is map_const 20x9 blocks = 40x18 tiles and the port viewport is 40x25 tiles so the corridor stays visible past pret's vanish point, and the sweep length is the maintainer's direction over two corrected revisions; lifetime=permanent viewport decision}
 ; ---------------------------------------------------------------------------
 .RivalExitStraightMovement:
-    times 9 db NPC_MOVEMENT_DOWN      ; (36,4) -> (36,13)
-    times 21 db NPC_MOVEMENT_LEFT     ; -> (15,13)
+    times 7 db NPC_MOVEMENT_DOWN      ; (36,4) -> (36,11): the doorway/corridor row
+    times 22 db NPC_MOVEMENT_LEFT     ; -> (14,11), i.e. off the left screen edge
     db -1
 
 .RivalExitAroundPlayerMovement:       ; pret: RIGHT + DOWN, then around the player
     db NPC_MOVEMENT_RIGHT             ; (36,4) -> (37,4)
-    times 9 db NPC_MOVEMENT_DOWN      ; -> (37,13)
-    times 22 db NPC_MOVEMENT_LEFT     ; -> (15,13)
+    times 7 db NPC_MOVEMENT_DOWN      ; -> (37,11)
+    times 23 db NPC_MOVEMENT_LEFT     ; -> (14,11)
     db -1
 
 %assign event_byte -1
