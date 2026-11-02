@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "stigmergy hook codex-claim-stop",
+            "command": "robitnet hook codex-claim-stop",
             "type": "command"
           }
         ],
@@ -13,7 +13,7 @@
       {
         "hooks": [
           {
-            "command": "stigmergy hook codex-mail-notify",
+            "command": "robitnet hook codex-mail-notify",
             "type": "command"
           }
         ],
@@ -24,7 +24,7 @@
       {
         "hooks": [
           {
-            "command": "stigmergy hook codex-claim-warn",
+            "command": "robitnet hook codex-claim-warn",
             "type": "command"
           }
         ],
@@ -35,7 +35,7 @@
       {
         "hooks": [
           {
-            "command": "stigmergy hook codex-session-start",
+            "command": "robitnet hook codex-session-start",
             "type": "command"
           }
         ],
@@ -46,7 +46,7 @@
       {
         "hooks": [
           {
-            "command": "stigmergy hook codex-mail-notify",
+            "command": "robitnet hook codex-mail-notify",
             "type": "command"
           }
         ]

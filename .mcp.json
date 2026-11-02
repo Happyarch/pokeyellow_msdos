@@ -21,11 +21,11 @@
       ],
       "command": "python3"
     },
-    "stigmergy": {
+    "robitnet": {
       "args": [
         "mcp"
       ],
-      "command": "stigmergy"
+      "command": "robitnet"
     }
   }
 }

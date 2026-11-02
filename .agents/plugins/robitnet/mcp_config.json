@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "stigmergy": {
+    "robitnet": {
       "args": [
         "mcp"
       ],
-      "command": "stigmergy"
+      "command": "robitnet"
     }
   }
 }
