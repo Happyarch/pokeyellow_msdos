@@ -92,6 +92,17 @@ dos_port/tools/mgba_build/
 .opencode/
 opencode.json
 
+# Agent tooling config is GENERATED per checkout by each tool's installer, never
+# authored here — do not track it. `.codex/config.toml` carries ABSOLUTE host paths,
+# so a committed copy points at a different machine's checkout. Regenerate with
+# `robitnet init` (coordination MCP server + claim hooks) plus the .mcp.json
+# template in docs/assembly.md § "Agent Tooling Config (untracked)".
+# NOTE: only the plugins/ subdirectory is ignored — .agents/AGENTS.md,
+# .agents/agents/ and .agents/skills/ are hand-authored and stay tracked.
+.agents/plugins/
+.codex/
+.mcp.json
+
 # precompiled python
 *.pyc
 *$py.class

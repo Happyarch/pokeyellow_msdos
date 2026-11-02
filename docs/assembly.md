@@ -276,3 +276,62 @@ dosbox-x -defaultdir "$PWD/dos_port" -conf "$PWD/dos_port/dosbox-x.conf"
 
 Must use **DOSBox-X**, not standard DOSBox. Standard DOSBox lacks the debugger
 features and accuracy required for this port.
+
+---
+
+## Agent Tooling Config (untracked)
+
+The MCP / hook configuration that agent hosts read is **generated per checkout and
+deliberately not committed**:
+
+| path | emitted by | notes |
+|------|-----------|-------|
+| `.agents/plugins/*/` | each tool's installer | `plugin.json` is just `{"name": …}` plus a `mcp_config.json`; includes `hooks.json` for the coordination server |
+| `.mcp.json` | MCP server registration | repo-scoped, RELATIVE paths — portable, but still installer output |
+| `.codex/config.toml`, `.codex/hooks.json` | Codex + `robitnet init` | **contains ABSOLUTE host paths** (`PKMN_SYM`, `DOSBOX_MCP_DIR`, the server script path), so a committed copy is wrong on any other machine |
+
+Hand-authored agent material — `.agents/AGENTS.md`, `.agents/agents/`, `.agents/skills/`,
+`.claude/skills/`, `AGENTS.md`, `CLAUDE.md` — **is** tracked. Only the generated
+`plugins/` subdirectory and the generated MCP/host configs are ignored.
+
+Nothing is lost by not tracking these: the files stay on disk, so the coordination
+hooks (claim guard, root gate, mail notify) keep working. Ignoring them only stops
+shipping config that points at another machine's paths.
+
+Recreate, in order:
+
+```sh
+# 1. Coordination server: MCP entry + claim/mail hooks for every host it detects
+#    (claude, codex, antigravity, opencode). Merges into existing config, never
+#    overwrites; `robitnet init --remove` takes back exactly what it added.
+robitnet init
+
+# 2. The three project MCP servers. There is no installer — write .mcp.json with
+#    these entries (relative paths, so the file itself stays portable):
+```
+
+```json
+{
+  "mcpServers": {
+    "dosbox-mcp": {
+      "args": ["dos_port/tools/dosbox_mcp/server.py"],
+      "command": "python3",
+      "env": { "DOSBOX_MCP_SOCKET": "/tmp/dosbox-mcp.sock" }
+    },
+    "nasm-lsp": {
+      "args": ["dos_port/tools/asm_lsp_mcp/server.py"],
+      "command": "python3"
+    },
+    "rgbds-lsp": {
+      "args": ["tools/rgbds_lsp_mcp/server.py"],
+      "command": "python3"
+    }
+  }
+}
+```
+
+`robitnet init` adds its own `robitnet` entry to that file; the three above are the
+project's. Codex needs the absolute-path variants in `.codex/config.toml` because its
+`mcp_servers` block does not resolve arguments relative to the repo — regenerate its
+managed `robitnet` block with `robitnet init --host codex` and write the `dosbox-mcp`
+entry with this checkout's real paths.
