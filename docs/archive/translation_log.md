@@ -15,7 +15,7 @@
 >
 > Where the narrative goes now: the COMMIT MESSAGE for reasoning, a machine-parsed
 > `DEVIATION{}` / `BUG{}` / `GLITCH{}` / `STUB{}` at the code for anything that
-> diverges, and a stigmergy memory for a lesson that outlives the commit. Those
+> diverges, and a robitnet memory for a lesson that outlives the commit. Those
 > have teeth; this did not.
 
 ---
@@ -5793,7 +5793,7 @@ pipeline) is unchanged. **Tooling trap:** `project_state` reported this label as
 `unlisted, provider=src/engine/joypad.asm` — a confident wrong provider pointing at the
 dead file, which reads as "unported". It still does, even after the `relocated_labels`
 entry: the provider picker does not consult the allowlist
-(`docs/current_plan_backlog.md` + stigmergy
+(`docs/current_plan_backlog.md` + robitnet
 `label-db-wrong-provider-on-inlined-routines`).
 
 `RunMapScript` (`src/home/run_map_script.asm`) — **decomposition closed.** It had been a
@@ -7777,7 +7777,7 @@ report), and the only entry gate that would change that is in `src/debug/debug_d
   do. Its header also corrects a stale premise repeated by the immediately
   preceding PC-access batch in this same subsystem (this file's own log
   entry, and `docs/current_plan_backlog.md` #31): interior-map tileset
-  residency is NOT what blocks a predef-text golden — stigmergy memory
+  residency is NOT what blocks a predef-text golden — robitnet memory
   `interior-maps-blocked-by-tileset-residency-not-blk` records that fixed
   2026-08-16 (`566c3027c`) and backlog #31's cause superseded. This scenario's
   actual, narrower blocker is the missing debug gate and golden artifacts

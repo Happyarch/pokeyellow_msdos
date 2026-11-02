@@ -49,7 +49,7 @@
 > the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
-> a stigmergy memory as evidence that a class is clean — every one of those has
+> a robitnet memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
 > Active plan: `docs/plans/menu_intro.md`  
@@ -874,7 +874,7 @@ byte-identical and old captures still parse. `src/debug/perf.asm` records each
 frame's busy total; `tools/read_perf.py` gains `work_stats()`, nearest-rank
 percentiles, `--from N`, and reports v1 captures as *distribution unavailable*
 rather than silently omitting it. Durable note:
-stigmergy `perf-bin-v2-per-frame-series`.
+robitnet `perf-bin-v2-per-frame-series`.
 
 **Measured correction to the contract's "zero deadline misses" clause.** The
 baseline is *not* miss-free over a full run: `party_menu` misses at frames 62,
@@ -1162,7 +1162,7 @@ recorded.
 
 Phase A began on a tree carrying **uncommitted overworld-events Stage 4 (Fly)
 work** from another session. It is preserved and kept out of this plan's
-commits. Related: stigmergy `overworld-events-stage4-fly-arrival-open` notes the
+commits. Related: robitnet `overworld-events-stage4-fly-arrival-open` notes the
 Fly *arrival* page-fault was deferred pending "a session with a real
 title/new-game flow" — which is precisely what A3/A4 deliver, so that item
 should be retested once A4 lands.
@@ -1225,7 +1225,7 @@ B2 must not create a `PlayIntroScene` stub.
 > **Remaining B1:** the sine data + the deterministic lifecycle/edge-crossing test
 > harness (B1.3); the per-frame projected-OAM publish is the same
 > `PublishProjectedOAM`(80,24) pattern B2 proved (`publish_splash_oam`), wired by
-> the B3 scene driver. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+> the B3 scene driver. Detail in robitnet `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
@@ -1265,7 +1265,7 @@ B2 must not create a `PlayIntroScene` stub.
 > reconciliation is `publish_splash_oam` (`PublishProjectedOAM` 80,24) before each
 > frame wait. **Remaining B2** (not blocking): `PlayShootingStar` + `GameFreakIntro`
 > boot wiring (rides with B4), and the splash **timing trace** (⚠ mGBA-blocked here).
-> Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+> Detail in robitnet `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
@@ -1371,7 +1371,7 @@ B2 must not create a `PlayIntroScene` stub.
 > 2/4/6/8/10/12/14 (the BG-map↔surface decision lands with the first `vBGMap0`
 > scene), scenes 7/11 (VBlank-copy mechanism), and scene 16's `Func_f9e9a`
 > (palette via `RunPaletteCommand`); repoint each `Jumptable_f9906` scaffold as it
-> lands; then per-scene pixel-verify. Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+> lands; then per-scene pixel-verify. Detail in robitnet `a4-4-oak-speech2-porting-plan`.
 >
 > **BG-map↔surface decision RESOLVED + first framed even scene lands
 > (2026-07-21).** The pattern: pret scenes write `vBGMap0` (`$9800`, 32-wide GB BG
@@ -1518,7 +1518,7 @@ B2 must not create a `PlayIntroScene` stub.
 > 7/11/15/16 (some need the deferred pal/LY helpers + VBlank-copy/LY-override),
 > `Func_f98fc` + `Jumptable_f9906`, `InitYellowIntroGFXAndMusic` (loads the B3.2b
 > gfx), `PlayIntroScene`, `UI_YELLOW_INTRO` projection, per-scene music/SFX.
-> Detail in stigmergy `a4-4-oak-speech2-porting-plan`.
+> Detail in robitnet `a4-4-oak-speech2-porting-plan`.
 
 #### Work
 
@@ -2030,7 +2030,7 @@ is very likely a cause of the long-standing "title screen graphics are wrong"
 entry in CLAUDE.md.
 
 > **Closed 2026-08-16.** That entry outlived this fix by about four weeks. It was
-> never a stigmergy memory — it was hardcoded prose in CLAUDE.md, and had been
+> never a robitnet memory — it was hardcoded prose in CLAUDE.md, and had been
 > copied into AGENTS.md, ROADMAP.md and docs/bug_categorization.md, so every
 > session re-read it as current and repeated it. All four are now retired. This
 > paragraph is kept as the record of what actually fixed the screen.
@@ -2599,7 +2599,7 @@ Oak’s cry remains silent by explicit scope decision. Every other cinematic aud
 
 ## Commit and coordination policy
 
-- Check stigmergy memories and active claims before each stage.
+- Check robitnet memories and active claims before each stage.
 - Claim files before editing.
 - Preserve unrelated dirty-tree work.
 - Use one reviewable commit per stage unless generator and output are mechanically inseparable.
@@ -2759,7 +2759,7 @@ sole silent audio. **⛔ mGBA-blocked here:** the Oak timing trace and the initi
 bag/party/box **golden** comparison (both need mGBA + baserom to produce the
 reference). **Remaining port-side:** the whole-chain new-game boot under AUTOKEY
 (title→menu→OakSpeech→overworld — the individual beats are all verified). Detail in
-stigmergy `a4-4-oak-speech2-porting-plan`.
+robitnet `a4-4-oak-speech2-porting-plan`.
 
 ### A4 progress (2026-07-20): pic engine, fade, text, PrepareOakSpeech; the PrintText-under-surface finding
 
@@ -2817,7 +2817,7 @@ verified so far:
     pixel-verified pieces; **end-to-end runtime verification of both paths — the
     custom-path surface re-establishment is the rival-pic-after-naming acceptance
     gate — lands in A4.5**, where the full `OakSpeech` cinematic runs the boot→
-    naming flow under AUTOKEY. Analysis in stigmergy `a4-4-oak-speech2-porting-plan`.
+    naming flow under AUTOKEY. Analysis in robitnet `a4-4-oak-speech2-porting-plan`.
 
 **Open finding — PrintText does not compose over the cinematic surface.** The
 `DEBUG_OAKINTRO` diagnostic gate drives Oak pic + fade + `PrintText(OakSpeechText1)`

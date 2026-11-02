@@ -11,7 +11,7 @@
 > archived with its remaining chunks dropped rather than done.
 >
 > **The open tail HAS a live owner, and it is not this file.** The fine-comb work
-> is tracked in stigmergy `script-fine-comb-fleet-queue` ("THE LIVE QUEUE", 68 BAIL
+> is tracked in robitnet `script-fine-comb-fleet-queue` ("THE LIVE QUEUE", 68 BAIL
 > banners across 33 port files, measured at `bc0dd2e2e`, tag `sm83xlat-baseline`),
 > with method and history in `script-transpiler-fine-comb-progress` and
 > `script-transpiler-stages-1-7`. A backlog pointer was filed as

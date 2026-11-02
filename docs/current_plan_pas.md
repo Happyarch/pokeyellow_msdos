@@ -15,7 +15,7 @@ Numbering: stages are `N`, substeps are `N.N` — one scheme, no NX mixes.
   true only of our fork's UPSTREAM BASE. Upstream independently landed its own
   PAS driver (`8759d741c`, 2026-09-18: PAS original/Plus/16) and the fork now
   RESYNCS onto it, so PAS IS emulated via `[sblaster] sbtype = pas16` and our
-  standalone `[pas]` section is retired (see the stigmergy memory
+  standalone `[pas]` section is retired (see the robitnet memory
   `decision-dosbox-x-pas-adopt-upstream`).
 - License is clean: 86Box ships GPL v2 `COPYING`; `snd_pas16.c` carries
   author/copyright lines but no "v2 only" notice (GPL §9: no version

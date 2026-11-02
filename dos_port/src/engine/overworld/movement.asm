@@ -294,7 +294,7 @@ UpdateNPCSprite:
     ; pret has NO MAPY/MAPX clamp here — it relies on CanWalkOntoTile +
     ; CheckSpriteAvailability to reject bad destinations. On clamp-fail, forced
     ; $D0-$D3 facing is still applied via .clampedOutOfWindow (only the tile read /
-    ; walk attempt is guarded; stigmergy key: regression-overworld-facing-clamp-band).
+    ; walk attempt is guarded; robitnet key: regression-overworld-facing-clamp-band).
     ; Movement-safe bounds: destination accesses ±2 tile rows/cols from current EBX.
     ; .moveDown: EBX+2*40 → needs row+2 ≤ 24 → MAPY ≤ wYCoord+6.
     ; .moveUp:   EBX-2*40 → needs row-2 ≥ 0  → MAPY ≥ wYCoord-3.

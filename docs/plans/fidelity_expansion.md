@@ -83,7 +83,7 @@ RED proof already captured in the Stage 4 notes: a temporary byte flip in
      source of truth. Check active roots before addressing anyone; the old root may be gone.
 
 **Session mechanics:**
-- Register with stigmergy, search memory key `fidelity-expansion-stage2-handoff`, and claim
+- Register with robitnet, search memory key `fidelity-expansion-stage2-handoff`, and claim
   every file before editing. Update that memory when handing off or closing.
 - The old Stage-4-first-half handoff was deliberately removed from this file. Do not resurrect
   its obsolete instructions.

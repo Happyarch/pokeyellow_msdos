@@ -87,7 +87,7 @@ bits 32
 GB_BG_ROW_TILES          equ 20        ; pret SCREEN_WIDTH  — tiles copied per row
 GB_BG_STRIDE             equ 32        ; pret TILEMAP_WIDTH — dest bytes per row
 ; Same reasoning for AutoBgMapTransfer, which slices wTileMap into thirds by GB
-; rows. See stigmergy [[redraw-ring-gb-geometry-contract]]: substituting the
+; rows. See robitnet [[redraw-ring-gb-geometry-contract]]: substituting the
 ; port's SCREEN_HEIGHT(25) here would slice 8-row thirds out of a buffer pret
 ; addresses in 6-row thirds, and address rows 18-24 that the GB map has no room
 ; for. GB geometry, always.

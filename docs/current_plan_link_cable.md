@@ -4,8 +4,8 @@ Created 2026-08-21 (planning session, branch `claude/link-cable-protocol-plannin
 This plan REOPENS the link layer: the 2026-08-17 "stays unwired" maintainer
 directive is superseded by the maintainer's 2026-08-21 request to begin this
 work. The two doc sites that recorded the directive are updated in the same
-commit as this file; the stigmergy memory `link-layer-planned-transports` must
-be rewritten from a host session (Stage 0 — remote sessions have no stigmergy).
+commit as this file; the robitnet memory `link-layer-planned-transports` must
+be rewritten from a host session (Stage 0 — remote sessions have no robitnet).
 
 Skills route: `asm-translation` + `faithfulness-review` for every pret mirror;
 `project-conventions` for stubs/annotations/plan bookkeeping; `build-and-debug`
@@ -259,13 +259,13 @@ blocks in `src/engine/menus/naming_screen.asm`.
       the then-active overworld-events plan (retired 2026-08-28 →
       `docs/plans/overworld_events.md`) and `docs/plans/printer.md`
       (the printer plan is archived)
-- [ ] HOST SESSION: apply the stigmergy edits queued in
+- [ ] HOST SESSION: apply the robitnet edits queued in
       `docs/stigmergy_outbox.jsonl` (the `link-layer-planned-transports`
       rewrite, the regression memory_search fold-back, and the Stage 2
       episode_record — full args are in the file, replay them verbatim and
       delete each line in the applying commit). This item closes when the
       outbox holds only its README line (2026-08-21/22 remote sessions could
-      not do this — stigmergy is host-only)
+      not do this — robitnet is host-only)
 - [x] Verify + close backlog #17 (2026-08-21): root-wired — `SpecialEnterMap`
       honors `wEnteringCableClub` (`main_menu.asm:426-431`),
       `PrepareForSpecialWarp` translated (`special_warps.asm:73`, stub retired
@@ -471,7 +471,7 @@ blocks in `src/engine/menus/naming_screen.asm`.
        additions and the IMFC SysEx fix are all still present. Two non-Linux CI
        breaks were fixed (the AF_UNIX bridge and the SCREENSHOT `realpath` are
        now platform-guarded). The tooling binary was rebuilt from the resynced
-       submodule and installed. See stigmergy memories
+       submodule and installed. See robitnet memories
        `decision-dosbox-x-pas-adopt-upstream`, `tooling-dosbox-x-resync-plan`,
        `regression-tooling-dosbox-x-mcp-bridge-breaks-nonlinux-ci`.
 
@@ -993,11 +993,11 @@ address cap (above) and SetupPlayerAndEnemyPokeballs OAM placement (Stage 4).
       _InitBattleCommon (see that commit — the stale 'TODO-HW: network HAL'
       deferral it replaced was the last one in the battle layer, and the
       Stage 4 arm that reads the seeded mailbox was live without it)
-- [ ] HOST SESSION: stigmergy final state + `episode_record` — ALL entries
+- [ ] HOST SESSION: robitnet final state + `episode_record` — ALL entries
       queued in `docs/stigmergy_outbox.jsonl` as of the Stage 8 sweep
       (stages 4-8 progress memories + the episode chain); the box stays
       unticked because the host-side apply-and-delete is the deliverable,
-      and only a session WITH stigmergy tools can do it
+      and only a session WITH robitnet tools can do it
 - [ ] Archive: `git mv docs/current_plan_link_cable.md docs/plans/link_cable.md`
       — DO NOT ARCHIVE YET: the battery above is open, and archiving with
       open runtime debt hides it. The plan closes as STATIC-COMPLETE,
@@ -1072,7 +1072,7 @@ the book.
   (text generators) and `mgba` (goldens). The Happyarch fork submodule URLs
   are SSH (`git@github.com:…`) — remote/CI sessions may need an https URL
   rewrite.
-- Stigmergy is unavailable in remote sessions; all memory/episode items above
+- Robitnet is unavailable in remote sessions; all memory/episode items above
   are marked HOST SESSION, and their concrete edits are queued in
   `docs/stigmergy_outbox.jsonl` (schema + apply-and-delete protocol in that
   file's README line) rather than described in prose.

@@ -22,7 +22,7 @@ start a replacement log. For each function the Integration
 Agent places, put the worker's Translation Notes Header into the COMMIT MESSAGE,
 and put anything durable where a tool can see it: a machine-parsed
 `DEVIATION{}`/`BUG{}`/`GLITCH{}`/`STUB{}` annotation at the code that diverges,
-or a stigmergy memory for a lesson. If the worker left notes blank, fill in what
+or a robitnet memory for a lesson. If the worker left notes blank, fill in what
 you can infer from the diff before committing.
 
 ---

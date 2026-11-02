@@ -77,13 +77,13 @@ TILE_CACHE_SIZE   equ TILE_CACHE_TILES * 64
 ;     :961-969), so the per-cell attribute plane is the natural carrier for it —
 ;     which is why that plane is specified to hold the FULL CGB attribute byte
 ;     and not just the palette bits Yellow's own 13 tables actually use (bits 3-7
-;     measured zero tree-wide, stigmergy cgb-stage0-collision-analysis).
+;     measured zero tree-wide, robitnet cgb-stage0-collision-analysis).
 ; Nothing in Yellow exercises either, so neither is built here: building an
 ; unwitnessed 768-tile path would ship untested code. This note exists so that
 ; work is scoped rather than rediscovered.
 ;
 ; Evidence: 2026-08-14 read-only survey of pret/pokecrystal + pret/pokegold
-; against this file; stigmergy memory gen2-render-architecture-assessment.
+; against this file; robitnet memory gen2-render-architecture-assessment.
 ; NOT established by that survey: that Crystal's CGB-exclusivity ($C0) versus
 ; Gold's CGB-enhanced ($80) is CAUSED by the extended VRAM — the same bank-1
 ; layout was cited in both repos. Do not plan around that distinction unverified.

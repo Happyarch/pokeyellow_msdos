@@ -91,7 +91,7 @@ PlayCry:
     ...
     ret
 ```
-- As documented in stigmergy memory `playcry-blocking-contract-destubbed`, `WaitForSoundToFinish` must wait for the exact duration of the cry. Golden scenarios (`bills_pc_ops`, `box_change_roundtrip`, `pokedex_entry`, `route_15_binoculars`) execute autokey schedules keyed to precise frame counts.
+- As documented in robitnet memory `playcry-blocking-contract-destubbed`, `WaitForSoundToFinish` must wait for the exact duration of the cry. Golden scenarios (`bills_pc_ops`, `box_change_roundtrip`, `pokedex_entry`, `route_15_binoculars`) execute autokey schedules keyed to precise frame counts.
 - Any cry implementation must preserve this frame duration:
   - If using synchronous direct mode (`sb_pcm_play`), the elapsed time must accurately reflect the cry's frame count, and `DelayFrame` / frame counters must advance consistently.
   - If using asynchronous DMA or per-frame buffer filling, `WaitForSoundToFinish` will continue to spin-wait across `DelayFrame` until the sound channel clears, naturally preserving exact frame cadence.

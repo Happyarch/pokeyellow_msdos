@@ -175,7 +175,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       section (this file, 2026-08-07). Projection spec confirmed against
       `docs/ui_projection.md`, `assets/ui_layout_battle.inc`,
       `PublishProjectedOAM`, and the battle goldens' compared regions.
-- [x] Record the plan-created stigmergy memory + link to
+- [x] Record the plan-created robitnet memory + link to
       `battle-transitions-landed`'s "next planned work" tail.
       DONE 2026-08-07: memory `battle-animations-plan-created`, linked.
 
@@ -724,7 +724,7 @@ Two maintainer-confirmed decisions (AskUserQuestion, 2026-08-07):
       must be re-measured then, not assumed.
 - [x] Sweep: retired stubs' extern comments (`label_status --callers` each),
       `update_label_db`, `docs/ui_projection.md` index rows + a battle-anim
-      subsystem note, `docs/translation_log.md` entries, stigmergy memories
+      subsystem note, `docs/translation_log.md` entries, robitnet memories
       (close/update + `episode_record`), refresh umbrella Stage 6 boxes,
       archive this plan.
       **DONE 2026-08-08:** extern comments swept twice (33 stale ones in

@@ -1984,7 +1984,7 @@ SCENARIOS = {
             #
             # COST, stated rather than hidden: this retires the incidental
             # move-selection witness that the autokey cadence used to provide (see
-            # stigmergy battle-stage1b-continuous-scenario, "port PP now matches the
+            # robitnet battle-stage1b-continuous-scenario, "port PP now matches the
             # golden"). That match was RNG alignment, not a pinned property — it
             # could not have survived any change to port-side battle timing. A
             # cadence regression now needs its own check.

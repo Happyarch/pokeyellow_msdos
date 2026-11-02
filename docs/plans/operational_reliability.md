@@ -430,7 +430,7 @@ not restructure its live files mid-stage.
 
 **Exact next steps for a fresh session:**
 
-1. Register with stigmergy, search memory, run `root_list_active`, and read this
+1. Register with robitnet, search memory, run `root_list_active`, and read this
    plan plus the fidelity-expansion plan/archive.
 2. Confirm the fidelity agent released `dos_port/Makefile`,
    `dos_port/tools/golden_diff.py`, `dos_port/tools/mgba_harness/**`,
@@ -528,7 +528,7 @@ regression without comparing its categorized inventory.
     eligible byte-for-byte pret stream validation.
 - [x] Add debug-only projection, scratch-owner, compositor-lifecycle, and
   re-entrancy assertions subsystem by subsystem.
-- [x] Reconcile M-69 and the MAP_BORDER=6 row-wrap stigmergy entries using repository/runtime
+- [x] Reconcile M-69 and the MAP_BORDER=6 row-wrap robitnet entries using repository/runtime
   evidence, retaining resolved historical lessons without stale active status.
 
 Acceptance for this initial slice: project state is generated from the scanner

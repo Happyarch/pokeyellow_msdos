@@ -1385,7 +1385,7 @@ glitch-safety reader would consult. Not row 14's file; filed rather than swept i
 
 ### M-47 — resolved by another session (noted, not claimed)
 The `RunPaletteCommand` ret-stub in `src/engine/battle/faint_switch.asm` is **gone**. The parallel
-colorization session (stigmergy root `r-0e1a76275e71`) deleted it and landed a real `RunPaletteCommand`
+colorization session (robitnet root `r-0e1a76275e71`) deleted it and landed a real `RunPaletteCommand`
 body while row 13 was in flight, after this ledger's finding was passed to them over the mailbox. The
 shadow hazard M-47 described is closed. Recorded here because the finding was filed here; the fix is
 theirs, not this audit's.

@@ -9,7 +9,7 @@
 #   auto-recreate path could drop it. This is that manual door, in one command.
 #
 #   Related hazard, do not "fix" it here: run_headless.sh copies PKMN.IMG and
-#   purges GBSTATE/DUMP/FRAME/PAL but NOT POKEMON.DSV (see the stigmergy memory
+#   purges GBSTATE/DUMP/FRAME/PAL but NOT POKEMON.DSV (see the robitnet memory
 #   regression-tooling-stale-dsv-goldencheck), so an unseeded headless probe
 #   boots WITH whatever save the base image carries.
 #

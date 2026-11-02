@@ -88,7 +88,7 @@ are a tool, not a manual procedure.
 
 Neither replaces step 3: **a green gate proves no structural or bookkeeping
 drift and NOTHING about behaviour.** Both print that caveat on every pass.
-Design notes, non-vacuity proofs and traps: stigmergy memory
+Design notes, non-vacuity proofs and traps: robitnet memory
 `static-gate-and-ci-wiring`.
 
 **The tree exits 0 in both modes — keep it that way.** Measured 2026-08-04:
@@ -164,7 +164,7 @@ with `python3 -c 'import json;d=json.load(open("dos_port/tools/pret_label_allowl
      inlined into a differently-named host.** A call that legitimately moved between
      routines shows up as disconnected ADDED/`missing`/DROPPED lines, and an inlined
      routine gets a *confident wrong provider* pointing at whatever dead file still
-     carries the label. See stigmergy memories `faithdiff-no-call-relocation-model`
+     carries the label. See robitnet memories `faithdiff-no-call-relocation-model`
      and `label-db-wrong-provider-on-inlined-routines` before concluding "unported".
    - Global translation boundaries (DelayFrame plumbing, TODO-HW, banking,
      scroll-register mirrors) are already suppressed in

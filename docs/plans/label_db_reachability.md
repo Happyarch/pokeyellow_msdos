@@ -10,7 +10,7 @@ forward as a TODO.md backlog entry so they outlive this file; **hole 1 is
 accepted, not scheduled** — a sound fix needs real basic-block reachability
 analysis and there is no instance in the tree. The `reachability` column's
 permanent limits (dd-tables, ISRs; `not-proven-reached` is never proof of
-unreachability) live in CLAUDE.md/AGENTS.md and the stigmergy memory
+unreachability) live in CLAUDE.md/AGENTS.md and the robitnet memory
 `project-state-reachability-false-negative-overworld-menu-subtree`.
 
 **Status:** round 8 — **ADVERSARIALLY REVIEWED** (2026-07-16). All
@@ -511,9 +511,9 @@ Sweep the citations (full-repo search):
 - `dos_port/src/engine/overworld/cut.asm:20-31` (source comment warning).
 - `CLAUDE.md:68-70` / `AGENTS.md:70` — add: **`unreachable` needs runtime
   evidence; this column is never proof of unreachability** (the dd-table gap
-  guarantees residual false negatives). Both files — they drift (stigmergy
+  guarantees residual false negatives). Both files — they drift (robitnet
   `claude-md-agents-md-are-separate-files-that-drift`).
-- stigmergy `project-state-reachability-false-negative-overworld-menu-subtree`
+- robitnet `project-state-reachability-false-negative-overworld-menu-subtree`
   (update, don't delete — the trap history is why the rename exists).
 
 ## Files to modify
@@ -523,7 +523,7 @@ Sweep the citations (full-repo search):
 | `dos_port/tools/update_label_db` | Make probe (S1, shared helper); membership discipline + source-wide call inventory and `build_active` flag (S2); single-pass classifier → immutable stream (S3); unknown-region hard-fail (S4); per-stream boundary model + macro registry (S5); terminator classification + DOS-exit rules (S6); occurrence-keyed successor pass + `fallthrough` emission (S7/S8); `--config` report-only mode (S1/S2) |
 | `dos_port/tools/project_state` | `source_sets()` consumes the shared Make probe and BFS filters `build_active=1` (S2/S8); rename the 3 values (S9); docstring/`--help` states the OUT gaps |
 | `CLAUDE.md` / `AGENTS.md` | evidence-policy caveat (S9) |
-| docs + `cut.asm` comment + stigmergy | citation sweep (S9) |
+| docs + `cut.asm` comment + robitnet | citation sweep (S9) |
 | *(new)* `dos_port/tools/test_label_db.py` | fixtures + live-tree assertions (Verification) — there are no tests today |
 
 **Not modified:** `faithdiff` (immune, S8), `lint_pret_labels` (verified by
@@ -1208,7 +1208,7 @@ population the headline counts.
 
 The fix's *direction* is unaffected and large either way (181 → 742 in the
 reported population). But the plan's own status line, its Context table, and the
-stigmergy memory all quote a number that is not the tool's output — the exact
+robitnet memory all quote a number that is not the tool's output — the exact
 "counts a different population than you assume" failure the metric exists to
 prevent. Four further corrections, all measured:
 

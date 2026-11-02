@@ -134,7 +134,7 @@ What it claimed and what was measured:
 |---|---|
 | "Faithful full `engine/overworld/` reimpl … the main open item" | That plan is **complete and archived** (`docs/plans/overworld_port.md`) |
 | "scripted NPC movement" still open | **Done** |
-| "the **VRAM tile-slot management fix** that resolves the live menu-box corruption" | The VRAM tile-slot *explanation* was **disproven in the plan itself** on 2026-07-05 and refiled as ticket OW-A.13 (`docs/plans/overworld_port.md:153`: "the original (incorrect) analysis is kept below for the record"). It also cited stigmergy memory `menu-corruption-vram-tileslots`, **which does not exist**. Whether any menu-box defect is still live needs re-measuring, not repeating |
+| "the **VRAM tile-slot management fix** that resolves the live menu-box corruption" | The VRAM tile-slot *explanation* was **disproven in the plan itself** on 2026-07-05 and refiled as ticket OW-A.13 (`docs/plans/overworld_port.md:153`: "the original (incorrect) analysis is kept below for the record"). It also cited robitnet memory `menu-corruption-vram-tileslots`, **which does not exist**. Whether any menu-box defect is still live needs re-measuring, not repeating |
 | "item USE dispatch" deferred | **False** — see the items bullet above |
 
 **To find what is actually open:**

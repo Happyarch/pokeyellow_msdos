@@ -4,7 +4,7 @@
 # Run it:   .githooks/test_prepare_commit_msg.sh
 #
 # WHY IT IS CHECKED IN. This repo's rule is that a gate step which cannot fail is
-# worse than no gate, because it reads as coverage (see the stigmergy memory
+# worse than no gate, because it reads as coverage (see the robitnet memory
 # static-gate-and-ci-wiring). This hook's whole job is to stop a fabricated
 # SHA-256 reaching a commit message, and two of its failure modes are silent:
 # emitting nothing on an amend, or leaking the block onto unrelated commits.

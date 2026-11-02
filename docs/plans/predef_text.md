@@ -50,11 +50,11 @@
 > the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
-> a stigmergy memory as evidence that a class is clean — every one of those has
+> a robitnet memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
 Goal: link `dos_port/src/home/predef_text.asm`, the last file the relocation
-grind left blocked (stigmergy `relocated-labels-grind`), and with it retire the
+grind left blocked (robitnet `relocated-labels-grind`), and with it retire the
 final two `pret_label_allowlist.json` relocation rows
 (`SetMapTextPointer` / `RestoreMapTextPointer`, which were split out into
 `src/home/map_text_pointer.asm` so the SAVE flow's `ChangeBox` could link them).
@@ -132,7 +132,7 @@ classes fails the generator loudly instead of silently emitting a different set.
 - [x] `src/engine/slots/game_corner_slots{,2}.asm`: their five hand-written
       `GameCorner*Text` wrappers duplicated the newly generated globals
       (`dup_def` ×5). Retired in favour of the generated definition, per the
-      `experience.asm` precedent in stigmergy `battle-text-composed-in-code-audit`
+      `experience.asm` precedent in robitnet `battle-text-composed-in-code-audit`
       ("one definition each"). Note what this surfaced: those wrappers pointed at
       `_GameCorner*Text` far labels **no file in the tree defines**, so both files
       could never have linked as written. They are not in the Makefile either.

@@ -470,7 +470,7 @@ other than `DefaultMapScript`, so wiring is what Stage 5b is actually about.
 - [ ] Remove temporary guards and stand-ins whose real providers landed; run
       `label_status --callers` for every retired stub; update the label DB; run both
       lint modes plus `fidelity_gate`; and sweep related `STUB`, `TODO`,
-      extern-provider, allowlist, plan, skill and stigmergy claims. Archive only after
+      extern-provider, allowlist, plan, skill and robitnet claims. Archive only after
       the generated plan inventory reports no open items here.
 
 ## Fidelity and acceptance

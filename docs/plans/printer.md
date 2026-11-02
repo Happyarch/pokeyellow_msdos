@@ -334,7 +334,7 @@ over renderer state, feeds the device below the seam, invisible to pret code).
 ### Stage 6 — docs + bookkeeping
 - [x] Evidence-discipline wording sweep (docs, comments, this plan's status
       lines): "spec-conformant + verified under DOSBox-X emulation" only
-- [x] Stigmergy feature memory updated to final state;
+- [x] Robitnet feature memory updated to final state;
       `link-layer-planned-transports` not touched by PRINTER work (it is now
       owned by `docs/current_plan_link_cable.md` Stage 0, reopened 2026-08-21)
 - [x] Archive: `git mv docs/current_plan_printer.md docs/plans/printer.md`

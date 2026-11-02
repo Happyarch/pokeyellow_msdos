@@ -1,9 +1,9 @@
 # Port-introduced bugs and potential bugs — audit 2026-10-02
 
 Skills used: `faithfulness-review` (fidelity gate, faithdiff/lint provenance, BUG/DEVIATION annotation discipline), `build-and-debug` (headless dumps, PAL.BIN/FRAME.BIN, golden harness, memmap audits), `asm-translation` (register map, ZF/CF preservation, counter-width, endianness/signedness, EBP model), `project-conventions` (BUG/DEVIATION/STUB schema, two-tier data rule, active-plan convention).
-Why: every finding below is either a divergence from pret as specification, a widened/relocated construct the translation skill defines, or a stigmergy-tracked regression with a repro command.
+Why: every finding below is either a divergence from pret as specification, a widened/relocated construct the translation skill defines, or a robitnet-tracked regression with a repro command.
 
-Stigmergy checked: `memory_search regression bug`, `memory_search port bug audit`, `memory_search regression OPEN`, `memory_search bug class`, `episode_list bug` (top 20). Claims checked: tree-wide active claims listed before writing; this file claimed as `docs/port_bug_audit_2026-10-02.md` (claim 2744). Regression memories re-read in full for the five OPEN items in §A.
+Robitnet checked: `memory_search regression bug`, `memory_search port bug audit`, `memory_search regression OPEN`, `memory_search bug class`, `episode_list bug` (top 20). Claims checked: tree-wide active claims listed before writing; this file claimed as `docs/port_bug_audit_2026-10-02.md` (claim 2744). Regression memories re-read in full for the five OPEN items in §A.
 
 Static state re-measured 2026-10-02 (host, worktree HEAD `d670ec5cb`):
 - `audit_memmap.py`: `1316 symbols, 78 sized regions — clean: no overlaps, no strays`
@@ -19,7 +19,7 @@ Subagent sweep (read-only, no edits, 2026-10-02): three `explore` audits coverin
 
 ---
 
-## A. Confirmed port-introduced bugs (stigmergy-tracked, with repro — A1 and A5 FIXED; A2/A3/A4 open)
+## A. Confirmed port-introduced bugs (robitnet-tracked, with repro — A1 and A5 FIXED; A2/A3/A4 open)
 
 ### A1. Indoor maps share one VGA DAC palette — `regression-indoor-maps-share-one-dac-palette` — **FIXED**
 - **RESOLVED:** the hidden-object gates seeded `wCurMap` but never `wLastMap`, so the
@@ -178,7 +178,7 @@ Severity: none is confirmed reachable today. Each has the exact `file:line` shap
 
 # Iteration 2 (same date, new areas — nothing above re-filed)
 
-Skills used: same four. Stigmergy re-queried: `regression OPEN`, `bug audit`, plus full reads of `bug-hunt-detector-gaps-2026-09-25`, `flagactionpredef-clobbers-regs`, `bug-class-loop-counter-in-cl-across-a-clobbering-call`, `coord-macros-logic-audit`, `bug-class-gb-counter-widened-to-32-bit`. All line numbers re-verified against the tree this iteration.
+Skills used: same four. Robitnet re-queried: `regression OPEN`, `bug audit`, plus full reads of `bug-hunt-detector-gaps-2026-09-25`, `flagactionpredef-clobbers-regs`, `bug-class-loop-counter-in-cl-across-a-clobbering-call`, `coord-macros-logic-audit`, `bug-class-gb-counter-widened-to-32-bit`. All line numbers re-verified against the tree this iteration.
 
 ## E. Live port bug: `FlagActionPredef` called without predef-slot setup in tool-seeded scripts
 
@@ -286,7 +286,7 @@ stores: + ADDED [wTextPredefFlag]
 
 # Iteration 4 (same date, new areas — nothing above re-filed)
 
-Skills used: same four. Stigmergy re-queried (`save SRAM box commit` → `sram-emulation-and-dsv-v2`, `savegen-pkhex-box-fixtures`). All lines re-verified this iteration; no subagents (direct greps + reads sufficed).
+Skills used: same four. Robitnet re-queried (`save SRAM box commit` → `sram-emulation-and-dsv-v2`, `savegen-pkhex-box-fixtures`). All lines re-verified this iteration; no subagents (direct greps + reads sufficed).
 
 ## N. Save-durability gap: box mutations update resident SRAM but never commit to disk — POTENTIAL (maintainer decision, not mistranslation)
 
@@ -311,7 +311,7 @@ Method: for each leftover from the iteration-1 exposure list, confirmed the wide
 
 # Iteration 5 (same date — verification round: one erratum, coverage gaps, clean audits)
 
-Skills used: same four. Stigmergy re-queried (`Gen 2 catch rate held item Time Capsule` → no dedicated memory; the rule lives in `gb_constants.inc` + `add_mon.asm:14`). No subagents; direct greps + reads.
+Skills used: same four. Robitnet re-queried (`Gen 2 catch rate held item Time Capsule` → no dedicated memory; the rule lives in `gb_constants.inc` + `add_mon.asm:14`). No subagents; direct greps + reads.
 
 ## Q. Erratum to §J plus coverage: `text_msgbox` does NOT leak in overworld flows; J2/J3 have zero golden coverage
 

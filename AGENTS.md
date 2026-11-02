@@ -2,13 +2,13 @@
 
 Project context for agent sessions. Read this at the start of every session.
 
-## ⚠ THIS PROJECT USES STIGMERGY — coordination is MANDATORY
+## ⚠ THIS PROJECT USES ROBITNET — coordination is MANDATORY
 
 1. **memory_search BEFORE you plan or edit.** Other agents left notes here; you
    are not starting from a blank slate.
 2. **claim_acquire every file you'll edit, BEFORE editing it.** An edit to a file
    another agent claimed is BLOCKED OUTRIGHT and names the owner.
-3. **Stay warm.** Every stigmergy call refreshes your liveness. Go quiet ~15 min
+3. **Stay warm.** Every robitnet call refreshes your liveness. Go quiet ~15 min
    and your root is considered dead and your claims drop (claim TTL 30 min, root
    liveness 15). Use claim_renew on long-held claims.
 
@@ -159,20 +159,20 @@ gate means only “no detected structural divergence”; run
 scenario when behavior is changed.
 
 When a capability becomes live, sweep related `TODO-HW`, `STUB`, extern,
-allowlist, plan, skill, `regression-*` memories, and stigmergy claims in the same
-workstream. Stigmergy is
+allowlist, plan, skill, `regression-*` memories, and robitnet claims in the same
+workstream. Robitnet is
 an evidence index, not authority: durable entries need evidence and state;
 volatile status needs expiry; contradictory repository evidence updates the
 existing key. Run `dos_port/tools/project_state --plans` for the generated active
 plan inventory; do not maintain a second hand-written inventory.
 
-Use stigmergy memories before making decisions that depend on project history,
+Use robitnet memories before making decisions that depend on project history,
 prior agent work, local conventions, or non-obvious constraints. Search with
 `memory_search` early, before choosing an approach, and again before recording a
 durable decision; treat hits as leads to verify against repository/runtime
 evidence, not as final authority.
 
-Stigmergy has two memory layers. **Memories** are the semantic layer — short,
+Robitnet has two memory layers. **Memories** are the semantic layer — short,
 current claims, searched with `memory_search`. **Episodes** are the episodic
 layer — immutable "what happened" records (sessions, investigations, failures
 and dead ends), written with `episode_record` and searched with `episode_list`;
@@ -396,7 +396,7 @@ end of each rule — invoke it when the rule needs its full context.
 
 Before any edit, confirm:
 - Which skill applies, or why none applies.
-- Which stigmergy memories were checked.
+- Which robitnet memories were checked.
 - **Which regression memories cover the area** (`memory_search regression <area>`
   — see "Known regressions" below).
 - Which files are claimed if coordination is needed.
@@ -626,7 +626,7 @@ load-bearing, and you QUERY them:
    annotation at the code that is wrong, in the format above. That is the
    authority on *what* is broken, it travels with the code, and
    `lint_pret_labels` parses it.
-2. **Stigmergy is the searchable index**, for regressions with no single site
+2. **Robitnet is the searchable index**, for regressions with no single site
    (cross-subsystem, tooling, harness) and for the "why/when/how to reproduce"
    behind an in-code tag. Key convention: **`regression-<area>-<slug>`**
    (`regression-battle-exp-overflow`, `regression-tooling-strict-lint-gap`).

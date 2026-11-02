@@ -450,7 +450,7 @@ high-byte inputs — the ones a quick test never reaches.
    did not have. Do not append to it, do not start a replacement log, and verify
    anything you take from it against the tree. The durable homes are the ones
    with teeth: a machine-parsed `DEVIATION{}`/`BUG{}`/`GLITCH{}`/`STUB{}` at the
-   code for anything that diverges, a stigmergy memory for a lesson that outlives
+   code for anything that diverges, a robitnet memory for a lesson that outlives
    the commit, and the commit message for the reasoning.
 8. Verify assembly from `dos_port/`:
    `nasm -f coff -I include/ -I . -D BUG_FIX_LEVEL=0 -o /dev/null <file>`.

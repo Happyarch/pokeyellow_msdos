@@ -51,7 +51,7 @@
 > the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
-> a stigmergy memory as evidence that a class is clean — every one of those has
+> a robitnet memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
 Status: **the wild-battle backend and the first battle fidelity surfaces are
@@ -1810,7 +1810,7 @@ provider shapes below, not their runtime behavior.
         step STALLS … this is what still blocks the Oak intro from reaching the
         lab end-to-end." That was FIXED by `7deceb6f1` ("battle: AnyPartyAlive
         faithful 8-bit wrap — fixes Oak-intro empty-party blackout"), five days
-        before this line was last re-read. The stigmergy memory
+        before this line was last re-read. The robitnet memory
         `regression-oak-intro-follow-stall-after-battle` has said `FIXED` since
         the same day, and the repository corroborates it independently:
         `AnyPartyAlive` (port core.asm:6797-6818) now carries pret's 8-bit
@@ -3422,7 +3422,7 @@ provider shapes below, not their runtime behavior.
 > **SUPERSEDED 2026-08-11 — do not execute 6a-6d from here.** This stage was
 > written before `docs/plans/battle_animations.md` existed; that plan took
 > the work over and is 31 done / 2 open, with the MOVE animations
-> maintainer-signed-off (stigmergy `battle-animations-plan-created`). Measured
+> maintainer-signed-off (robitnet `battle-animations-plan-created`). Measured
 > today, the routines 6c and 6d ask for are already `translated` and live:
 > `PlayAnimation` (four callers, via `MoveAnimation` and `TossBallAnimation`),
 > `MoveAnimation`, `AnimationShakeScreenVertically`. The boxes below are left
@@ -3465,7 +3465,7 @@ enemy-gauge clone tile ids and VRAM slots.
 - [x] **6e. TRANSFERRED OUT 2026-08-14 (maintainer instruction) to the CGB
       colour plan, which owns its blocker. NOT done — re-homed.** It is now
       that plan's **Stage 5**, published at the same artifact URL recorded in
-      stigmergy `cgb-colour-scoping-2026-08-08`. Everything below is kept
+      robitnet `cgb-colour-scoping-2026-08-08`. Everything below is kept
       verbatim as the record of what was measured here, and the Stage 5 text
       carries the mask inventory, the `DrawHPBar` / `DuplicateEnemyHPBarTiles`
       production sites, and the acceptance test (the eight battle scenarios
@@ -3498,7 +3498,7 @@ enemy-gauge clone tile ids and VRAM slots.
       tilemap CELL — so the clone trick exists precisely because there is no
       per-cell plane. Building one is the CGB colour plan's Stage 1, and that
       plan is deliberately NOT in this repo (maintainer-confirmed; a markdown
-      artifact — see stigmergy `cgb-colour-scoping-2026-08-08` for the URL).
+      artifact — see robitnet `cgb-colour-scoping-2026-08-08` for the URL).
       **Do not create `docs/current_plan_cgb_colour.md`.**
 
       Worse for 6e specifically: that plan's Stage 0 measured every
@@ -4665,7 +4665,7 @@ enemy-gauge clone tile ids and VRAM slots.
       Remove temporary guards and stand-ins whose real providers landed. Run
       `label_status --callers` for each retired stub, update the label DB, run
       default/strict label lint and `fidelity_gate`, and sweep related `STUB`,
-      `TODO-HW`, extern-provider, allowlist, plan, skill, and stigmergy claims.
+      `TODO-HW`, extern-provider, allowlist, plan, skill, and robitnet claims.
       - **INVENTORY 2026-08-13 — 9 battle-area stubs, 1 RETIRED, 8 classified.**
         * **RETIRED: `IsPlayerPikachuAsleepInParty`.** Every dependency was
           already present (`IsThisPartyMonStarterPikachu` and `AddNTimes` both

@@ -94,7 +94,7 @@ For every commit executing this plan:
 2. `dos_port/tools/faithdiff <Label>` for each modified pret label.
 3. `dos_port/tools/lint_pret_labels --no-scan` and `--no-scan --strict-claims`.
 4. `make -C dos_port fidelity` for core regression verification.
-5. Search stigmergy memories before editing (`memory_search battle`).
+5. Search robitnet memories before editing (`memory_search battle`).
 
 ---
 

@@ -12,7 +12,7 @@
 ; different palettes. Measured 2026-08-09 against the mGBA goldens, every screen
 ; reached from here is collision-free at the pixel level except the Game Freak
 ; copyright screen (4 tiles) and the pokédex list (1 tile); see the DEVIATION
-; below and stigmergy memory cgb-stage0-collision-analysis for the decomposition.
+; below and robitnet memory cgb-stage0-collision-analysis for the decomposition.
 ;
 ; DEVIATION{class=HAL; pret=engine/gfx/bg_map_attributes.asm:LoadBGMapAttributes; behavior=the attribute plane is resolved to a per-tile-id palette band at load time instead of being VDMAed to VRAM bank 1 and paired per cell by the PPU, so a screen showing one tile id under two palettes takes the last one written; evidence=the port's compositor bakes palette into tile_cache per tile id (ppu.asm:rebuild_tile_cache) and models no VRAM bank 1, and a golden-measured collision census found only 5 colliding tiles across all statically-resolvable screens; lifetime=retire when a per-cell attribute layer lands in the compositor, at which point this walks the plane into that layer instead}
 ;

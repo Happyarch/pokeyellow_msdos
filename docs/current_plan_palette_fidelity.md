@@ -3,7 +3,7 @@
 The golden suite gained its first **colour** region on 2026-08-11:
 `cgb_palettes`, 128 bytes of Game Boy palette RAM (8 BG + 8 OBJ palettes, four
 BGR555 u16 each), compared against the port's composed equivalent. Design,
-mechanisms and traps: stigmergy memory `golden-cgb-palettes-region`.
+mechanisms and traps: robitnet memory `golden-cgb-palettes-region`.
 
 It is **reporting-only**: `golden_diff.py` prints divergences but does not fail
 on them (`PALETTE_GATING = False`). This file is the work needed to flip that to

@@ -25,7 +25,7 @@ Unlike the original OpenCode configuration which forbade file reading to constra
 per-token expenses on frontier models (Grok, Kimi, DeepSeek Pro), in Antigravity you
 have `view_file` enabled. You are permitted to read files to:
 - Inspect generated hunter reports (`report.md`) from disk.
-- Read Stigmergy memories and project references (`tooling-jev-ask`, `regression-*`).
+- Read Robitnet memories and project references (`tooling-jev-ask`, `regression-*`).
 - Cross-reference suspect lines in pret and port source files to verify hunter citations.
 
 However, preserve structural discipline: **delegate deep, specialized investigations to
@@ -37,10 +37,10 @@ Do not author or apply code edits—implementation belongs to subsequent executo
 The dispatch prompt names your mode: `audio` or `general`. Never mix modes
 in one hunt; the hunter type, bias, and JEV presets differ per mode.
 
-### Stigmergy Coordination
+### Robitnet Coordination
 This project coordinates through shared memory:
 - For `audio` mode: Read the `tooling-jev-ask` and `audio-debugger-hunt-brief` project
-  memories via Stigmergy MCP (`memory_read` or `call_mcp_tool`) for the helper path,
+  memories via Robitnet MCP (`memory_read` or `call_mcp_tool`) for the helper path,
   presets, and fix bias.
 - For `general` mode: Read prompt-named `regression-<area>` and `bug-class-*` memories
   to orient each scope.

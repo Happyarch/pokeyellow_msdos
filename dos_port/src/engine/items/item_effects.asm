@@ -1665,7 +1665,7 @@ ItemUseItemfinder:
     ; call overwrote it and `dec cl / jnz` counted from an audio-derived value,
     ; so the found-item jingle played an unpredictable number of times. Same
     ; defect class as DivideExpDataByNumMonsGainingExp (17d670c2f); found by the
-    ; tree-wide audit recorded in the stigmergy memory
+    ; tree-wide audit recorded in the robitnet memory
     ; bug-class-loop-counter-in-cl-across-a-clobbering-call.
     ; (WaitForSoundToFinish -> DelayFrame is pushad-wrapped, so that half was
     ; never the leak.)

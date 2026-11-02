@@ -73,7 +73,7 @@
 > the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
-> a stigmergy memory as evidence that a class is clean — every one of those has
+> a robitnet memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
 Status: **seed only — do not execute autonomously.** This file is the input to

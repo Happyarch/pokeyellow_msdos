@@ -42,7 +42,7 @@
 > the complete routine to `dos_port/src/<pret path>` instead.
 >
 > Do not quote a finding count from this file, CLAUDE.md, AGENTS.md, a skill, or
-> a stigmergy memory as evidence that a class is clean — every one of those has
+> a robitnet memory as evidence that a class is clean — every one of those has
 > been wrong before. Re-measure it.
 
 Status: **inventory, not a work order.** Nothing here is scheduled; each entry
@@ -68,7 +68,7 @@ Scope discipline, so this does not rot the way its predecessor did:
   it graduates to its own plan file and leaves a one-line pointer behind.
 
 `TODO.md` is recoverable if ever needed: `git show 3bee670d^:TODO.md`.
-Full provenance: stigmergy memory `todo-md-deleted-orphaned-trackers`.
+Full provenance: robitnet memory `todo-md-deleted-orphaned-trackers`.
 
 **Do not assume an item here is done because the file that tracked it is gone.**
 Every entry needs its status re-measured against repository or runtime evidence
@@ -603,7 +603,7 @@ time) and was fixed 2026-08-11 in `eda16b214` — worth reading as the pattern.
 `regression-battle-backsprite-palette-silhouette` may also belong here.
 
 Full detail, symptom list and the eliminated hypotheses:
-stigmergy `regression-battle-party-menu-graphics-not-set-up`.
+robitnet `regression-battle-party-menu-graphics-not-set-up`.
 
 
 ### 10c. SWITCH/STATS/CANCEL box is drawn where nothing composites it — **DONE 2026-08-15 (7471492d9)**
@@ -667,7 +667,7 @@ exactly where this box waits, so the timing already works.
 `DisplayTextBoxID` call in `PartyMenuOrRockOrRun.partyMonWasSelected`
 (`src/engine/battle/core.asm`). Grep `SWITCH_STATS_CANCEL_MENU_TEMPLATE`.
 
-Full symptom list and the eliminated hypotheses: stigmergy
+Full symptom list and the eliminated hypotheses: robitnet
 `regression-battle-party-menu-graphics-not-set-up`.
 
 ### 11. Bill's PC full UI — DONE 2026-07-31 (sram plan C1-C5, a2ea6550..c0b34720)
@@ -781,7 +781,7 @@ blockset does not contain them, so they fall out of range and hit the
 `DrawTileBlock` block-ID clamp (CLAUDE.md, "Temporary scaffold — two out-of-map
 clamps"), which clamps to block 0. **The clamp that exists to prevent rendering
 garbage is what turns "wrong tileset" into an innocuous-looking empty room.**
-Full record, including what was deliberately *not* measured, in the stigmergy
+Full record, including what was deliberately *not* measured, in the robitnet
 memory `interior-maps-blocked-by-tileset-residency-not-blk`.
 
 Every predef-text hidden event is still on an interior map (grep
@@ -840,7 +840,7 @@ verdict. All 20 tilesets are generated, linked and dispatched; measured live,
 `vTileset` held 1602/2048 non-zero bytes on a LOBBY map *before* any fix. The real
 cause was that a hand-seeded spawn never staged the indoor `.blk` into the shared
 `INDOOR_BLK_GBADDR` window, because only `LoadDestinationMapData` (the warp path)
-does that — fixed 2026-08-16 in `566c3027c` by `StageIndoorMapBlk`. See stigmergy
+does that — fixed 2026-08-16 in `566c3027c` by `StageIndoorMapBlk`. See robitnet
 `interior-maps-blocked-by-tileset-residency-not-blk`.
 
 Independently re-confirmed 2026-08-21 while building this scenario's port gate:
@@ -962,7 +962,7 @@ Still open, in the archived plan's own words:
 - the closing gate run (`lint_pret_labels` 0 both modes, `make fidelity-full`,
   `make pixellock`).
 
-**The fine-comb half already has a live owner in stigmergy, so start there, not
+**The fine-comb half already has a live owner in robitnet, so start there, not
 here:** `script-fine-comb-fleet-queue` is THE LIVE QUEUE (68 BAIL banners across
 33 port files at `bc0dd2e2e`, tag `sm83xlat-baseline`), with method/history in
 `script-transpiler-fine-comb-progress` and `script-transpiler-stages-1-7`. This
@@ -1018,7 +1018,7 @@ Current registry, measured (`python3 -c "import json; …"` over the file):
 `relocated_files` **0**; sha256 prefix `604994cf`, matching git config
 `pokeyellow.pretallowlistapprovedsha256` — i.e. maintainer-blessed.
 
-Tracked in stigmergy memories `relocated-labels-grind` and
+Tracked in robitnet memories `relocated-labels-grind` and
 `registry-approval-state`, not here; this pointer exists so the item is findable
 from the same index as everything else.
 
@@ -1041,7 +1041,7 @@ direction (they were provably stale — both named the deleted
 longer depended on the predef acceptance, which remains item 31's). The
 maintainer blessed both hash locks the same session; `relocated_labels`,
 `relocated_files` and `structural_findings` are all `{}` — the registry is at
-zero rows, 348 → 0 across the campaign. Full record: stigmergy
+zero rows, 348 → 0 across the campaign. Full record: robitnet
 `relocated-labels-grind` and the archived `docs/plans/predef_text.md`.
 **New relocations are
 forbidden and registry ADDITIONS are refused outright by `.githooks/pre-commit`

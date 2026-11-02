@@ -29,7 +29,7 @@ false-pass class, on the input side. It is now purged too, and a scenario that
 wants one declares `seed_save` and gets a freshly converted copy.
 
 **Ownership.** Stages 1-4 (everything in memory) are implemented by an **external
-agent working outside this repo's harness** — it has no stigmergy, and may not be
+agent working outside this repo's harness** — it has no robitnet, and may not be
 able to run DOSBox-X, mGBA or the djgpp link. Stage 5 (the disk boundary) and stage 6
 (goldens + sweep) are the maintainers'. The PC **UI** is a separate later sweep and is
 out of scope here.

@@ -277,7 +277,7 @@ single commit but too specific to belong in `ROADMAP.md`.
 > beyond salvage. Several deferred tails below named it as their tracker; they
 > now live in **`docs/current_plan_backlog.md`** — still open, not done, but no
 > longer homeless. Read that file rather than assuming they are untracked.
-> Inventory of what moved: stigmergy memory `todo-md-deleted-orphaned-trackers`.
+> Inventory of what moved: robitnet memory `todo-md-deleted-orphaned-trackers`.
 
 **Workflow:**
 - At the start of each session, scan `docs/current_plan_*.md` to see every open

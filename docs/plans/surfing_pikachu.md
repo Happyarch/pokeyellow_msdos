@@ -310,7 +310,7 @@ its box. A failed review holds the line.
 Each of the three specs below is **self-contained**. Hand one verbatim to a
 `gemini-3.7-flash-high` agent. Do not hand more than one at a time.
 
-Launch form (from CLAUDE.md, plus the fan-out lessons in stigmergy memory
+Launch form (from CLAUDE.md, plus the fan-out lessons in robitnet memory
 `agent-fanout-worktree-setup`):
 
 ```sh
@@ -378,7 +378,7 @@ You are working in the git worktree `/mnt/sdb1/Code/Active Code/pokeyellow_msdos
 branch `surfing-pikachu`. It is already built. All paths below are relative to
 that worktree root unless absolute.
 
-Register with stigmergy using `agent_kind: "antigravity"` and
+Register with robitnet using `agent_kind: "antigravity"` and
 `context_open` on the **main** repo path
 `/mnt/sdb1/Code/Active Code/pokeyellow_msdos` (not the worktree path — using the
 worktree path silently forks the project memory space).
@@ -718,7 +718,7 @@ objdump -t dos_port/src/ppu/ppu.o | grep g_row_yoff
 #### Environment
 
 Worktree `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-surf`, branch
-`surfing-pikachu`. Register with stigmergy using `agent_kind: "antigravity"` and
+`surfing-pikachu`. Register with robitnet using `agent_kind: "antigravity"` and
 `context_open` on the **main** repo path
 `/mnt/sdb1/Code/Active Code/pokeyellow_msdos` (not the worktree path).
 `DOSBOX_MCP_SOCKET=/tmp/dosbox-mcp-surf.sock`.
@@ -1041,7 +1041,7 @@ agent owns.
 #### Environment
 
 Worktree `/mnt/sdb1/Code/Active Code/pokeyellow_msdos-surf`, branch
-`surfing-pikachu`. Register with stigmergy using `agent_kind: "antigravity"` and
+`surfing-pikachu`. Register with robitnet using `agent_kind: "antigravity"` and
 `context_open` on the **main** repo path
 `/mnt/sdb1/Code/Active Code/pokeyellow_msdos` (not the worktree path).
 `export DOSBOX_MCP_SOCKET=/tmp/dosbox-mcp-surf.sock`; `run_with_mcp.sh` launches
