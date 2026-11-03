@@ -140,7 +140,13 @@ def apply_map_overrides(pascal: str, data: bytearray) -> int:
     if pascal not in dims:
         sys.exit(f"{ov}: no map_const dimensions found for {pascal}")
     w, h = dims[pascal]
-    cells = json.loads(ov.read_text())["cells"]
+    raw = json.loads(ov.read_text())
+    # Schema-2 map authoring owns base-block edits and extents in the shared
+    # map_expansion.compose path below.  Applying it here as legacy cells would
+    # either KeyError or merge the same authored cell twice.
+    if raw.get("schema") == 2:
+        return 0
+    cells = raw["cells"]
     for y, x, b in cells:
         if not (0 <= x < w and 0 <= y < h and 0 <= b <= 0xFF):
             sys.exit(f"{ov}: cell ({y},{x},0x{b:02X}) out of range "

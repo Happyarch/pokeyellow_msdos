@@ -27,6 +27,11 @@ def load(pascal: str) -> dict[tuple[int, int], int]:
     if not p.exists():
         return {}
     raw = json.loads(p.read_text())
+    if raw.get("schema") == 2:
+        # The shared schema composer owns schema-2 extents/recipes.  This
+        # compatibility view lets the legacy pygame paint path inspect its base
+        # cells without assuming a `cells` member exists.
+        return {(y, x): b for y, x, b in raw.get("base_blocks", [])}
     return {(y, x): b for y, x, b in raw["cells"]}
 
 

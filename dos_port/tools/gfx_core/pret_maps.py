@@ -59,11 +59,19 @@ class MapInfo:
     tileset_name: str | None           # e.g. "OVERWORLD"
     tileset_id: int | None
     tileset_stem: str | None           # gfx/blockset stem, e.g. "overworld"
+    base_w: int                        # raw pret .blk width in blocks
+    base_h: int                        # raw pret .blk height in blocks
 
 
 @lru_cache(maxsize=None)
 def _constants() -> dict[str, tuple[int, int, int]]:
     return gmh.parse_map_constants()   # {const: (id, w, h)}
+
+
+@lru_cache(maxsize=None)
+def _base_constants() -> dict[str, tuple[int, int, int]]:
+    """Raw pret dimensions, before port-side map-diff extents."""
+    return gmh.parse_map_constants(expand=False)
 
 
 @lru_cache(maxsize=None)
@@ -78,6 +86,7 @@ def all_map_consts() -> list[str]:
 @lru_cache(maxsize=None)
 def map_info(const: str) -> MapInfo:
     map_id, w, h = _constants()[const]
+    _base_id, base_w, base_h = _base_constants()[const]
     const_to_label, label_tileset = _headers()
     label = const_to_label.get(const) or (
         gmh.const_to_pascal(const)
@@ -85,16 +94,16 @@ def map_info(const: str) -> MapInfo:
     ts = label_tileset.get(label) if label else None
     ts_id = TILESET_IDS.get(ts) if ts else None
     stem = TILESET_CANONICAL[ts_id] if ts_id is not None else None
-    return MapInfo(const, map_id, w, h, label, ts, ts_id, stem)
+    return MapInfo(const, map_id, w, h, label, ts, ts_id, stem, base_w, base_h)
 
 
 def load_blk(info: MapInfo) -> bytes:
-    """The map's raw block grid (w*h bytes) from pret maps/<Pascal>.blk."""
+    """The raw pret block grid, deliberately before port-side extensions."""
     blk = ROOT / "maps" / f"{info.label}.blk"
     data = blk.read_bytes()
-    if len(data) != info.w * info.h:
+    if len(data) != info.base_w * info.base_h:
         raise ValueError(
-            f"{blk.name}: {len(data)} bytes != {info.w}x{info.h} blocks")
+            f"{blk.name}: {len(data)} bytes != {info.base_w}x{info.base_h} blocks")
     return data
 
 

@@ -6,8 +6,9 @@ Usage (from dos_port/):
 
 View controls:
   drag / arrows    pan                     + / -   zoom
-  G  block grid    T  tile grid            W  warp markers
-  N  NPC markers   V  viewport ghost (click sets the player tile)
+   G  block grid    T  tile grid            W  warp markers
+   N  NPC markers   V/H/R port/GB/reach frames (click sets player tile)
+   I  coordinate inspector
   Tab              cycle to the next map with a header
   Esc / close      quit (warns if unsaved paint)
 
@@ -43,8 +44,9 @@ MARK_WARP = (255, 60, 60)
 MARK_NPC = (60, 120, 255)
 MARK_TRAINER = (255, 160, 0)
 MARK_ITEM = (0, 200, 120)
-GHOST_WIN = (255, 220, 0)
-GHOST_SUR = (0, 220, 220)
+PORT_VIEW = (255, 72, 72)
+GB_VIEW = (60, 220, 100)
+RENDER_REACH = (0, 220, 220)
 GRID_BLOCK = (0, 0, 0)
 GRID_TILE = (70, 70, 70)
 PAINTED = (255, 120, 220)
@@ -61,9 +63,11 @@ class Viewer:
         self.zoom = zoom
         self.pan = [0, 0]
         self.show = {"blocks": False, "tiles": False, "warps": True,
-                     "npcs": True, "ghost": False}
+                     "npcs": True, "port_view": False, "gb_view": False,
+                     "render_reach": False, "inspector": False}
         self.paint = False
-        self.player = None          # map-local tile (x, y) for the ghost
+        self.player = None          # map-local tile (x, y) for frame references
+        self.cursor_tile = None     # map-local (x, y), updated from mouse motion
         self.drag = None
         self.painting = False
         pygame.init()
@@ -109,6 +113,15 @@ class Viewer:
         by = (pos[1] - self.pan[1]) // (ts.BLOCK_PX * self.zoom)
         if 0 <= bx < self.cm.stride and 0 <= by < self.cm.rows:
             return int(by), int(bx)
+        return None
+
+    def tile_at(self, pos) -> tuple[int, int] | None:
+        """Mouse pixel -> map-local (x, y) tile, excluding the padded ring."""
+        tx = (pos[0] - self.pan[0]) // (TILE * self.zoom)
+        ty = (pos[1] - self.pan[1]) // (TILE * self.zoom)
+        x, y = int(tx - view.BORDER * 4), int(ty - view.BORDER * 4)
+        if 0 <= x < self.cm.info.w * 4 and 0 <= y < self.cm.info.h * 4:
+            return x, y
         return None
 
     def _region(self, r, c) -> tuple[dict, tuple[int, int]] | None:
@@ -307,11 +320,17 @@ class Viewer:
                 color = MARK_TRAINER if s["is_trainer"] else \
                     MARK_ITEM if s["is_item"] else MARK_NPC
                 rect_px(px, py, TILE, TILE, color, 2)
-        if self.show["ghost"] and self.player:
+        if (self.show["port_view"] or self.show["gb_view"]
+                or self.show["render_reach"]) and self.player:
             win, sur = view.viewport_rect(self.cm, self.player[1],
-                                          self.player[0])
-            rect_px(*win, GHOST_WIN, 2)
-            rect_px(*sur, GHOST_SUR, 1)
+                                           self.player[0])
+            if self.show["port_view"]:
+                rect_px(*win, PORT_VIEW, 2)
+            if self.show["gb_view"]:
+                rect_px(*view.gb_viewport_rect(self.cm, self.player[1],
+                                                self.player[0]), GB_VIEW, 2)
+            if self.show["render_reach"]:
+                rect_px(*sur, RENDER_REACH, 1)
 
         if self.paint:
             x0 = self.screen.get_width() - PAL_W
@@ -325,11 +344,12 @@ class Viewer:
                  6 + (b // PAL_COLS) * ts.BLOCK_PX,
                  ts.BLOCK_PX, ts.BLOCK_PX), 2)
 
+        self.draw_hud()
         state = "*UNSAVED*" if self.dirty else "saved"
         mode = (f"PAINT block 0x{self.current_block:02X} "
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
                 if self.paint else
-                "[G]rid [T]iles [W]arps [N]pcs [V]iewport Tab next")
+                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect Tab next")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
@@ -341,6 +361,35 @@ class Viewer:
                                   else (220, 220, 220)), (8, 4))
         self.screen.blit(bar, (0, self.screen.get_height() - PANEL_H))
         pygame.display.flip()
+
+    def draw_hud(self):
+        """Persistent top-left final-coordinate HUD; I expands its trace view."""
+        cursor = "F: —"
+        block = ""
+        if self.cursor_tile:
+            x, y = self.cursor_tile
+            bx, by = x // 4, y // 4
+            cursor = f"F (Y:{y}, X:{x})"
+            block_id = self.cm.grid[(by + view.BORDER) * self.cm.stride
+                                    + bx + view.BORDER]
+            block = f" B(Y:{by},X:{bx})=${block_id:02X}"
+        layers = " ".join(name for name, enabled in (
+            ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
+            ("PV", self.show["port_view"]), ("GB", self.show["gb_view"]),
+            ("RR", self.show["render_reach"])) if enabled)
+        lines = [f"{self.cm.info.const} id:${self.cm.info.map_id:02X}  DMG",
+                 f"Size W×H {self.cm.info.base_w}×{self.cm.info.base_h} → "
+                 f"{self.cm.info.w}×{self.cm.info.h} B",
+                 f"{cursor}{block}", f"Layers: {layers or '—'}"]
+        if self.show["inspector"]:
+            lines += ["Inspector", "P/U/A/F: cursor trace" if self.cursor_tile
+                      else "Move cursor over the authored map"]
+        width = max(self.font.size(line)[0] for line in lines) + 12
+        panel = pygame.Surface((width, len(lines) * 16 + 8), pygame.SRCALPHA)
+        panel.fill((20, 20, 26, 205))
+        for i, line in enumerate(lines):
+            panel.blit(self.font.render(line, True, (235, 235, 235)), (6, 4 + i * 16))
+        self.screen.blit(panel, (6, 6))
 
     def next_map(self):
         consts = [c for c in pm.all_map_consts()
@@ -382,7 +431,13 @@ class Viewer:
                     elif ev.key == pygame.K_n:
                         self.show["npcs"] = not self.show["npcs"]
                     elif ev.key == pygame.K_v:
-                        self.show["ghost"] = not self.show["ghost"]
+                        self.show["port_view"] = not self.show["port_view"]
+                    elif ev.key == pygame.K_h:
+                        self.show["gb_view"] = not self.show["gb_view"]
+                    elif ev.key == pygame.K_r:
+                        self.show["render_reach"] = not self.show["render_reach"]
+                    elif ev.key == pygame.K_i:
+                        self.show["inspector"] = not self.show["inspector"]
                     elif ev.key == pygame.K_TAB:
                         if self.dirty:
                             print("WARNING: switching map with unsaved paint")
@@ -407,11 +462,9 @@ class Viewer:
                     elif self.paint:
                         self.painting = True
                         self.paint_cell(ev.pos)
-                    elif self.show["ghost"]:
-                        tx = (ev.pos[0] - self.pan[0]) // (TILE * self.zoom)
-                        ty = (ev.pos[1] - self.pan[1]) // (TILE * self.zoom)
-                        self.player = (tx - view.BORDER * 2,
-                                       ty - view.BORDER * 2)
+                    elif (self.show["port_view"] or self.show["gb_view"]
+                          or self.show["render_reach"]):
+                        self.player = self.tile_at(ev.pos)
                     else:
                         self.drag = (ev.pos, tuple(self.pan))
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
@@ -421,6 +474,7 @@ class Viewer:
                     self.drag = None
                     self.painting = False
                 elif ev.type == pygame.MOUSEMOTION:
+                    self.cursor_tile = self.tile_at(ev.pos)
                     if self.painting:
                         self.paint_cell(ev.pos)
                     elif self.drag:

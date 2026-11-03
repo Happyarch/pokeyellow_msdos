@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from gfx_core import pret_maps as pm          # noqa: E402
 from gfx_core import tilesets as ts           # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE      # noqa: E402
+from map_editor import schema                 # noqa: E402
 
 BORDER = pm.MAP_BORDER_BLOCKS                 # blocks each side (parsed from gb_memmap.inc)
 BLOCK_PX = ts.BLOCK_PX                        # 32
@@ -64,7 +65,13 @@ def compose_padded(const: str, overrides: dict | None = None,
     info = pm.map_info(const)
     if info.tileset_stem is None:
         raise ValueError(f"{const}: no header/tileset")
-    blk = pm.load_blk(info)
+    raw_blk = pm.load_blk(info)
+    blk, port_w, port_h, _diff = schema.compose_layout(
+        info.label or pm.gmh.const_to_pascal(const), raw_blk, info.base_w,
+        info.base_h, map_overrides)
+    if (port_w, port_h) != (info.w, info.h):
+        raise ValueError(f"{const}: composed dimensions {port_w}x{port_h} "
+                         f"do not match map-header dimensions {info.w}x{info.h}")
     obj = pm.objects(info) or (0, [], 0, [])
     border_block, warps, sign_count, sprites = obj
 
@@ -80,7 +87,12 @@ def compose_padded(const: str, overrides: dict | None = None,
     all_strips: set[int] = set()
     for direction, nconst, offset in pm.CONNECTIONS.get(const, []):
         ninfo = pm.map_info(nconst)
-        nblk = pm.load_blk(ninfo)
+        nraw = pm.load_blk(ninfo)
+        nblk, nw, nh, _ndiff = schema.compose_layout(
+            ninfo.label or pm.gmh.const_to_pascal(nconst), nraw,
+            ninfo.base_w, ninfo.base_h)
+        if (nw, nh) != (ninfo.w, ninfo.h):
+            raise ValueError(f"{nconst}: composed dimensions disagree with header")
         c = pm.get_connection(direction, ninfo.map_id, offset,
                               info.w, info.h, ninfo.w, ninfo.h)
         src, dst = c["blk"], c["map"]
@@ -166,3 +178,13 @@ def viewport_rect(cm: ComposedMap, py: int, px_: int):
     sur = ((pbx - 5) * BLOCK_PX, (pby - 4) * BLOCK_PX,
            12 * BLOCK_PX, 9 * BLOCK_PX)
     return win, sur
+
+
+def gb_viewport_rect(cm: ComposedMap, py: int, px_: int):
+    """20x18-tile GB-sized reference frame around a map-local player tile.
+
+    This is intentionally a size/frame reference for staging, not an emulation
+    of the original GB camera's edge scroll rules.
+    """
+    ptx, pty = px_ + BORDER * 2, py + BORDER * 2
+    return ((ptx - 9) * TILE, (pty - 8) * TILE, 20 * TILE, 18 * TILE)

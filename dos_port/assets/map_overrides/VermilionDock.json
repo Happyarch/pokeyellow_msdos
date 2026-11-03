@@ -1,0 +1,27 @@
+{
+ "schema": 2,
+ "map": "VermilionDock",
+ "extent_blocks": {
+  "north": 0,
+  "west": 0,
+  "south": 0,
+  "east": 8
+ },
+ "base_blocks": [],
+ "added_blocks": [],
+ "recipes": [
+  {
+   "kind": "repeat_base_column",
+   "edge": "east",
+   "source_x": 12,
+   "count": 8,
+   "row_overrides": [
+    [
+     1,
+     13
+    ]
+   ]
+  }
+ ],
+ "objects": {}
+}

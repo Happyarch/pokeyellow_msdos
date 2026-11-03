@@ -3890,6 +3890,7 @@ fidelity-full-serial:
 # `assets:` list -- that is racy under -j. See memory ci-clean-tree-generator-order-traps.
 assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc &: \
 		assets/script_constants.inc assets/pret_ram.inc \
+		tools/generators/map_expansion.py tools/map_editor/schema.py \
 		$(wildcard assets/map_overrides/*.json)
 	python3 tools/generators/gen_all_assets.py
 
@@ -3906,9 +3907,11 @@ endif
 # (this hid the border-6 connection-clamp bug for a month). Keep the inputs listed.
 assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc assets/rom_window.inc: \
     tools/generators/gen_map_headers.py \
+    tools/generators/map_expansion.py tools/map_editor/schema.py \
     ../constants/map_constants.asm \
     $(wildcard ../data/maps/headers/*.asm) \
-    $(wildcard ../data/maps/objects/*.asm)
+    $(wildcard ../data/maps/objects/*.asm) \
+    $(wildcard assets/map_overrides/*.json)
 	python3 tools/generators/gen_map_headers.py $(GEN_MAP_HEADERS_FLAGS)
 
 # Per-map (music id, ROM bank) table — pret data/maps/songs.asm (gen_map_songs.py).
