@@ -73,12 +73,12 @@ def scan_coordinate_macros(path: Path) -> list[CoordinateBinding]:
                 raise ValueError(f"{path}: dbmapcoord annotation disagrees with bytes")
             start, end = offset + annotated.start(), offset + annotated.end()
             result.append(CoordinateBinding(
-                'annotated_dbmapcoord', TileYX(y, x),
+                'annotated_dbmapcoord', TileYX(y * 2, x * 2),
                 SourceSpan.from_text(path, start, end, text), annotated.group(0)))
         for match in _COORD.finditer(code):
             start, end = offset + match.start(), offset + match.end()
             result.append(CoordinateBinding(
-                match.group("macro"), TileYX(int(match.group("y")), int(match.group("x"))),
+                match.group("macro"), TileYX(int(match.group("y")) * 2, int(match.group("x")) * 2),
                 SourceSpan.from_text(path, start, end, text), match.group(0)))
         offset += len(line)
     return result
@@ -88,15 +88,16 @@ def translate_binding(binding: CoordinateBinding, *, dy: int, dx: int,
                       write: bool = False) -> CoordinateBinding:
     """Translate one direct script macro without touching unrelated source."""
     tile = binding.tile.translated(dy, dx)
-    if not (0 <= tile.y <= 255 and 0 <= tile.x <= 255):
-        raise ValueError("script coordinate must fit in a byte")
+    if not (0 <= tile.y <= 510 and 0 <= tile.x <= 510 and tile.y % 2 == 0 and tile.x % 2 == 0):
+        raise ValueError("script tile coordinates must be even and fit in a byte")
+    y, x = tile.y // 2, tile.x // 2
     if binding.kind == 'annotated_dbmapcoord':
         old = _ANNOTATED_DB.fullmatch(binding.source)
         if old is None:
             raise ValueError("invalid annotated coordinate binding")
-        replacement = f"db {tile.y}, {tile.x}{old['gap']}{tile.x}, {tile.y}"
+        replacement = f"db {y}, {x}{old['gap']}{x}, {y}"
     else:
-        replacement = f"{binding.kind} {tile.x}, {tile.y}"
+        replacement = f"{binding.kind} {x}, {y}"
     if write:
         binding.span.replace(replacement)
     # A caller that wrote must rescan before performing another checked edit.

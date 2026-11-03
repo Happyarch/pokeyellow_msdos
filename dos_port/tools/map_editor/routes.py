@@ -29,8 +29,13 @@ def decode(raw: bytes) -> list[RouteOp]:
             result.append(RouteOp("step", value, _STEP[value][2]))
         elif value in _QUICK:
             result.append(RouteOp("quick_step", value, _QUICK[value][2]))
+        elif value == 0xe0:
+            # The driver uses a stale facing register; it is not a direction.
+            result.append(RouteOp("change_facing_unknown", value))
         elif 0x11 <= value <= 0x14:
-            result.append(RouteOp("turn", value))
+            # Func_5288's set-2 path has a documented WRAM write bug. Do not
+            # present these as safe turns or invent a positional trace.
+            result.append(RouteOp("unsafe_special", value))
         else:
             result.append(RouteOp("unknown", value))
     return result
@@ -44,6 +49,7 @@ def preview(anchor: TileYX, ops: list[RouteOp]) -> list[TileYX]:
         table = _STEP if op.kind == "step" else _QUICK if op.kind == "quick_step" else None
         if table and op.byte in table:
             dy, dx, _ = table[op.byte]
-            pos = pos.translated(dy, dx)
+            # The driver advances one 16px map square = two 8px tiles.
+            pos = pos.translated(dy * 2, dx * 2)
             out.append(pos)
     return out

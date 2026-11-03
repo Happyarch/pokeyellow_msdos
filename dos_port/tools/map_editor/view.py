@@ -138,16 +138,16 @@ def compose_padded(const: str, overrides: dict | None = None,
     return cm
 
 
-def render(cm: ComposedMap) -> Image.Image:
+def render(cm: ComposedMap, palette=DMG_PAL) -> Image.Image:
     """Padded grid -> RGB image ((w+12)*32 x (h+12)*32)."""
     tiles = ts.load_tileset_2bpp(cm.info.tileset_stem)
     blocks = ts.load_blockset(cm.info.tileset_stem)
     img = Image.new("RGB", (cm.stride * BLOCK_PX, cm.rows * BLOCK_PX),
-                    DMG_PAL[0])
+                    palette[0])
     for by in range(cm.rows):
         for bx in range(cm.stride):
             ts._blit_block(img, tiles, blocks, cm.grid[by * cm.stride + bx],
-                           bx, by, DMG_PAL)
+                           bx, by, palette)
     return img
 
 
@@ -155,12 +155,13 @@ def render(cm: ComposedMap) -> Image.Image:
 
 def warp_px(cm: ComposedMap, y: int, x: int) -> tuple[int, int]:
     """Map-local tile coords -> padded-image px (warps/signs use tiles)."""
-    return ((x + BORDER * 4) * TILE, (y + BORDER * 4) * TILE)
+    return ((x * 2 + BORDER * 4) * TILE, (y * 2 + BORDER * 4) * TILE)
 
 
 def sprite_px(cm: ComposedMap, mapy: int, mapx: int) -> tuple[int, int]:
     """Object MAPY/MAPX (map tile + 4) -> padded-image px."""
-    return ((mapx - 4 + BORDER * 4) * TILE, (mapy - 4 + BORDER * 4) * TILE)
+    return (((mapx - 4) * 2 + BORDER * 4) * TILE,
+            ((mapy - 4) * 2 + BORDER * 4) * TILE)
 
 
 def viewport_rect(cm: ComposedMap, py: int, px_: int):

@@ -38,7 +38,7 @@ from gfx_core import pret_maps as pm            # noqa: E402
 from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
-from map_editor import borders, overrides, view  # noqa: E402
+from map_editor import borders, overrides, view, palette  # noqa: E402
 
 MARK_WARP = (255, 60, 60)
 MARK_NPC = (60, 120, 255)
@@ -66,11 +66,14 @@ class Viewer:
                      "npcs": True, "port_view": False, "gb_view": False,
                      "render_reach": False, "inspector": False}
         self.paint = False
+        self.palette_mode = 'port-cgb'
         self.player = None          # map-local tile (x, y) for frame references
         self.cursor_tile = None     # map-local (x, y), updated from mouse motion
         self.drag = None
         self.object_drag = None
         self.selected_object = None
+        self.object_menu = None
+        self.menu_offset = 0
         self.painting = False
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 700),
@@ -93,7 +96,7 @@ class Viewer:
         self.tiles = ts.load_tileset_2bpp(self.cm.info.tileset_stem)
         self.blocks = ts.load_blockset(self.cm.info.tileset_stem)
         self.nblocks = len(self.blocks) // ts.BLOCK_BYTES
-        self.img = view.render(self.cm)
+        self.refresh_palette()
         self.surf = None
         self.pal_surf = None
         self.pan = [0, 0]
@@ -103,6 +106,7 @@ class Viewer:
         self.save_error = ""
         self.selected_object = None
         self.object_drag = None
+        self.object_menu = None
         pygame.display.set_caption(
             f"map_editor — {const} ({self.cm.info.w}x{self.cm.info.h} blocks,"
             f" {self.cm.info.tileset_name})")
@@ -111,6 +115,15 @@ class Viewer:
         if self.surf is None:
             self.surf = to_pygame(self.img, self.zoom)
         return self.surf
+
+    def refresh_palette(self):
+        if self.palette_mode == 'port-cgb':
+            self.palette_name, self.colors, self.palette_warning = palette.resolve(self.cm.info)
+        else:
+            self.palette_name, self.colors, self.palette_warning = 'DMG', DMG_PAL, None
+        self.img = view.render(self.cm, self.colors)
+        self.surf = None
+        self.pal_surf = None
 
     # ── painting ─────────────────────────────────────────────────────────────
 
@@ -160,7 +173,7 @@ class Viewer:
             target[key] = block
         self.cm.grid[idx] = block
         ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
-                       DMG_PAL)
+                       self.colors)
         return rec
 
     def paint_cell(self, pos):
@@ -219,7 +232,7 @@ class Viewer:
                 block = prev
             self.cm.grid[idx] = block
             ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
-                           DMG_PAL)
+                           self.colors)
         self.dirty = True
         self.surf = None
 
@@ -258,7 +271,7 @@ class Viewer:
                                     rows * ts.BLOCK_PX), (30, 30, 36))
             for b in range(self.nblocks):
                 ts._blit_block(img, self.tiles, self.blocks, b,
-                               b % PAL_COLS, b // PAL_COLS, DMG_PAL)
+                               b % PAL_COLS, b // PAL_COLS, self.colors)
             self.pal_surf = to_pygame(img, 1)
         return self.pal_surf
 
@@ -271,6 +284,67 @@ class Viewer:
         if 0 <= b < self.nblocks:
             self.current_block = b
         return True
+
+    def object_fields(self):
+        """Dropdown values from the generator's supported constants."""
+        return {'sprite': sorted(pm.gmh._SPRITE_CONSTS),
+                'movement': ['WALK', 'STAY'],
+                'facing': ['ANY_DIR', 'UP_DOWN', 'LEFT_RIGHT', 'DOWN',
+                           'UP', 'LEFT', 'RIGHT', 'NONE', 'BOULDER_MOVEMENT_BYTE_2']}
+
+    def object_panel_click(self, pos):
+        if self.paint or not self.selected_object:
+            return False
+        left = self.screen.get_width() - 290
+        if pos[0] < left or pos[1] >= 400:
+            return False
+        if self.object_menu:
+            index = (pos[1] - 94) // 20 + self.menu_offset
+            options = self.object_fields()[self.object_menu]
+            if 94 <= pos[1] < 334 and 0 <= index < len(options):
+                from map_editor import commands
+                try:
+                    commands.set_object(self.cm.info.const, self.selected_object,
+                                        write=True, **{self.object_menu: options[index]})
+                    self.cm.sprites = pm.objects(self.cm.info)[3]
+                    self.save_error = ''
+                except (ValueError, OSError) as exc:
+                    self.save_error = str(exc)
+                self.object_menu = None
+                return True
+        if 20 <= pos[1] < 86:
+            index = (pos[1] - 20) // 22
+            self.object_menu = ('sprite', 'movement', 'facing')[index]
+            self.menu_offset = 0
+        else:
+            self.object_menu = None
+        return True
+
+    def draw_object_panel(self):
+        if self.paint or not self.selected_object:
+            return
+        npc = next((s for s in self.cm.sprites if s['stable_id'] == self.selected_object), None)
+        if not npc:
+            return
+        x = self.screen.get_width() - 290
+        panel = pygame.Surface((290, 400), pygame.SRCALPHA)
+        panel.fill((25, 25, 33, 225))
+        panel.blit(self.font.render('NPC properties (saved on select)', True, (255, 255, 255)), (6, 2))
+        tables = self.object_fields()
+        for index, (field, key, values) in enumerate((
+                ('sprite', 'sprite_id', pm.gmh._SPRITE_CONSTS),
+                ('movement', 'mov', pm.gmh._MOV_CONSTS),
+                ('facing', 'dir', pm.gmh._DIR_CONSTS))):
+            name = next((s for s in tables[field] if values.get(s) == npc[key]), str(npc[key]))
+            pygame.draw.rect(panel, (65, 65, 78), (4, 20 + index * 22, 282, 20))
+            panel.blit(self.font.render(f'{field}: {name} ▾', True, (235, 235, 235)),
+                       (8, 22 + index * 22))
+        if self.object_menu:
+            for i, name in enumerate(tables[self.object_menu][self.menu_offset:self.menu_offset + 12]):
+                pygame.draw.rect(panel, (55, 60, 76), (4, 94 + i * 20, 282, 19))
+                panel.blit(self.font.render(name, True, (235, 235, 235)), (8, 95 + i * 20))
+            panel.blit(self.font.render('Mouse wheel: scroll', True, (220, 220, 220)), (8, 340))
+        self.screen.blit(panel, (x, 0))
 
     # ── drawing ──────────────────────────────────────────────────────────────
 
@@ -323,15 +397,15 @@ class Viewer:
         if self.show["warps"]:
             for (y, x, dest, wid) in self.cm.warps:
                 px, py = view.warp_px(self.cm, y, x)
-                rect_px(px, py, TILE, TILE, MARK_WARP, 2)
+                rect_px(px, py, TILE * 2, TILE * 2, MARK_WARP, 2)
         if self.show["npcs"]:
             for s in self.cm.sprites:
                 px, py = view.sprite_px(self.cm, s["mapy"], s["mapx"])
                 color = MARK_TRAINER if s["is_trainer"] else \
                     MARK_ITEM if s["is_item"] else MARK_NPC
-                rect_px(px, py, TILE, TILE, color, 2)
+                rect_px(px, py, TILE * 2, TILE * 2, color, 2)
                 if s['stable_id'] == self.selected_object:
-                    rect_px(px - 1, py - 1, TILE + 2, TILE + 2, (255, 255, 255), 1)
+                    rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
         if (self.show["port_view"] or self.show["gb_view"]
                 or self.show["render_reach"]) and self.player:
             win, sur = view.viewport_rect(self.cm, self.player[1],
@@ -357,6 +431,7 @@ class Viewer:
                  ts.BLOCK_PX, ts.BLOCK_PX), 2)
 
         self.draw_hud()
+        self.draw_object_panel()
         state = "*UNSAVED*" if self.dirty else "saved"
         mode = (f"PAINT block 0x{self.current_block:02X} "
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
@@ -389,10 +464,12 @@ class Viewer:
             ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
             ("PV", self.show["port_view"]), ("GB", self.show["gb_view"]),
             ("RR", self.show["render_reach"])) if enabled)
-        lines = [f"{self.cm.info.const} id:${self.cm.info.map_id:02X}  DMG",
+        lines = [f"{self.cm.info.const} id:${self.cm.info.map_id:02X}  {self.palette_name}",
                  f"Size W×H {self.cm.info.base_w}×{self.cm.info.base_h} → "
                  f"{self.cm.info.w}×{self.cm.info.h} B",
                  f"{cursor}{block}", f"Layers: {layers or '—'}"]
+        if self.palette_warning:
+            lines.append(self.palette_warning)
         if self.show["inspector"]:
             selected = next((s for s in self.cm.sprites
                              if s['stable_id'] == self.selected_object), None)
@@ -457,6 +534,9 @@ class Viewer:
                         self.show["render_reach"] = not self.show["render_reach"]
                     elif ev.key == pygame.K_i:
                         self.show["inspector"] = not self.show["inspector"]
+                    elif ev.key == pygame.K_c:
+                        self.palette_mode = 'dmg' if self.palette_mode == 'port-cgb' else 'port-cgb'
+                        self.refresh_palette()
                     elif ev.key == pygame.K_TAB:
                         if self.dirty:
                             print("WARNING: switching map with unsaved paint")
@@ -476,17 +556,19 @@ class Viewer:
                     elif ev.key == pygame.K_DOWN:
                         self.pan[1] -= 64
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
-                    if self.palette_click(ev.pos):
+                    if self.object_panel_click(ev.pos):
+                        pass
+                    elif self.palette_click(ev.pos):
                         pass
                     elif self.paint:
                         self.painting = True
                         self.paint_cell(ev.pos)
                     elif self.show["npcs"] and self.tile_at(ev.pos) is not None and any(
-                            (s['mapx'] - 4, s['mapy'] - 4) == self.tile_at(ev.pos)
+                            (s['mapx'] - 4, s['mapy'] - 4) == tuple(v // 2 for v in self.tile_at(ev.pos))
                             for s in self.cm.sprites):
                         self.object_drag = next(s['stable_id'] for s in self.cm.sprites
                                                 if (s['mapx'] - 4, s['mapy'] - 4)
-                                                == self.tile_at(ev.pos))
+                                                == tuple(v // 2 for v in self.tile_at(ev.pos)))
                         self.selected_object = self.object_drag
                     elif (self.show["port_view"] or self.show["gb_view"]
                           or self.show["render_reach"]):
@@ -496,6 +578,9 @@ class Viewer:
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
                     if self.paint:
                         self.eyedrop(ev.pos)
+                elif ev.type == pygame.MOUSEWHEEL and self.object_menu:
+                    count = len(self.object_fields()[self.object_menu])
+                    self.menu_offset = max(0, min(max(0, count - 12), self.menu_offset - ev.y))
                 elif ev.type == pygame.MOUSEBUTTONUP and ev.button == 1:
                     if self.object_drag:
                         tile = self.tile_at(ev.pos)
@@ -503,7 +588,7 @@ class Viewer:
                             from map_editor import commands
                             try:
                                 commands.set_object(self.cm.info.const, self.object_drag,
-                                                    y=tile[1], x=tile[0], write=True)
+                                                    y=tile[1] // 2 * 2, x=tile[0] // 2 * 2, write=True)
                                 self.cm.sprites = pm.objects(self.cm.info)[3]
                                 self.save_error = ""
                             except (ValueError, OSError) as exc:

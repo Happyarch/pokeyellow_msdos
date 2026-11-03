@@ -60,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     render.add_argument("map")
     render.add_argument("--out", type=Path, required=True)
     render.add_argument("--zoom", type=int, default=1)
+    render.add_argument("--palette", choices=('dmg', 'port-cgb'), default='dmg')
+    render.add_argument("--last-map")
     args = parser.parse_args(argv)
     try:
         if args.command == "inspect":
@@ -83,7 +85,8 @@ def main(argv: list[str] | None = None) -> int:
                 result = commands.move_script_coordinate(args.map, args.index, args.sha256,
                                                          args.y, args.x, args.write)
         else:
-            result = commands.render(args.map, out=args.out, zoom=args.zoom)
+            result = commands.render(args.map, out=args.out, zoom=args.zoom,
+                                     palette_mode=args.palette, last_map=args.last_map)
     except (ValueError, OSError) as exc:
         _json({"schema": 1, "written": False, "error": str(exc)})
         return 2

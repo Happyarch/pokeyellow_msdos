@@ -14,7 +14,10 @@ def source_id(label: str, source: str, occurrence: int) -> str:
 def lower(label, border, warps, signs, sprites, tables):
     """Return fresh lowered records; sprite MAP coordinates include GB's +4."""
     diff = schema.load(label)
-    dy, dx = diff.extents.tile_delta()
+    # Game object/event bytes count 16px map squares, not 8px graphics tiles.
+    # Extents count 32px blocks; authored manual deltas count 8px tiles.
+    tile_dy, tile_dx = diff.extents.tile_delta()
+    dy, dx = tile_dy // 2, tile_dx // 2
     result_warps = [(y + dy, x + dx, dest, ident) for y, x, dest, ident in warps]
     result_signs = [{**s, 'y': s['y'] + dy, 'x': s['x'] + dx} for s in signs]
     result_sprites = []
@@ -32,7 +35,9 @@ def lower(label, border, warps, signs, sprites, tables):
         manual = override.get('manual_delta_tile', [0, 0])
         if not isinstance(manual, list) or len(manual) != 2 or any(type(v) is not int for v in manual):
             raise ValueError(f"{label}: invalid manual_delta_tile for {ident}")
-        y, x = npc['mapy'] + dy + manual[0], npc['mapx'] + dx + manual[1]
+        if any(v % 2 for v in manual):
+            raise ValueError(f"{label}: {ident} manual offsets must align to 16px map squares")
+        y, x = npc['mapy'] + dy + manual[0] // 2, npc['mapx'] + dx + manual[1] // 2
         if not (0 <= y <= 255 and 0 <= x <= 255):
             raise ValueError(f"{label}: {ident} MAPY/MAPX outside byte range")
         npc['mapy'], npc['mapx'] = y, x
@@ -42,9 +47,9 @@ def lower(label, border, warps, signs, sprites, tables):
                 if name not in tables[field]:
                     raise ValueError(f"{label}: invalid {field} {name!r}")
                 npc[dest] = tables[field][name]
-        npc['trace'] = {'base': [base['mapy'] - 4, base['mapx'] - 4],
-                        'manual_delta': manual, 'automatic_delta': [dy, dx],
-                        'final': [y - 4, x - 4]}
+        npc['trace'] = {'base': [(base['mapy'] - 4) * 2, (base['mapx'] - 4) * 2],
+                        'manual_delta': manual, 'automatic_delta': [tile_dy, tile_dx],
+                        'final': [(y - 4) * 2, (x - 4) * 2]}
         result_sprites.append(npc)
     missing = set(diff.objects) - seen
     if missing:

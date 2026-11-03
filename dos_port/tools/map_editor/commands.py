@@ -84,8 +84,8 @@ def set_object(ref: str, object_id: str, *, y: int | None = None,
     diff = schema.load(info.label)
     override = dict(diff.objects.get(object_id, {}))
     if y is not None:
-        if not (0 <= y <= 251 and 0 <= x <= 251):
-            raise ValueError("object coordinates must fit MAPY/MAPX after +4")
+        if not (0 <= y <= 502 and 0 <= x <= 502 and y % 2 == 0 and x % 2 == 0):
+            raise ValueError("object tile coordinates must be even and fit MAPY/MAPX after +4")
         by, bx = npc['trace']['base']
         dy, dx = diff.extents.tile_delta()
         override['manual_delta_tile'] = [y - by - dy, x - bx - dx]
@@ -198,15 +198,28 @@ def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
             if pm.CONNECTIONS.get(const) else []}
 
 
-def render(ref: str, *, out: Path, zoom: int = 1) -> dict[str, Any]:
+def render(ref: str, *, out: Path, zoom: int = 1, palette_mode: str = 'dmg',
+           last_map: str | None = None) -> dict[str, Any]:
     const = resolve_map(ref)
     cm = view.compose_padded(const)
-    image = view.render(cm)
+    if zoom < 1:
+        raise ValueError('zoom must be at least 1')
+    palette_name, warning = 'dmg', None
+    if palette_mode == 'port-cgb':
+        from map_editor import palette
+        palette_name, colors, warning = palette.resolve(
+            cm.info, resolve_map(last_map) if last_map else None)
+        image = view.render(cm, colors)
+    elif palette_mode == 'dmg':
+        image = view.render(cm)
+    else:
+        raise ValueError(f'unknown palette mode {palette_mode!r}')
     if zoom > 1:
         image = image.resize((image.width * zoom, image.height * zoom))
     image.save(out)
     manifest = {"schema": 1, "written": True, "map": _identity(const),
-                "palette": "dmg", "zoom": zoom,
+                "palette": palette_mode, "palette_name": palette_name,
+                "diagnostics": [warning] if warning else [], "zoom": zoom,
                 "layers": ["blocks"], "png": str(out)}
     out.with_suffix(out.suffix + ".json").write_text(__import__("json").dumps(manifest, indent=1) + "\n")
     return manifest
