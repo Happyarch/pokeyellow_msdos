@@ -153,6 +153,7 @@ def scan_routes(ref: str) -> dict[str, Any]:
             'path': script['path'], 'sha256': script['sha256'],
             'coverage': {'complete': False, 'adapter': 'direct literal streams only'},
             'routes': [{'label': b.label, 'drivers': b.drivers,
+                        'pair': b.pair, 'channel': b.channel, 'slot': b.slot,
                         'bytes': list(b.values),
                         'operations': [asdict(op) for op in routes.decode(b.values)]}
                        for b in bindings]}
@@ -176,8 +177,10 @@ def set_route(ref: str, label: str, digest: str, values: list[int],
     if 'MoveSprite2' in binding.drivers and len(values) > 90:
         raise ValueError('MoveSprite2 stream exceeds its 90-byte channel')
     text = path.read_text()
-    for (start, end), value in reversed(list(zip(binding.spans, values))):
-        text = text[:start] + f'0x{value:02X}' + text[end:]
+    tokens = binding.tokens or tuple(f'0x{v:02X}' for v in binding.values)
+    for (start, end), original, value in reversed(
+            list(zip(binding.spans, tokens, values))):
+        text = text[:start] + routes.render_token(original, value) + text[end:]
     if write:
         import hashlib
         if hashlib.sha256(path.read_bytes()).hexdigest() != digest:

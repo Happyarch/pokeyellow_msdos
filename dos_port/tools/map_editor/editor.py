@@ -50,6 +50,11 @@ MARK_ITEM = (0, 200, 120)
 PORT_VIEW = (255, 72, 72)
 GB_VIEW = (60, 220, 100)
 RENDER_REACH = (0, 220, 220)
+# Paired-cutscene onion skins. Close violet tones, with a stronger violet where
+# both MoveSprite2 walkers occupy the same cell.
+NPCMV1 = (168, 92, 230)
+NPCMV2 = (120, 132, 240)
+NPCMV12 = (236, 120, 255)
 GRID_BLOCK = (0, 0, 0)
 GRID_TILE = (70, 70, 70)
 PAINTED = (255, 120, 220)
@@ -106,9 +111,9 @@ class Viewer:
         self.refresh_palette()
         self.surf = None
         self.pal_surf = None
-        self.pan = [0, 0]
         self.undo_stack = []
         self.dirty = False
+        self.center_view()
         self.current_block = self.cm.border_block
         self.save_error = ""
         self.selected_object = None
@@ -132,6 +137,18 @@ class Viewer:
         if self.surf is None:
             self.surf = to_pygame(self.img, self.zoom)
         return self.surf
+
+    def center_view(self):
+        """Frame the authored map, not the padding ring.
+
+        The render is the padded grid, so panning to (0, 0) shows only border
+        blocks and the map sits off-screen. Centre the padded image instead: the
+        border is symmetric, so its centre is the map's centre.
+        """
+        if self.surf is None:
+            self.surf = to_pygame(self.img, self.zoom)
+        self.pan = [(self.screen.get_width() - self.surf.get_width()) // 2,
+                    (self.screen.get_height() - PANEL_H - self.surf.get_height()) // 2]
 
     def refresh_palette(self):
         if self.palette_mode == 'port-cgb':
@@ -337,6 +354,63 @@ class Viewer:
             self.object_menu = None
         return True
 
+    def draw_route_overlay(self, ox, oy, z):
+        """Draw recognized movement streams as onion skins.
+
+        NPCMV1 = first walker, NPCMV2 = second walker of a MoveSprite2 pair,
+        NPCMV12 = a cell both streams visit. Anchors come from the sprite slot
+        the script arms (slot N is the map's Nth object, 1-based), falling back
+        to the selected NPC when the call site does not name one.
+        """
+        from map_editor import routes, scripts
+        route = self.route_options[self.route_index]
+        pair = route.get('pair')
+        group = [r for r in self.route_options
+                 if pair is not None and r.get('pair') == pair] or [route]
+        colors = {0: NPCMV1, 1: NPCMV2}
+        traces = {}
+        for member in group:
+            anchor = self.route_anchor(member)
+            if anchor is None:
+                continue
+            channel = member.get('channel') or 0
+            traces[channel] = routes.preview(
+                scripts.TileYX(anchor[0], anchor[1]),
+                routes.decode(bytes(member['bytes'])))
+        seen = {}
+        for channel, trace in traces.items():
+            points = [(ox + (p.x + view.BORDER * 4 + 1) * TILE * z,
+                       oy + (p.y + view.BORDER * 4 + 1) * TILE * z) for p in trace]
+            if len(points) > 1:
+                pygame.draw.lines(self.screen, colors[channel], False, points, 3)
+            for point in points:
+                pygame.draw.circle(self.screen, colors[channel], point, max(2, 2 * z))
+            for cell in trace:
+                seen.setdefault((cell.y, cell.x), []).append(channel)
+        for (y, x), channels in seen.items():
+            if len(channels) > 1:
+                px = ox + (x + view.BORDER * 4 + 1) * TILE * z
+                py = oy + (y + view.BORDER * 4 + 1) * TILE * z
+                pygame.draw.rect(self.screen, NPCMV12, (px - 2, py - 2, 4, 4))
+        overlap = [cell for cell, channels in seen.items() if len(channels) > 1]
+        if overlap:
+            y, x = overlap[0]
+            px = ox + (x + view.BORDER * 4 + 1) * TILE * z
+            py = oy + (y + view.BORDER * 4 + 1) * TILE * z
+            self.screen.blit(self.font.render('NPCMV12', True, NPCMV12), (px + 6, py - 14))
+
+    def route_anchor(self, route):
+        """(y, x) 8px-tile anchor for a stream, from its sprite slot."""
+        slot = route.get('slot')
+        if isinstance(slot, int) and 1 <= slot <= len(self.cm.sprites):
+            return tuple(self.cm.sprites[slot - 1]['trace']['final'])
+        if self.selected_object:
+            actor = next((s for s in self.cm.sprites
+                          if s['stable_id'] == self.selected_object), None)
+            if actor:
+                return tuple(actor['trace']['final'])
+        return None
+
     def draw_object_panel(self):
         if self.paint or not self.selected_object:
             return
@@ -364,7 +438,39 @@ class Viewer:
                 pygame.draw.rect(panel, (55, 60, 76), (4, 94 + i * 20, 282, 19))
                 panel.blit(self.font.render(name, True, (235, 235, 235)), (8, 95 + i * 20))
             panel.blit(self.font.render('Mouse wheel: scroll', True, (220, 220, 220)), (8, 340))
+        if self.route_index >= 0:
+            self.draw_route_timeline(panel)
         self.screen.blit(panel, (x, 0))
+
+    def draw_route_timeline(self, panel):
+        """Compact step timeline for the selected stream: [ ] navigate, 1-4 edit."""
+        route = self.route_options[self.route_index]
+        operations = route['operations']
+        panel.blit(self.font.render(f"Route {route['label'][:34]}", True, (235, 235, 235)), (6, 108))
+        columns, size, gap = 22, 12, 2
+        for i, op in enumerate(operations):
+            row, col = divmod(i, columns)
+            left = 6 + col * (size + gap)
+            top = 126 + row * (size + gap)
+            if top > 380:
+                panel.blit(self.font.render(f'+{len(operations) - i} more', True,
+                                            (200, 200, 200)), (left, top))
+                break
+            if op['kind'] in ('step', 'quick_step'):
+                color = (110, 190, 255) if op['kind'] == 'step' else (90, 150, 210)
+            elif op['kind'] == 'end':
+                color = (90, 90, 100)
+            else:
+                color = (230, 150, 60)
+            pygame.draw.rect(panel, color, (left, top, size, size))
+            if i == self.route_step:
+                pygame.draw.rect(panel, (255, 255, 255), (left - 1, top - 1, size + 2, size + 2), 1)
+        if operations:
+            current = operations[self.route_step]
+            label = f"{self.route_step + 1}/{len(operations)} {current['kind']}"
+            if current['direction']:
+                label += f" {current['direction']}"
+            panel.blit(self.font.render(label, True, (235, 235, 235)), (6, 386))
 
     def edit_route_step(self, direction):
         """Edit an existing recognized move without changing the stream length."""
@@ -464,19 +570,8 @@ class Viewer:
                 rect_px(px, py, TILE * 2, TILE * 2, color, 2)
                 if s['stable_id'] == self.selected_object:
                     rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
-        if self.route_index >= 0 and self.selected_object:
-            from map_editor import routes, scripts
-            actor = next((s for s in self.cm.sprites if s['stable_id'] == self.selected_object), None)
-            if actor:
-                route = self.route_options[self.route_index]
-                y, x = actor['trace']['final']
-                trace = routes.preview(scripts.TileYX(y, x), routes.decode(bytes(route['bytes'])))
-                points = [(ox + (p.x + view.BORDER * 4 + 1) * TILE * z,
-                           oy + (p.y + view.BORDER * 4 + 1) * TILE * z) for p in trace]
-                if len(points) > 1:
-                    pygame.draw.lines(self.screen, (190, 100, 255), False, points, 3)
-                for point in points:
-                    pygame.draw.circle(self.screen, (190, 100, 255), point, max(2, 3 * z))
+        if self.route_index >= 0:
+            self.draw_route_overlay(ox, oy, z)
         if (self.show["port_view"] or self.show["gb_view"]
                 or self.show["render_reach"]) and self.player:
             win, sur = view.viewport_rect(self.cm, self.player[1],
@@ -731,7 +826,8 @@ class Viewer:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("map_const", nargs="?", default="PALLET_TOWN")
-    ap.add_argument("--zoom", type=int, default=2)
+    ap.add_argument("--zoom", type=int, default=None,
+                    help="tile zoom; default picks the largest that fits the window")
     args = ap.parse_args()
     from map_editor.commands import resolve_map
     try:
@@ -739,11 +835,27 @@ def main():
     except ValueError as exc:
         print(f"map editor: {exc}", file=sys.stderr)
         return 2
+    zoom = args.zoom if args.zoom else best_zoom(const)
     try:
-        Viewer(const, args.zoom).run()
+        Viewer(const, zoom).run()
     finally:
         pygame.quit()
     return 0
+
+
+def best_zoom(const, size=(1024, 700)):
+    """Largest integer zoom that fits the padded map, capped at 2.
+
+    A fixed default of 2 cropped every map bigger than ~15 blocks; a fixed 1
+    wasted space on small interiors. Fit the actual composed size instead.
+    """
+    info = pm.map_info(const)
+    width = (info.w + 2 * view.BORDER) * ts.BLOCK_PX
+    height = (info.h + 2 * view.BORDER) * ts.BLOCK_PX
+    for zoom in (2, 1):
+        if width * zoom <= size[0] and height * zoom <= size[1] - PANEL_H:
+            return zoom
+    return 1
 
 
 if __name__ == "__main__":
