@@ -446,6 +446,9 @@ class Viewer:
             for (y, x, dest, wid) in self.cm.warps:
                 px, py = view.warp_px(self.cm, y, x)
                 rect_px(px, py, TILE * 2, TILE * 2, MARK_WARP, 2)
+            for sign in self.cm.signs:
+                px, py = view.warp_px(self.cm, sign['y'], sign['x'])
+                rect_px(px, py, TILE * 2, TILE * 2, (255, 220, 80), 2)
         if self.show["npcs"]:
             for s in self.cm.sprites:
                 px, py = view.sprite_px(self.cm, s["mapy"], s["mapx"])
@@ -484,6 +487,11 @@ class Viewer:
                                                 self.player[0]), GB_VIEW, 2)
             if self.show["render_reach"]:
                 rect_px(*sur, RENDER_REACH, 1)
+            px = (self.player[0] + view.BORDER * 4) * TILE
+            py = (self.player[1] + view.BORDER * 4) * TILE
+            rect_px(px, py, TILE * 2, TILE * 2, (255, 100, 190), 2)
+            self.screen.blit(self.font.render('PT', True, (255, 100, 190)),
+                             (ox + px * z, oy + py * z))
 
         if self.paint:
             x0 = self.screen.get_width() - PAL_W

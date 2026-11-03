@@ -36,7 +36,7 @@ class ComposedMap:
     rows: int                  # h + 12
     border_block: int
     warps: list                # [(y, x, dest_const, warp_id)] map-local tiles
-    sign_count: int
+    signs: list                # [{y, x, text_id, text_name}] map squares
     sprites: list              # gmh sprite dicts (mapy/mapx include +4)
     anomalies: list            # connection strips reading outside the
                                # neighbour's blk (candidate C4 re-tune bugs)
@@ -72,8 +72,8 @@ def compose_padded(const: str, overrides: dict | None = None,
     if (port_w, port_h) != (info.w, info.h):
         raise ValueError(f"{const}: composed dimensions {port_w}x{port_h} "
                          f"do not match map-header dimensions {info.w}x{info.h}")
-    obj = pm.objects(info) or (0, [], 0, [])
-    border_block, warps, sign_count, sprites = obj
+    obj = pm.objects(info) or (0, [], [], [])
+    border_block, warps, signs, sprites = obj
 
     stride, rows = info.w + 2 * BORDER, info.h + 2 * BORDER
     grid = bytearray(bytes([border_block]) * (stride * rows))
@@ -128,7 +128,7 @@ def compose_padded(const: str, overrides: dict | None = None,
                 grid[(y + BORDER) * stride + (x + BORDER)] = block
 
     cm = ComposedMap(info, grid, stride, rows, border_block,
-                     warps, sign_count, sprites, anomalies, all_strips)
+                     warps, signs, sprites, anomalies, all_strips)
     if overrides:
         editable = cm.editable_cells()
         for (row, col), block in overrides.items():
