@@ -338,10 +338,15 @@ InitBattleCanvas:
     or  al, (1 << BIT_FAST_TEXT_DELAY)
     and al, (~(1 << BIT_TEXT_DELAY)) & 0xFF
     mov [ebp + wLetterPrintingDelayFlags], al
-    mov al, [ebp + wOptions]
-    and al, 0xF0                              ; keep battle-style/anim bits, reset speed nibble (TEXT_DELAY_MASK)
-    or al, TEXT_DELAY_MEDIUM                  ; default 3 frames/char
-    mov [ebp + wOptions], al
+    ; pret InitBattleCommon touches ONLY wLetterPrintingDelayFlags (push af at
+    ; :28, restored at the end of _InitBattleCommon). It never writes wOptions,
+    ; so battle dialog uses the player's chosen text speed. This routine used to
+    ; also force wOptions' speed nibble to TEXT_DELAY_MEDIUM here and never put
+    ; it back, which silently reverted a player's FAST setting after the first
+    ; battle and then propagated to the save file (a save taken after a battle
+    ; stored MEDIUM, so the title options and every later continue showed it).
+    ; The write is port-only, has no pret counterpart, and its own comment cited
+    ; only the delay-flag change as faithful. Do not reintroduce it.
     call ClearCellAttrPlanes                 ; clear stale per-cell BG attribute overrides
     call ClearSprites                        ; drop the overworld OAM (player etc.)
     ; Stop the per-frame OAM rebuild (update_oam → PrepareOAMData) re-showing the
