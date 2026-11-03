@@ -96,6 +96,10 @@ def scan(path: Path) -> list[RouteBinding]:
         for previous in reversed(lines[max(0, i-12):i]):
             if re.match(r'^\s*[A-Za-z_]\w*:', previous):
                 break
+            # Intervening calls may clobber argument registers; do not infer
+            # bindings across them. Any later write to a register also wins.
+            if re.match(r'^\s*call\b', previous, re.IGNORECASE):
+                break
             m = re.match(r'^\s*mov\s+(edi|edx)\s*,\s*([^;\s]+)\s*(?:;.*)?$',
                          previous.rstrip('\r\n'), re.IGNORECASE)
             if m:
@@ -105,6 +109,11 @@ def scan(path: Path) -> list[RouteBinding]:
                 seen_registers.add(register)
                 if (register == 'edi' or driver == 'MoveSprite2') and re.fullmatch(r'[A-Za-z_]\w*', m.group(2)):
                     direct.setdefault(m.group(2), set()).add(driver)
+            else:
+                modified = re.match(r'^\s*(?:lea|pop|add|sub|xor|and|or|inc|dec)\s+(edi|edx)\b',
+                                    previous, re.IGNORECASE)
+                if modified:
+                    seen_registers.add(modified.group(1).lower())
     found = []
     for label, drivers in sorted(direct.items()):
         if label not in labels:

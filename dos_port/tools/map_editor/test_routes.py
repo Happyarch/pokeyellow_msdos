@@ -29,6 +29,13 @@ class RouteTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'changed since scan'):
                 commands.set_route('PALLET_TOWN', 'PathA', scan['sha256'], [6, 255], write=True)
 
+    def test_intervening_call_does_not_bind_route(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'test.asm'
+            path.write_text('PathA:\n db 0x06\n db 0xFF\n'
+                            'Start:\n mov edi, PathA\n call SomeOtherRoutine\n call MoveSprite\n')
+            self.assertEqual(routes.scan(path), [])
+
 
 if __name__ == '__main__':
     unittest.main()

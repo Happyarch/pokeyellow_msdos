@@ -39,7 +39,7 @@ from gfx_core import pret_maps as pm            # noqa: E402
 from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
-from map_editor import borders, overrides, view, palette  # noqa: E402
+from map_editor import borders, overrides, view, palette, sprites  # noqa: E402
 
 MARK_WARP = (255, 60, 60)
 MARK_NPC = (60, 120, 255)
@@ -346,7 +346,10 @@ class Viewer:
                 ('facing', 'dir', pm.gmh._DIR_CONSTS))):
             name = next((s for s in tables[field] if values.get(s) == npc[key]), str(npc[key]))
             pygame.draw.rect(panel, (65, 65, 78), (4, 20 + index * 22, 282, 20))
-            panel.blit(self.font.render(f'{field}: {name} ▾', True, (235, 235, 235)),
+            # Source field "facing" is movement byte 2, not initial facing.
+            # Pret zeroes sprite state on load, then this byte constrains motion.
+            display = 'movement rule' if field == 'facing' else field
+            panel.blit(self.font.render(f'{display}: {name} ▾', True, (235, 235, 235)),
                        (8, 22 + index * 22))
         if self.object_menu:
             for i, name in enumerate(tables[self.object_menu][self.menu_offset:self.menu_offset + 12]):
@@ -410,6 +413,12 @@ class Viewer:
         if self.show["npcs"]:
             for s in self.cm.sprites:
                 px, py = view.sprite_px(self.cm, s["mapy"], s["mapx"])
+                thumbnail = sprites.thumbnail(s['sprite_id'], tuple(self.colors))
+                if thumbnail is not None:
+                    surf = pygame.image.fromstring(thumbnail.tobytes(), thumbnail.size, 'RGBA')
+                    if z != 1:
+                        surf = pygame.transform.scale(surf, (16 * z, 16 * z))
+                    self.screen.blit(surf, (ox + px * z, oy + py * z))
                 color = MARK_TRAINER if s["is_trainer"] else \
                     MARK_ITEM if s["is_item"] else MARK_NPC
                 rect_px(px, py, TILE * 2, TILE * 2, color, 2)
