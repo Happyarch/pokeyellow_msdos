@@ -39,11 +39,13 @@ class MapDiff:
     added_blocks: dict[tuple[int, int], int] = field(default_factory=dict)
     recipes: list[dict] = field(default_factory=list)
     objects: dict[str, dict] = field(default_factory=dict)
+    extra: dict = field(default_factory=dict)
+    schema_version: int = 1
 
     @property
     def is_v2(self) -> bool:
-        return bool(self.extents != Extents() or self.added_blocks or self.recipes
-                    or self.objects)
+        return bool(self.schema_version == 2 or self.extents != Extents()
+                    or self.added_blocks or self.recipes or self.objects or self.extra)
 
 
 def path_for(pascal: str) -> Path:
@@ -95,6 +97,9 @@ def load(pascal: str) -> MapDiff:
         _cells(raw.get("added_blocks", []), "added_blocks"),
         recipes,
         objects,
+        {key: value for key, value in raw.items() if key not in
+         {"schema", "map", "extent_blocks", "base_blocks", "added_blocks", "recipes", "objects"}},
+        2,
     )
 
 
@@ -111,6 +116,7 @@ def write(diff: MapDiff) -> None:
                "cells": [[y, x, b] for (y, x), b in sorted(diff.base_blocks.items())]}
     else:
         out = {
+            **diff.extra,
             "schema": 2,
             "map": diff.pascal,
             "extent_blocks": {"north": diff.extents.north, "west": diff.extents.west,
@@ -125,6 +131,26 @@ def write(diff: MapDiff) -> None:
 
 def expanded_dims(pascal: str, width: int, height: int) -> tuple[int, int]:
     return load(pascal).extents.dimensions(width, height)
+
+
+def base_to_final(diff: MapDiff, y: int, x: int, base_w: int) -> tuple[int, int]:
+    """Map a base block to its final canvas location, including insert recipes."""
+    e = diff.extents
+    if x == base_w - 1:
+        for recipe in diff.recipes:
+            if recipe.get("kind") == "repeat_base_column" and recipe.get("edge") == "east":
+                x += recipe.get("count", 0)
+    return y + e.north, x + e.west
+
+
+def final_to_base(diff: MapDiff, y: int, x: int, base_w: int,
+                  base_h: int) -> tuple[int, int] | None:
+    """Inverse of base_to_final, or None for an authored expansion cell."""
+    for by in range(base_h):
+        for bx in range(base_w):
+            if base_to_final(diff, by, bx, base_w) == (y, x):
+                return by, bx
+    return None
 
 
 def _apply_recipe(canvas: bytearray, width: int, height: int, base: bytes,
@@ -207,5 +233,8 @@ def set_absolute_extents(diff: MapDiff, *, north: int, west: int,
     if north < old.north or west < old.west or south < old.south or east < old.east:
         raise ValueError("shrinking map extents is not implemented")
     delta = ((north - old.north) * 4, (west - old.west) * 4)
+    dy, dx = north - old.north, west - old.west
+    diff.added_blocks = {(y + dy, x + dx): block
+                         for (y, x), block in diff.added_blocks.items()}
     diff.extents = Extents(north, west, south, east)
     return diff, delta

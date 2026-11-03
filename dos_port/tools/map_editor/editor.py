@@ -81,7 +81,9 @@ class Viewer:
     def load(self, const: str):
         self.cells = borders.load(const)
         info = pm.map_info(const)
-        self.map_cells = overrides.load(info.label) if info.label else {}
+        self.map_cells = overrides.load(info.label, info) if info.label else {}
+        self.initial_map_cells = dict(self.map_cells)
+        self.initial_cells = dict(self.cells)
         base = view.compose_padded(const)          # pre-override
         self.base_grid = bytes(base.grid)
         self.cm = view.compose_padded(const, self.cells, self.map_cells)
@@ -145,7 +147,11 @@ class Viewer:
         target, key = region
         rec = (r, c, target is self.map_cells, target.get(key))
         if block == self.base_grid[idx]:
-            target.pop(key, None)            # painting back = remove override
+            initial = self.initial_map_cells if target is self.map_cells else self.initial_cells
+            if key in initial:
+                target[key] = initial[key]
+            else:
+                target.pop(key, None)
         else:
             target[key] = block
         self.cm.grid[idx] = block

@@ -7,11 +7,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 import unittest
+from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from gfx_core import pret_maps as pm
-from map_editor import schema
+from map_editor import schema, overrides, view, commands
 
 
 class MapDiffTest(unittest.TestCase):
@@ -37,6 +40,40 @@ class MapDiffTest(unittest.TestCase):
         diff, repeat = schema.set_absolute_extents(
             diff, north=1, west=2, south=0, east=0)
         self.assertEqual(repeat, (0, 0))
+
+    def test_growth_preserves_added_cells(self):
+        diff = schema.MapDiff("Example", added_blocks={(2, 3): 9})
+        schema.set_absolute_extents(diff, north=2, west=1, south=0, east=0)
+        self.assertEqual(diff.added_blocks, {(4, 4): 9})
+        schema.set_absolute_extents(diff, north=2, west=1, south=0, east=0)
+        self.assertEqual(diff.added_blocks, {(4, 4): 9})
+
+    def test_paint_save_preserves_recipe_and_other_fields(self):
+        with TemporaryDirectory() as directory, patch.object(schema, "OVERRIDES", Path(directory)), \
+             patch.object(overrides, "MAP_OVERRIDES_DIR", Path(directory)):
+            diff = schema.MapDiff("Test", schema.Extents(east=2),
+                                  recipes=[{"kind": "repeat_base_column", "edge": "east",
+                                            "source_x": 0, "count": 2}],
+                                  extra={"new_objects": [{"id": "human"}]})
+            schema.write(diff)
+            info = SimpleNamespace(w=4, h=1, base_w=2, base_h=1)
+            overrides.save("Test", {(0, 1): 3, (0, 3): 4}, info, 8)
+            saved = schema.load("Test")
+            self.assertEqual(saved.extents.east, 2)
+            self.assertEqual(saved.recipes, diff.recipes)
+            self.assertEqual(saved.extra, diff.extra)
+            self.assertEqual(saved.base_blocks, {(0, 1): 4})
+            self.assertEqual(saved.added_blocks, {(0, 1): 3})
+            self.assertEqual(overrides.load("Test", info), {(0, 1): 3, (0, 3): 4})
+
+    def test_overlay_uses_four_tiles_per_border_block(self):
+        self.assertEqual(view.warp_px(None, 0, 0), (view.BORDER * 32,) * 2)
+        self.assertEqual(view.sprite_px(None, 4, 4), (view.BORDER * 32,) * 2)
+
+    def test_north_west_write_rejected_until_events_are_relocated(self):
+        with self.assertRaisesRegex(ValueError, "not automatically relocated"):
+            commands.set_extents("PALLET_TOWN", north=1, west=0,
+                                 south=0, east=0, write=True)
 
 
 if __name__ == "__main__":

@@ -71,14 +71,16 @@ def set_block(ref: str, *, y: int, x: int, block: int, write: bool) -> dict[str,
     diff = schema.load(pascal)
     if not 0 <= block <= 0xff:
         raise ValueError("block must be in 0..255")
-    if 0 <= y < info.base_h and 0 <= x < info.base_w:
-        diff.base_blocks[(y, x)] = block
+    if not (0 <= y < info.h and 0 <= x < info.w):
+        raise ValueError(f"block ({y},{x}) outside port map {info.h}x{info.w}")
+    base = schema.final_to_base(diff, y, x, info.base_w, info.base_h)
+    if base is not None:
+        diff.base_blocks[base] = block
+        diff.added_blocks.pop((y, x), None)
         space = "base"
-    elif 0 <= y < info.h and 0 <= x < info.w:
+    else:
         diff.added_blocks[(y, x)] = block
         space = "added"
-    else:
-        raise ValueError(f"block ({y},{x}) outside port map {info.h}x{info.w}")
     if write:
         schema.write(diff)
     return {"schema": 1, "written": write, "map": _identity(const),
@@ -94,6 +96,9 @@ def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
     pascal = info.label or pm.gmh.const_to_pascal(const)
     diff = schema.load(pascal)
     old = asdict(diff.extents)
+    if write and (north != diff.extents.north or west != diff.extents.west):
+        raise ValueError("north/west expansion cannot be written yet: map events and "
+                         "script coordinates are not automatically relocated")
     _diff, tile_delta = schema.set_absolute_extents(
         diff, north=north, west=west, south=south, east=east)
     width, height = diff.extents.dimensions(info.base_w, info.base_h)

@@ -68,7 +68,7 @@ def compose_padded(const: str, overrides: dict | None = None,
     raw_blk = pm.load_blk(info)
     blk, port_w, port_h, _diff = schema.compose_layout(
         info.label or pm.gmh.const_to_pascal(const), raw_blk, info.base_w,
-        info.base_h, map_overrides)
+        info.base_h)
     if (port_w, port_h) != (info.w, info.h):
         raise ValueError(f"{const}: composed dimensions {port_w}x{port_h} "
                          f"do not match map-header dimensions {info.w}x{info.h}")
@@ -155,12 +155,12 @@ def render(cm: ComposedMap) -> Image.Image:
 
 def warp_px(cm: ComposedMap, y: int, x: int) -> tuple[int, int]:
     """Map-local tile coords -> padded-image px (warps/signs use tiles)."""
-    return ((x + BORDER * 2) * TILE, (y + BORDER * 2) * TILE)
+    return ((x + BORDER * 4) * TILE, (y + BORDER * 4) * TILE)
 
 
 def sprite_px(cm: ComposedMap, mapy: int, mapx: int) -> tuple[int, int]:
     """Object MAPY/MAPX (map tile + 4) -> padded-image px."""
-    return ((mapx - 4 + BORDER * 2) * TILE, (mapy - 4 + BORDER * 2) * TILE)
+    return ((mapx - 4 + BORDER * 4) * TILE, (mapy - 4 + BORDER * 4) * TILE)
 
 
 def viewport_rect(cm: ComposedMap, py: int, px_: int):
@@ -169,7 +169,7 @@ def viewport_rect(cm: ComposedMap, py: int, px_: int):
     the window's top-left tile = player tile - (19, 11) in padded coords
     (40/2-1, 25/2 rounded), plus the 12-tile pad. Returns (x, y, w, h) px.
     Also returns the 12x9-block wSurroundingTiles reach as a second rect."""
-    ptx, pty = px_ + BORDER * 2, py + BORDER * 2      # padded tile coords
+    ptx, pty = px_ + BORDER * 4, py + BORDER * 4      # padded tile coords
     win = ((ptx - 19) * TILE, (pty - 11) * TILE, 40 * TILE, 25 * TILE)
     # LoadCurrentMapView reads SCREEN_BLOCK_WIDTH x SCREEN_BLOCK_HEIGHT
     # (12x9) blocks starting one block up-left of the view pointer; approximate
@@ -186,5 +186,5 @@ def gb_viewport_rect(cm: ComposedMap, py: int, px_: int):
     This is intentionally a size/frame reference for staging, not an emulation
     of the original GB camera's edge scroll rules.
     """
-    ptx, pty = px_ + BORDER * 2, py + BORDER * 2
+    ptx, pty = px_ + BORDER * 4, py + BORDER * 4
     return ((ptx - 9) * TILE, (pty - 8) * TILE, 20 * TILE, 18 * TILE)

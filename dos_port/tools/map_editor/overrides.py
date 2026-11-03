@@ -22,16 +22,20 @@ def path_for(pascal: str) -> Path:
     return MAP_OVERRIDES_DIR / f"{pascal}.json"
 
 
-def load(pascal: str) -> dict[tuple[int, int], int]:
+def load(pascal: str, info=None) -> dict[tuple[int, int], int]:
     p = path_for(pascal)
     if not p.exists():
         return {}
     raw = json.loads(p.read_text())
     if raw.get("schema") == 2:
-        # The shared schema composer owns schema-2 extents/recipes.  This
-        # compatibility view lets the legacy pygame paint path inspect its base
-        # cells without assuming a `cells` member exists.
-        return {(y, x): b for y, x, b in raw.get("base_blocks", [])}
+        if info is None:
+            raise ValueError("map dimensions are required for schema-2 paint")
+        from map_editor import schema
+        diff = schema.load(pascal)
+        cells = {schema.base_to_final(diff, y, x, info.base_w): b
+                 for (y, x), b in diff.base_blocks.items()}
+        cells.update(diff.added_blocks)
+        return cells
     return {(y, x): b for y, x, b in raw["cells"]}
 
 
@@ -50,6 +54,19 @@ def save(pascal: str, cells: dict[tuple[int, int], int], info,
     errs = validate(cells, info, nblocks)
     if errs:
         raise ValueError("; ".join(errs))
+    from map_editor import schema
+    diff = schema.load(pascal)
+    if diff.is_v2:
+        diff.base_blocks.clear()
+        diff.added_blocks.clear()
+        for (y, x), block in cells.items():
+            base = schema.final_to_base(diff, y, x, info.base_w, info.base_h)
+            if base is None:
+                diff.added_blocks[y, x] = block
+            else:
+                diff.base_blocks[base] = block
+        schema.write(diff)
+        return
     MAP_OVERRIDES_DIR.mkdir(parents=True, exist_ok=True)
     p = path_for(pascal)
     if not cells:
