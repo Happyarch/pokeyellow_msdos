@@ -25,9 +25,11 @@
 ; would be swallowed by the gate.
 
 %include "gb_memmap.inc"        ; W_PORT_SCRATCH — port-only audio scratch
+%include "assets/audio_constants.inc" ; SFX_STOP_ALL_MUSIC
 global audio_tick
 global audio_init
 global audio_shutdown
+global hal_sfx_offer
 global g_cfg_nosound
 global g_cfg_shim
 global g_cfg_noenh
@@ -43,6 +45,7 @@ global g_sb_dsp_ver
 extern FadeOutAudio               ; src/home/fade_audio.asm
 extern Music_DoLowHealthAlarm     ; src/audio/low_health_alarm.asm
 extern Audio1_UpdateMusic         ; src/audio/engine_1.asm
+extern DetermineAudioFunction    ; src/home/audio.asm — engine dispatch by wAudioROMBank
 extern StopAllSounds              ; src/home/init.asm
 extern g_audio_engine_online      ; src/home/audio.asm
 extern opl_init                   ; src/audio/opl_shim.asm
@@ -141,6 +144,7 @@ audio_tick:
     call sb_dma_poll_completion
     call FadeOutAudio
     call Music_DoLowHealthAlarm
+    call hal_sfx_pending_tick
     call Audio1_UpdateMusic
     ; Solved dispatch: init-resolved passes, zero per-tick compares.
     ; Non-MIDI/IMFC the winner voices music+SFX in its one pass; under MIDI/IMFC the
@@ -151,6 +155,76 @@ audio_tick:
     call [g_tick_midi]
     call [g_tick_imfc]
 .off:
+    ret
+
+; ---------------------------------------------------------------------------
+; hal_sfx_offer — record whether a just-requested sound actually started.
+; In: AL = sound id, EBP = GB base. Called from PlaySound (src/home/audio.asm)
+; after DetermineAudioFunction has run. A started sound (music lands on 0-3,
+; SFX on 4-7) clears the pending slot; an SFX id present on no channel was
+; rejected by the pret arbiter and is held for hal_sfx_pending_tick.
+; Preserves all registers.
+; ---------------------------------------------------------------------------
+hal_sfx_offer:
+    push eax
+    push ecx
+    push edx
+    cmp byte [g_audio_engine_online], 0
+    je .done
+    cmp al, SFX_STOP_ALL_MUSIC
+    je .clear
+    movzx edx, al
+    xor ecx, ecx
+.scan:
+    cmp byte [ebp + wChannelSoundIDs + ecx], dl
+    je .clear
+    inc ecx
+    cmp ecx, NUM_CHANNELS
+    jb .scan
+    ; No channel holds it. Music always lands on 0-3, so this is a rejected SFX.
+    cmp byte [hal_pending_sfx_id], dl
+    je .done                      ; already held; keep its TTL
+    mov [hal_pending_sfx_id], dl
+    mov byte [hal_pending_sfx_ttl], HAL_SFX_TTL
+    jmp .done
+.clear:
+    mov byte [hal_pending_sfx_id], 0
+    mov byte [hal_pending_sfx_ttl], 0
+.done:
+    pop edx
+    pop ecx
+    pop eax
+    ret
+
+; ---------------------------------------------------------------------------
+; hal_sfx_pending_tick — re-offer a rejected SFX once per frame until it
+; starts or HAL_SFX_TTL expires. Runs before Audio1_UpdateMusic so a sound
+; that starts this tick is voiced by the following shim pass in the same tick.
+; Calls DetermineAudioFunction directly (not PlaySound) so a failed re-offer
+; cannot re-arm its own TTL or recurse through hal_sfx_offer.
+; ---------------------------------------------------------------------------
+hal_sfx_pending_tick:
+    cmp byte [hal_pending_sfx_id], 0
+    je .done
+    cmp byte [hal_pending_sfx_ttl], 0
+    je .clear
+    mov bh, [hal_pending_sfx_id]
+    call DetermineAudioFunction
+    mov al, bh
+    movzx edx, al
+    xor ecx, ecx
+.scan:
+    cmp byte [ebp + wChannelSoundIDs + ecx], dl
+    je .clear
+    inc ecx
+    cmp ecx, NUM_CHANNELS
+    jb .scan
+    dec byte [hal_pending_sfx_ttl]
+    jnz .done
+.clear:
+    mov byte [hal_pending_sfx_id], 0
+    mov byte [hal_pending_sfx_ttl], 0
+.done:
     ret
 
 tick_noop:
@@ -404,6 +478,14 @@ g_sb_irq:       db 0              ; BLASTER I field
 g_sb_dma:       db 0              ; BLASTER D field
 g_sb_present:   db 0              ; DSP answered the reset with $AA
 g_sb_dsp_ver:   dw 0              ; DSP version: major<<8 | minor
+
+; One-slot pending SFX. The pret arbiter (audio/engine_1.asm AudioCommon_PlaySound)
+; rejects a whole request when a needed channel is busy with a lower id; that is
+; correct pret behaviour but loses the sound. The HAL re-offers the rejected id
+; once per tick for HAL_SFX_TTL frames. Only one request is held: last one wins.
+HAL_SFX_TTL     equ 40
+hal_pending_sfx_id:  db 0         ; 0 = none
+hal_pending_sfx_ttl: db 0
 
 section .text
 

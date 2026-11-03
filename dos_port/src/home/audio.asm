@@ -52,6 +52,7 @@ extern Audio2_StopAllAudio        ; src/audio/engine_2.asm
 extern AudioRom                   ; src/data/audio_data.asm
 extern WaitForSoundToFinish       ; src/home/delay.asm
 extern sb_sfx_dma_play            ; src/audio/sb_pcm.asm
+extern hal_sfx_offer              ; src/audio/audio_hal.asm — pending-SFX register
 
 section .text
 
@@ -261,6 +262,9 @@ PlaySound:
     xor al, al
     mov [ebp + wNewSoundID], al
     call DetermineAudioFunction
+    ; DEVIATION{class=HAL; pret=home/audio.asm:PlaySound; behavior=an SFX request the pret arbiter rejected for a busy channel is handed to the audio HAL pending register and re-offered once per frame for up to 40 frames instead of being discarded; evidence=SFX_GET_KEY_ITEM (0x94) is silent when the previous ManualTextScroll SFX_PRESS_AB (0x90) still owns CHAN5 as a fast text message ends, and the same silence reproduces on OPL3 with and without SB DMA and on MT32, so no device path is the differentiator, and the GB is audible there, so the port must not lose the request; lifetime=permanent while the virtual APU may queue what the APU cannot}
+    mov al, bh
+    call hal_sfx_offer
     ; DEVIATION{class=HAL; pret=home/audio.asm:PlaySound; behavior=if Sound Blaster DMA is available and the requested SFX is designated for soft APU playback in SfxSoftApuMask, the SFX is synthesized via soft APU into DMA memory and streamed via background DMA (sb_sfx_dma_play), falling back to pret virtual APU / FM playback on failure or without SB DMA; evidence=FM synthesis struggles with complex Game Boy noise SFX like door transitions, and asynchronous DMA PCM accurately reproduces noise while keeping 60 FPS gameplay uninterrupted; lifetime=permanent hardware routing}
     mov al, bh
     call sb_sfx_dma_play
