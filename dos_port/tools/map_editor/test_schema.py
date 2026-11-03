@@ -70,6 +70,14 @@ class MapDiffTest(unittest.TestCase):
         self.assertEqual(view.warp_px(None, 0, 0), (view.BORDER * 32,) * 2)
         self.assertEqual(view.sprite_px(None, 4, 4), (view.BORDER * 32,) * 2)
 
+    def test_unusable_pret_maps_report_a_reason_not_a_traceback(self):
+        """Two pret maps are data-broken; the editor must skip, not crash."""
+        self.assertTrue(view.can_compose("PALLET_TOWN"))
+        for const in ("UNDERGROUND_PATH_NORTH_SOUTH", "UNDERGROUND_PATH_ROUTE_7_COPY"):
+            self.assertFalse(view.can_compose(const), const)
+            with self.assertRaisesRegex(ValueError, "cannot load pret block layout"):
+                view.compose_padded(const)
+
     def test_recipe_cells_protect_generated_columns(self):
         """The expander must not add explicit cells over a recipe's output."""
         diff = schema.MapDiff("VermilionDock", schema.Extents(east=8),

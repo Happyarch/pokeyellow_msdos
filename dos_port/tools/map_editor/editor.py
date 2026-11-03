@@ -668,7 +668,8 @@ class Viewer:
 
     def next_map(self):
         consts = [c for c in pm.all_map_consts()
-                  if pm.map_info(c).tileset_stem is not None]
+                  if pm.map_info(c).tileset_stem is not None
+                  and view.can_compose(c)]
         i = consts.index(self.cm.info.const)
         self.load(consts[(i + 1) % len(consts)])
 
@@ -838,6 +839,10 @@ def main():
     zoom = args.zoom if args.zoom else best_zoom(const)
     try:
         Viewer(const, zoom).run()
+    except ValueError as exc:
+        # e.g. a map whose pret .blk cannot be used as a standalone grid.
+        print(f"map editor: {exc}", file=sys.stderr)
+        return 2
     finally:
         pygame.quit()
     return 0

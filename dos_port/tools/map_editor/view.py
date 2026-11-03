@@ -56,6 +56,22 @@ class ComposedMap:
         return cells
 
 
+def can_compose(const: str) -> bool:
+    """True when this map's pret data is usable as a standalone block grid.
+
+    Cheap enough for the Tab cycle: it only touches the .blk header, not the
+    tile cache.
+    """
+    try:
+        info = pm.map_info(const)
+        if info.tileset_stem is None:
+            return False
+        pm.load_blk(info)
+        return True
+    except (OSError, ValueError, KeyError):
+        return False
+
+
 def compose_padded(const: str, overrides: dict | None = None,
                    map_overrides: dict | None = None) -> ComposedMap:
     """overrides: {(row, col): block} painted border-ring cells (map_borders
@@ -65,7 +81,16 @@ def compose_padded(const: str, overrides: dict | None = None,
     info = pm.map_info(const)
     if info.tileset_stem is None:
         raise ValueError(f"{const}: no header/tileset")
-    raw_blk = pm.load_blk(info)
+    try:
+        raw_blk = pm.load_blk(info)
+    except (OSError, ValueError) as exc:
+        # Two pret maps are genuinely unusable as standalone grids and this is a
+        # data fact, not an editor failure: UNDERGROUND_PATH_ROUTE_7_COPY is a
+        # COPY map with no .blk of its own, and UNDERGROUND_PATH_NORTH_SOUTH
+        # declares 4x24 while pret's own comment notes the file is 4x23.
+        # Report it as a clean diagnostic so callers can skip the map instead of
+        # dying with a traceback.
+        raise ValueError(f"{const}: cannot load pret block layout ({exc})") from exc
     blk, port_w, port_h, _diff = schema.compose_layout(
         info.label or pm.gmh.const_to_pascal(const), raw_blk, info.base_w,
         info.base_h)
