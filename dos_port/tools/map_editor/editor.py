@@ -9,6 +9,7 @@ View controls:
    G  block grid    T  tile grid            W  warp markers
    N  NPC markers   V/H/R port/GB/reach frames (click sets player tile)
    I  coordinate inspector  C  toggle palette  O  cycle route preview
+   [ / ] select route step; 1-4 set down/up/left/right (edits port script)
    click/drag NPC     move in 16px map squares; property panel edits its fields
   Tab              cycle to the next map with a header
   Esc / close      quit (warns if unsaved paint)
@@ -76,6 +77,8 @@ class Viewer:
         self.object_menu = None
         self.menu_offset = 0
         self.route_index = -1
+        self.route_step = 0
+        self.route_sha = None
         self.route_options = []
         self.painting = False
         pygame.init()
@@ -111,11 +114,15 @@ class Viewer:
         self.object_drag = None
         self.object_menu = None
         self.route_index = -1
+        self.route_step = 0
         try:
             from map_editor import commands
-            self.route_options = commands.scan_routes(const)['routes']
+            scanned = commands.scan_routes(const)
+            self.route_options = scanned['routes']
+            self.route_sha = scanned['sha256']
         except (ValueError, OSError):
             self.route_options = []
+            self.route_sha = None
         pygame.display.set_caption(
             f"map_editor — {const} ({self.cm.info.w}x{self.cm.info.h} blocks,"
             f" {self.cm.info.tileset_name})")
@@ -358,6 +365,35 @@ class Viewer:
             panel.blit(self.font.render('Mouse wheel: scroll', True, (220, 220, 220)), (8, 340))
         self.screen.blit(panel, (x, 0))
 
+    def edit_route_step(self, direction):
+        """Edit an existing recognized move without changing the stream length."""
+        from map_editor import commands, routes
+        if self.route_index < 0 or not self.route_sha:
+            return
+        route = self.route_options[self.route_index]
+        values = list(route['bytes'])
+        if not (0 <= self.route_step < len(values) - 1):
+            return
+        op = routes.decode(bytes(values))[self.route_step]
+        if op.kind not in ('step', 'quick_step'):
+            self.save_error = 'Selected route operation is not a recognized movement step'
+            return
+        table = ((0x00, 0x40, 0x80, 0xC0) if op.kind == 'step'
+                 else (0x04, 0x05, 0x06, 0x07))
+        values[self.route_step] = table[direction]
+        try:
+            result = commands.set_route(self.cm.info.const, route['label'], self.route_sha,
+                                        values, write=True)
+            for warning in result['diagnostics']:
+                print(f'ROUTE: {warning}')
+            scanned = commands.scan_routes(self.cm.info.const)
+            self.route_options, self.route_sha = scanned['routes'], scanned['sha256']
+            self.route_index = next(i for i, item in enumerate(self.route_options)
+                                    if item['label'] == route['label'])
+            self.save_error = ''
+        except (ValueError, OSError, StopIteration) as exc:
+            self.save_error = str(exc)
+
     # ── drawing ──────────────────────────────────────────────────────────────
 
     def draw(self):
@@ -512,7 +548,13 @@ class Viewer:
             else:
                 lines += ["Inspector", "Select an NPC or move over the map"]
         if self.route_index >= 0:
-            lines.append('Preview (selected NPC): ' + self.route_options[self.route_index]['label'])
+            route = self.route_options[self.route_index]
+            lines.append('Preview (selected NPC): ' + route['label'])
+            operations = route['operations']
+            if operations:
+                step = operations[self.route_step]
+                lines.append(f"Step {self.route_step + 1}/{len(operations)}: "
+                             f"{step['kind']} {step['direction'] or ''} [ ] 1-4")
         width = max(self.font.size(line)[0] for line in lines) + 12
         panel = pygame.Surface((width, len(lines) * 16 + 8), pygame.SRCALPHA)
         panel.fill((20, 20, 26, 205))
@@ -574,6 +616,14 @@ class Viewer:
                         self.route_index += 1
                         if self.route_index >= len(self.route_options):
                             self.route_index = -1
+                        self.route_step = 0
+                    elif ev.key in (pygame.K_LEFTBRACKET, pygame.K_RIGHTBRACKET) and self.route_index >= 0:
+                        count = len(self.route_options[self.route_index]['operations'])
+                        if count:
+                            delta = -1 if ev.key == pygame.K_LEFTBRACKET else 1
+                            self.route_step = max(0, min(count - 1, self.route_step + delta))
+                    elif ev.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4) and self.route_index >= 0:
+                        self.edit_route_step(ev.key - pygame.K_1)
                     elif ev.key == pygame.K_TAB:
                         if self.dirty:
                             print("WARNING: switching map with unsaved paint")

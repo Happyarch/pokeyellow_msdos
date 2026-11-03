@@ -12,8 +12,8 @@ class SpriteTest(unittest.TestCase):
         colors = ((255, 255, 255), (160, 160, 160), (80, 80, 80), (0, 0, 0))
         img = sprites.thumbnail(3, colors)
         self.assertEqual(img.size, (16, 16))
-        self.assertIn(0, img.getchannel('A').getdata())
-        self.assertIn(255, img.getchannel('A').getdata())
+        self.assertIn(0, img.getchannel('A').tobytes())
+        self.assertIn(255, img.getchannel('A').tobytes())
 
 
 if __name__ == '__main__':

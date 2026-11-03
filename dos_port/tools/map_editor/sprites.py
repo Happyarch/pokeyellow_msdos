@@ -31,7 +31,7 @@ def thumbnail(sprite_id, colors):
         source = source.convert('L').crop((0, 0, 16, 16))
         img = Image.new('RGBA', (16, 16))
         pixels = []
-        for luminance in source.getdata():
+        for luminance in source.tobytes():
             shade = 3 - min(3, round(luminance / 85))
             pixels.append((*colors[shade], 0 if shade == 0 else 255))
         img.putdata(pixels)
