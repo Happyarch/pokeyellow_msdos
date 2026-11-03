@@ -287,6 +287,15 @@ place_flat_str:
     jb .skip
     mov [ebp + esi], cl
     inc esi
+    ; pret reaches every substitution string through PlaceString, whose glyph
+    ; path stores the tile and then calls PrintLetterDelay (home/text.asm
+    ; PlaceNextChar: `ld [hli], a / call PrintLetterDelay`). This flat clone
+    ; omitted that call, so names and control-code strings ("PC", "TM",
+    ; "TRAINER", "Enemy ", "POKe", "<PK><MN>", "......") printed instantly and
+    ; shortened the message by one delay per glyph. Inert outside a text
+    ; session: PrintLetterDelay returns at once unless TextCommandProcessor
+    ; set BIT_TEXT_DELAY.
+    call PrintLetterDelay
 .skip:
     inc eax
     jmp .loop
@@ -1031,6 +1040,7 @@ PrintPlayerName:
     jb .player_next
     mov [ebp + esi], al
     inc esi
+    call PrintLetterDelay             ; pret: PlaceString's per-glyph delay
 .player_next:
     inc edx
     jmp .player_loop
@@ -1050,6 +1060,7 @@ PrintRivalName:
     jb .rival_next
     mov [ebp + esi], al
     inc esi
+    call PrintLetterDelay             ; pret: PlaceString's per-glyph delay
 .rival_next:
     inc edx
     jmp .rival_loop
@@ -1087,6 +1098,7 @@ PlaceMoveUsersName.place:
     jb .battler_next
     mov [ebp + esi], al
     inc esi
+    call PrintLetterDelay             ; pret: PlaceString's per-glyph delay
 .battler_next:
     inc edx
     jmp .battler_copy
