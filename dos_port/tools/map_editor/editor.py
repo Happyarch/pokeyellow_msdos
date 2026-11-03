@@ -489,9 +489,18 @@ def main():
     ap.add_argument("map_const", nargs="?", default="PALLET_TOWN")
     ap.add_argument("--zoom", type=int, default=2)
     args = ap.parse_args()
-    Viewer(args.map_const.upper(), args.zoom).run()
-    pygame.quit()
+    from map_editor.commands import resolve_map
+    try:
+        const = resolve_map(args.map_const)
+    except ValueError as exc:
+        print(f"map editor: {exc}", file=sys.stderr)
+        return 2
+    try:
+        Viewer(const, args.zoom).run()
+    finally:
+        pygame.quit()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

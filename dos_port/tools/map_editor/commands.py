@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from difflib import SequenceMatcher
 from pathlib import Path
+import re
 from typing import Any
 
 from gfx_core import pret_maps as pm
@@ -10,14 +12,32 @@ from map_editor import schema, view
 
 
 def resolve_map(ref: str) -> str:
-    token = ref.upper()
-    if token in pm.all_map_consts():
-        return token
-    want = ref.replace("_", "").lower()
-    for const in pm.all_map_consts():
-        if pm.gmh.const_to_pascal(const).lower() == want:
-            return const
-    raise ValueError(f"unknown map {ref!r}")
+    """Resolve names safely: exact, unique substring, then unambiguous typo."""
+    def normalize(value: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", value.lower())
+
+    want = normalize(ref)
+    if not want:
+        raise ValueError("map name must not be empty")
+    names = {const: {normalize(const), normalize(pm.gmh.const_to_pascal(const))}
+             for const in pm.all_map_consts()}
+    exact = sorted(c for c, stems in names.items() if want in stems)
+    if len(exact) == 1:
+        return exact[0]
+    matches = exact or sorted(c for c, stems in names.items()
+                              if any(want in stem for stem in stems))
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        raise ValueError(f"ambiguous map {ref!r}; matches: " + ", ".join(matches))
+    scores = sorted(((max(SequenceMatcher(None, want, s).ratio() for s in stems), c)
+                     for c, stems in names.items()), reverse=True)
+    if scores and scores[0][0] >= 0.7:
+        best = [c for score, c in scores if score >= 0.7 and score >= scores[0][0] - 0.03]
+        if len(best) == 1:
+            return best[0]
+        raise ValueError(f"ambiguous map {ref!r}; close matches: " + ", ".join(sorted(best)))
+    raise ValueError(f"no map matches {ref!r}")
 
 
 def _identity(const: str) -> dict[str, Any]:
