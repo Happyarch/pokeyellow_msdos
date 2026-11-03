@@ -44,6 +44,13 @@ def main(argv: list[str] | None = None) -> int:
     ssub = script.add_subparsers(dest="scripts_command", required=True)
     scan = ssub.add_parser("scan")
     scan.add_argument("map")
+    move = ssub.add_parser("move")
+    move.add_argument("map")
+    move.add_argument("--index", type=int, required=True)
+    move.add_argument("--sha256", required=True)
+    move.add_argument("--y", type=int, required=True)
+    move.add_argument("--x", type=int, required=True)
+    move.add_argument("--write", action="store_true")
     expand = subs.add_parser("expand")
     expand.add_argument("map")
     for edge in ("north", "west", "south", "east"):
@@ -70,7 +77,11 @@ def main(argv: list[str] | None = None) -> int:
                                          sprite=args.sprite, movement=args.movement,
                                          facing=args.facing, write=args.write)
         elif args.command == "scripts":
-            result = commands.scan_scripts(args.map)
+            if args.scripts_command == "scan":
+                result = commands.scan_scripts(args.map)
+            else:
+                result = commands.move_script_coordinate(args.map, args.index, args.sha256,
+                                                         args.y, args.x, args.write)
         else:
             result = commands.render(args.map, out=args.out, zoom=args.zoom)
     except (ValueError, OSError) as exc:

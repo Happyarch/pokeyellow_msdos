@@ -54,6 +54,9 @@ class CoordinateBinding:
 
 _COORD = re.compile(r"\b(?P<macro>dbmapcoord|map_coord_movement)\s+"
                       r"(?P<x>\d+)\s*,\s*(?P<y>\d+)")
+_ANNOTATED_DB = re.compile(r"\bdb\s+(?P<y>\d+)\s*,\s*(?P<x>\d+)"
+                           r"(?P<gap>\s*;\s*dbmapcoord\s+)"
+                           r"(?P<comment_x>\d+)\s*,\s*(?P<comment_y>\d+)")
 
 
 def scan_coordinate_macros(path: Path) -> list[CoordinateBinding]:
@@ -63,6 +66,15 @@ def scan_coordinate_macros(path: Path) -> list[CoordinateBinding]:
     offset = 0
     for line in text.splitlines(keepends=True):
         code = line.split(';', 1)[0]
+        annotated = _ANNOTATED_DB.search(line)
+        if annotated:
+            y, x = int(annotated['y']), int(annotated['x'])
+            if (x, y) != (int(annotated['comment_x']), int(annotated['comment_y'])):
+                raise ValueError(f"{path}: dbmapcoord annotation disagrees with bytes")
+            start, end = offset + annotated.start(), offset + annotated.end()
+            result.append(CoordinateBinding(
+                'annotated_dbmapcoord', TileYX(y, x),
+                SourceSpan.from_text(path, start, end, text), annotated.group(0)))
         for match in _COORD.finditer(code):
             start, end = offset + match.start(), offset + match.end()
             result.append(CoordinateBinding(
@@ -78,7 +90,13 @@ def translate_binding(binding: CoordinateBinding, *, dy: int, dx: int,
     tile = binding.tile.translated(dy, dx)
     if not (0 <= tile.y <= 255 and 0 <= tile.x <= 255):
         raise ValueError("script coordinate must fit in a byte")
-    replacement = f"{binding.kind} {tile.x}, {tile.y}"
+    if binding.kind == 'annotated_dbmapcoord':
+        old = _ANNOTATED_DB.fullmatch(binding.source)
+        if old is None:
+            raise ValueError("invalid annotated coordinate binding")
+        replacement = f"db {tile.y}, {tile.x}{old['gap']}{tile.x}, {tile.y}"
+    else:
+        replacement = f"{binding.kind} {tile.x}, {tile.y}"
     if write:
         binding.span.replace(replacement)
     # A caller that wrote must rescan before performing another checked edit.

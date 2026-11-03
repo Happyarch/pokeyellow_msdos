@@ -109,6 +109,7 @@ def set_object(ref: str, object_id: str, *, y: int | None = None,
 
 def scan_scripts(ref: str) -> dict[str, Any]:
     from map_editor import scripts
+    import hashlib
     const = resolve_map(ref)
     info = pm.map_info(const)
     if not info.label:
@@ -118,11 +119,30 @@ def scan_scripts(ref: str) -> dict[str, Any]:
         raise ValueError(f"{const}: script file not found: {path}")
     bindings = scripts.scan_coordinate_macros(path)
     return {'schema': 1, 'written': False, 'map': _identity(const),
-            'path': str(path), 'coverage': {'adapter': 'coordinate macros only',
+            'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'coverage': {'adapter': 'coordinate macros and annotated dbmapcoord bytes',
             'complete': False}, 'bindings': [
                 {'index': i, 'kind': b.kind, 'coordinate': [b.tile.y, b.tile.x],
                  'span': [b.span.start, b.span.end], 'sha256': b.span.digest}
                 for i, b in enumerate(bindings)]}
+
+
+def move_script_coordinate(ref: str, index: int, digest: str, y: int, x: int,
+                           write: bool = False) -> dict[str, Any]:
+    from map_editor import scripts
+    scan = scan_scripts(ref)
+    bindings = scripts.scan_coordinate_macros(Path(scan['path']))
+    if index < 0 or index >= len(bindings):
+        raise ValueError(f"binding index {index} is out of range")
+    binding = bindings[index]
+    if scan['sha256'] != digest:
+        raise ValueError("script changed since scan; rescan before writing")
+    updated = scripts.translate_binding(binding, dy=y-binding.tile.y,
+                                        dx=x-binding.tile.x, write=write)
+    return {'schema': 1, 'written': write, 'map': scan['map'], 'index': index,
+            'path': scan['path'], 'before': [binding.tile.y, binding.tile.x],
+            'after': [updated.tile.y, updated.tile.x], 'file_sha256': digest,
+            'span_sha256': binding.span.digest}
 
 
 def set_block(ref: str, *, y: int, x: int, block: int, write: bool) -> dict[str, Any]:
