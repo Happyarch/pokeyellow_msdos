@@ -55,15 +55,41 @@ dos_port/tools/colorize.py --import-png PATH.png
 
 ---
 
-## Overworld Map Editor (`map_editor/editor.py`)
+## Overworld Map Editor (`map_editor/`)
 
-Viewer and painter for map border-ring authoring and block painting.
+Port-side map **and cutscene** authoring. Pret's `maps/*.blk`, `data/maps/objects/*`
+and `data/maps/headers/*` stay read-only: writes go to
+`dos_port/assets/map_overrides/<Pascal>.json` (schema 2) or to a port script under
+`dos_port/src/scripts/`.
+
 ```sh
-python3 dos_port/tools/map_editor/editor.py [options]
+python3 dos_port/tools/map_editor/editor.py VERMILION_DOCK   # pygame GUI
+python3 dos_port/tools/map_editor/cli.py inspect VERMILION_DOCK   # JSON, dry run
 ```
-- Edits sidecars in `dos_port/assets/map_overrides/<PascalCaseMapName>.json`.
-- Feeds `dos_port/tools/generators/gen_map_borders.py` during `make assets`.
-- Run with `--help` to view current active controls.
+
+`commands.py` is the only mutation surface; the GUI and CLI both call it. Every
+CLI command is a dry run unless `--write` is passed.
+
+**Coordinate units — the trap.** Editor tiles are 8 px, game map squares
+(`object_event`, `warp_event`, `bg_event`, `MAPY`/`MAPX`) are 16 px, and map
+blocks are 32 px. One block is 2 map squares or 4 editor tiles. Convert only at
+adapter boundaries, and never touch pret's `+4` `MAPY`/`MAPX` bias.
+
+What it does today: block painting (border ring + interior), north/west/south/east
+expansion with classified script-coordinate rewriting, NPC drag + sprite/movement
+dropdowns, real overworld BG palette preview, sprite thumbnails, warp/sign/PT
+event skins, and `NPCMV1`/`NPCMV2`/`NPCMV12` overlays for `MoveSprite2` pairs.
+
+Read `dos_port/tools/map_editor/README.md` before changing it — it documents the
+sidecar schema, the CLI, the script adapters, and the honest coverage limits
+(expansion rewrites only *classified* script coordinates and reports the rest).
+
+Tests are the only meaningful gate for this tool (the port's static/fidelity
+gates do not exercise it):
+
+```sh
+python3 -m unittest discover -s dos_port/tools/map_editor -p 'test_*.py'
+```
 
 ---
 

@@ -1,31 +1,36 @@
 #!/usr/bin/env python3
-"""editor.py — overworld map viewer + border-ring painter (map-tool C1+C2).
+"""editor.py — pygame overworld map and cutscene editor.
 
-Usage (from dos_port/):
-  python3 tools/map_editor/editor.py PALLET_TOWN [--zoom 2]
+Usage (from the repo root):
+  python3 dos_port/tools/map_editor/editor.py PALLET_TOWN [--zoom N]
+
+`--zoom` defaults to the largest integer zoom that fits the composed map.
 
 View controls:
   drag / arrows    pan                     + / -   zoom
-   G  block grid    T  tile grid            W  warp markers
-   N  NPC markers   V/H/R port/GB/reach frames (click sets player tile)
-   I  coordinate inspector  C  toggle palette  O  cycle route preview
-   [ / ] select route step; 1-4 set down/up/left/right (edits port script)
-   Ctrl+Shift+arrow  expand that edge by one 32px block
-   click/drag NPC     move in 16px map squares; property panel edits its fields
-  Tab              cycle to the next map with a header
+  G  block grid    T  tile grid            W  warp + sign events
+  N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
+  I  coordinate inspector   C  toggle palette   O  cycle route preview
+  [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
+  Ctrl+Shift+arrow  expand that edge by one 32px block
+  click/drag NPC    move in 16px map squares; the side panel edits its fields
+  Tab              cycle to the next map with a usable header
   Esc / close      quit (warns if unsaved paint)
 
-Paint mode (P toggles; edits the map_borders/<CONST>.json sidecar):
-  left click/drag  paint the border ring with the selected block
+Paint mode (P toggles):
+  left click/drag  paint the selected block (border ring or map interior)
   right click      eyedropper (pick block under cursor)
   click palette    select block                F  flood fill
   Ctrl+Z           undo                        S  save sidecar
-   Connection strips are locked (drawn dimmed); map blocks and the border ring
-   are editable. Connections always win at runtime.
+  Connection strips are locked (drawn dimmed); map blocks and the border ring
+  are editable. Connections always win at runtime.
 
 The composition is runtime-faithful: border fill -> connection strips from
-the neighbours' real .blk (via gen_map_headers.get_connection) -> centre ->
-border overrides (editable ring only).
+the neighbours' real .blk (via gen_map_headers.get_connection) -> the map's own
+blocks composed with its schema-2 sidecar -> editable border overrides.
+
+See README.md in this directory for the coordinate units, sidecar schema, CLI
+and the coverage limits of expansion and script adapters.
 """
 from __future__ import annotations
 

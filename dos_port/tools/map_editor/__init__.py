@@ -1,10 +1,14 @@
-"""map_editor — pygame overworld map viewer/editor (docs/current_plan_map_tool.md).
+"""map_editor — port-side overworld map and cutscene authoring.
 
-Built on tools/gfx_core (tile/blockset decode, pret map metadata). C1 ships
-the read-only viewer: it composes each map exactly the way the runtime does —
-border-block fill, then connection strips from the neighbours' real .blk via
-gen_map_headers.get_connection(), then the map's own blocks — so what you see
-is what LoadCurrentMapView will read out of wOverworldMap.
+Composes each map the way the runtime does (border fill, connection strips from
+the neighbours' real .blk via gen_map_headers.get_connection(), then the map's
+own blocks composed with its schema-2 sidecar), so what the GUI shows is what
+LoadCurrentMapView reads out of wOverworldMap.
 
-Entry point: python3 tools/map_editor/editor.py <MAP_CONST> [--zoom N]
+Pret's map/object/header sources are read-only specification. Writes go to
+dos_port/assets/map_overrides/<Pascal>.json or to a port script under
+dos_port/src/scripts/.
+
+Front ends: editor.py (pygame) and cli.py (JSON). Both call commands.py, which
+is the only mutation surface. See README.md for units, schema, CLI and limits.
 """
