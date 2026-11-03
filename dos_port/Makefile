@@ -3888,9 +3888,26 @@ fidelity-full-serial:
 # that is a hard FileNotFoundError (CI 32646793945), while a developer tree hides
 # it because gitignored assets/ accumulates. Do not rely on ordering in the
 # `assets:` list -- that is racy under -j. See memory ci-clean-tree-generator-order-traps.
+#
+# THE DIRECTORY IS ALSO A PREREQUISITE, ON PURPOSE. `$(wildcard …)` lists the
+# sidecars that exist NOW, so DELETING one removes it from the prerequisite list
+# and make sees nothing newer than the target: the deleted map keeps its expanded
+# dimensions and blob forever. Measured 2026-11-03 — removing PalletTown.json left
+# PALLET_TOWN_HEIGHT at 10 (expanded) instead of 9 until the generator was touched.
+# The directory's mtime moves on add/remove/rename, so listing it catches exactly
+# the cases the wildcard cannot. Modifying a sidecar's contents still needs the
+# wildcard entry, so both are required.
+# The sidecar directory is a prerequisite of the map-asset rules (see the
+# wildcard/deletion note below), so give make a rule to create it: on a tree where
+# assets/map_overrides/ does not exist yet the prerequisite would otherwise be a
+# hard "No rule to make target".
+assets/map_overrides:
+	mkdir -p $@
+
 assets/overworld_gfx.inc assets/overworld_blocks.inc assets/pallet_town_blk.inc &: \
 		assets/script_constants.inc assets/pret_ram.inc \
 		tools/generators/map_expansion.py tools/map_editor/schema.py \
+		assets/map_overrides \
 		$(wildcard assets/map_overrides/*.json)
 	python3 tools/generators/gen_all_assets.py
 
@@ -3905,12 +3922,16 @@ endif
 # NB: these had NO prerequisites, so once the .inc files existed the rule never fired
 # again — editing the generator or the pret map data silently shipped stale headers
 # (this hid the border-6 connection-clamp bug for a month). Keep the inputs listed.
+# `assets/map_overrides` (the directory) is listed for the same reason as the assets
+# rule above: a DELETED sidecar drops out of the wildcard and would otherwise never
+# force a regeneration.
 assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc assets/rom_window.inc: \
     tools/generators/gen_map_headers.py \
     tools/generators/map_expansion.py tools/map_editor/schema.py tools/map_editor/objects.py \
     ../constants/map_constants.asm \
     $(wildcard ../data/maps/headers/*.asm) \
     $(wildcard ../data/maps/objects/*.asm) \
+    assets/map_overrides \
     $(wildcard assets/map_overrides/*.json)
 	python3 tools/generators/gen_map_headers.py $(GEN_MAP_HEADERS_FLAGS)
 
