@@ -51,6 +51,16 @@ def main(argv: list[str] | None = None) -> int:
     move.add_argument("--y", type=int, required=True)
     move.add_argument("--x", type=int, required=True)
     move.add_argument("--write", action="store_true")
+    route = subs.add_parser('route')
+    rsub = route.add_subparsers(dest='route_command', required=True)
+    rscan = rsub.add_parser('scan')
+    rscan.add_argument('map')
+    rset = rsub.add_parser('set')
+    rset.add_argument('map')
+    rset.add_argument('--label', required=True)
+    rset.add_argument('--sha256', required=True)
+    rset.add_argument('--bytes-file', type=Path, required=True)
+    rset.add_argument('--write', action='store_true')
     expand = subs.add_parser("expand")
     expand.add_argument("map")
     for edge in ("north", "west", "south", "east"):
@@ -84,6 +94,12 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 result = commands.move_script_coordinate(args.map, args.index, args.sha256,
                                                          args.y, args.x, args.write)
+        elif args.command == 'route':
+            if args.route_command == 'scan':
+                result = commands.scan_routes(args.map)
+            else:
+                result = commands.set_route(args.map, args.label, args.sha256,
+                                            json.loads(args.bytes_file.read_text()), args.write)
         else:
             result = commands.render(args.map, out=args.out, zoom=args.zoom,
                                      palette_mode=args.palette, last_map=args.last_map)

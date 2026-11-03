@@ -8,7 +8,8 @@ View controls:
   drag / arrows    pan                     + / -   zoom
    G  block grid    T  tile grid            W  warp markers
    N  NPC markers   V/H/R port/GB/reach frames (click sets player tile)
-   I  coordinate inspector
+   I  coordinate inspector  C  toggle palette  O  cycle route preview
+   click/drag NPC     move in 16px map squares; property panel edits its fields
   Tab              cycle to the next map with a header
   Esc / close      quit (warns if unsaved paint)
 
@@ -17,8 +18,8 @@ Paint mode (P toggles; edits the map_borders/<CONST>.json sidecar):
   right click      eyedropper (pick block under cursor)
   click palette    select block                F  flood fill
   Ctrl+Z           undo                        S  save sidecar
-  Connection strips and the real map area are locked (drawn dimmed) —
-  connections always win at runtime; the generator re-validates on regen.
+   Connection strips are locked (drawn dimmed); map blocks and the border ring
+   are editable. Connections always win at runtime.
 
 The composition is runtime-faithful: border fill -> connection strips from
 the neighbours' real .blk (via gen_map_headers.get_connection) -> centre ->
@@ -74,6 +75,8 @@ class Viewer:
         self.selected_object = None
         self.object_menu = None
         self.menu_offset = 0
+        self.route_index = -1
+        self.route_options = []
         self.painting = False
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 700),
@@ -107,6 +110,12 @@ class Viewer:
         self.selected_object = None
         self.object_drag = None
         self.object_menu = None
+        self.route_index = -1
+        try:
+            from map_editor import commands
+            self.route_options = commands.scan_routes(const)['routes']
+        except (ValueError, OSError):
+            self.route_options = []
         pygame.display.set_caption(
             f"map_editor — {const} ({self.cm.info.w}x{self.cm.info.h} blocks,"
             f" {self.cm.info.tileset_name})")
@@ -406,6 +415,19 @@ class Viewer:
                 rect_px(px, py, TILE * 2, TILE * 2, color, 2)
                 if s['stable_id'] == self.selected_object:
                     rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
+        if self.route_index >= 0 and self.selected_object:
+            from map_editor import routes, scripts
+            actor = next((s for s in self.cm.sprites if s['stable_id'] == self.selected_object), None)
+            if actor:
+                route = self.route_options[self.route_index]
+                y, x = actor['trace']['final']
+                trace = routes.preview(scripts.TileYX(y, x), routes.decode(bytes(route['bytes'])))
+                points = [(ox + (p.x + view.BORDER * 4 + 1) * TILE * z,
+                           oy + (p.y + view.BORDER * 4 + 1) * TILE * z) for p in trace]
+                if len(points) > 1:
+                    pygame.draw.lines(self.screen, (190, 100, 255), False, points, 3)
+                for point in points:
+                    pygame.draw.circle(self.screen, (190, 100, 255), point, max(2, 3 * z))
         if (self.show["port_view"] or self.show["gb_view"]
                 or self.show["render_reach"]) and self.player:
             win, sur = view.viewport_rect(self.cm, self.player[1],
@@ -436,7 +458,7 @@ class Viewer:
         mode = (f"PAINT block 0x{self.current_block:02X} "
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
                 if self.paint else
-                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect Tab next")
+                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
@@ -480,6 +502,8 @@ class Viewer:
                           f"AΔ: {trace['automatic_delta']} F: {trace['final']}"]
             else:
                 lines += ["Inspector", "Select an NPC or move over the map"]
+        if self.route_index >= 0:
+            lines.append('Preview (selected NPC): ' + self.route_options[self.route_index]['label'])
         width = max(self.font.size(line)[0] for line in lines) + 12
         panel = pygame.Surface((width, len(lines) * 16 + 8), pygame.SRCALPHA)
         panel.fill((20, 20, 26, 205))
@@ -537,6 +561,10 @@ class Viewer:
                     elif ev.key == pygame.K_c:
                         self.palette_mode = 'dmg' if self.palette_mode == 'port-cgb' else 'port-cgb'
                         self.refresh_palette()
+                    elif ev.key == pygame.K_o:
+                        self.route_index += 1
+                        if self.route_index >= len(self.route_options):
+                            self.route_index = -1
                     elif ev.key == pygame.K_TAB:
                         if self.dirty:
                             print("WARNING: switching map with unsaved paint")

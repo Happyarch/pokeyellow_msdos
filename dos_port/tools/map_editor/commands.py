@@ -145,6 +145,49 @@ def move_script_coordinate(ref: str, index: int, digest: str, y: int, x: int,
             'span_sha256': binding.span.digest}
 
 
+def scan_routes(ref: str) -> dict[str, Any]:
+    from map_editor import routes
+    script = scan_scripts(ref)
+    bindings = routes.scan(Path(script['path']))
+    return {'schema': 1, 'written': False, 'map': script['map'],
+            'path': script['path'], 'sha256': script['sha256'],
+            'coverage': {'complete': False, 'adapter': 'direct literal streams only'},
+            'routes': [{'label': b.label, 'drivers': b.drivers,
+                        'bytes': list(b.values),
+                        'operations': [asdict(op) for op in routes.decode(b.values)]}
+                       for b in bindings]}
+
+
+def set_route(ref: str, label: str, digest: str, values: list[int],
+              write: bool = False) -> dict[str, Any]:
+    from map_editor import routes
+    result = scan_routes(ref)
+    if result['sha256'] != digest:
+        raise ValueError('script changed since scan; rescan before writing')
+    path = Path(result['path'])
+    binding = next((b for b in routes.scan(path) if b.label == label), None)
+    if binding is None:
+        raise ValueError(f'no recognized direct route {label!r}')
+    if (not isinstance(values, list) or not values or any(type(v) is not int or not 0 <= v <= 255 for v in values)
+            or values[-1] != 255 or 255 in values[:-1]):
+        raise ValueError('route must contain byte values with one final 255 terminator')
+    if len(values) != len(binding.values):
+        raise ValueError('route edit must retain its length to preserve source labels and comments')
+    if 'MoveSprite2' in binding.drivers and len(values) > 90:
+        raise ValueError('MoveSprite2 stream exceeds its 90-byte channel')
+    text = path.read_text()
+    for (start, end), value in reversed(list(zip(binding.spans, values))):
+        text = text[:start] + f'0x{value:02X}' + text[end:]
+    if write:
+        import hashlib
+        if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise ValueError('script changed since scan; rescan before writing')
+        path.write_text(text)
+    return {'schema': 1, 'written': write, 'map': result['map'], 'path': str(path),
+            'label': label, 'before': list(binding.values), 'after': values,
+            'diagnostics': ['Inline comments are preserved and may need review after byte changes.']}
+
+
 def set_block(ref: str, *, y: int, x: int, block: int, write: bool) -> dict[str, Any]:
     const = resolve_map(ref)
     info = pm.map_info(const)

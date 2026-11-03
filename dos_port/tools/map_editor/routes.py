@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
+from pathlib import Path
 
 from map_editor.scripts import TileYX
 
@@ -46,6 +48,8 @@ def preview(anchor: TileYX, ops: list[RouteOp]) -> list[TileYX]:
     out = [anchor]
     pos = anchor
     for op in ops:
+        if op.kind in ('unknown', 'unsafe_special', 'change_facing_unknown'):
+            break  # later positions are not safely predictable
         table = _STEP if op.kind == "step" else _QUICK if op.kind == "quick_step" else None
         if table and op.byte in table:
             dy, dx, _ = table[op.byte]
@@ -53,3 +57,73 @@ def preview(anchor: TileYX, ops: list[RouteOp]) -> list[TileYX]:
             pos = pos.translated(dy * 2, dx * 2)
             out.append(pos)
     return out
+
+
+@dataclass(frozen=True)
+class RouteBinding:
+    label: str
+    drivers: tuple[str, ...]
+    values: bytes
+    spans: tuple[tuple[int, int], ...]
+
+
+def scan(path: Path) -> list[RouteBinding]:
+    """Recognize literal byte streams bound directly to MoveSprite drivers.
+
+    This deliberately does not infer computed pointers or generated macros.
+    Numeric byte spans are retained separately so checked edits preserve all
+    labels, surrounding assembly and comments.
+    """
+    text = path.read_text()
+    lines = text.splitlines(keepends=True)
+    offsets = []
+    at = 0
+    for line in lines:
+        offsets.append(at)
+        at += len(line)
+    labels = {}
+    for i, line in enumerate(lines):
+        match = re.match(r'^\s*([A-Za-z_]\w*):\s*(?:;.*)?$', line.rstrip('\r\n'))
+        if match:
+            labels[match.group(1)] = i
+    direct = {}
+    for i, line in enumerate(lines):
+        call = re.match(r'^\s*call\s+(MoveSprite2?)\b', line)
+        if not call:
+            continue
+        driver = call.group(1)
+        seen_registers = set()
+        for previous in reversed(lines[max(0, i-12):i]):
+            if re.match(r'^\s*[A-Za-z_]\w*:', previous):
+                break
+            m = re.match(r'^\s*mov\s+(edi|edx)\s*,\s*([^;\s]+)\s*(?:;.*)?$',
+                         previous.rstrip('\r\n'), re.IGNORECASE)
+            if m:
+                register = m.group(1).lower()
+                if register in seen_registers:
+                    continue
+                seen_registers.add(register)
+                if (register == 'edi' or driver == 'MoveSprite2') and re.fullmatch(r'[A-Za-z_]\w*', m.group(2)):
+                    direct.setdefault(m.group(2), set()).add(driver)
+    found = []
+    for label, drivers in sorted(direct.items()):
+        if label not in labels:
+            continue
+        values, spans = [], []
+        for i in range(labels[label] + 1, len(lines)):
+            line = lines[i]
+            if re.match(r'^\s*(?:;.*)?$', line.rstrip('\r\n')) or re.match(r'^\s*[A-Za-z_]\w*:\s*$', line.rstrip('\r\n')):
+                continue
+            match = re.match(r'^\s*db\s+(0x[0-9a-fA-F]+|\$[0-9a-fA-F]+|\d+)\s*(?:;.*)?$', line.rstrip('\r\n'), re.IGNORECASE)
+            if not match:
+                break
+            literal = match.group(1)
+            value = int(literal[1:], 16) if literal.startswith('$') else int(literal, 0)
+            if value > 255:
+                break
+            values.append(value)
+            spans.append((offsets[i] + match.start(1), offsets[i] + match.end(1)))
+            if value == 255:
+                found.append(RouteBinding(label, tuple(sorted(drivers)), bytes(values), tuple(spans)))
+                break
+    return found
