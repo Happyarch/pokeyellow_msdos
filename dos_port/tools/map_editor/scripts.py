@@ -60,10 +60,15 @@ def scan_coordinate_macros(path: Path) -> list[CoordinateBinding]:
     """Find editable macro coordinates; macro source is (X,Y), model is (Y,X)."""
     text = path.read_text()
     result = []
-    for match in _COORD.finditer(text):
-        result.append(CoordinateBinding(
-            match.group("macro"), TileYX(int(match.group("y")), int(match.group("x"))),
-            SourceSpan.from_text(path, match.start(), match.end(), text), match.group(0)))
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        code = line.split(';', 1)[0]
+        for match in _COORD.finditer(code):
+            start, end = offset + match.start(), offset + match.end()
+            result.append(CoordinateBinding(
+                match.group("macro"), TileYX(int(match.group("y")), int(match.group("x"))),
+                SourceSpan.from_text(path, start, end, text), match.group(0)))
+        offset += len(line)
     return result
 
 
@@ -71,6 +76,8 @@ def translate_binding(binding: CoordinateBinding, *, dy: int, dx: int,
                       write: bool = False) -> CoordinateBinding:
     """Translate one direct script macro without touching unrelated source."""
     tile = binding.tile.translated(dy, dx)
+    if not (0 <= tile.y <= 255 and 0 <= tile.x <= 255):
+        raise ValueError("script coordinate must fit in a byte")
     replacement = f"{binding.kind} {tile.x}, {tile.y}"
     if write:
         binding.span.replace(replacement)

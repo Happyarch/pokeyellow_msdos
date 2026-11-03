@@ -1,0 +1,58 @@
+"""Composition of pret object records with port-side map diffs."""
+from __future__ import annotations
+
+import hashlib
+
+from map_editor import schema
+
+
+def source_id(label: str, source: str, occurrence: int) -> str:
+    digest = hashlib.sha256((label + "\0" + source.strip()).encode()).hexdigest()[:16]
+    return f"base:{digest}:{occurrence}"
+
+
+def lower(label, border, warps, signs, sprites, tables):
+    """Return fresh lowered records; sprite MAP coordinates include GB's +4."""
+    diff = schema.load(label)
+    dy, dx = diff.extents.tile_delta()
+    result_warps = [(y + dy, x + dx, dest, ident) for y, x, dest, ident in warps]
+    result_signs = [{**s, 'y': s['y'] + dy, 'x': s['x'] + dx} for s in signs]
+    result_sprites = []
+    seen = set()
+    for base in sprites:
+        npc = dict(base)
+        ident = npc['stable_id']
+        seen.add(ident)
+        override = diff.objects.get(ident, {})
+        if not isinstance(override, dict):
+            raise ValueError(f"{label}: override {ident} must be an object")
+        unknown = set(override) - {'manual_delta_tile', 'sprite', 'movement', 'facing'}
+        if unknown:
+            raise ValueError(f"{label}: unknown object fields: {sorted(unknown)}")
+        manual = override.get('manual_delta_tile', [0, 0])
+        if not isinstance(manual, list) or len(manual) != 2 or any(type(v) is not int for v in manual):
+            raise ValueError(f"{label}: invalid manual_delta_tile for {ident}")
+        y, x = npc['mapy'] + dy + manual[0], npc['mapx'] + dx + manual[1]
+        if not (0 <= y <= 255 and 0 <= x <= 255):
+            raise ValueError(f"{label}: {ident} MAPY/MAPX outside byte range")
+        npc['mapy'], npc['mapx'] = y, x
+        for field, dest in (('sprite', 'sprite_id'), ('movement', 'mov'), ('facing', 'dir')):
+            if field in override:
+                name = override[field]
+                if name not in tables[field]:
+                    raise ValueError(f"{label}: invalid {field} {name!r}")
+                npc[dest] = tables[field][name]
+        npc['trace'] = {'base': [base['mapy'] - 4, base['mapx'] - 4],
+                        'manual_delta': manual, 'automatic_delta': [dy, dx],
+                        'final': [y - 4, x - 4]}
+        result_sprites.append(npc)
+    missing = set(diff.objects) - seen
+    if missing:
+        raise ValueError(f"{label}: object overrides refer to missing sources: {sorted(missing)}")
+    for y, x, *_ in result_warps:
+        if not (0 <= y <= 255 and 0 <= x <= 255):
+            raise ValueError(f"{label}: warp position outside byte range")
+    for sign in result_signs:
+        if not (0 <= sign['y'] <= 255 and 0 <= sign['x'] <= 255):
+            raise ValueError(f"{label}: sign position outside byte range")
+    return border, result_warps, result_signs, result_sprites

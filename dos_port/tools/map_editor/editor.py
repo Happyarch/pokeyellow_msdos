@@ -69,6 +69,8 @@ class Viewer:
         self.player = None          # map-local tile (x, y) for frame references
         self.cursor_tile = None     # map-local (x, y), updated from mouse motion
         self.drag = None
+        self.object_drag = None
+        self.selected_object = None
         self.painting = False
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 700),
@@ -99,6 +101,8 @@ class Viewer:
         self.dirty = False
         self.current_block = self.cm.border_block
         self.save_error = ""
+        self.selected_object = None
+        self.object_drag = None
         pygame.display.set_caption(
             f"map_editor — {const} ({self.cm.info.w}x{self.cm.info.h} blocks,"
             f" {self.cm.info.tileset_name})")
@@ -326,6 +330,8 @@ class Viewer:
                 color = MARK_TRAINER if s["is_trainer"] else \
                     MARK_ITEM if s["is_item"] else MARK_NPC
                 rect_px(px, py, TILE, TILE, color, 2)
+                if s['stable_id'] == self.selected_object:
+                    rect_px(px - 1, py - 1, TILE + 2, TILE + 2, (255, 255, 255), 1)
         if (self.show["port_view"] or self.show["gb_view"]
                 or self.show["render_reach"]) and self.player:
             win, sur = view.viewport_rect(self.cm, self.player[1],
@@ -388,8 +394,15 @@ class Viewer:
                  f"{self.cm.info.w}×{self.cm.info.h} B",
                  f"{cursor}{block}", f"Layers: {layers or '—'}"]
         if self.show["inspector"]:
-            lines += ["Inspector", "P/U/A/F: cursor trace" if self.cursor_tile
-                      else "Move cursor over the authored map"]
+            selected = next((s for s in self.cm.sprites
+                             if s['stable_id'] == self.selected_object), None)
+            if selected:
+                trace = selected['trace']
+                lines += [f"Object {selected['stable_id']}",
+                          f"P: {trace['base']} UΔ: {trace['manual_delta']}",
+                          f"AΔ: {trace['automatic_delta']} F: {trace['final']}"]
+            else:
+                lines += ["Inspector", "Select an NPC or move over the map"]
         width = max(self.font.size(line)[0] for line in lines) + 12
         panel = pygame.Surface((width, len(lines) * 16 + 8), pygame.SRCALPHA)
         panel.fill((20, 20, 26, 205))
@@ -468,6 +481,13 @@ class Viewer:
                     elif self.paint:
                         self.painting = True
                         self.paint_cell(ev.pos)
+                    elif self.show["npcs"] and self.tile_at(ev.pos) is not None and any(
+                            (s['mapx'] - 4, s['mapy'] - 4) == self.tile_at(ev.pos)
+                            for s in self.cm.sprites):
+                        self.object_drag = next(s['stable_id'] for s in self.cm.sprites
+                                                if (s['mapx'] - 4, s['mapy'] - 4)
+                                                == self.tile_at(ev.pos))
+                        self.selected_object = self.object_drag
                     elif (self.show["port_view"] or self.show["gb_view"]
                           or self.show["render_reach"]):
                         self.player = self.tile_at(ev.pos)
@@ -477,6 +497,18 @@ class Viewer:
                     if self.paint:
                         self.eyedrop(ev.pos)
                 elif ev.type == pygame.MOUSEBUTTONUP and ev.button == 1:
+                    if self.object_drag:
+                        tile = self.tile_at(ev.pos)
+                        if tile is not None:
+                            from map_editor import commands
+                            try:
+                                commands.set_object(self.cm.info.const, self.object_drag,
+                                                    y=tile[1], x=tile[0], write=True)
+                                self.cm.sprites = pm.objects(self.cm.info)[3]
+                                self.save_error = ""
+                            except (ValueError, OSError) as exc:
+                                self.save_error = str(exc)
+                        self.object_drag = None
                     self.drag = None
                     self.painting = False
                 elif ev.type == pygame.MOUSEMOTION:

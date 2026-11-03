@@ -29,6 +29,21 @@ def main(argv: list[str] | None = None) -> int:
     set_block.add_argument("--x", type=int, required=True)
     set_block.add_argument("--block", type=lambda s: int(s, 0), required=True)
     set_block.add_argument("--write", action="store_true")
+    objects = subs.add_parser("objects")
+    osub = objects.add_subparsers(dest="objects_command", required=True)
+    set_object = osub.add_parser("set")
+    set_object.add_argument("map")
+    set_object.add_argument("--object", required=True)
+    set_object.add_argument("--y", type=int)
+    set_object.add_argument("--x", type=int)
+    set_object.add_argument("--sprite")
+    set_object.add_argument("--movement")
+    set_object.add_argument("--facing")
+    set_object.add_argument("--write", action="store_true")
+    script = subs.add_parser("scripts")
+    ssub = script.add_subparsers(dest="scripts_command", required=True)
+    scan = ssub.add_parser("scan")
+    scan.add_argument("map")
     expand = subs.add_parser("expand")
     expand.add_argument("map")
     for edge in ("north", "west", "south", "east"):
@@ -50,6 +65,12 @@ def main(argv: list[str] | None = None) -> int:
                                           west=args.west_total,
                                           south=args.south_total,
                                           east=args.east_total, write=args.write)
+        elif args.command == "objects":
+            result = commands.set_object(args.map, args.object, y=args.y, x=args.x,
+                                         sprite=args.sprite, movement=args.movement,
+                                         facing=args.facing, write=args.write)
+        elif args.command == "scripts":
+            result = commands.scan_scripts(args.map)
         else:
             result = commands.render(args.map, out=args.out, zoom=args.zoom)
     except (ValueError, OSError) as exc:

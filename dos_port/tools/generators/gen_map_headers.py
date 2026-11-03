@@ -651,6 +651,8 @@ def parse_object_file(label: str, debug_warps: bool = False):
     # Binary layout per macro:  sprite_id, y+4, x+4, mov, dir, text_byte [, extra...]
     # text_byte: plain text_id (std), ITEM|text_id (item, 7 args), TRAINER|text_id (trainer, 8 args)
     sprites = []
+    from map_editor import objects
+    occurrences = {}
     for om in re.finditer(
             r"\bobject_event\b\s+"
             r"([^,\n]+),\s*([^,\n]+),\s*([^,\n]+),\s*([^,\n]+),\s*([^,\n]+),\s*([^,\n]+)"
@@ -677,7 +679,12 @@ def parse_object_file(label: str, debug_warps: bool = False):
         trainer_num   = _resolve_const(arg8.strip(), {}, f"trainer_num in {label}")   if is_trainer else 0
         item_id       = _resolve_const(arg7.strip(), _ITEM_CONSTS, f"item_id in {label}") if is_item    else 0
 
+        source = om.group(0).strip()
+        occurrence = occurrences.get(source, 0)
+        occurrences[source] = occurrence + 1
         sprites.append({
+            'stable_id':     objects.source_id(label, source, occurrence),
+            'source':        source,
             'sprite_id':     sprite_id,
             'mapy':          y + 4,
             'mapx':          x + 4,
@@ -690,7 +697,9 @@ def parse_object_file(label: str, debug_warps: bool = False):
             'item_id':       item_id,
         })
 
-    return border, warps, signs, sprites
+    return objects.lower(label, border, warps, signs, sprites,
+                         {'sprite': _SPRITE_CONSTS, 'movement': _MOV_CONSTS,
+                          'facing': _DIR_CONSTS})
 
 
 def get_connection(direction, conn_map_id, offset,

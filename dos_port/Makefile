@@ -3907,7 +3907,7 @@ endif
 # (this hid the border-6 connection-clamp bug for a month). Keep the inputs listed.
 assets/map_headers.inc assets/extra_includes.inc assets/map_dims.inc assets/rom_window.inc: \
     tools/generators/gen_map_headers.py \
-    tools/generators/map_expansion.py tools/map_editor/schema.py \
+    tools/generators/map_expansion.py tools/map_editor/schema.py tools/map_editor/objects.py \
     ../constants/map_constants.asm \
     $(wildcard ../data/maps/headers/*.asm) \
     $(wildcard ../data/maps/objects/*.asm) \

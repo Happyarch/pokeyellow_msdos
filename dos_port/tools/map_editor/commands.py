@@ -58,10 +58,71 @@ def inspect_map(ref: str) -> dict[str, Any]:
         "units": {"coordinates": "[y,x]", "blocks": "32x32 px",
                   "tiles": "8x8 px"},
         "extent_blocks": asdict(diff.extents),
+        "objects": (pm.objects(info) or (0, [], [], []))[3],
         "overrides": {"base_blocks": len(diff.base_blocks),
                       "added_blocks": len(diff.added_blocks),
                       "recipes": len(diff.recipes), "objects": len(diff.objects)},
     }
+
+
+def set_object(ref: str, object_id: str, *, y: int | None = None,
+               x: int | None = None, sprite: str | None = None,
+               movement: str | None = None, facing: str | None = None,
+               write: bool = False) -> dict[str, Any]:
+    const = resolve_map(ref)
+    info = pm.map_info(const)
+    if not info.label:
+        raise ValueError(f"{const}: no object file")
+    parsed = pm.objects(info)
+    if parsed is None:
+        raise ValueError(f"{const}: no object file")
+    npc = next((s for s in parsed[3] if s['stable_id'] == object_id), None)
+    if npc is None:
+        raise ValueError(f"{const}: unknown object {object_id!r}")
+    if (y is None) != (x is None):
+        raise ValueError("--y and --x must be supplied together")
+    diff = schema.load(info.label)
+    override = dict(diff.objects.get(object_id, {}))
+    if y is not None:
+        if not (0 <= y <= 251 and 0 <= x <= 251):
+            raise ValueError("object coordinates must fit MAPY/MAPX after +4")
+        by, bx = npc['trace']['base']
+        dy, dx = diff.extents.tile_delta()
+        override['manual_delta_tile'] = [y - by - dy, x - bx - dx]
+    for field, value, table in (
+            ('sprite', sprite, pm.gmh._SPRITE_CONSTS),
+            ('movement', movement, pm.gmh._MOV_CONSTS),
+            ('facing', facing, pm.gmh._DIR_CONSTS)):
+        if value is not None:
+            if value not in table:
+                raise ValueError(f"invalid {field} {value!r}")
+            override[field] = value
+    if not override:
+        raise ValueError("no object changes specified")
+    diff.objects[object_id] = override
+    if write:
+        schema.write(diff)
+    return {'schema': 1, 'written': write, 'map': _identity(const),
+            'object': object_id, 'changes': override,
+            'units': {'coordinate': 'tile [y,x]'}}
+
+
+def scan_scripts(ref: str) -> dict[str, Any]:
+    from map_editor import scripts
+    const = resolve_map(ref)
+    info = pm.map_info(const)
+    if not info.label:
+        raise ValueError(f"{const}: no script label")
+    path = schema.ROOT / 'dos_port' / 'src' / 'scripts' / f'{info.label}.asm'
+    if not path.is_file():
+        raise ValueError(f"{const}: script file not found: {path}")
+    bindings = scripts.scan_coordinate_macros(path)
+    return {'schema': 1, 'written': False, 'map': _identity(const),
+            'path': str(path), 'coverage': {'adapter': 'coordinate macros only',
+            'complete': False}, 'bindings': [
+                {'index': i, 'kind': b.kind, 'coordinate': [b.tile.y, b.tile.x],
+                 'span': [b.span.start, b.span.end], 'sha256': b.span.digest}
+                for i, b in enumerate(bindings)]}
 
 
 def set_block(ref: str, *, y: int, x: int, block: int, write: bool) -> dict[str, Any]:
