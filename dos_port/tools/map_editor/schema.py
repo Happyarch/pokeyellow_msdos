@@ -153,6 +153,28 @@ def final_to_base(diff: MapDiff, y: int, x: int, base_w: int,
     return None
 
 
+def recipe_cells(diff: MapDiff, base_w: int, base_h: int) -> set[tuple[int, int]]:
+    """Final-canvas cells a recipe writes, so callers can avoid clobbering them.
+
+    Recipes run before `added_blocks` in compose_layout, so an explicit added
+    cell would silently overwrite a recipe's generated content.  The map
+    expander uses this set to fill only genuinely uncovered new cells.
+    """
+    e = diff.extents
+    covered: set[tuple[int, int]] = set()
+    for recipe in diff.recipes:
+        if recipe.get("kind") != "repeat_base_column" or recipe.get("edge") != "east":
+            continue
+        count = recipe.get("count")
+        if not isinstance(count, int):
+            continue
+        edge = e.west + base_w - 1
+        for y in range(e.north, e.north + base_h):
+            for x in range(edge, edge + count + 1):
+                covered.add((y, x))
+    return covered
+
+
 def _apply_recipe(canvas: bytearray, width: int, height: int, base: bytes,
                   base_w: int, base_h: int, ext: Extents, recipe: dict) -> None:
     """Apply compact authored expansion recipes before explicit cells.
@@ -166,7 +188,7 @@ def _apply_recipe(canvas: bytearray, width: int, height: int, base: bytes,
     count = recipe.get("count")
     if not isinstance(source_x, int) or not isinstance(count, int):
         raise ValueError(f"invalid repeat_base_column recipe {recipe!r}")
-    if count != ext.east or not 0 <= source_x < base_w - 1:
+    if not (0 <= count <= ext.east) or not 0 <= source_x < base_w - 1:
         raise ValueError(f"recipe does not match east extent/base width: {recipe!r}")
     row_overrides = recipe.get("row_overrides", [])
     if not isinstance(row_overrides, list):

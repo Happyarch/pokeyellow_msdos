@@ -70,10 +70,84 @@ class MapDiffTest(unittest.TestCase):
         self.assertEqual(view.warp_px(None, 0, 0), (view.BORDER * 32,) * 2)
         self.assertEqual(view.sprite_px(None, 4, 4), (view.BORDER * 32,) * 2)
 
-    def test_north_west_write_rejected_until_events_are_relocated(self):
-        with self.assertRaisesRegex(ValueError, "not automatically relocated"):
-            commands.set_extents("PALLET_TOWN", north=1, west=0,
-                                 south=0, east=0, write=True)
+    def test_recipe_cells_protect_generated_columns(self):
+        """The expander must not add explicit cells over a recipe's output."""
+        diff = schema.MapDiff("VermilionDock", schema.Extents(east=8),
+                              recipes=[{"kind": "repeat_base_column", "edge": "east",
+                                        "source_x": 12, "count": 8,
+                                        "row_overrides": [[1, 13]]}])
+        covered = schema.recipe_cells(diff, 14, 6)
+        self.assertEqual(len(covered), 6 * 9)
+        self.assertIn((0, 13), covered)
+        self.assertIn((0, 21), covered)
+        self.assertNotIn((0, 22), covered)
+        self.assertNotIn((0, 12), covered)
+
+    def test_expansion_fills_new_cells_with_border_block(self):
+        info = pm.map_info("PALLET_TOWN")
+        raw = pm.load_blk(info)
+        border = pm.objects(info)[0]
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(schema, "OVERRIDES", root / "overrides"), \
+                 patch.object(schema, "ROOT", root):
+                commands.set_extents("PALLET_TOWN", north=1, west=0,
+                                     south=0, east=0, write=True)
+                diff = schema.load("PalletTown")
+                self.assertEqual(diff.extents.north, 1)
+                composed, width, height, _ = schema.compose_layout(
+                    "PalletTown", raw, info.base_w, info.base_h)
+            self.assertEqual((width, height), (info.base_w, info.base_h + 1))
+            # Original map intact one block down; the new top row is the border.
+            for y in range(info.base_h):
+                row = bytes(composed[(y + 1) * width:(y + 2) * width])
+                self.assertEqual(row, raw[y * info.base_w:(y + 1) * info.base_w])
+            self.assertEqual(bytes(composed[:width]), bytes([border]) * width)
+        pm._constants.cache_clear()
+        pm.map_info.cache_clear()
+
+    def test_generator_sees_expanded_dimensions_and_objects(self):
+        """Header generation and object lowering share the one expansion diff."""
+        info = pm.map_info("PALLET_TOWN")
+        npc_before = pm.gmh.parse_object_file(info.label)[3][0]
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.object(schema, "OVERRIDES", root / "overrides"), \
+                 patch.object(schema, "ROOT", root):
+                commands.set_extents("PALLET_TOWN", north=1, west=2,
+                                     south=0, east=0, write=True)
+                dims = pm.gmh.parse_map_constants()
+                raw = pm.gmh.parse_map_constants(expand=False)
+                npc_after = pm.gmh.parse_object_file(info.label)[3][0]
+            self.assertEqual(dims["PALLET_TOWN"][1:], (12, 10))
+            self.assertEqual(raw["PALLET_TOWN"][1:], (10, 9))
+        # north 1 block = 2 map squares; west 2 blocks = 4 map squares.
+        self.assertEqual(npc_after["mapy"], npc_before["mapy"] + 2)
+        self.assertEqual(npc_after["mapx"], npc_before["mapx"] + 4)
+        pm._constants.cache_clear()
+        pm.map_info.cache_clear()
+
+    def test_north_west_expansion_moves_classified_script_once(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'dos_port/src/scripts/PalletTown.asm'
+            path.parent.mkdir(parents=True)
+            path.write_text('db 8, 10 ; dbmapcoord 10, 8\n; dbmapcoord 9, 9\n')
+            with patch.object(schema, 'ROOT', root), patch.object(schema, 'OVERRIDES', root / 'overrides'):
+                result = commands.set_extents('PALLET_TOWN', north=1, west=2,
+                                              south=0, east=0, write=True)
+                self.assertEqual(result['automatic_delta'], [4, 8])
+                self.assertEqual((pm.map_info('PALLET_TOWN').w, pm.map_info('PALLET_TOWN').h), (12, 10))
+                self.assertEqual(path.read_text(), 'db 10, 14 ; dbmapcoord 14, 10\n; dbmapcoord 9, 9\n')
+                self.assertEqual(result['script_changes'][0]['before'], [16, 20])
+                self.assertFalse(result['coverage']['script_coordinates_complete'])
+                self.assertTrue(schema.load('PalletTown').added_blocks)
+                repeated = commands.set_extents('PALLET_TOWN', north=1, west=2,
+                                                south=0, east=0, write=True)
+                self.assertEqual(repeated['automatic_delta'], [0, 0])
+                self.assertEqual(path.read_text(), 'db 10, 14 ; dbmapcoord 14, 10\n; dbmapcoord 9, 9\n')
+            pm._constants.cache_clear()
+            pm.map_info.cache_clear()
 
 
 if __name__ == "__main__":

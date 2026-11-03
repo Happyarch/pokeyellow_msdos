@@ -10,6 +10,7 @@ View controls:
    N  NPC markers   V/H/R port/GB/reach frames (click sets player tile)
    I  coordinate inspector  C  toggle palette  O  cycle route preview
    [ / ] select route step; 1-4 set down/up/left/right (edits port script)
+   Ctrl+Shift+arrow  expand that edge by one 32px block
    click/drag NPC     move in 16px map squares; property panel edits its fields
   Tab              cycle to the next map with a header
   Esc / close      quit (warns if unsaved paint)
@@ -40,7 +41,7 @@ from gfx_core import pret_maps as pm            # noqa: E402
 from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
-from map_editor import borders, overrides, view, palette, sprites  # noqa: E402
+from map_editor import borders, overrides, view, palette, sprites, schema  # noqa: E402
 
 MARK_WARP = (255, 60, 60)
 MARK_NPC = (60, 120, 255)
@@ -576,6 +577,27 @@ class Viewer:
         i = consts.index(self.cm.info.const)
         self.load(consts[(i + 1) % len(consts)])
 
+    def expand_edge(self, edge):
+        from map_editor import commands
+        if self.dirty:
+            self.save()
+            if self.save_error:
+                return
+        info = self.cm.info
+        diff = schema.load(info.label or pm.gmh.const_to_pascal(info.const))
+        totals = {name: getattr(diff.extents, name) for name in ('north', 'west', 'south', 'east')}
+        totals[edge] += 1
+        try:
+            result = commands.set_extents(info.const, **totals, write=True)
+            for message in result['diagnostics']:
+                print(f'EXPANSION REVIEW: {message}')
+            if self.player:
+                self.player = (self.player[0] + result['automatic_delta'][1],
+                               self.player[1] + result['automatic_delta'][0])
+            self.load(info.const)
+        except (ValueError, OSError) as exc:
+            self.save_error = str(exc)
+
     # ── event loop ───────────────────────────────────────────────────────────
 
     def run(self):
@@ -592,6 +614,10 @@ class Viewer:
                         if self.dirty:
                             print("WARNING: quit with unsaved paint")
                         return
+                    elif (mods & pygame.KMOD_CTRL and mods & pygame.KMOD_SHIFT
+                          and ev.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)):
+                        self.expand_edge({pygame.K_UP: 'north', pygame.K_DOWN: 'south',
+                                          pygame.K_LEFT: 'west', pygame.K_RIGHT: 'east'}[ev.key])
                     elif ev.key == pygame.K_p:
                         self.paint = not self.paint
                     elif ev.key == pygame.K_s:

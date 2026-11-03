@@ -215,14 +215,14 @@ def set_block(ref: str, *, y: int, x: int, block: int, write: bool) -> dict[str,
 
 def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
                 write: bool) -> dict[str, Any]:
+    from map_editor import scripts
+    import hashlib
     const = resolve_map(ref)
     info = pm.map_info(const)
     pascal = info.label or pm.gmh.const_to_pascal(const)
     diff = schema.load(pascal)
     old = asdict(diff.extents)
-    if write and (north != diff.extents.north or west != diff.extents.west):
-        raise ValueError("north/west expansion cannot be written yet: map events and "
-                         "script coordinates are not automatically relocated")
+    old_width, old_height = diff.extents.dimensions(info.base_w, info.base_h)
     _diff, tile_delta = schema.set_absolute_extents(
         diff, north=north, west=west, south=south, east=east)
     width, height = diff.extents.dimensions(info.base_w, info.base_h)
@@ -230,15 +230,70 @@ def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
     footprint = (width + 2 * border) * (height + 2 * border)
     if footprint > 2304:
         raise ValueError(f"expanded padded map consumes {footprint} bytes, limit is 2304")
+    # New cells get an explicit initial fill rather than implicitly becoming
+    # block zero, but never over a recipe: recipes run before added_blocks in
+    # compose_layout, so an explicit cell there would erase generated content
+    # (the Dock's inserted sea columns are exactly this case).
+    shift_y, shift_x = tile_delta[0] // 4, tile_delta[1] // 4
+    border_block = (pm.objects(info) or (0, [], [], []))[0]
+    covered = schema.recipe_cells(diff, info.base_w, info.base_h)
+    for y in range(height):
+        for x in range(width):
+            in_old = (shift_y <= y < shift_y + old_height
+                      and shift_x <= x < shift_x + old_width)
+            if not in_old and (y, x) not in covered:
+                diff.added_blocks.setdefault((y, x), border_block)
+
+    script_path = schema.ROOT / 'dos_port' / 'src' / 'scripts' / f'{pascal}.asm'
+    original = replacement = None
+    source_hash = None
+    changes = []
+    diagnostics = []
+    if tile_delta != (0, 0):
+        if script_path.exists():
+            original = script_path.read_text()
+            source_hash = hashlib.sha256(original.encode()).hexdigest()
+            bindings = scripts.scan_coordinate_macros(script_path)
+            replacement = original
+            for binding in reversed(bindings):
+                edited = scripts.translate_binding(binding, dy=tile_delta[0], dx=tile_delta[1])
+                replacement = (replacement[:binding.span.start] + edited.source
+                               + replacement[binding.span.end:])
+                changes.append({'kind': binding.kind,
+                                'before': [binding.tile.y, binding.tile.x],
+                                'after': [edited.tile.y, edited.tile.x],
+                                'span': [binding.span.start, binding.span.end]})
+            changes.reverse()
+            diagnostics.append('Only classified script coordinates are updated; review unparsed script code manually.')
+        else:
+            diagnostics.append('No matching port script file was found; script coordinate coverage is unavailable.')
+    if pm.CONNECTIONS.get(const):
+        diagnostics.append('Connection seams are not automatically rewritten.')
     if write:
-        schema.write(diff)
+        if original is not None and replacement != original:
+            if hashlib.sha256(script_path.read_bytes()).hexdigest() != source_hash:
+                raise ValueError('script changed since scan; expansion was not written')
+            script_path.write_text(replacement)
+            try:
+                schema.write(diff)
+            except Exception:
+                # Roll back only if the exact text we wrote remains present.
+                if script_path.read_text() == replacement:
+                    script_path.write_text(original)
+                raise
+        else:
+            schema.write(diff)
+        # Metadata is cached by the shared viewer/parser. Dimensions changed in
+        # this process, so subsequent commands must see the new extents.
+        pm._constants.cache_clear()
+        pm.map_info.cache_clear()
     return {"schema": 1, "written": write, "map": _identity(const),
             "units": {"extents": "blocks", "automatic_delta": "tiles [y,x]"},
             "old_extents": old, "new_extents": asdict(diff.extents),
             "automatic_delta": list(tile_delta),
             "port_blocks": {"width": width, "height": height},
-            "diagnostics": ["connection seams are not automatically rewritten"]
-            if pm.CONNECTIONS.get(const) else []}
+            "script_changes": changes, "diagnostics": diagnostics,
+            "coverage": {"script_coordinates_complete": False}}
 
 
 def render(ref: str, *, out: Path, zoom: int = 1, palette_mode: str = 'dmg',
