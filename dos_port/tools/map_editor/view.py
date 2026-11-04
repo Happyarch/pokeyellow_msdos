@@ -312,8 +312,8 @@ def viewport_rect(cm: ComposedMap, py: int, px_: int):
     the window's top-left tile = player tile - (19, 11) in padded coords
     (40/2-1, 25/2 rounded), plus the 12-tile pad. Returns (x, y, w, h) px.
     Also returns the 12x9-block wSurroundingTiles reach as a second rect."""
-    x, y, w, h = viewport_tile_rect(py, px_, "dos")
-    win = (x * TILE, y * TILE, w * TILE, h * TILE)
+    x, y, w, h = viewport_px(py, px_, "dos")
+    win = (x, y, w, h)
     # LoadCurrentMapView reads SCREEN_BLOCK_WIDTH x SCREEN_BLOCK_HEIGHT
     # (12x9) blocks starting one block up-left of the view pointer; approximate
     # centred on the player block:
@@ -330,55 +330,60 @@ def gb_viewport_rect(cm: ComposedMap, py: int, px_: int):
     This is intentionally a size/frame reference for staging, not an emulation
     of the original GB camera's edge scroll rules.
     """
-    x, y, w, h = viewport_tile_rect(py, px_, "gb")
-    return (x * TILE, y * TILE, w * TILE, h * TILE)
+    return viewport_px(py, px_, "gb")
 
 
 # ── viewport probe: what the camera shows from a step ───────────────────────
 #
-# The player stands on a 16 px STEP (2x2 tiles) and the camera keeps that step
-# near the screen centre, so the visible window is a fixed-size rectangle at a
-# fixed tile offset from the step's top-left tile. "dos" is the port's 320x200
-# window (40x25 tiles); "gb" is the 160x144 reference (20x18 tiles).
+# The camera keeps the player's 16 px step at the CENTRE of the screen, so the
+# visible window is the step's centre +/- half the screen. Both window sizes are
+# even, so this is exact in pixels; the DOS window is 25 tiles (200 px) tall, an
+# ODD number of tiles, which is why the geometry is done in pixels and the sweep
+# mask uses 4 px cells instead of 8 px tiles.
 
-VIEWPORT_TILES = {"dos": (40, 25), "gb": (20, 18)}
-VIEWPORT_OFFSET = {"dos": (19, 11), "gb": (9, 8)}
-
-
-def viewport_tile_rect(tile_y: int, tile_x: int, kind: str):
-    """Padded-TILE rect the camera shows with the player tile at (tile_x, tile_y)."""
-    off_x, off_y = VIEWPORT_OFFSET[kind]
-    w, h = VIEWPORT_TILES[kind]
-    return (tile_x + BORDER * 4 - off_x, tile_y + BORDER * 4 - off_y, w, h)
+VIEWPORT_PX = {"dos": (320, 200), "gb": (160, 144)}
+SWEEP_CELL = 4                      # px per mask cell; divides every origin
 
 
-def step_viewport_tile_rect(step_y: int, step_x: int, kind: str):
+def viewport_px(tile_y: int, tile_x: int, kind: str):
+    """Padded-IMAGE pixel rect the camera shows with the player on that tile.
+
+    The player occupies a 16 px step, so its centre is the tile + TILE.
+    """
+    w, h = VIEWPORT_PX[kind]
+    cx = (tile_x + BORDER * 4) * TILE + TILE
+    cy = (tile_y + BORDER * 4) * TILE + TILE
+    return (cx - w // 2, cy - h // 2, w, h)
+
+
+def step_viewport_px(step_y: int, step_x: int, kind: str):
     """Same rect for a player standing on the map-square step (step_y, step_x)."""
-    return viewport_tile_rect(step_y * 2, step_x * 2, kind)
+    return viewport_px(step_y * 2, step_x * 2, kind)
 
 
 def viewport_sweep(steps, kind: str):
-    """Union of the viewport over a path of (y, x) steps, as a padded-TILE mask.
+    """Union of the viewport over a path of (y, x) steps, as a SWEEP_CELL mask.
 
-    Returns (mask, x0, y0, cols, rows): `mask` is row-major over TILE cells whose
-    top-left is padded tile (x0, y0). The union is the point of the sweep — it is
-    everything that is on screen at SOME point along the path, not one position
-    at a time.
+    Returns (mask, x0, y0, cols, rows) with the origin in padded-image pixels.
+    The union is the point of the sweep — everything that is on screen at SOME
+    point along the path, not one position at a time.
     """
     if not steps:
         return bytearray(), 0, 0, 0, 0
-    rects = [step_viewport_tile_rect(y, x, kind) for (y, x) in steps]
+    rects = [step_viewport_px(y, x, kind) for (y, x) in steps]
     x0 = min(r[0] for r in rects)
     y0 = min(r[1] for r in rects)
-    cols = max(r[0] + r[2] for r in rects) - x0
-    rows = max(r[1] + r[3] for r in rects) - y0
+    cols = (-(-(max(r[0] + r[2] for r in rects) - x0)) // SWEEP_CELL)
+    rows = (-(-(max(r[1] + r[3] for r in rects) - y0)) // SWEEP_CELL)
     mask = bytearray(cols * rows)
     for (rx, ry, w, h) in rects:
-        left = rx - x0
-        run = b"\x01" * w
-        for r in range(ry - y0, ry - y0 + h):
-            start = r * cols + left
-            mask[start:start + w] = run
+        c0 = (rx - x0) // SWEEP_CELL
+        r0 = (ry - y0) // SWEEP_CELL
+        cw, ch = w // SWEEP_CELL, h // SWEEP_CELL
+        run = b"\x01" * cw
+        for r in range(r0, r0 + ch):
+            start = r * cols + c0
+            mask[start:start + cw] = run
     return mask, x0, y0, cols, rows
 
 

@@ -397,13 +397,16 @@ class Viewer:
         return []
 
     def probe_sweep(self, kind):
-        """Cached (x0, y0, horizontal, vertical) outline for one channel."""
+        """Cached (x0, y0, horizontal, vertical) outline for one channel, in px."""
         key = (kind, tuple(self.probe_steps()))
         hit = self._probe_cache.get(key)
         if hit is None:
             mask, x0, y0, cols, rows = view.viewport_sweep(key[1], kind)
             horizontal, vertical = view.mask_edges(mask, cols, rows)
-            hit = (x0, y0, horizontal, vertical)
+            cell = view.SWEEP_CELL
+            hit = (x0, y0,
+                   [(r * cell, c0 * cell, c1 * cell) for (r, c0, c1) in horizontal],
+                   [(c * cell, r0 * cell, r1 * cell) for (c, r0, r1) in vertical])
             self._probe_cache = {key: hit}      # only one path is live at a time
         return hit
 
@@ -1046,19 +1049,21 @@ class Viewer:
         steps = self.probe_steps()
         if not steps:
             return
-        tz = TILE * z
 
+        # Everything below is in padded-image PIXELS, so a window whose centre
+        # falls on a half tile (the DOS window is 200 px = 12.5 tiles tall) still
+        # lands exactly on the step's centre.
         def edge(x0, y0, x1, y1, color, width):
             pygame.draw.line(
                 self.screen, color,
-                (int(round(ox + x0 * tz)), int(round(oy + y0 * tz))),
-                (int(round(ox + x1 * tz)), int(round(oy + y1 * tz))), width)
+                (int(round(ox + x0 * z)), int(round(oy + y0 * z))),
+                (int(round(ox + x1 * z)), int(round(oy + y1 * z))), width)
 
         def box(x, y, w, h, color, width):
             pygame.draw.rect(
                 self.screen, color,
-                (int(round(ox + x * tz)), int(round(oy + y * tz)),
-                 max(1, int(round(w * tz))), max(1, int(round(h * tz)))), width)
+                (int(round(ox + x * z)), int(round(oy + y * z)),
+                 max(1, int(round(w * z))), max(1, int(round(h * z)))), width)
 
         for kind, enabled, color in (("dos", self.show["port_view"], PORT_VIEW),
                                      ("gb", self.show["gb_view"], GB_VIEW)):
@@ -1073,14 +1078,13 @@ class Viewer:
         if self.show["render_reach"] and self.player:
             _win, sur = view.viewport_rect(self.cm, self.player[1],
                                            self.player[0])
-            box(sur[0] // TILE, sur[1] // TILE,
-                sur[2] // TILE, sur[3] // TILE, RENDER_REACH, 1)
+            box(*sur, RENDER_REACH, 1)
         if self.player:
-            px = self.player[0] + view.BORDER * 4
-            py = self.player[1] + view.BORDER * 4
+            px = (self.player[0] + view.BORDER * 4) * TILE
+            py = (self.player[1] + view.BORDER * 4) * TILE
             box(px, py, TILE * 2, TILE * 2, (255, 100, 190), 2)
             self.screen.blit(self.font.render('PT', True, (255, 100, 190)),
-                             (ox + px * tz, oy + py * tz))
+                             (ox + px * z, oy + py * z))
 
     def draw_warp_drag_ghost(self, ox, oy, z):
         """Show where a dragged warp would land (snapped to its 2x2 map square)."""
@@ -1695,7 +1699,12 @@ class Viewer:
                 elif ev.type == pygame.MOUSEMOTION:
                     self.cursor_tile = self.tile_at(ev.pos)
                     if self.probe_drag:
-                        self.probe_extend(ev.pos)
+                        # A lost button-up must not leave the sweep armed: the
+                        # motion event carries the real button state.
+                        if not ev.buttons[0]:
+                            self.probe_drag = False
+                        else:
+                            self.probe_extend(ev.pos)
                     elif self.painting:
                         self.paint_cell(ev.pos)
                     elif self.drag:

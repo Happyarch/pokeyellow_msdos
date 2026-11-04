@@ -565,9 +565,9 @@ class ProbeTest(ViewerTestBase):
         v.show["gb_view"] = True
         dos = v.probe_sweep("dos")
         gb = v.probe_sweep("gb")
-        # One step: the union is exactly the window, 40x25 vs 20x18 tiles.
-        self.assertEqual((dos[2][0][2], len(dos[3])), (40, 2))
-        self.assertEqual((gb[2][0][2], len(gb[3])), (20, 2))
+        # One step: the union is exactly the window, 320x200 vs 160x144 px.
+        self.assertEqual((dos[2][0][2], len(dos[3])), (320, 2))
+        self.assertEqual((gb[2][0][2], len(gb[3])), (160, 2))
         self.assertTrue(PORT_VIEW[0] > PORT_VIEW[2], "DOS is red")
         self.assertTrue(GB_VIEW[2] > GB_VIEW[0], "GB is blue")
         v.draw()
@@ -578,16 +578,52 @@ class ProbeTest(ViewerTestBase):
         v.probe_click(self.placed(v, 4, 4))
         v.probe_extend(self.placed(v, 4, 6))          # two steps east = 4 tiles
         x0, y0, horiz, _vert = v.probe_sweep("dos")
-        self.assertEqual(horiz[0], (0, 0, 44), "40 + 4 tiles of sweep")
+        self.assertEqual(horiz[0], (0, 0, 352), "320 + 32 px of sweep")
         self.assertEqual(len(horiz), 2, "a plain rectangle has two long edges")
         # The union is smaller than the sum of the two windows (they overlap).
-        self.assertLess(44 * 25, 2 * 40 * 25)
+        self.assertLess(352 * 200, 2 * 320 * 200)
 
     def test_sweep_of_one_step_equals_the_window(self):
         from map_editor import view as vw
         mask, x0, y0, cols, rows = vw.viewport_sweep([(4, 4)], "dos")
-        self.assertEqual((x0, y0, cols, rows), vw.step_viewport_tile_rect(4, 4, "dos"))
-        self.assertEqual(sum(mask), 40 * 25)
+        self.assertEqual((x0, y0), vw.step_viewport_px(4, 4, "dos")[:2])
+        self.assertEqual((cols * vw.SWEEP_CELL, rows * vw.SWEEP_CELL), (320, 200))
+        self.assertEqual(sum(mask), cols * rows)
+
+    def test_click_lands_at_the_centre_of_the_box(self):
+        """The player is centre-screen, so the window must straddle the step.
+
+        This is the whole point of the mode: click a tile, and the box shows what
+        the camera sees with the player standing THERE — not with the click at
+        the box's top-left corner.
+        """
+        v = self.viewer()
+        v.screen = self.pygame.display.set_mode((1024, 700))
+        v.show["port_view"] = True
+        v.show["gb_view"] = False
+        click = (520, 380)
+
+        class StopLoop(Exception):
+            pass
+
+        for event in (pygame.event.Event(pygame.KEYDOWN, key=pygame.K_y, mod=0),
+                      pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=click)):
+            with patch.object(pygame.event, "get", side_effect=[[event], StopLoop]), \
+                 patch.object(pygame.key, "get_mods", return_value=0):
+                with self.assertRaises(StopLoop):
+                    v.run()
+        self.assertTrue(v.probe, "the click must place the probe")
+        v.probe_drag = False
+        v.draw()
+
+        import numpy as np
+        a = pygame_surfarray(v.screen)
+        red = ((a[:, :, 0] > 240) & (a[:, :, 1] > 50) & (a[:, :, 1] < 100)
+               & (a[:, :, 2] > 50) & (a[:, :, 2] < 100))
+        ys, xs = np.nonzero(red)
+        self.assertGreater(len(xs), 0, "the DOS box must be drawn")
+        self.assertAlmostEqual((xs.min() + xs.max()) / 2, click[0], delta=2)
+        self.assertAlmostEqual((ys.min() + ys.max()) / 2, click[1], delta=2)
 
     def test_probe_moves_with_an_expansion(self):
         """Expanding north/west shifts the map, so the probe must shift with it."""
