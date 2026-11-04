@@ -167,6 +167,7 @@ Ctrl + = / -     zoom in / out
 G step grid (16px = 1 movement step)   B block grid (32px)   T tile grid (8px)
 W warps + signs
 N NPC markers    V/H/R port/GB/reach frames (click sets the staged player tile)
+Y viewport probe click a step to box what the camera sees; drag to sweep a path
 I inspector      C palette              O cycle route preview
 X connections    assemble neighbouring maps at their real offsets (read-only)
 click W marker   select a warp; panel edits dest / target warp / kind
@@ -227,6 +228,34 @@ chrome stays readable when the window is resized. `"auto"` uses
 shrinks the chrome rather than letting it overflow the bottom bar. The scale is
 recomputed whenever the window size changes; pinning it with a number overrides
 the formula but still respects the bounds.
+
+### Viewport probe (`Y`)
+
+Answers "what is on screen if the player stands here?" without booting the port.
+Tap `Y` to enter probe mode, then:
+
+| gesture | effect |
+|---|---|
+| click a step | anchor the camera box on that **16 px step** |
+| drag | sweep a path; the box follows and the outline becomes the **union** |
+| shift + click | clear the probe |
+| `V` / `H` | show the DOS box (red) / the GB box (blue) — either, both or neither |
+
+The anchor is always a legal player position: a step is 2x2 tiles, so the click
+snaps to even tile coordinates and the box is positioned from there, not from
+the raw cursor pixel. Leaving probe mode keeps the overlay — it is an annotation
+you keep while painting or editing, not a transient cursor. It is also drawn in
+connections mode, since the coordinates are the same padded grid.
+
+With a swept path the outline is the union of the window along it: everything
+that is on screen at *some* point while walking that route. The union is
+computed on the 8 px tile grid and only the boundary is drawn, so a long sweep
+costs one outline rather than N overlapping rectangles.
+
+Sizes are the real ones: **DOS** 40x25 tiles (320x200), **GB** 20x18 (160x144).
+The GB box is a size reference, not an emulation of the original camera's edge
+scroll rules, and neither box is clamped at the map edge — a box hanging off the
+map is telling you exactly how much of the view is out of bounds.
 
 ### Paint palette sizing
 

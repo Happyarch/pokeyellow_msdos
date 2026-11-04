@@ -312,11 +312,12 @@ def viewport_rect(cm: ComposedMap, py: int, px_: int):
     the window's top-left tile = player tile - (19, 11) in padded coords
     (40/2-1, 25/2 rounded), plus the 12-tile pad. Returns (x, y, w, h) px.
     Also returns the 12x9-block wSurroundingTiles reach as a second rect."""
-    ptx, pty = px_ + BORDER * 4, py + BORDER * 4      # padded tile coords
-    win = ((ptx - 19) * TILE, (pty - 11) * TILE, 40 * TILE, 25 * TILE)
+    x, y, w, h = viewport_tile_rect(py, px_, "dos")
+    win = (x * TILE, y * TILE, w * TILE, h * TILE)
     # LoadCurrentMapView reads SCREEN_BLOCK_WIDTH x SCREEN_BLOCK_HEIGHT
     # (12x9) blocks starting one block up-left of the view pointer; approximate
     # centred on the player block:
+    ptx, pty = px_ + BORDER * 4, py + BORDER * 4
     pbx, pby = ptx // 4, pty // 4
     sur = ((pbx - 5) * BLOCK_PX, (pby - 4) * BLOCK_PX,
            12 * BLOCK_PX, 9 * BLOCK_PX)
@@ -329,5 +330,89 @@ def gb_viewport_rect(cm: ComposedMap, py: int, px_: int):
     This is intentionally a size/frame reference for staging, not an emulation
     of the original GB camera's edge scroll rules.
     """
-    ptx, pty = px_ + BORDER * 4, py + BORDER * 4
-    return ((ptx - 9) * TILE, (pty - 8) * TILE, 20 * TILE, 18 * TILE)
+    x, y, w, h = viewport_tile_rect(py, px_, "gb")
+    return (x * TILE, y * TILE, w * TILE, h * TILE)
+
+
+# ── viewport probe: what the camera shows from a step ───────────────────────
+#
+# The player stands on a 16 px STEP (2x2 tiles) and the camera keeps that step
+# near the screen centre, so the visible window is a fixed-size rectangle at a
+# fixed tile offset from the step's top-left tile. "dos" is the port's 320x200
+# window (40x25 tiles); "gb" is the 160x144 reference (20x18 tiles).
+
+VIEWPORT_TILES = {"dos": (40, 25), "gb": (20, 18)}
+VIEWPORT_OFFSET = {"dos": (19, 11), "gb": (9, 8)}
+
+
+def viewport_tile_rect(tile_y: int, tile_x: int, kind: str):
+    """Padded-TILE rect the camera shows with the player tile at (tile_x, tile_y)."""
+    off_x, off_y = VIEWPORT_OFFSET[kind]
+    w, h = VIEWPORT_TILES[kind]
+    return (tile_x + BORDER * 4 - off_x, tile_y + BORDER * 4 - off_y, w, h)
+
+
+def step_viewport_tile_rect(step_y: int, step_x: int, kind: str):
+    """Same rect for a player standing on the map-square step (step_y, step_x)."""
+    return viewport_tile_rect(step_y * 2, step_x * 2, kind)
+
+
+def viewport_sweep(steps, kind: str):
+    """Union of the viewport over a path of (y, x) steps, as a padded-TILE mask.
+
+    Returns (mask, x0, y0, cols, rows): `mask` is row-major over TILE cells whose
+    top-left is padded tile (x0, y0). The union is the point of the sweep — it is
+    everything that is on screen at SOME point along the path, not one position
+    at a time.
+    """
+    if not steps:
+        return bytearray(), 0, 0, 0, 0
+    rects = [step_viewport_tile_rect(y, x, kind) for (y, x) in steps]
+    x0 = min(r[0] for r in rects)
+    y0 = min(r[1] for r in rects)
+    cols = max(r[0] + r[2] for r in rects) - x0
+    rows = max(r[1] + r[3] for r in rects) - y0
+    mask = bytearray(cols * rows)
+    for (rx, ry, w, h) in rects:
+        left = rx - x0
+        run = b"\x01" * w
+        for r in range(ry - y0, ry - y0 + h):
+            start = r * cols + left
+            mask[start:start + w] = run
+    return mask, x0, y0, cols, rows
+
+
+def mask_edges(mask: bytearray, cols: int, rows: int):
+    """Outline of a tile mask as merged segments, relative to the mask origin.
+
+    Horizontal entries are (row, col0, col1) and vertical are (col, row0, row1),
+    with half-open ranges. Only edges bordering an uncovered cell are emitted, so
+    this is the boundary of the UNION rather than a pile of overlapping boxes.
+    """
+    def filled(r: int, c: int) -> bool:
+        return 0 <= r < rows and 0 <= c < cols and mask[r * cols + c]
+
+    horizontal, vertical = [], []
+    for r in range(rows):
+        for above in (True, False):
+            start = None
+            for c in range(cols + 1):
+                edge = (c < cols and filled(r, c)
+                        and not (filled(r - 1, c) if above else filled(r + 1, c)))
+                if edge and start is None:
+                    start = c
+                elif not edge and start is not None:
+                    horizontal.append((r if above else r + 1, start, c))
+                    start = None
+    for c in range(cols):
+        for left in (True, False):
+            start = None
+            for r in range(rows + 1):
+                edge = (r < rows and filled(r, c)
+                        and not (filled(r, c - 1) if left else filled(r, c + 1)))
+                if edge and start is None:
+                    start = r
+                elif not edge and start is not None:
+                    vertical.append((c if left else c + 1, start, r))
+                    start = None
+    return horizontal, vertical

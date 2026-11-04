@@ -54,7 +54,9 @@ class ConfigTest(unittest.TestCase):
                 config.load(path)
 
 
-class ZoomTest(unittest.TestCase):
+class ViewerTestBase(unittest.TestCase):
+    """A real Viewer on a private tree, so no test can write the repository."""
+
     @classmethod
     def setUpClass(cls):
         from map_editor.editor import Viewer
@@ -85,9 +87,16 @@ class ZoomTest(unittest.TestCase):
         settings.update(overrides)
         return self.Viewer("PALLET_TOWN", 1.0, settings)
 
+    def tree(self, rel):
+        """Path inside this test's private repository root."""
+        return Path(self._tmp.name) / rel
+
     def image_point(self, v, screen_point):
         return ((screen_point[0] - v.pan[0]) / v.scale,
                 (screen_point[1] - v.pan[1]) / v.scale)
+
+
+class ZoomTest(ViewerTestBase):
 
     def test_cursor_anchor_keeps_point_under_cursor(self):
         v = self.viewer(zoom_anchor="cursor")
@@ -354,9 +363,6 @@ class ZoomTest(unittest.TestCase):
 
     # ── save semantics: Ctrl+S commits, an edit never does ───────────────────
 
-    def tree(self, rel):
-        return Path(self._tmp.name) / rel
-
     def drag_warp(self, v):
         """Move the selected warp one map square: a real sidecar edit."""
         v.pan = [0.0, 0.0]
@@ -466,6 +472,130 @@ class ZoomTest(unittest.TestCase):
         self.assertEqual(saved, [], "a bare S must not save")
         press(pygame.K_s, pygame.KMOD_CTRL)
         self.assertEqual(saved, [1], "Ctrl+S must save")
+
+
+class ProbeTest(ViewerTestBase):
+    """Viewport probe: a step-anchored box (or swept union) for DOS and GB."""
+
+    def placed(self, v, step_y, step_x, dx=0, dy=0):
+        """Screen pixel inside a step, with the map pinned at 1:1."""
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        return (step_x * 16 + view.BORDER * 4 * 8 + dx,
+                step_y * 16 + view.BORDER * 4 * 8 + dy)
+
+    def test_click_snaps_to_a_legal_player_step(self):
+        v = self.viewer()
+        v.probe_mode = True
+        # Every pixel inside one step must give the same anchor, and the anchor
+        # must be an even tile: the player only exists on whole 16 px steps.
+        for dx, dy in ((0, 0), (7, 0), (0, 7), (7, 7), (15, 15)):
+            v.probe_click(self.placed(v, 3, 4, dx, dy))
+            self.assertEqual(v.probe, [(3, 4)], f"offset {dx},{dy}")
+            self.assertEqual(v.player, (8, 6), "player tile = step * 2")
+        # The next step over is a different anchor.
+        v.probe_click(self.placed(v, 3, 5))
+        self.assertEqual(v.probe, [(3, 5)])
+
+    def test_drag_sweeps_a_contiguous_path(self):
+        """A fast drag skips steps between events; the path must not have holes."""
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 1, 1))
+        v.probe_extend(self.placed(v, 9, 5))
+        self.assertEqual(v.probe[0], (1, 1))
+        self.assertEqual(v.probe[-1], (9, 5))
+        for (y0, x0), (y1, x1) in zip(v.probe, v.probe[1:]):
+            self.assertLessEqual(abs(y1 - y0), 1, "no gap in y")
+            self.assertLessEqual(abs(x1 - x0), 1, "no gap in x")
+        self.assertEqual(v.player, (5 * 2, 9 * 2))
+
+    def test_shift_click_clears_only_in_probe_mode(self):
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 2, 2))
+        self.assertTrue(v.probe)
+        # Outside probe mode a click (shift or not) belongs to the other tools.
+        v.probe_mode = False
+        self.assertFalse(v.probe_click(self.placed(v, 2, 2), shift=True))
+        self.assertEqual(v.probe, [(2, 2)])
+        # Inside it, it is a clear.
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 2, 2), shift=True)
+        self.assertEqual(v.probe, [])
+        self.assertIsNone(v.player, "clearing must remove the box entirely")
+
+    def test_probe_survives_leaving_the_mode(self):
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 3, 3))
+        v.probe_mode = False
+        self.assertEqual(v.probe, [(3, 3)], "the overlay is an annotation")
+        v.draw()          # and it still draws outside the mode
+
+    def test_y_toggles_probe_mode_and_paint_is_exclusive(self):
+        v = self.viewer()
+        v.save = lambda: None
+
+        class StopLoop(Exception):
+            pass
+
+        def press(key, mods=0):
+            event = pygame.event.Event(pygame.KEYDOWN, key=key, mod=mods)
+            with patch.object(pygame.event, "get", side_effect=[[event], StopLoop]), \
+                 patch.object(pygame.key, "get_mods", return_value=mods):
+                with self.assertRaises(StopLoop):
+                    v.run()
+
+        press(pygame.K_y)
+        self.assertTrue(v.probe_mode)
+        press(pygame.K_p)
+        self.assertTrue(v.paint)
+        self.assertFalse(v.probe_mode, "paint and probe cannot share a click")
+        press(pygame.K_y)
+        self.assertTrue(v.probe_mode)
+        self.assertFalse(v.paint)
+
+    def test_v_and_h_select_the_channel(self):
+        from map_editor.editor import GB_VIEW, PORT_VIEW
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 4, 4))
+        v.show["port_view"] = True
+        v.show["gb_view"] = True
+        dos = v.probe_sweep("dos")
+        gb = v.probe_sweep("gb")
+        # One step: the union is exactly the window, 40x25 vs 20x18 tiles.
+        self.assertEqual((dos[2][0][2], len(dos[3])), (40, 2))
+        self.assertEqual((gb[2][0][2], len(gb[3])), (20, 2))
+        self.assertTrue(PORT_VIEW[0] > PORT_VIEW[2], "DOS is red")
+        self.assertTrue(GB_VIEW[2] > GB_VIEW[0], "GB is blue")
+        v.draw()
+
+    def test_sweep_union_covers_both_endpoints_and_is_not_a_sum(self):
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 4, 4))
+        v.probe_extend(self.placed(v, 4, 6))          # two steps east = 4 tiles
+        x0, y0, horiz, _vert = v.probe_sweep("dos")
+        self.assertEqual(horiz[0], (0, 0, 44), "40 + 4 tiles of sweep")
+        self.assertEqual(len(horiz), 2, "a plain rectangle has two long edges")
+        # The union is smaller than the sum of the two windows (they overlap).
+        self.assertLess(44 * 25, 2 * 40 * 25)
+
+    def test_sweep_of_one_step_equals_the_window(self):
+        from map_editor import view as vw
+        mask, x0, y0, cols, rows = vw.viewport_sweep([(4, 4)], "dos")
+        self.assertEqual((x0, y0, cols, rows), vw.step_viewport_tile_rect(4, 4, "dos"))
+        self.assertEqual(sum(mask), 40 * 25)
+
+    def test_probe_moves_with_an_expansion(self):
+        """Expanding north/west shifts the map, so the probe must shift with it."""
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 3, 3))
+        v.expand_edge("north")                     # one block = 2 steps
+        self.assertEqual(v.probe, [(5, 3)])
 
 
 if __name__ == "__main__":

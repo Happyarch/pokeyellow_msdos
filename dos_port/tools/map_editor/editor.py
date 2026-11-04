@@ -16,6 +16,8 @@ View controls:
   N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
   I  coordinate inspector   C  toggle palette   O  cycle route preview
   X  connections: assemble neighbouring maps at their real offsets (read-only)
+  Y  viewport probe: click a step to box what the DOS (V, red) and GB (H, blue)
+     camera sees from there; drag to sweep a path; shift-click clears
   click a W marker  select a warp; drag it to move; panel edits dest / target / kind
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
@@ -71,8 +73,8 @@ MARK_WARP = (0, 150, 170)      # teal: distinct from the cyan render-reach frame
 MARK_NPC = (60, 120, 255)
 MARK_TRAINER = (255, 160, 0)
 MARK_ITEM = (0, 200, 120)
-PORT_VIEW = (255, 72, 72)
-GB_VIEW = (60, 220, 100)
+PORT_VIEW = (255, 72, 72)      # red: the port's 320x200 window
+GB_VIEW = (90, 150, 255)       # blue: the GB's 160x144 window
 RENDER_REACH = (0, 220, 220)
 # Paired-cutscene onion skins. Close violet tones, with a stronger violet where
 # both MoveSprite2 walkers occupy the same cell.
@@ -96,6 +98,28 @@ PANEL_H = 22
 # narrow instead of eating the map.
 PAL_CELL = ts.BLOCK_PX
 PAL_MAX_COLS = 16
+
+
+def _step_line(a, b):
+    """Steps from `a` (exclusive) to `b` (inclusive), Bresenham on the step grid."""
+    y0, x0 = a
+    y1, x1 = b
+    dx, dy = abs(x1 - x0), -abs(y1 - y0)
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    err = dx + dy
+    out = []
+    y, x = y0, x0
+    while (y, x) != (y1, x1):
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x += sx
+        if e2 <= dx:
+            err += dx
+            y += sy
+        out.append((y, x))
+    return out
 
 
 class Viewer:
@@ -133,6 +157,13 @@ class Viewer:
         self.route_sha = None
         self.route_options = []
         self.painting = False
+        # Viewport probe: steps whose camera window is drawn, and the mode that
+        # places them. The overlay outlives the mode on purpose — it is an
+        # annotation you keep while painting, not a transient cursor.
+        self.probe = []
+        self.probe_mode = False
+        self.probe_drag = False
+        self._probe_cache = {}
         self.conn_view = None
         self.conn_surf = None
         self.conn_scale = None
@@ -163,6 +194,7 @@ class Viewer:
         self.refresh_palette()
         self.invalidate_assembly()
         self.undo_stack = []
+        self._probe_cache = {}
         self.painted = False
         # "Unsaved" covers both layers: an in-memory paint stroke, and a staged
         # sidecar/script edit from an earlier action in this session.
@@ -327,6 +359,96 @@ class Viewer:
         if 0 <= x < self.cm.info.w * 4 and 0 <= y < self.cm.info.h * 4:
             return x, y
         return None
+
+    # ── viewport probe ───────────────────────────────────────────────────────
+
+    def step_at(self, pos) -> tuple[int, int] | None:
+        """Mouse pixel -> map-square step (y, x), or None outside the map.
+
+        The player only exists on whole 16 px steps, so a probe anchor is always
+        snapped to one: step (y, x) is tiles (2y..2y+1, 2x..2x+1).
+        """
+        tile = self.tile_at(pos)
+        if tile is None:
+            return None
+        return tile[1] // 2, tile[0] // 2
+
+    def set_player_tile(self, pos):
+        """Stage the player tile on the step under the cursor (always even)."""
+        step = self.step_at(pos)
+        if step is None:
+            self.player = None
+            return
+        sy, sx = step
+        self.player = (sx * 2, sy * 2)
+
+    def sync_player(self):
+        """Keep the staged player tile on the probe's last step (the frames use it)."""
+        if self.probe:
+            sy, sx = self.probe[-1]
+            self.player = (sx * 2, sy * 2)
+
+    def probe_steps(self):
+        """Steps to draw: the probed path, else the single staged player tile."""
+        if self.probe:
+            return self.probe
+        if self.player:
+            return [(self.player[1] // 2, self.player[0] // 2)]
+        return []
+
+    def probe_sweep(self, kind):
+        """Cached (x0, y0, horizontal, vertical) outline for one channel."""
+        key = (kind, tuple(self.probe_steps()))
+        hit = self._probe_cache.get(key)
+        if hit is None:
+            mask, x0, y0, cols, rows = view.viewport_sweep(key[1], kind)
+            horizontal, vertical = view.mask_edges(mask, cols, rows)
+            hit = (x0, y0, horizontal, vertical)
+            self._probe_cache = {key: hit}      # only one path is live at a time
+        return hit
+
+    def probe_click(self, pos, shift=False):
+        """Place the probe on a step, or clear it (shift). Returns handled?
+
+        Only meaningful in probe mode: outside it a left click still belongs to
+        warp/NPC/paint selection, so the mode guard lives here as well as in the
+        event routing.
+        """
+        if not self.probe_mode:
+            return False
+        if shift:
+            self.clear_probe()
+            return True
+        step = self.step_at(pos)
+        if step is None:
+            return False
+        self.probe = [step]
+        self.probe_drag = True
+        self.sync_player()
+        self._probe_cache = {}
+        return True
+
+    def probe_extend(self, pos):
+        """Grow the swept path to the step under the cursor, filling the gap.
+
+        MOUSEMOTION can skip several steps between events, so consecutive samples
+        are joined with a straight line; otherwise a fast drag would leave holes
+        and the union would be wrong exactly where the path is fastest.
+        """
+        step = self.step_at(pos)
+        if step is None or not self.probe:
+            return
+        for s in _step_line(self.probe[-1], step):
+            if s != self.probe[-1]:
+                self.probe.append(s)
+        self.sync_player()
+        self._probe_cache = {}
+
+    def clear_probe(self):
+        self.probe = []
+        self.probe_drag = False
+        self.player = None
+        self._probe_cache = {}
 
     def _region(self, r, c) -> tuple[dict, tuple[int, int]] | None:
         """(target sidecar dict, its key) for a paintable cell, else None.
@@ -912,6 +1034,54 @@ class Viewer:
         self.screen.blit(chip, (sx + (w - chip.get_width()) // 2,
                                 sy + (h - chip.get_height()) // 2))
 
+    def draw_probe(self, ox, oy, z):
+        """Box what the camera shows from the probed step(s).
+
+        `V` is the port's 320x200 window (red), `H` the GB's 160x144 one (blue);
+        either, both or neither. With a swept path the outline is the UNION along
+        it — everything that is on screen at some point while walking that route.
+        The anchor is the player's 16 px step, so the boxes are always positioned
+        from a legal player position.
+        """
+        steps = self.probe_steps()
+        if not steps:
+            return
+        tz = TILE * z
+
+        def edge(x0, y0, x1, y1, color, width):
+            pygame.draw.line(
+                self.screen, color,
+                (int(round(ox + x0 * tz)), int(round(oy + y0 * tz))),
+                (int(round(ox + x1 * tz)), int(round(oy + y1 * tz))), width)
+
+        def box(x, y, w, h, color, width):
+            pygame.draw.rect(
+                self.screen, color,
+                (int(round(ox + x * tz)), int(round(oy + y * tz)),
+                 max(1, int(round(w * tz))), max(1, int(round(h * tz)))), width)
+
+        for kind, enabled, color in (("dos", self.show["port_view"], PORT_VIEW),
+                                     ("gb", self.show["gb_view"], GB_VIEW)):
+            if not enabled:
+                continue
+            x0, y0, horizontal, vertical = self.probe_sweep(kind)
+            for (r, c0, c1) in horizontal:
+                edge(x0 + c0, y0 + r, x0 + c1, y0 + r, color, 2)
+            for (c, r0, r1) in vertical:
+                edge(x0 + c, y0 + r0, x0 + c, y0 + r1, color, 2)
+
+        if self.show["render_reach"] and self.player:
+            _win, sur = view.viewport_rect(self.cm, self.player[1],
+                                           self.player[0])
+            box(sur[0] // TILE, sur[1] // TILE,
+                sur[2] // TILE, sur[3] // TILE, RENDER_REACH, 1)
+        if self.player:
+            px = self.player[0] + view.BORDER * 4
+            py = self.player[1] + view.BORDER * 4
+            box(px, py, TILE * 2, TILE * 2, (255, 100, 190), 2)
+            self.screen.blit(self.font.render('PT', True, (255, 100, 190)),
+                             (ox + px * tz, oy + py * tz))
+
     def draw_warp_drag_ghost(self, ox, oy, z):
         """Show where a dragged warp would land (snapped to its 2x2 map square)."""
         if not self.warp_drag or not self.cursor_tile:
@@ -1180,22 +1350,7 @@ class Viewer:
                     rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
         if self.route_index >= 0:
             self.draw_route_overlay(ox, oy, z)
-        if (self.show["port_view"] or self.show["gb_view"]
-                or self.show["render_reach"]) and self.player:
-            win, sur = view.viewport_rect(self.cm, self.player[1],
-                                           self.player[0])
-            if self.show["port_view"]:
-                rect_px(*win, PORT_VIEW, 2)
-            if self.show["gb_view"]:
-                rect_px(*view.gb_viewport_rect(self.cm, self.player[1],
-                                                self.player[0]), GB_VIEW, 2)
-            if self.show["render_reach"]:
-                rect_px(*sur, RENDER_REACH, 1)
-            px = (self.player[0] + view.BORDER * 4) * TILE
-            py = (self.player[1] + view.BORDER * 4) * TILE
-            rect_px(px, py, TILE * 2, TILE * 2, (255, 100, 190), 2)
-            self.screen.blit(self.font.render('PT', True, (255, 100, 190)),
-                             (ox + px * z, oy + py * z))
+        self.draw_probe(ox, oy, z)
 
         if self.paint:
             width = self.palette_width()
@@ -1220,7 +1375,7 @@ class Viewer:
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z"
                 if self.paint else
                 f"{state} | [G]step grid [B]lock grid [T]iles [W]arps [N]pcs "
-                "[V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
+                "[V/H/R] frames [Y]probe [I]nspect [C]olor [O] route [X]conn")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
@@ -1245,6 +1400,7 @@ class Viewer:
                                     + bx + view.BORDER]
             block = f" B(Y:{by},X:{bx})=${block_id:02X}"
         layers = " ".join(name for name, enabled in (
+            ("PROBE", self.probe_mode),
             ("STEP", self.show["steps"]), ("BLK", self.show["blocks"]),
             ("TILE", self.show["tiles"]),
             ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
@@ -1257,6 +1413,13 @@ class Viewer:
                  f"{self.cm.info.w}×{self.cm.info.h} B",
                  f"{cursor}{block}", f"Layers: {layers or '—'}",
                  f"Zoom {self.scale:.2f}x  anchor:{anchor} (Ctrl inverts)"]
+        if self.probe:
+            sy, sx = self.probe[-1]
+            span = (f"Y:{sy} X:{sx}" if len(self.probe) == 1
+                    else f"Y:{sy} X:{sx} sweep:{len(self.probe)}")
+            lines.append(f"Probe {span}  V:DOS H:GB  shift-click clears")
+        elif self.probe_mode:
+            lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
         if self.palette_warning:
             lines.append(self.palette_warning)
         if self.show["connections"]:
@@ -1306,6 +1469,7 @@ class Viewer:
             except ValueError as exc:
                 self.save_error = str(exc)
                 return
+        self.clear_probe()
         self.load(consts[(i + 1) % len(consts)])
 
     def expand_edge(self, edge):
@@ -1331,6 +1495,12 @@ class Viewer:
             if self.player:
                 self.player = (self.player[0] + result['automatic_delta'][1],
                                self.player[1] + result['automatic_delta'][0])
+            if self.probe:
+                # Steps are 2 tiles, so a block of growth moves them by 2.
+                dy = result['automatic_delta'][0] // 2
+                dx = result['automatic_delta'][1] // 2
+                self.probe = [(y + dy, x + dx) for (y, x) in self.probe]
+                self._probe_cache = {}
             self.load(info.const)
         except (ValueError, OSError) as exc:
             self.save_error = str(exc)
@@ -1369,6 +1539,14 @@ class Viewer:
                                           pygame.K_LEFT: 'west', pygame.K_RIGHT: 'east'}[ev.key])
                     elif ev.key == pygame.K_p:
                         self.paint = not self.paint
+                        if self.paint:
+                            self.probe_mode = False
+                            self.probe_drag = False
+                    elif ev.key == pygame.K_y:
+                        self.probe_mode = not self.probe_mode
+                        if self.probe_mode:
+                            self.paint = False
+                        self.probe_drag = False
                     elif ev.key == pygame.K_s and mods & pygame.KMOD_CTRL:
                         self.save()
                     elif ev.key == pygame.K_z and mods & pygame.KMOD_CTRL:
@@ -1441,6 +1619,9 @@ class Viewer:
                         pass
                     elif self.palette_click(ev.pos):
                         pass
+                    elif self.probe_mode:
+                        self.probe_click(
+                            ev.pos, bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
                     elif self.paint:
                         self.painting = True
                         self.paint_cell(ev.pos)
@@ -1460,12 +1641,12 @@ class Viewer:
                         self.selected_warp = None
                     elif (self.show["port_view"] or self.show["gb_view"]
                           or self.show["render_reach"]):
-                        self.player = self.tile_at(ev.pos)
+                        self.set_player_tile(ev.pos)
                     else:
                         self.selected_object = None
                         self.selected_warp = None
                         self.warp_menu = None
-                        self.player = self.tile_at(ev.pos)
+                        self.set_player_tile(ev.pos)
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == self.settings['pan_button']:
                     self.drag = (ev.pos, tuple(self.pan))
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
@@ -1508,11 +1689,14 @@ class Viewer:
                                     self.save_error = str(exc)
                             self.object_drag = None
                         self.painting = False
+                        self.probe_drag = False
                     if ev.button == self.settings['pan_button']:
                         self.drag = None
                 elif ev.type == pygame.MOUSEMOTION:
                     self.cursor_tile = self.tile_at(ev.pos)
-                    if self.painting:
+                    if self.probe_drag:
+                        self.probe_extend(ev.pos)
+                    elif self.painting:
                         self.paint_cell(ev.pos)
                     elif self.drag:
                         (sx, sy), (px, py) = self.drag
