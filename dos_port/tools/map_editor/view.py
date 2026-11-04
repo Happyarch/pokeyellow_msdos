@@ -307,10 +307,18 @@ def compose_padded(const: str, overrides: dict | None = None,
     return cm
 
 
-def render(cm: ComposedMap, palette=DMG_PAL) -> Image.Image:
-    """Padded grid -> RGB image ((w+12)*32 x (h+12)*32)."""
-    tiles = ts.load_tileset_2bpp(cm.info.tileset_stem)
-    blocks = ts.load_blockset(cm.info.tileset_stem)
+def render(cm: ComposedMap, palette=DMG_PAL,
+           stem: str | None = None) -> Image.Image:
+    """Padded grid -> RGB image ((w+12)*32 x (h+12)*32).
+
+    `stem` renders the SAME block ids through another tileset. That is the
+    neighbour preview: on the GB the current map's tileset expands every block on
+    screen, including the strip copied from the neighbour, so re-expanding with
+    the neighbour's tileset shows exactly what changes when the player crosses.
+    """
+    stem = stem or cm.info.tileset_stem
+    tiles = ts.load_tileset_2bpp(stem)
+    blocks = ts.load_blockset(stem)
     img = Image.new("RGB", (cm.stride * BLOCK_PX, cm.rows * BLOCK_PX),
                     palette[0])
     for by in range(cm.rows):
@@ -662,6 +670,59 @@ def reachable_steps(cm, seed) -> Reach:
                     standing.add(land)
                     queue.append(land)
     return Reach(standing, traversed - standing)
+
+
+def block_at_cell(cm, x: int, y: int) -> int:
+    """Block id under a 4 px cell (works for strip cells, unlike _tile_at)."""
+    tx = x // TILE - BORDER * 4
+    ty = y // TILE - BORDER * 4
+    idx = (ty // 4 + BORDER) * cm.stride + (tx // 4 + BORDER)
+    if not (0 <= idx < len(cm.grid)):
+        return 0
+    return cm.grid[idx]
+
+
+@lru_cache(maxsize=None)
+def _block_rgb(stem: str, block: int, colors: tuple) -> bytes:
+    """32x32 RGB bytes for one block under one tileset + palette.
+
+    The palette is part of the key because a colour-only difference is exactly
+    what a route/city seam produces (see SetPal_Overworld: a town's palette id is
+    its map id + 1, every route shares PAL_ROUTE).
+    """
+    img = Image.new("RGB", (ts.BLOCK_PX, ts.BLOCK_PX))
+    ts._blit_block(img, ts.load_tileset_2bpp(stem), ts.load_blockset(stem),
+                   block, 0, 0, colors)
+    return img.tobytes()
+
+
+def appearance(cm, cells, stem: str, colors) -> dict:
+    """{(x, y): rendered 32x32 bytes} for 4 px cells under one look.
+
+    A look is a (tileset, palette) pair: the tileset decides how a block ID
+    expands into tiles, the palette decides what those tile pixels become. Two
+    cells with the same signature look identical to the player.
+    """
+    key = tuple(tuple(c) for c in colors)
+    return {(x, y): _block_rgb(stem, block_at_cell(cm, x, y), key)
+            for (x, y) in cells}
+
+
+def look_changes(cm, cells, own, other) -> tuple[int, int, int]:
+    """(both, shape-only, colour-only) counts of cells that change appearance.
+
+    `own`/`other` are (stem, colours). The decomposition is the useful part:
+    `shape` compares the two tilesets under the SAME palette, `colour` the two
+    palettes under the same tileset. A route/city seam is colour-only; a
+    cross-tileset seam changes shape.
+    """
+    base = appearance(cm, cells, *own)
+    both = appearance(cm, cells, *other)
+    shape = appearance(cm, cells, other[0], own[1])
+    colour = appearance(cm, cells, own[0], other[1])
+    return (sum(1 for c in cells if base[c] != both[c]),
+            sum(1 for c in cells if base[c] != shape[c]),
+            sum(1 for c in cells if base[c] != colour[c]))
 
 
 def viewport_cells(steps, kind: str) -> set[tuple[int, int]]:

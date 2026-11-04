@@ -220,6 +220,9 @@ class Viewer:
         self._reach_runs = []    # merged attention cells, for the fill
         self._reach_outline = {} # kind -> (x0, y0, horizontal, vertical)
         self._reach_surf = None  # reusable translucent overlay
+        self._reach_cells = set()  # the amber band, for the look comparison
+        self.view_as = None      # const whose tileset+palette we render with
+        self.look_stats = None   # (const, cells, changed, shape, colour)
         self.probe_mode = False
         self.probe_drag = False
         self._probe_cache = {}
@@ -247,6 +250,7 @@ class Viewer:
         self.base_grid = bytes(base.grid)
         self.cm = view.compose_padded(const, self.cells, self.map_cells)
         self.editable = self.cm.editable_cells()
+        self.view_as = None
         self.tiles = ts.load_tileset_2bpp(self.cm.info.tileset_stem)
         self.blocks = ts.load_blockset(self.cm.info.tileset_stem)
         self.nblocks = len(self.blocks) // ts.BLOCK_BYTES
@@ -386,12 +390,31 @@ class Viewer:
         self.pan = [(self.screen.get_width() - surf.get_width()) // 2,
                     (self.screen.get_height() - self.panel_h() - surf.get_height()) // 2]
 
+    def view_info(self):
+        """The MapInfo whose tileset + palette the canvas is drawn with.
+
+        Normally the map itself. `K` points this at a connected neighbour, which
+        is how a seam is checked: the runtime expands every block on screen
+        through the CURRENT map's tileset and paints it with the current map's
+        palette (SetPal_Overworld), so re-rendering the same block ids with the
+        neighbour's pair shows exactly what changes at the crossing.
+        """
+        return pm.map_info(self.view_as) if self.view_as else self.cm.info
+
+    def look_of(self, info):
+        """(tileset stem, colours) — one renderable, hashable 'look' for a map."""
+        if self.palette_mode != 'port-cgb':
+            return (info.tileset_stem, tuple(tuple(c) for c in DMG_PAL))
+        return (info.tileset_stem,
+                tuple(tuple(c) for c in palette.resolve(info)[1]))
+
     def refresh_palette(self):
+        info = self.view_info()
         if self.palette_mode == 'port-cgb':
-            self.palette_name, self.colors, self.palette_warning = palette.resolve(self.cm.info)
+            self.palette_name, self.colors, self.palette_warning = palette.resolve(info)
         else:
             self.palette_name, self.colors, self.palette_warning = 'DMG', DMG_PAL, None
-        self.img = view.render(self.cm, self.colors)
+        self.img = view.render(self.cm, self.colors, stem=info.tileset_stem)
         # Colours changed: every raster is stale, but the assembly's GEOMETRY is
         # not, so only the surfaces are dropped here.
         self.conn_surf = None
@@ -507,6 +530,8 @@ class Viewer:
         self.reach_stats = (len(reach.standing), len(reach.traversed),
                             len(dos), len(gb), len(attention), len(border))
         self._reach_runs = _cell_runs(attention)
+        self._reach_cells = attention
+        self.look_stats = self.measure_look()
         # Outlines are stored, not recomputed: a whole-map union is thousands of
         # 4 px cells and this must not run once per frame.
         self._reach_outline = {kind: self.outline(steps, kind)
@@ -521,10 +546,52 @@ class Viewer:
             return
         self.compute_reach()
 
+    def look_candidates(self):
+        """[None] + one entry per DISTINCT neighbour look, in connection order."""
+        seen = {}
+        for _direction, nconst, _offset in pm.CONNECTIONS.get(self.cm.info.const, []):
+            info = pm.map_info(nconst)
+            key = (info.tileset_stem, self.look_of(info)[1])
+            seen.setdefault(key, nconst)
+        return [None] + list(seen.values())
+
+    def cycle_view_as(self):
+        """`K`: render this map with the own look, then each neighbour's, then back."""
+        options = self.look_candidates()
+        if not options:
+            return
+        try:
+            index = options.index(self.view_as)
+        except ValueError:
+            index = 0
+        self.apply_view_as(options[(index + 1) % len(options)])
+
+    def apply_view_as(self, const=None):
+        """Render the same block ids through another map's tileset + palette."""
+        self.view_as = const
+        info = self.view_info()
+        self.tiles = ts.load_tileset_2bpp(info.tileset_stem)
+        self.blocks = ts.load_blockset(info.tileset_stem)
+        self.nblocks = len(self.blocks) // ts.BLOCK_BYTES
+        self.refresh_palette()
+        self.look_stats = self.measure_look()
+
+    def measure_look(self):
+        """How many amber-band cells change appearance under the viewed look."""
+        if self.view_as is None or not self._reach_cells:
+            return None
+        own = self.look_of(self.cm.info)
+        other = self.look_of(pm.map_info(self.view_as))
+        both, shape, colour = view.look_changes(
+            self.cm, self._reach_cells, own, other)
+        return (self.view_as, len(self._reach_cells), both, shape, colour)
+
     def clear_reach(self):
         self.reach = None
         self.reach_stats = None
         self._reach_runs = []
+        self._reach_cells = set()
+        self.look_stats = None
         self._reach_outline = {}
 
     def probe_sweep(self, kind):
@@ -1715,6 +1782,21 @@ class Viewer:
                          + (f"  LOCK {self.lock_axis}" if self.lock_axis else ""))
         elif self.probe_mode:
             lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
+        if self.view_as is not None:
+            info = pm.map_info(self.view_as)
+            lines.append(f"View as {self.view_as} "
+                         f"({info.tileset_name} · {palette.resolve(info)[0]})"
+                         f"  K cycles  — this is a PREVIEW, edits still belong "
+                         f"to {self.cm.info.const}")
+        if self.look_stats is not None:
+            const, cells, both, shape, colour = self.look_stats
+            # The decomposition is the answer: shape = a different tileset turns
+            # these block ids into different graphics, colour = the per-map
+            # palette recolours them. A route/city seam is colour-only.
+            lines.append(f"Swap at {const}: {both} of {cells} band cells change "
+                         f"(shape {shape}, colour {colour})")
+        elif self.reach_stats is not None and self.view_as is None:
+            lines.append("K: preview this map with a neighbour's tileset+palette")
         if self.reach_stats is not None:
             steps, hops, dos, gb, attention, border = self.reach_stats
             # Units are load-bearing: 4 px cells, not tiles, so nobody reads the
@@ -1859,6 +1941,10 @@ class Viewer:
                         if self.probe_mode:
                             self.paint = False
                         self.probe_drag = False
+                    elif ev.key == pygame.K_k:
+                        # Preview the same block ids through a neighbour's
+                        # tileset + palette: the crossing, before crossing.
+                        self.cycle_view_as()
                     elif ev.key == pygame.K_u:
                         # Flood the walkable area from the probe anchor and show
                         # what the port reveals; a second U clears it. The click

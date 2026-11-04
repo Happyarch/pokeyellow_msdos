@@ -118,15 +118,24 @@ translation, not inferred:
   Invalidate on every `cm.grid` mutation (paint, undo, fill, expand, load, map
   switch) — the skeleton currently never invalidates and never draws, which
   would ship an overlay that lies after the first edit.
-- [ ] **3. Cross-map seam check.** Compare **rendered pixels**, not IDs, over the
-  overlap of two connected maps as assembled by `view.ConnectionView` (which is
-  cell-for-cell tested against the runtime strips). Decode each side's block with
-  **its own tileset and its own palette**; flag on 32x32 inequality. That makes
-  a differing ID with the same graphic pass (the devs' fixed-connector case) and
-  a same-tile/different-palette colour flip flag correctly. Report the pixel
-  diff and the tile-index diff. Interiors depend on `wLastMap`, which is not
-  statically knowable — emit the existing "assuming PAL_ROUTE" warning instead
-  of guessing.
+- [ ] **3. Cross-map seam check.** Started, and the mechanism turned out to be
+  narrower than the plan assumed. `LoadTilesetHeader` rebuilds the tileset per
+  map (`LoadMapHeader` calls it every load), so while standing on A, A's tileset
+  expands every block on screen **including the strip copied from B** — and
+  `SetPal_Overworld` picks the palette per map (town = `map id + 1`, all routes =
+  `PAL_ROUTE`, interiors = `wLastMap`). The block on screen at a shared cell is
+  the neighbour's own byte in both cases, so **a world cell can only change
+  appearance across a seam if the tileset or the palette differs.**
+  `K` now previews the map through each connected neighbour's tileset + palette
+  and reports `Swap at X: N of M band cells change (shape S, colour C)`, where
+  `shape` compares the two tilesets under one palette and `colour` the two
+  palettes under one tileset. Measured on Route 1: shape **0**, colour **2668**
+  for both neighbours (shared `OVERWORLD`, different town palettes). The genuine
+  shape change needs a cross-tileset pair — `ROUTE_22` vs `ROUTE_23` — which the
+  port does not connect, so **no live seam can change graphics today**.
+  Still open: the `ConnectionView`-assembly comparison, which would also cover
+  the pairs the port renders as border-vs-edge, and palette context for interiors
+  (already warned, not guessed).
 - [ ] **4. Docs + tests.** README section, tests for the flood/union/difference,
   and an explicit note that the flood is undirected ("can the player ever stand
   here", not "can they get here from the entrance"), that tile-pair collisions

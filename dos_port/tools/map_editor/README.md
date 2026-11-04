@@ -171,6 +171,7 @@ Y viewport probe click a step to box what the camera sees; drag to sweep a path
 I inspector      C palette              O cycle route preview
 X connections    assemble neighbouring maps at their real offsets; strip cells edit the owner
 U walkable reach flood from the probe; shade what only the port can show
+K look preview  render with the own look, then each neighbour's, then back
 click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
@@ -344,6 +345,48 @@ over-marks too.
 The reach is derived from the live grid, so any edit (paint, fill, undo,
 expansion, map switch) drops it — a stale overlay would claim the port shows
 cells it no longer does.
+
+### Tileset + palette preview (`K`)
+
+Answers "does anything change at this seam?" — the swap, before crossing.
+
+**How the game loads it.** `LoadTilesetHeader` (`engine/overworld/tilesets.asm`)
+copies the tileset's graphics, blockset and collision list into fixed slots and
+arms `g_tilecache_dirty` so the decoded-tile cache rebuilds; `LoadMapHeader`
+calls it on **every map load**. So yes: the tileset is rebuilt per map, and while
+you stand on map A, **A's tileset expands every block on screen — including the
+strip copied out of B's `.blk`**. The palette is per map too
+(`SetPal_Overworld`): cemetery → `PAL_GRAYMON`, cavern → `PAL_CAVE`, a town gets
+`map id + 1`, every route shares `PAL_ROUTE`, and interiors inherit `wLastMap`.
+
+The consequence is worth stating plainly, because it narrows the search:
+
+> A world cell can only look different when you cross if the two maps differ in
+> **tileset** or **palette**. Same tileset + same palette ⇒ provably identical,
+> because the block on screen is the neighbour's own byte in both cases.
+
+`K` cycles the look: own → each *distinct* connected neighbour → own. The canvas
+re-renders the same block ids through that tileset and palette, so the amber band
+is shown exactly as the neighbour would show it. The HUD says
+`View as VIRIDIAN_CITY (OVERWORLD · PAL_VIRIDIAN)`, and that it is a preview —
+edits still belong to the map you have open.
+
+With the reach showing, `K` also measures it:
+
+```
+Swap at VIRIDIAN_CITY: 2668 of 2668 band cells change (shape 0, colour 2668)
+```
+
+- **shape** — the two tilesets under the *same* palette: a different tileset turns
+  these block ids into different graphics. This is the tree→grass case.
+- **colour** — the two palettes under the same tileset: the per-map palette
+  recolours them. A route↔city seam is colour-only.
+
+Measured on Route 1: both neighbours are `OVERWORLD`, so shape is **0** and every
+band cell changes colour only (Viridian and Pallet each have their own palette).
+The genuine shape change needs a cross-tileset pair — `ROUTE_22` (OVERWORLD) vs
+`ROUTE_23` (PLATEAU) — which the port does not connect, so no live seam can
+change graphics today.
 
 ### Paint palette sizing
 

@@ -21,6 +21,7 @@ from map_editor import config  # noqa: E402
 from map_editor import staging  # noqa: E402
 from map_editor import view  # noqa: E402
 from gfx_core import tilesets as ts  # noqa: E402
+from gfx_core.tiles import DMG_PAL  # noqa: E402
 
 
 def pygame_surfarray(surface):
@@ -1027,6 +1028,84 @@ class ReachOverlayTest(ViewerTestBase):
         v.paint = True                        # mode change alone must not clear
         v.paint = False
         self.assertEqual(v.reach_stats, before)
+
+
+class LookSwapTest(ViewerTestBase):
+    """`K`: preview a map through a neighbour's tileset + palette, and measure it."""
+
+    def test_k_cycles_distinct_neighbour_looks(self):
+        v = self.viewer("ROUTE_1")
+        options = v.look_candidates()
+        self.assertIsNone(options[0], "own look first")
+        self.assertEqual(sorted(o for o in options if o),
+                         ["PALLET_TOWN", "VIRIDIAN_CITY"])
+        seen = []
+        for _ in range(len(options)):
+            v.cycle_view_as()
+            seen.append(v.view_as)
+        self.assertEqual(seen[-1], None, "cycling wraps back to the own look")
+        self.assertEqual(set(seen), set(options))
+
+    def test_preview_swaps_the_palette_and_the_render(self):
+        v = self.viewer("ROUTE_1")
+        own_palette = v.palette_name
+        own_image = v.img.tobytes()
+        v.apply_view_as("VIRIDIAN_CITY")
+        self.assertEqual(v.view_as, "VIRIDIAN_CITY")
+        self.assertNotEqual(v.palette_name, own_palette,
+                            "a town has its own palette (SetPal_Overworld: map id + 1)")
+        self.assertNotEqual(v.img.tobytes(), own_image,
+                            "the preview must actually re-render")
+        v.apply_view_as(None)
+        self.assertEqual(v.palette_name, own_palette)
+        self.assertEqual(v.img.tobytes(), own_image)
+
+    def test_a_same_tileset_seam_changes_colour_only(self):
+        """Route 1 and Viridian City share OVERWORLD; only the palette differs."""
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        v.apply_view_as("VIRIDIAN_CITY")
+        const, cells, both, shape, colour = v.look_stats
+        self.assertEqual(const, "VIRIDIAN_CITY")
+        self.assertGreater(cells, 0)
+        self.assertEqual(shape, 0, "same tileset: no block can change graphic")
+        self.assertEqual(colour, both,
+                         "every changed cell changed by palette alone")
+        self.assertGreater(both, 0)
+
+    def test_no_band_means_no_swap_report(self):
+        v = self.viewer("ROUTE_1")
+        v.apply_view_as("VIRIDIAN_CITY")
+        self.assertIsNone(v.look_stats, "the swap is measured over the amber band")
+
+    def test_switching_map_drops_the_preview(self):
+        v = self.viewer("ROUTE_1")
+        v.apply_view_as("VIRIDIAN_CITY")
+        v.load("ROUTE_1")
+        self.assertIsNone(v.view_as)
+        self.assertIsNone(v.look_stats)
+
+    def test_identical_looks_report_no_change(self):
+        cm = view.compose_padded("ROUTE_1")
+        reach = view.reachable_steps(cm, (4, 4))
+        _dos, _gb, band, _border = view.viewable(cm, reach.steps())
+        own = (cm.info.tileset_stem, tuple(tuple(c) for c in DMG_PAL))
+        self.assertEqual(view.look_changes(cm, band, own, own), (0, 0, 0))
+
+    def test_a_cross_tileset_pair_changes_shape(self):
+        """OVERWORLD vs PLATEAU: the same block ids become different graphics."""
+        cm = view.compose_padded("ROUTE_22")
+        cells = {(x, y) for y in range(0, 200, 8) for x in range(0, 320, 8)}
+        own = ("overworld", tuple(tuple(c) for c in DMG_PAL))
+        other = ("plateau", tuple(tuple(c) for c in DMG_PAL))
+        both, shape, colour = view.look_changes(cm, cells, own, other)
+        self.assertEqual(colour, 0, "same palette: nothing can recolour")
+        self.assertEqual(shape, both)
+        self.assertGreater(shape, 0, "PLATEAU reads these block ids differently")
 
 
 if __name__ == "__main__":
