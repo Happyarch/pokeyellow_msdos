@@ -77,6 +77,9 @@ MARK_ITEM = (0, 200, 120)
 PORT_VIEW = (255, 72, 72)      # red: the port's 320x200 window
 GB_VIEW = (90, 150, 255)       # blue: the GB's 160x144 window
 RENDER_REACH = (0, 220, 220)
+# Connection strips belong to the NEIGHBOUR, so they get their own tints rather
+# than the "locked" dim: the colour tells you whose edge you are looking at.
+STRIP_TINTS = ((255, 150, 0), (0, 200, 220), (200, 120, 255), (130, 220, 90))
 # Paired-cutscene onion skins. Close violet tones, with a stronger violet where
 # both MoveSprite2 walkers occupy the same cell.
 NPCMV1 = (168, 92, 230)
@@ -505,42 +508,81 @@ class Viewer:
         self.player = None
         self._probe_cache = {}
 
-    def _region(self, r, c) -> tuple[dict, tuple[int, int]] | None:
-        """(target sidecar dict, its key) for a paintable cell, else None.
-        Border ring -> map_borders cells (padded coords); real map area ->
-        map_overrides cells (map-local coords); strips are locked.
+    def _region(self, r, c):
+        """Where a paint at padded cell (r, c) belongs, or None if it is locked.
 
-        In CONNECTIONS mode the ring is deliberately not editable: the neighbour
-        maps are drawn there purely so the seam can be watched, and painting a
-        ring cell under a neighbour's pixels would silently edit something the
-        user is not looking at. Only this map's own blocks stay placeable.
+            ("border", (r, c))              this map's border-ring override
+            ("map", (y, x))                 this map's own block, map-local
+            ("neighbour", (CONST, y, x))    a connection strip cell
+
+        A strip cell is the NEIGHBOUR's block: the runtime copies it out of the
+        neighbour's .blk into this map's wOverworldMap, so this map never stores
+        it. Editing one therefore writes to the neighbour's sidecar and the seam
+        updates on both sides — which is the whole point, since a transition is
+        two maps' edges agreeing.
+
+        In CONNECTIONS mode the ring stays locked (the neighbours are drawn there
+        purely so the seam can be watched), but strip cells are editable: that is
+        exactly where a transition lives.
         """
         idx = r * self.cm.stride + c
         if idx in self.editable:
             if self.show["connections"]:
                 return None
-            return self.cells, (r, c)
+            return ("border", (r, c))
         b = view.BORDER
         if b <= c < self.cm.stride - b and b <= r < self.cm.rows - b:
-            return self.map_cells, (r - b, c - b)
-        return None                          # connection strip: locked
+            return ("map", (r - b, c - b))
+        owner = self.cm.strip_owner.get(idx)
+        if owner is not None:
+            return ("neighbour", owner)
+        return None                 # strip reading outside the neighbour's blk
 
-    def _apply(self, r, c, block) -> tuple | None:
-        """Set one cell (grid+img+sidecar); returns an undo record or None."""
+    def strip_colors(self) -> dict:
+        """A stable tint per connected neighbour, for the strip overlay."""
+        consts = [entry[1] for entry in pm.CONNECTIONS.get(self.cm.info.const, [])]
+        return {const: STRIP_TINTS[i % len(STRIP_TINTS)]
+                for i, const in enumerate(consts)}
+
+    def refresh_after_neighbour(self):
+        """Re-copy the strips after a neighbour write and re-blit what moved."""
+        changed = view.refresh_strips(self.cm)
+        for idx in changed:
+            r, c = divmod(idx, self.cm.stride)
+            ts._blit_block(self.img, self.tiles, self.blocks,
+                           self.cm.grid[idx], c, r, self.colors)
+        if changed:
+            self.invalidate_map_blocks()
+
+    def _apply(self, r, c, block):
+        """Set one cell; returns an undo record or None."""
         idx = r * self.cm.stride + c
         region = self._region(r, c)
         if region is None or self.cm.grid[idx] == block:
             return None
-        target, key = region
-        rec = (r, c, target is self.map_cells, target.get(key))
+        kind, payload = region
+        if kind == "neighbour":
+            from map_editor import commands
+            const, y, x = payload
+            prev = self.cm.grid[idx]
+            try:
+                commands.set_block(const, y=y, x=x, block=block, write=True)
+            except (ValueError, OSError) as exc:
+                self.save_error = str(exc)
+                return None
+            self.refresh_after_neighbour()
+            self.dirty = True
+            return (kind, payload, prev)
+        target = self.map_cells if kind == "map" else self.cells
+        rec = (kind, payload, target.get(payload))
         if block == self.base_grid[idx]:
-            initial = self.initial_map_cells if target is self.map_cells else self.initial_cells
-            if key in initial:
-                target[key] = initial[key]
+            initial = self.initial_map_cells if kind == "map" else self.initial_cells
+            if payload in initial:
+                target[payload] = initial[payload]
             else:
-                target.pop(key, None)
+                target.pop(payload, None)
         else:
-            target[key] = block
+            target[payload] = block
         self.cm.grid[idx] = block
         ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
                        self.colors)
@@ -603,11 +645,16 @@ class Viewer:
         target = self.cm.grid[idx0]
         if target == self.current_block:
             return
+        # A fill stops at an ownership boundary: crossing into a strip cell would
+        # start writing to the neighbour, which a fill should never do silently.
+        start_kind = self._region(r0, c0)[0]
         op, seen, todo = [], {(r0, c0)}, [(r0, c0)]
         while todo:
             r, c = todo.pop()
             idx = r * self.cm.stride + c
-            if self._region(r, c) is None or self.cm.grid[idx] != target:
+            region = self._region(r, c)
+            if region is None or region[0] != start_kind \
+                    or self.cm.grid[idx] != target:
                 continue
             rec = self._apply(r, c, self.current_block)
             if rec:
@@ -625,16 +672,29 @@ class Viewer:
     def undo(self):
         if not self.undo_stack:
             return
+        from map_editor import commands
         b = view.BORDER
-        for r, c, is_map, prev in reversed(self.undo_stack.pop()):
+        for kind, payload, prev in reversed(self.undo_stack.pop()):
+            if kind == "neighbour":
+                # The cell belongs to the neighbour, so the undo is a write there
+                # too — otherwise the seam would silently keep the new block.
+                const, y, x = payload
+                try:
+                    commands.set_block(const, y=y, x=x, block=prev, write=True)
+                except (ValueError, OSError) as exc:
+                    self.save_error = str(exc)
+                    continue
+                self.refresh_after_neighbour()
+                self.dirty = True
+                continue
+            r, c = (payload[0] + b, payload[1] + b) if kind == "map" else payload
             idx = r * self.cm.stride + c
-            target = self.map_cells if is_map else self.cells
-            key = (r - b, c - b) if is_map else (r, c)
+            target = self.map_cells if kind == "map" else self.cells
             if prev is None:
-                target.pop(key, None)
+                target.pop(payload, None)
                 block = self.base_grid[idx]
             else:
-                target[key] = prev
+                target[payload] = prev
                 block = prev
             self.cm.grid[idx] = block
             ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
@@ -1363,10 +1423,17 @@ class Viewer:
             dim_w = max(1, int(round(ts.BLOCK_PX * z)))
             dim = pygame.Surface((dim_w, dim_w), pygame.SRCALPHA)
             dim.fill(LOCKED_DIM)
+            tints = {}
+            for const, colour in self.strip_colors().items():
+                surf = pygame.Surface((dim_w, dim_w), pygame.SRCALPHA)
+                surf.fill((*colour, 40))
+                tints[const] = surf
             for idx in self.cm.strip_cells:
                 bx, by = idx % self.cm.stride, idx // self.cm.stride
-                self.screen.blit(dim, (int(round(ox + bx * ts.BLOCK_PX * z)),
-                                       int(round(oy + by * ts.BLOCK_PX * z))))
+                owner = self.cm.strip_owner.get(idx)
+                surf = dim if owner is None else tints[owner[0]]
+                self.screen.blit(surf, (int(round(ox + bx * ts.BLOCK_PX * z)),
+                                        int(round(oy + by * ts.BLOCK_PX * z))))
             for (r, c) in self.cells:
                 rect_px(c * ts.BLOCK_PX, r * ts.BLOCK_PX,
                         ts.BLOCK_PX, ts.BLOCK_PX, PAINTED, 2)
@@ -1479,9 +1546,14 @@ class Viewer:
             x, y = self.cursor_tile
             bx, by = x // 4, y // 4
             cursor = f"F (Y:{y}, X:{x})"
-            block_id = self.cm.grid[(by + view.BORDER) * self.cm.stride
-                                    + bx + view.BORDER]
-            block = f" B(Y:{by},X:{bx})=${block_id:02X}"
+            idx = (by + view.BORDER) * self.cm.stride + bx + view.BORDER
+            block = f" B(Y:{by},X:{bx})=${self.cm.grid[idx]:02X}"
+            owner = self.cm.strip_owner.get(idx)
+            if owner is not None:
+                # Strip cells are the neighbour's blocks: say whose, so an edit
+                # made here is never a surprise write to another map.
+                const, oy, ox_ = owner
+                block += f" ← {const}(Y:{oy},X:{ox_})"
         layers = " ".join(name for name, enabled in (
             ("PROBE", self.probe_mode),
             ("STEP", self.show["steps"]), ("BLK", self.show["blocks"]),

@@ -82,10 +82,10 @@ class ViewerTestBase(unittest.TestCase):
         self.addCleanup(pm.map_info.cache_clear)
         self.addCleanup(pm._constants.cache_clear)
 
-    def viewer(self, **overrides):
+    def viewer(self, const="PALLET_TOWN", **overrides):
         settings = dict(config.DEFAULTS)
         settings.update(overrides)
-        return self.Viewer("PALLET_TOWN", 1.0, settings)
+        return self.Viewer(const, 1.0, settings)
 
     def tree(self, rel):
         """Path inside this test's private repository root."""
@@ -665,6 +665,74 @@ class ProbeTest(ViewerTestBase):
         v.probe_click(self.placed(v, 3, 3))
         v.expand_edge("north")                     # one block = 2 steps
         self.assertEqual(v.probe, [(5, 3)])
+
+
+class ConnectorTest(ViewerTestBase):
+    """Connection strips belong to the NEIGHBOUR: editing one edits their map."""
+
+    def strip_cell(self, v, const):
+        for idx, owner in v.cm.strip_owner.items():
+            if owner[0] == const:
+                r, c = divmod(idx, v.cm.stride)
+                return r, c, owner
+        self.fail(f"no strip cell owned by {const}")
+
+    def test_strip_cell_edits_the_neighbour_not_this_map(self):
+        """Route 1's edge is Pallet Town's data; the write must land there."""
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        r, c, (const, y, x) = self.strip_cell(v, "PALLET_TOWN")
+        self.assertEqual(const, "PALLET_TOWN")
+        idx = r * v.cm.stride + c
+        before = v.cm.grid[idx]
+        block = 0x2A if before != 0x2A else 0x2B
+        v.paint = True
+        v.current_block = block
+        v.paint_cell((c * 32 + 1, r * 32 + 1))
+        # The strip re-renders from the neighbour's composed layout...
+        self.assertEqual(v.cm.grid[idx], block)
+        self.assertEqual(v.cm.strip_owner[idx][0], "PALLET_TOWN")
+        # ...and this map's own sidecars stay untouched.
+        self.assertEqual(v.map_cells, {})
+        self.assertEqual(v.cells, {})
+        v.save()
+        sidecar = self.tree("dos_port/assets/map_overrides/PalletTown.json")
+        self.assertTrue(sidecar.exists(), "the edit belongs to the neighbour")
+        self.assertIn(str(block), sidecar.read_text())
+        self.assertFalse(
+            self.tree("dos_port/assets/map_overrides/Route1.json").exists(),
+            "the map being viewed must not get the override")
+
+    def test_strip_undo_writes_back_to_the_neighbour(self):
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        r, c, (_const, _y, _x) = self.strip_cell(v, "PALLET_TOWN")
+        idx = r * v.cm.stride + c
+        before = v.cm.grid[idx]
+        block = 0x2A if before != 0x2A else 0x2B
+        v.paint = True
+        v.current_block = block
+        v.paint_cell((c * 32 + 1, r * 32 + 1))
+        self.assertEqual(v.cm.grid[idx], block)
+        v.undo()
+        self.assertEqual(v.cm.grid[idx], before, "undo restores the neighbour")
+        self.assertFalse(
+            self.tree("dos_port/assets/map_overrides/PalletTown.json").exists()
+            and block in self.tree(
+                "dos_port/assets/map_overrides/PalletTown.json").read_text()
+            and before != block,
+            "the neighbour's sidecar must not keep the reverted block")
+
+    def test_owner_map_names_the_neighbour(self):
+        v = self.viewer("ROUTE_1")
+        r, c, owner = self.strip_cell(v, "VIRIDIAN_CITY")
+        self.assertEqual(v._region(r, c), ("neighbour", owner))
+        # Every strip cell with an owner is editable; an unowned one is not.
+        for idx, entry in v.cm.strip_owner.items():
+            rr, cc = divmod(idx, v.cm.stride)
+            self.assertEqual(v._region(rr, cc), ("neighbour", entry))
 
 
 if __name__ == "__main__":

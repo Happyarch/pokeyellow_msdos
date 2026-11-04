@@ -12,7 +12,7 @@ runtime; the centre never overlaps strips).
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image
@@ -41,7 +41,9 @@ class ComposedMap:
     anomalies: list            # connection strips reading outside the
                                # neighbour's blk (candidate C4 re-tune bugs)
     strip_cells: set           # padded-grid indices covered by connection
-                               # strips (locked: connections always win)
+                               # strips (drawn from the neighbour, not this map)
+    strip_owner: dict = field(default_factory=dict)
+                               # padded idx -> (neighbour CONST, its final y, x)
 
     def editable_cells(self) -> set[int]:
         """Paintable indices: the border ring minus connection strips."""
@@ -189,6 +191,67 @@ def render_grid(info: pm.MapInfo, grid: bytearray, stride: int, rows: int,
     return img
 
 
+def copy_strips(grid: bytearray, stride: int, const: str, info) -> tuple:
+    """Copy every connection strip into `grid`; returns (cells, owners, anomalies).
+
+    The runtime does exactly this (`LoadNorthSouth/EastWestConnectionsTileMap`):
+    MAP_BORDER rows/columns of the CONNECTED map's .blk are copied into the
+    current map's wOverworldMap buffer. The bytes live in the neighbour, so a
+    strip cell belongs to the neighbour, not to this map — `owners` maps each
+    padded cell to (neighbour CONST, that neighbour's final block y, x) so the
+    editor can edit the seam from either side and write to the real owner.
+    """
+    strips: set[int] = set()
+    owners: dict[int, tuple[str, int, int]] = {}
+    anomalies: list[str] = []
+    for direction, nconst, offset in pm.CONNECTIONS.get(const, []):
+        ninfo = pm.map_info(nconst)
+        nraw = pm.load_blk(ninfo)
+        nblk, nw, nh, _ndiff = schema.compose_layout(
+            ninfo.label or pm.gmh.const_to_pascal(nconst), nraw,
+            ninfo.base_w, ninfo.base_h)
+        if (nw, nh) != (ninfo.w, ninfo.h):
+            raise ValueError(f"{nconst}: composed dimensions disagree with header")
+        c = pm.get_connection(direction, ninfo.map_id, offset,
+                              info.w, info.h, ninfo.w, ninfo.h)
+        src, dst = c["blk"], c["map"]
+        if direction in ("NORTH", "SOUTH"):
+            rows_n, cols_n = BORDER, c["len"]
+        else:
+            rows_n, cols_n = c["len"], BORDER
+        oob = 0
+        for r in range(rows_n):
+            s = src + r * ninfo.w
+            d = dst + r * stride
+            for i in range(cols_n):
+                if d + i < 0 or d + i >= len(grid):
+                    oob += 1
+                    continue
+                strips.add(d + i)
+                if 0 <= s + i < len(nblk):
+                    grid[d + i] = nblk[s + i]
+                    owners[d + i] = (nconst, (s + i) // ninfo.w,
+                                     (s + i) % ninfo.w)
+                else:
+                    oob += 1
+        if oob:
+            anomalies.append(
+                f"{const} {direction}->{nconst} (offset {offset}): {oob} "
+                f"strip bytes outside the neighbour blk (src {src})")
+    return strips, owners, anomalies
+
+
+def refresh_strips(cm) -> set[int]:
+    """Re-copy the strips after a neighbour edit; returns the cells that changed."""
+    before = {i: cm.grid[i] for i in cm.strip_cells}
+    strips, owners, anomalies = copy_strips(cm.grid, cm.stride,
+                                           cm.info.const, cm.info)
+    cm.strip_cells = strips
+    cm.strip_owner = owners
+    cm.anomalies = anomalies
+    return {i for i, block in before.items() if cm.grid[i] != block}
+
+
 def compose_padded(const: str, overrides: dict | None = None,
                    map_overrides: dict | None = None) -> ComposedMap:
     """overrides: {(row, col): block} painted border-ring cells (map_borders
@@ -220,45 +283,7 @@ def compose_padded(const: str, overrides: dict | None = None,
     stride, rows = info.w + 2 * BORDER, info.h + 2 * BORDER
     grid = bytearray(bytes([border_block]) * (stride * rows))
 
-    # connection strips (runtime: LoadNorthSouth/EastWestConnectionsTileMap).
-    # A source index outside the neighbour's blk means the RUNTIME reads
-    # adjacent GB memory (get_connection can emit src = -1 for offset -5
-    # connections) — we render the border block there and record an anomaly
-    # for the C4 connection re-tune pass.
-    anomalies = []
-    all_strips: set[int] = set()
-    for direction, nconst, offset in pm.CONNECTIONS.get(const, []):
-        ninfo = pm.map_info(nconst)
-        nraw = pm.load_blk(ninfo)
-        nblk, nw, nh, _ndiff = schema.compose_layout(
-            ninfo.label or pm.gmh.const_to_pascal(nconst), nraw,
-            ninfo.base_w, ninfo.base_h)
-        if (nw, nh) != (ninfo.w, ninfo.h):
-            raise ValueError(f"{nconst}: composed dimensions disagree with header")
-        c = pm.get_connection(direction, ninfo.map_id, offset,
-                              info.w, info.h, ninfo.w, ninfo.h)
-        src, dst = c["blk"], c["map"]
-        if direction in ("NORTH", "SOUTH"):
-            rows_n, cols_n = BORDER, c["len"]
-        else:
-            rows_n, cols_n = c["len"], BORDER
-        oob = 0
-        for r in range(rows_n):
-            s = src + r * ninfo.w
-            d = dst + r * stride
-            for i in range(cols_n):
-                if d + i < 0 or d + i >= len(grid):
-                    oob += 1
-                    continue
-                all_strips.add(d + i)
-                if 0 <= s + i < len(nblk):
-                    grid[d + i] = nblk[s + i]
-                else:
-                    oob += 1
-        if oob:
-            anomalies.append(
-                f"{const} {direction}->{nconst} (offset {offset}): {oob} "
-                f"strip bytes outside the neighbour blk (src {src})")
+    strip_cells, strip_owner, anomalies = copy_strips(grid, stride, const, info)
 
     # the map's own blocks (centre)
     for y in range(info.h):
@@ -270,7 +295,7 @@ def compose_padded(const: str, overrides: dict | None = None,
                 grid[(y + BORDER) * stride + (x + BORDER)] = block
 
     cm = ComposedMap(info, grid, stride, rows, border_block,
-                     warps, signs, sprites, anomalies, all_strips)
+                     warps, signs, sprites, anomalies, strip_cells, strip_owner)
     if overrides:
         editable = cm.editable_cells()
         for (row, col), block in overrides.items():
