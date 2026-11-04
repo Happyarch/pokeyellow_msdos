@@ -162,7 +162,8 @@ middle drag      pan                     arrows  pan too
 wheel            smooth zoom (continuous scale, not 1x/2x snapping)
 Ctrl + wheel     zoom using the OTHER anchor mode while Ctrl is held
 Ctrl + = / -     zoom in / out
-G block grid     T tile grid             W warps + signs
+G step grid (16px = 1 movement step)   B block grid (32px)   T tile grid (8px)
+W warps + signs
 N NPC markers    V/H/R port/GB/reach frames (click sets the staged player tile)
 I inspector      C palette              O cycle route preview
 X connections    assemble neighbouring maps at their real offsets (read-only)
@@ -193,6 +194,16 @@ error, so a typo fails loudly instead of silently doing nothing.
 | `zoom_step` | `1.1` | wheel multiplier per notch |
 | `zoom_key_step` | `1.25` | Ctrl+= / Ctrl+- multiplier |
 | `pan_button` | `2` | mouse button that pans (1 left, 2 middle, 3 right) |
+| `ui_scale` | `"auto"` | `"auto"` (derive from the window) or a number to pin it |
+| `ui_scale_min` / `ui_scale_max` | `0.75` / `2.5` | bounds applied to either form |
+| `ui_reference` | `[1024, 700]` | the window size `"auto"` is measured against |
+
+`ui_scale` drives the HUD font, the properties panels and the bottom bar, so the
+chrome stays readable when the window is resized. `"auto"` uses
+`min(width/ref_w, height/ref_h)` — the SMALLER axis ratio, so a short window
+shrinks the chrome rather than letting it overflow the bottom bar. The scale is
+recomputed whenever the window size changes; pinning it with a number overrides
+the formula but still respects the bounds.
 
 ### Connections view (`X`)
 

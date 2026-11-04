@@ -26,6 +26,13 @@ DEFAULTS = {
     "zoom_key_step": 1.25,
     # Mouse button that pans: 1 left, 2 middle, 3 right.
     "pan_button": 2,
+    # UI chrome scale. "auto" derives it from the window size (so it follows a
+    # resize); a number pins it. Bounds apply either way.
+    "ui_scale": "auto",
+    "ui_scale_min": 0.75,
+    "ui_scale_max": 2.5,
+    # The window size "auto" is measured against.
+    "ui_reference": [1024, 700],
 }
 
 _ALLOWED_ANCHORS = ("cursor", "center")
@@ -58,3 +65,14 @@ def validate(settings: dict, where: object = "config") -> None:
         raise ValueError(f"{where}: zoom steps must be greater than 1")
     if settings["pan_button"] not in (1, 2, 3):
         raise ValueError(f"{where}: pan_button must be 1, 2 or 3")
+    scale = settings["ui_scale"]
+    if scale != "auto" and not isinstance(scale, (int, float)):
+        raise ValueError(f"{where}: ui_scale must be \"auto\" or a number")
+    if isinstance(scale, (int, float)) and not scale > 0:
+        raise ValueError(f"{where}: ui_scale must be positive")
+    if not 0 < settings["ui_scale_min"] <= settings["ui_scale_max"]:
+        raise ValueError(f"{where}: need 0 < ui_scale_min <= ui_scale_max")
+    ref = settings["ui_reference"]
+    if (not isinstance(ref, (list, tuple)) or len(ref) != 2
+            or any(not isinstance(v, int) or v <= 0 for v in ref)):
+        raise ValueError(f"{where}: ui_reference must be [width, height]")

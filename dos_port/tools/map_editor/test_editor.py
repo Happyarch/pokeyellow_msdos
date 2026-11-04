@@ -14,9 +14,17 @@ from unittest.mock import patch
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
+import pygame  # noqa: E402  (after the SDL driver env vars)
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from map_editor import config  # noqa: E402
 from map_editor import view  # noqa: E402
+
+
+def pygame_surfarray(surface):
+    """Surface -> HxWx3 numpy array (pygame.surfarray is x-major, so transpose)."""
+    import numpy as np
+    return np.transpose(np.array(pygame.surfarray.array3d(surface)), (1, 0, 2))
 
 
 class ConfigTest(unittest.TestCase):
@@ -48,7 +56,6 @@ class ConfigTest(unittest.TestCase):
 class ZoomTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import pygame
         from map_editor import schema
         from map_editor.editor import Viewer
         pygame.init()
@@ -177,7 +184,38 @@ class ZoomTest(unittest.TestCase):
         # An odd tile belongs to the 16px square that contains it.
         self.assertEqual(drop(31, 19), (9, 15))
 
-    def test_connection_hint_tracks_the_staged_tile(self):
+    def test_step_grid_is_one_cell_per_movement_step(self):
+        """The grid must be 16 px: a 32 px cell is 2x2 steps and reads as wrong."""
+        v = self.viewer()
+        self.assertFalse(v.show["steps"], "grids stay off by default")
+        v.show["steps"] = True
+        v.show["blocks"] = False
+        v.center_view()
+        v.draw()
+        import numpy as np
+        a = pygame_surfarray(v.screen)
+        black = (a[:, :, 0] == 0) & (a[:, :, 1] == 0) & (a[:, :, 2] == 0)
+        cols = black.sum(axis=0)
+        lines = [x for x in range(len(cols)) if cols[x] > 100]
+        self.assertGreater(len(lines), 4)
+        pitches = {b - a for a, b in zip(lines, lines[1:])}
+        self.assertEqual(pitches, {16}, f"step grid pitch {pitches}")
+
+    def test_block_grid_stays_32px_and_is_distinct(self):
+        v = self.viewer()
+        v.show["steps"] = False
+        v.show["blocks"] = True
+        v.center_view()
+        v.draw()
+        import numpy as np
+        a = pygame_surfarray(v.screen)
+        orange = ((a[:, :, 0] > 200) & (a[:, :, 1] > 100)
+                  & (a[:, :, 1] < 180) & (a[:, :, 2] < 60))
+        cols = orange.sum(axis=0)
+        lines = [x for x in range(len(cols)) if cols[x] > 100]
+        pitches = {b - a for a, b in zip(lines, lines[1:])}
+        self.assertEqual(pitches, {32}, f"block grid pitch {pitches}")
+
         v = self.viewer()
         v.player = (0, 0)
         self.assertIn("NORTH", v.connection_at_player() or "")
@@ -185,6 +223,51 @@ class ZoomTest(unittest.TestCase):
         self.assertIn("SOUTH", v.connection_at_player() or "")
         v.player = (20, 20)
         self.assertIsNone(v.connection_at_player())
+
+    def test_ui_scale_follows_the_window_and_can_be_pinned(self):
+        v = self.viewer()
+        self.assertEqual(v.settings["ui_scale"], "auto")
+        v.screen = self.pygame.display.set_mode((1024, 700))
+        self.assertAlmostEqual(v.ui_scale(), 1.0, places=3)
+        small = v.ui_scale()
+        v.screen = self.pygame.display.set_mode((1600, 1000))
+        big = v.ui_scale()
+        self.assertGreater(big, small, "a bigger window must scale the UI up")
+        self.assertGreater(v.font.get_height(), 13, "font must follow the scale")
+        self.assertGreater(v.ui_panel_width(), 290)
+
+        pinned = self.viewer(ui_scale=2.0)
+        self.assertAlmostEqual(pinned.ui_scale(), 2.0, places=3)
+        self.assertEqual(self.viewer(ui_scale=99.0).ui_scale(),
+                         config.DEFAULTS["ui_scale_max"])
+        self.assertEqual(self.viewer(ui_scale=0.01).ui_scale(),
+                         config.DEFAULTS["ui_scale_min"])
+        v.screen = self.pygame.display.set_mode((1024, 700))
+
+    def test_panel_rows_never_overlap_when_scaled_up(self):
+        v = self.viewer(ui_scale=2.5)
+        geo = v.panel_geo()
+        self.assertGreaterEqual(geo["row_h"], v.font.get_height())
+        self.assertGreaterEqual(geo["item_h"], v.font.get_height())
+        self.assertGreaterEqual(geo["list"], geo["rows"] + 3 * geo["row_h"])
+        v.draw()
+
+    def test_ui_scale_config_is_validated(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(json.dumps({"ui_scale": "huge"}))
+            with self.assertRaisesRegex(ValueError, "ui_scale"):
+                config.load(path)
+            path.write_text(json.dumps({"ui_scale": 0}))
+            with self.assertRaisesRegex(ValueError, "positive"):
+                config.load(path)
+            path.write_text(json.dumps({"ui_reference": [1024]}))
+            with self.assertRaisesRegex(ValueError, "ui_reference"):
+                config.load(path)
+            path.write_text(json.dumps({"ui_scale": 1.5, "ui_reference": [1280, 720]}))
+            loaded = config.load(path)
+            self.assertEqual(loaded["ui_scale"], 1.5)
+            self.assertEqual(loaded["ui_reference"], [1280, 720])
 
     def test_left_click_does_not_start_a_pan(self):
         """The pan drag must never be armed by button 1."""

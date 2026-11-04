@@ -11,7 +11,8 @@ View controls:
   middle drag      pan                     arrows  pan too
   wheel            smooth zoom (continuous scale)  Ctrl+wheel  other anchor
   Ctrl + = / -     zoom in / out
-  G  block grid    T  tile grid            W  warp + sign events
+  G  step grid (16px, one movement step)   B  block grid (32px)   T  tile grid (8px)
+  W  warp + sign events
   N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
   I  coordinate inspector   C  toggle palette   O  cycle route preview
   X  connections: assemble neighbouring maps at their real offsets (read-only)
@@ -24,6 +25,9 @@ View controls:
 Zoom anchoring is set by `zoom_anchor` in config.json (`cursor` by default, or
 `center`). Ctrl is a held shift, not a toggle: while it is down the other anchor
 mode is used, and releasing it returns to the configured default.
+
+UI chrome (HUD font, side panels, bottom bar) scales with the window; set
+`ui_scale` in config.json to "auto" (default) or pin it with a number.
 
 Paint mode (P toggles):
   left click/drag  paint the selected block (border ring or map interior)
@@ -72,8 +76,9 @@ NPCMV12 = (236, 120, 255)
 # Connection-assembly review view: this map vs its neighbours.
 CONN_SELF = (255, 60, 200)
 CONN_OTHER = (90, 190, 255)
-GRID_BLOCK = (0, 0, 0)
-GRID_TILE = (70, 70, 70)
+GRID_STEP = (0, 0, 0)          # 16 px: one movement step (primary grid)
+GRID_BLOCK = (255, 140, 0)     # 32 px: one .blk cell (2x2 steps) — accent colour
+GRID_TILE = (70, 70, 70)       # 8 px: one GB tile (half a step)
 PAINTED = (255, 120, 220)
 MAP_PAINTED = (0, 220, 255)
 LOCKED_DIM = (0, 0, 0, 110)
@@ -90,7 +95,9 @@ class Viewer:
         # steps so the zoom is smooth instead of snapping between 1x/2x.
         self.scale = float(zoom) if zoom else 1.0
         self.pan = [0, 0]
-        self.show = {"blocks": False, "tiles": False, "warps": True,
+        # Grids stay OFF by default, as before: `G` is the step grid, `B` the
+        # 32 px block grid, `T` the 8 px tile grid.
+        self.show = {"steps": False, "blocks": False, "tiles": False, "warps": True,
                      "npcs": True, "port_view": False, "gb_view": False,
                      "render_reach": False, "inspector": False,
                      "connections": False}
@@ -118,7 +125,10 @@ class Viewer:
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 700),
                                               pygame.RESIZABLE)
-        self.font = pygame.font.SysFont("monospace", 13)
+        self._font = pygame.font.SysFont("monospace", 13)
+        self._font_size = 13
+        self._ui_key = None
+        self._ui_value = 1.0
         self.load(const)
 
     # ── data ─────────────────────────────────────────────────────────────────
@@ -209,7 +219,7 @@ class Viewer:
     def viewport_center(self) -> tuple[float, float]:
         """Screen centre of the map area (the bottom bar is excluded)."""
         return (self.screen.get_width() / 2.0,
-                (self.screen.get_height() - PANEL_H) / 2.0)
+                (self.screen.get_height() - self.panel_h()) / 2.0)
 
     def zoom_anchor(self, ctrl: bool) -> str:
         """Effective anchor mode.
@@ -259,11 +269,11 @@ class Viewer:
             surf = self.connection_surface()
             off_x, off_y = self.connection_offset(self.scale)
             self.pan = [(self.screen.get_width() - surf.get_width()) // 2 - off_x,
-                        (self.screen.get_height() - PANEL_H - surf.get_height()) // 2 - off_y]
+                        (self.screen.get_height() - self.panel_h() - surf.get_height()) // 2 - off_y]
             return
         surf = self.surface()
         self.pan = [(self.screen.get_width() - surf.get_width()) // 2,
-                    (self.screen.get_height() - PANEL_H - surf.get_height()) // 2]
+                    (self.screen.get_height() - self.panel_h() - surf.get_height()) // 2]
 
     def refresh_palette(self):
         if self.palette_mode == 'port-cgb':
@@ -458,13 +468,15 @@ class Viewer:
     def object_panel_click(self, pos):
         if self.paint or not self.selected_object:
             return False
-        left = self.screen.get_width() - 290
-        if pos[0] < left or pos[1] >= 400:
+        geo = self.panel_geo()
+        left = self.screen.get_width() - geo['w']
+        if pos[0] < left or pos[1] >= geo['h']:
             return False
         if self.object_menu:
-            index = (pos[1] - 94) // 20 + self.menu_offset
+            index = (pos[1] - geo['list']) // geo['item_h'] + self.menu_offset
             options = self.object_fields()[self.object_menu]
-            if 94 <= pos[1] < 334 and 0 <= index < len(options):
+            list_end = geo['list'] + geo['item_h'] * 12
+            if geo['list'] <= pos[1] < list_end and 0 <= index < len(options):
                 from map_editor import commands
                 try:
                     commands.set_object(self.cm.info.const, self.selected_object,
@@ -475,9 +487,10 @@ class Viewer:
                     self.save_error = str(exc)
                 self.object_menu = None
                 return True
-        if 20 <= pos[1] < 86:
-            index = (pos[1] - 20) // 22
-            self.object_menu = ('sprite', 'movement', 'facing')[index]
+        row_end = geo['rows'] + geo['row_h'] * 3
+        if geo['rows'] <= pos[1] < row_end:
+            self.object_menu = ('sprite', 'movement', 'facing')[
+                (pos[1] - geo['rows']) // geo['row_h']]
             self.menu_offset = 0
         else:
             self.object_menu = None
@@ -546,42 +559,59 @@ class Viewer:
         npc = next((s for s in self.cm.sprites if s['stable_id'] == self.selected_object), None)
         if not npc:
             return
-        x = self.screen.get_width() - 290
-        panel = pygame.Surface((290, 400), pygame.SRCALPHA)
+        geo = self.panel_geo()
+        x = self.screen.get_width() - geo['w']
+        panel = pygame.Surface((geo['w'], geo['h']), pygame.SRCALPHA)
         panel.fill((25, 25, 33, 225))
-        panel.blit(self.font.render('NPC properties (saved on select)', True, (255, 255, 255)), (6, 2))
+        panel.blit(self.font.render('NPC properties (saved on select)', True,
+                                    (255, 255, 255)), (geo['pad'], 2))
         tables = self.object_fields()
         for index, (field, key, values) in enumerate((
                 ('sprite', 'sprite_id', pm.gmh._SPRITE_CONSTS),
                 ('movement', 'mov', pm.gmh._MOV_CONSTS),
                 ('facing', 'dir', pm.gmh._DIR_CONSTS))):
             name = next((s for s in tables[field] if values.get(s) == npc[key]), str(npc[key]))
-            pygame.draw.rect(panel, (65, 65, 78), (4, 20 + index * 22, 282, 20))
+            top = geo['rows'] + index * geo['row_h']
+            pygame.draw.rect(panel, (65, 65, 78),
+                             (geo['pad'] - 2, top, geo['w'] - 2 * geo['pad'] + 4,
+                              geo['row_h'] - 2))
             # Source field "facing" is movement byte 2, not initial facing.
             # Pret zeroes sprite state on load, then this byte constrains motion.
             display = 'movement rule' if field == 'facing' else field
             panel.blit(self.font.render(f'{display}: {name} ▾', True, (235, 235, 235)),
-                       (8, 22 + index * 22))
+                       (geo['pad'], top + 1))
         if self.object_menu:
             for i, name in enumerate(tables[self.object_menu][self.menu_offset:self.menu_offset + 12]):
-                pygame.draw.rect(panel, (55, 60, 76), (4, 94 + i * 20, 282, 19))
-                panel.blit(self.font.render(name, True, (235, 235, 235)), (8, 95 + i * 20))
-            panel.blit(self.font.render('Mouse wheel: scroll', True, (220, 220, 220)), (8, 340))
+                top = geo['list'] + i * geo['item_h']
+                pygame.draw.rect(panel, (55, 60, 76),
+                                 (geo['pad'] - 2, top, geo['w'] - 2 * geo['pad'] + 4,
+                                  geo['item_h'] - 1))
+                panel.blit(self.font.render(name, True, (235, 235, 235)),
+                           (geo['pad'], top + 1))
+            panel.blit(self.font.render('Mouse wheel: scroll', True, (220, 220, 220)),
+                       (geo['pad'], geo['h'] - geo['item_h'] * 2))
         if self.route_index >= 0:
-            self.draw_route_timeline(panel)
+            self.draw_route_timeline(panel, geo)
         self.screen.blit(panel, (x, 0))
 
-    def draw_route_timeline(self, panel):
+    def draw_route_timeline(self, panel, geo):
         """Compact step timeline for the selected stream: [ ] navigate, 1-4 edit."""
         route = self.route_options[self.route_index]
         operations = route['operations']
-        panel.blit(self.font.render(f"Route {route['label'][:34]}", True, (235, 235, 235)), (6, 108))
-        columns, size, gap = 22, 12, 2
+        s = self.ui_scale()
+        size = max(6, int(round(12 * s)))
+        gap = max(1, int(round(2 * s)))
+        columns = max(1, (geo['w'] - 2 * geo['pad'] + gap) // (size + gap))
+        top0 = geo['rows'] + 4 * geo['row_h']
+        panel.blit(self.font.render(f"Route {route['label'][:34]}", True,
+                                    (235, 235, 235)), (geo['pad'], top0))
+        grid_top = top0 + self.font.get_linesize()
+        limit = geo['h'] - geo['item_h'] * 3
         for i, op in enumerate(operations):
             row, col = divmod(i, columns)
-            left = 6 + col * (size + gap)
-            top = 126 + row * (size + gap)
-            if top > 380:
+            left = geo['pad'] + col * (size + gap)
+            top = grid_top + row * (size + gap)
+            if top > limit:
                 panel.blit(self.font.render(f'+{len(operations) - i} more', True,
                                             (200, 200, 200)), (left, top))
                 break
@@ -593,13 +623,15 @@ class Viewer:
                 color = (230, 150, 60)
             pygame.draw.rect(panel, color, (left, top, size, size))
             if i == self.route_step:
-                pygame.draw.rect(panel, (255, 255, 255), (left - 1, top - 1, size + 2, size + 2), 1)
+                pygame.draw.rect(panel, (255, 255, 255),
+                                 (left - 1, top - 1, size + 2, size + 2), 1)
         if operations:
             current = operations[self.route_step]
             label = f"{self.route_step + 1}/{len(operations)} {current['kind']}"
             if current['direction']:
                 label += f" {current['direction']}"
-            panel.blit(self.font.render(label, True, (235, 235, 235)), (6, 386))
+            panel.blit(self.font.render(label, True, (235, 235, 235)),
+                       (geo['pad'], geo['h'] - geo['item_h'] * 2 - 4))
 
     def edit_route_step(self, direction):
         """Edit an existing recognized move without changing the stream length."""
@@ -736,7 +768,7 @@ class Viewer:
                 f"{entry['direction']} {entry['const']} ({entry['offset']:+d})",
                 True, CONN_OTHER)
             lx = max(0, rect[0] + max(3, (rect[2] - label.get_width()) // 2))
-            ly = max(0, min(self.screen.get_height() - PANEL_H - 18,
+            ly = max(0, min(self.screen.get_height() - self.panel_h() - 18,
                             rect[1] + 3))
             chip = pygame.Surface((label.get_width() + 4, label.get_height()),
                                   pygame.SRCALPHA)
@@ -745,7 +777,7 @@ class Viewer:
             self.screen.blit(chip, (lx, ly))
         for i, note in enumerate(cv.anomalies):
             self.screen.blit(self.font.render(note[:96], True, (255, 170, 90)),
-                             (8, self.screen.get_height() - PANEL_H - 18 - i * 16))
+                             (8, self.screen.get_height() - self.panel_h() - 18 - i * 16))
 
     def finish_warp_drag(self, pos):
         """Drop a dragged warp on the tile under the cursor.
@@ -835,49 +867,63 @@ class Viewer:
                      if w['stable_id'] == self.selected_warp), None)
         if not warp:
             return
-        x = self.screen.get_width() - 290
-        panel = pygame.Surface((290, 400), pygame.SRCALPHA)
+        geo = self.panel_geo()
+        x = self.screen.get_width() - geo['w']
+        panel = pygame.Surface((geo['w'], geo['h']), pygame.SRCALPHA)
         panel.fill((25, 25, 33, 225))
         panel.blit(self.font.render('Warp properties (saved on select)', True,
-                                    (255, 255, 255)), (6, 2))
+                                    (255, 255, 255)), (geo['pad'], 2))
         rows = (('dest', f"dest: {warp['dest']}"),
                 ('warp_id', f"target warp: {warp['warp_id']}"),
                 ('kind', f"kind: {warp['kind'] or '(unset)'}"))
         for index, (field, text) in enumerate(rows):
-            pygame.draw.rect(panel, (65, 65, 78), (4, 20 + index * 22, 282, 20))
+            top = geo['rows'] + index * geo['row_h']
+            pygame.draw.rect(panel, (65, 65, 78),
+                             (geo['pad'] - 2, top, geo['w'] - 2 * geo['pad'] + 4,
+                              geo['row_h'] - 2))
             panel.blit(self.font.render(text + ' ▾', True, (235, 235, 235)),
-                       (8, 22 + index * 22))
+                       (geo['pad'], top + 1))
         panel.blit(self.font.render(f"at (Y:{warp['y']*2}, X:{warp['x']*2}) tiles",
-                                    True, (200, 200, 200)), (6, 88))
+                                    True, (200, 200, 200)),
+                   (geo['pad'], geo['rows'] + 3 * geo['row_h']))
         if self.warp_menu:
             options = self.warp_fields()[self.warp_menu]
             for i, name in enumerate(options[self.warp_menu_offset:
                                              self.warp_menu_offset + 12]):
-                pygame.draw.rect(panel, (55, 60, 76), (4, 108 + i * 20, 282, 19))
+                top = geo['list'] + i * geo['item_h']
+                pygame.draw.rect(panel, (55, 60, 76),
+                                 (geo['pad'] - 2, top, geo['w'] - 2 * geo['pad'] + 4,
+                                  geo['item_h'] - 1))
                 panel.blit(self.font.render(name, True, (235, 235, 235)),
-                           (8, 109 + i * 20))
+                           (geo['pad'], top + 1))
             panel.blit(self.font.render('Mouse wheel: scroll', True,
-                                        (220, 220, 220)), (8, 356))
+                                        (220, 220, 220)),
+                       (geo['pad'], geo['h'] - geo['item_h'] * 3))
         panel.blit(self.font.render('kind is editor metadata, not emitted',
-                                    True, (200, 190, 150)), (6, 380))
+                                    True, (200, 190, 150)),
+                   (geo['pad'], geo['h'] - geo['item_h'] - 4))
         self.screen.blit(panel, (x, 0))
 
     def warp_panel_click(self, pos) -> bool:
         if self.paint or not self.selected_warp:
             return False
-        left = self.screen.get_width() - 290
-        if pos[0] < left or pos[1] >= 400:
+        geo = self.panel_geo()
+        left = self.screen.get_width() - geo['w']
+        if pos[0] < left or pos[1] >= geo['h']:
             return False
         options = self.warp_fields()
         if self.warp_menu:
-            index = (pos[1] - 108) // 20 + self.warp_menu_offset
+            index = (pos[1] - geo['list']) // geo['item_h'] + self.warp_menu_offset
             values = options[self.warp_menu]
-            if 108 <= pos[1] < 348 and 0 <= index < len(values):
+            list_end = geo['list'] + geo['item_h'] * 12
+            if geo['list'] <= pos[1] < list_end and 0 <= index < len(values):
                 self.apply_warp_field(self.warp_menu, values[index])
                 self.warp_menu = None
                 return True
-        if 20 <= pos[1] < 86:
-            self.warp_menu = ('dest', 'warp_id', 'kind')[(pos[1] - 20) // 22]
+        row_end = geo['rows'] + geo['row_h'] * 3
+        if geo['rows'] <= pos[1] < row_end:
+            self.warp_menu = ('dest', 'warp_id', 'kind')[
+                (pos[1] - geo['rows']) // geo['row_h']]
             self.warp_menu_offset = 0
         else:
             self.warp_menu = None
@@ -895,6 +941,62 @@ class Viewer:
             self.save_error = ''
         except (ValueError, OSError) as exc:
             self.save_error = str(exc)
+
+    def panel_geo(self) -> dict:
+        """Metrics for the right-hand properties panel, in pixels.
+
+        Derived from the live font so the panel keeps working when the UI scale
+        changes on a window resize: rows that assume a 13 px font overlap as soon
+        as the font grows.
+        """
+        s = self.ui_scale()
+        line = self.font.get_linesize()
+        return {'w': self.ui_panel_width(),
+                'h': int(round(400 * s)),
+                'pad': max(3, int(round(6 * s))),
+                'rows': int(round(20 * s)),      # first row's top
+                'row_h': line + 8,               # dropdown rows
+                'list': int(round(94 * s)),      # first dropdown item's top
+                'item_h': line + 6}
+
+    @property
+    def font(self):
+        """HUD font at the current UI scale (cheap: recreated only on resize)."""
+        size = max(9, int(round(13 * self.ui_scale())))
+        if self._font_size != size:
+            self._font = pygame.font.SysFont("monospace", size)
+            self._font_size = size
+        return self._font
+
+    def ui_scale(self) -> float:
+        """UI chrome scale, driven by the window size so it follows a resize.
+
+        `ui_scale` in config.json is either "auto" (the default: derive from the
+        window) or a number (pin it). The auto formula uses the SMALLER of the two
+        axis ratios against the reference window, so a short window shrinks the
+        chrome instead of letting it overflow — text growing past the bottom bar
+        is worse than text being small.
+        """
+        width, height = self.screen.get_width(), self.screen.get_height()
+        if self._ui_key == (width, height):
+            return self._ui_value
+        setting = self.settings.get('ui_scale', 'auto')
+        low = self.settings['ui_scale_min']
+        high = self.settings['ui_scale_max']
+        if setting == 'auto':
+            ref_w, ref_h = self.settings['ui_reference']
+            value = min(width / ref_w, height / ref_h)
+        else:
+            value = float(setting)
+        self._ui_value = max(low, min(high, value))
+        self._ui_key = (width, height)
+        return self._ui_value
+
+    def panel_h(self) -> int:
+        return max(PANEL_H, int(round(PANEL_H * self.ui_scale())))
+
+    def ui_panel_width(self) -> int:
+        return int(round(290 * self.ui_scale()))
 
     def draw(self):
         self.screen.fill((24, 24, 28))
@@ -932,6 +1034,19 @@ class Viewer:
 
         if self.show["connections"]:
             self.draw_connection_outlines(ox, oy, z)
+        if self.show["steps"]:
+            # ONE CELL PER MOVEMENT STEP (16 px). This is the grid that matches how
+            # NPC/warp/script coordinates are counted, so it is the default. The
+            # 32 px block grid is a separate toggle because a .blk cell is 2x2
+            # steps — useful for map data, useless for judging a step.
+            for sx in range(0, self.cm.stride * 4 + 1, 2):
+                x = ox + sx * TILE * z
+                pygame.draw.line(self.screen, GRID_STEP, (x, oy),
+                                 (x, oy + self.img.height * z))
+            for sy in range(0, self.cm.rows * 4 + 1, 2):
+                y = oy + sy * TILE * z
+                pygame.draw.line(self.screen, GRID_STEP, (ox, y),
+                                 (ox + self.img.width * z, y))
         if self.show["blocks"]:
             for bx in range(self.cm.stride + 1):
                 x = ox + bx * ts.BLOCK_PX * z
@@ -1011,17 +1126,17 @@ class Viewer:
         mode = (f"PAINT block 0x{self.current_block:02X} "
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
                 if self.paint else
-                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
+                "[G]step grid [B]lock grid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
             info = f"SAVE REFUSED: {self.save_error[:80]}"
-        bar = pygame.Surface((self.screen.get_width(), PANEL_H))
+        bar = pygame.Surface((self.screen.get_width(), self.panel_h()))
         bar.fill((40, 40, 48))
         bar.blit(self.font.render(info[:120], True,
                                   (255, 120, 120) if self.save_error
                                   else (220, 220, 220)), (8, 4))
-        self.screen.blit(bar, (0, self.screen.get_height() - PANEL_H))
+        self.screen.blit(bar, (0, self.screen.get_height() - self.panel_h()))
         pygame.display.flip()
 
     def draw_hud(self):
@@ -1036,6 +1151,8 @@ class Viewer:
                                     + bx + view.BORDER]
             block = f" B(Y:{by},X:{bx})=${block_id:02X}"
         layers = " ".join(name for name, enabled in (
+            ("STEP", self.show["steps"]), ("BLK", self.show["blocks"]),
+            ("TILE", self.show["tiles"]),
             ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
             ("PV", self.show["port_view"]), ("GB", self.show["gb_view"]),
             ("RR", self.show["render_reach"]),
@@ -1071,12 +1188,15 @@ class Viewer:
                 step = operations[self.route_step]
                 lines.append(f"Step {self.route_step + 1}/{len(operations)}: "
                              f"{step['kind']} {step['direction'] or ''} [ ] 1-4")
-        width = max(self.font.size(line)[0] for line in lines) + 12
-        panel = pygame.Surface((width, len(lines) * 16 + 8), pygame.SRCALPHA)
+        line_h = self.font.get_linesize()
+        pad = max(3, int(round(6 * self.ui_scale())))
+        width = max(self.font.size(line)[0] for line in lines) + pad * 2
+        panel = pygame.Surface((width, len(lines) * line_h + pad), pygame.SRCALPHA)
         panel.fill((20, 20, 26, 205))
         for i, line in enumerate(lines):
-            panel.blit(self.font.render(line, True, (235, 235, 235)), (6, 4 + i * 16))
-        self.screen.blit(panel, (6, 6))
+            panel.blit(self.font.render(line, True, (235, 235, 235)),
+                       (pad, pad // 2 + i * line_h))
+        self.screen.blit(panel, (pad, pad))
 
     def next_map(self):
         consts = [c for c in pm.all_map_consts()
@@ -1136,6 +1256,8 @@ class Viewer:
                     elif ev.key == pygame.K_f and self.paint:
                         self.flood_fill(pygame.mouse.get_pos())
                     elif ev.key == pygame.K_g:
+                        self.show["steps"] = not self.show["steps"]
+                    elif ev.key == pygame.K_b:
                         self.show["blocks"] = not self.show["blocks"]
                     elif ev.key == pygame.K_t:
                         self.show["tiles"] = not self.show["tiles"]

@@ -1,3 +1,4 @@
 {
-  "zoom_anchor": "cursor"
+  "zoom_anchor": "cursor",
+  "ui_scale": "auto"
 }
