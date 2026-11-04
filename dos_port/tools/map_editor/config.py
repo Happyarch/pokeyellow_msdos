@@ -33,9 +33,13 @@ DEFAULTS = {
     "ui_scale_max": 2.5,
     # The window size "auto" is measured against.
     "ui_reference": [1024, 700],
-    # Base pixel size of one paint-palette cell, before the UI scale. 16 is one
-    # movement step (2x2 GB tiles); 32 is one whole map block.
-    "palette_cell": 16,
+    # Base pixel size of one paint-palette cell, before the UI scale. 32 is one
+    # whole map block at 1:1 pixels (the clearest swatch); 16 is one movement
+    # step. Bigger cells are fine — the columns shrink to keep the strip narrow.
+    "palette_cell": 32,
+    # Tiles per palette row, or "auto": fit the window height, so a bigger cell
+    # makes the column longer instead of a wider strip.
+    "palette_cols": "auto",
 }
 
 _ALLOWED_ANCHORS = ("cursor", "center")
@@ -82,3 +86,7 @@ def validate(settings: dict, where: object = "config") -> None:
     cell = settings["palette_cell"]
     if not isinstance(cell, int) or isinstance(cell, bool) or not 4 <= cell <= 128:
         raise ValueError(f"{where}: palette_cell must be an integer in 4..128")
+    cols = settings["palette_cols"]
+    if cols != "auto" and (not isinstance(cols, int) or isinstance(cols, bool)
+                           or not 1 <= cols <= 32):
+        raise ValueError(f"{where}: palette_cols must be \"auto\" or an integer in 1..32")

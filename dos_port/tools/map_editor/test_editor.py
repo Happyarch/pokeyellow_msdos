@@ -285,41 +285,57 @@ class ZoomTest(unittest.TestCase):
         # The branch that arms `drag` is keyed on settings['pan_button'].
         self.assertNotEqual(v.settings["pan_button"], 1)
 
-    # ── paint palette: one cell per block, sized in steps, UI-scaled ─────────
+    # ── paint palette: readable swatches that follow the window ─────────────
 
-    def test_palette_cell_is_step_sized_and_follows_the_window(self):
-        from map_editor.editor import PAL_COLS
+    def test_palette_cell_is_block_sized_and_follows_the_window(self):
         v = self.viewer()
         v.screen = self.pygame.display.set_mode((1024, 700))
-        self.assertEqual(v.palette_cell(), 16, "a cell is one movement step at 1x")
+        self.assertEqual(v.palette_cell(), 32, "a cell is one block at 1x, 1:1")
         v.screen = self.pygame.display.set_mode((1600, 1000))
         cell = v.palette_cell()
-        self.assertGreater(cell, 16, "the palette must scale with the UI")
-        self.assertEqual(v.palette_width(), PAL_COLS * cell + 12)
-        rows = (v.nblocks + PAL_COLS - 1) // PAL_COLS
+        self.assertGreater(cell, 32, "the palette must scale with the UI")
+        self.assertEqual(v.palette_width(), v.palette_cols() * cell + 12)
         self.assertEqual(v.palette_surface().get_size(),
-                         (PAL_COLS * cell, rows * cell))
+                         (v.palette_cols() * cell, v.palette_rows() * cell))
 
-    def test_palette_cell_can_be_set_to_a_block(self):
-        v = self.viewer(palette_cell=32)
+    def test_palette_cols_shrink_as_the_cells_grow(self):
+        """Auto columns trade width for height: a bigger cell means a longer column."""
+        v = self.viewer()
         v.screen = self.pygame.display.set_mode((1024, 700))
-        self.assertEqual(v.palette_cell(), 32, "palette_cell is the base size")
+        small = (v.palette_cell(), v.palette_cols(), v.palette_rows())
+        v.screen = self.pygame.display.set_mode((2560, 1440))
+        big = (v.palette_cell(), v.palette_cols(), v.palette_rows())
+        self.assertGreater(big[0], small[0])
+        self.assertLessEqual(big[1], small[1], "fewer tiles per row")
+        self.assertGreaterEqual(big[2], small[2], "a longer column")
+        # The strip must still fit the window it is drawn in.
+        self.assertLessEqual(v.palette_rows() * v.palette_cell(),
+                             v.screen.get_height() - v.panel_h())
+
+    def test_palette_cell_and_cols_are_configurable(self):
+        v = self.viewer(palette_cell=64, palette_cols=4)
+        v.screen = self.pygame.display.set_mode((1024, 700))
+        self.assertEqual(v.palette_cell(), 64)
+        self.assertEqual(v.palette_cols(), 4)
+        self.assertEqual(v.palette_width(), 4 * 64 + 12)
+        # A fixed column count does not follow the window height.
+        v.screen = self.pygame.display.set_mode((1600, 1000))
+        self.assertEqual(v.palette_cols(), 4)
 
     def test_palette_click_uses_the_scaled_cell(self):
         """The hit test must follow the drawn size, not a hard-coded 32 px."""
-        from map_editor.editor import PAL_COLS
         v = self.viewer()
         v.screen = self.pygame.display.set_mode((1600, 1000))
         v.paint = True
-        cell = v.palette_cell()
+        cell, cols = v.palette_cell(), v.palette_cols()
         x0 = v.screen.get_width() - v.palette_width()
-        for block in (0, 9, PAL_COLS + 3):
-            col, row = block % PAL_COLS, block // PAL_COLS
+        for block in (0, cols - 1, cols + 3):
+            col, row = block % cols, block // cols
             pos = (x0 + 6 + col * cell + cell // 2, 6 + row * cell + cell // 2)
             self.assertTrue(v.palette_click(pos))
             self.assertEqual(v.current_block, block, f"block {block} at {pos}")
 
-    def test_palette_cell_config_is_validated(self):
+    def test_palette_config_is_validated(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "config.json"
             path.write_text(json.dumps({"palette_cell": 0}))
@@ -327,6 +343,14 @@ class ZoomTest(unittest.TestCase):
                 config.load(path)
             path.write_text(json.dumps({"palette_cell": 24}))
             self.assertEqual(config.load(path)["palette_cell"], 24)
+            path.write_text(json.dumps({"palette_cols": "wide"}))
+            with self.assertRaisesRegex(ValueError, "palette_cols"):
+                config.load(path)
+            path.write_text(json.dumps({"palette_cols": 0}))
+            with self.assertRaisesRegex(ValueError, "palette_cols"):
+                config.load(path)
+            path.write_text(json.dumps({"palette_cols": 5}))
+            self.assertEqual(config.load(path)["palette_cols"], 5)
 
     # ── save semantics: Ctrl+S commits, an edit never does ───────────────────
 

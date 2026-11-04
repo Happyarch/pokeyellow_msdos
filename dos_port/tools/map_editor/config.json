@@ -1,5 +1,6 @@
 {
   "zoom_anchor": "cursor",
   "ui_scale": "auto",
-  "palette_cell": 16
+  "palette_cell": 32,
+  "palette_cols": "auto"
 }

@@ -218,7 +218,8 @@ error, so a typo fails loudly instead of silently doing nothing.
 | `ui_scale` | `"auto"` | `"auto"` (derive from the window) or a number to pin it |
 | `ui_scale_min` / `ui_scale_max` | `0.75` / `2.5` | bounds applied to either form |
 | `ui_reference` | `[1024, 700]` | the window size `"auto"` is measured against |
-| `palette_cell` | `16` | base px per paint-palette cell (16 = one step, 32 = one block); the UI scale multiplies it |
+| `palette_cell` | `32` | base px per paint-palette cell (32 = one block at 1:1, 16 = one step); the UI scale multiplies it |
+| `palette_cols` | `"auto"` | tiles per row, or `"auto"` = as many rows as the window is tall |
 
 `ui_scale` drives the HUD font, the properties panels and the bottom bar, so the
 chrome stays readable when the window is resized. `"auto"` uses
@@ -229,15 +230,25 @@ the formula but still respects the bounds.
 
 ### Paint palette sizing
 
-The paint palette's cells are **one movement step** (16 px) at 1× and are
-multiplied by the UI scale, so they stay the same size *relative to the chrome*
-at every window size instead of being a fixed 32 px slab. A block is 2×2 steps,
-so a 32 px cell was 2× too large — the same mistake the step grid had. Set
-`palette_cell: 32` for block-sized swatches, or any value in 4..128.
+The swatches are one map block each, drawn at **1:1 pixels** by default (32 px at
+1×) and multiplied by the UI scale, so the tiles are actually readable — a step-
+sized 16 px cell was too small to tell blocks apart.
 
-The swatches are rendered at their true 32 px and then resized to the cell, so
-at `ui_scale` 2 (cell = 32 px) the preview is exact 1:1 pixels; smaller cells are
-a clean nearest-neighbour reduction, not a blur.
+`palette_cols` defaults to `"auto"`, which fits as many ROWS as the window is
+tall and derives the columns from that. That is the trade the palette needs: a
+bigger cell does not make a wider strip that eats the map, it makes a LONGER
+column with fewer tiles per row. Set a number to pin the columns instead.
+
+| window | cell | cols x rows | strip |
+|---|---|---|---|
+| 1024x700 | 32 | 7 x 19 | 236 x 620 |
+| 1600x1000 | 46 | 7 x 19 | 334 x 886 |
+| 2560x1440 | 66 | 7 x 19 | 474 x 1266 |
+
+The blocks are rendered at their true 32 px and then resized to the cell, so a
+32 px cell is exact 1:1 and larger cells are nearest-neighbour scaled (sharp,
+not blurred). `palette_click` hit-tests the drawn cell, so clicking picks the
+block under the cursor at every scale.
 
 ### Connections view (`X`)
 
