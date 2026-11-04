@@ -44,14 +44,29 @@ translation, not inferred:
   pass an all-four rule, and the 12-step difference is real geometry (e.g. step
   (14,7) has feet tile `$54`, passable, while its top row is water `$14` — the
   player standing at the water's edge with the sprite overlapping the water).
-- **Ledges are directed jumps of TWO steps.** `HandleLedges`
-  (`engine/overworld/ledges.asm`) matches (facing, standing tile, tile in front)
-  against `data/tilesets/ledge_tiles.asm`, then sets
+- **Ledges are traversable, one way, and they are TWO steps long.**
+  `HandleLedges` (`engine/overworld/ledges.asm`) matches (facing, standing tile,
+  tile in front) against `data/tilesets/ledge_tiles.asm`, then sets
   `wSimulatedJoypadStatesIndex = 2` with two identical pad presses — two steps —
   and sets `BIT_LEDGE_OR_FISHING`, which makes `CollisionCheckOnLand` return
   "passable" for the whole hop. It is OVERWORLD-only. A flood that ignores
   ledges sees a wall where the game jumps over it and **misses everything below
   it** — the unsafe direction.
+- **A ledge is in play when the tile BEHIND it is passable and reachable** —
+  above a downward ledge, to the right of a leftward one, to the left of a
+  rightward one. Reachability is exactly what the flood has already established,
+  so the rule is checked only from steps the player can stand on. pret's table
+  additionally pins the approach tile to `$2C`/`$39`; measured across all 34
+  OVERWORLD maps that pins the same **756** transitions as "approach tile is
+  passable" (0 disagreements), so the two rules agree today. The table is what
+  `HandleLedges` actually matches, so it is the one implemented: paint a ledge
+  whose approach tile is not one of those two and the hop genuinely will not
+  happen in-game, which the editor should tell you.
+- **The mid-hop position is a camera position, not a standing position.** The
+  first of the two simulated steps puts the player's sprite ON the ledge tile, so
+  the camera is centred there and its window is real — but the player cannot stop
+  or turn, so the flood must never expand from it. `view.Reach` therefore
+  separates `standing` from `traversed`.
 - **Tile-pair collisions are barriers on CAVERN/FOREST only**
   (`data/tilesets/pair_collision_tile_ids.asm`). Not modelled in v1; ignoring
   them lets the flood cross an elevation edge the game forbids, which
@@ -78,10 +93,15 @@ translation, not inferred:
     reported zero walkable steps. Assign each `coll_tiles` set to every pending
     label.
   - `view.feet_tile` / `step_walkable`: the bottom-right tile rule above.
-  - `view.reachable_steps`: 4-connected flood over steps, destination feet tile
-    passable, **plus directed ledge edges** parsed from
-    `data/tilesets/ledge_tiles.asm` for OVERWORLD maps (standing tile `$2C`/`$39`
-    + matching ledge tile in front -> step two ahead).
+  - `view.reachable_steps`: two phases per round, in the order that keeps the
+    common case cheap. **(1)** plain 4-connectivity from every step reached so
+    far — no ledge logic in the inner loop, and it answers most of the map;
+    **(2)** then resolve the ledges of those steps from a queue. A hop that lands
+    somewhere new opens a region, so its landing goes back through phase 1.
+    Every reached step has its ledge checked exactly once, so the cost is
+    proportional to what the flood covers rather than to the whole map (Route 1:
+    2 ms for 369 standing + 42 mid-hop steps). Returns `Reach(standing,
+    traversed)`.
   - `view.viewport_cells`: union of the camera window over a step set, as
     absolute 4 px cells (already written; the grids align because every origin
     is a multiple of 4).
@@ -143,6 +163,13 @@ translation, not inferred:
   masked to real map data. Both windows are player-centred and DOS strictly
   contains GB, so per-position difference is the frame and union-difference is
   "ever on DOS, never on GB".
+- The union is over every position the CAMERA occupies (`Reach.steps()` =
+  standing + mid-hop), because "can the player see from here" is a camera
+  question, not a standing question. Measured across all 34 OVERWORLD maps,
+  adding the mid-hop positions changes the union by **0 cells** — a 320x200
+  window is 20 steps wide and a hop is 2, so the midpoint window is already
+  covered by the two end windows. They are modelled anyway: the camera really is
+  there, and a future narrower window would make the omission a real under-mark.
 - The GB box is a **size reference**, not an emulation of the GB camera's
   edge-scroll rules (`README.md`). Near map edges the real GB camera slides while
   the reference stays centred, so the band over-marks there. Over-marking is the

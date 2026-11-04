@@ -311,11 +311,27 @@ tileset's passable list — the sprite may overlap a wall, and a step wedged int
 corner still counts. Requiring all four tiles would under-approximate the walkable
 area and hide seams.
 
-Ledges are **directed edges two steps long**, read from
-`data/tilesets/ledge_tiles.asm`: standing on `$2C`/`$39` with the matching ledge
-tile in front hops over it, never back. Ignoring them would put a wall where the
-game jumps and hide everything below it. `HandleLedges` returns early for every
-non-OVERWORLD tileset, so only overworld maps get them.
+Ledges are **traversable one way**, and the hop is **two steps** long: the first
+step puts the player's sprite ON the ledge tile, the second clears it. So a ledge
+is in play when the tile *behind* it is passable and reachable — above a downward
+ledge, to the right of a leftward one, to the left of a rightward one — and the
+tile in front is the ledge tile `data/tilesets/ledge_tiles.asm` lists for that
+facing. Ignoring them would put a wall where the game jumps and hide everything
+below it. `HandleLedges` returns early for every non-OVERWORLD tileset, so only
+overworld maps get them.
+
+The flood runs in two phases so the common case stays cheap: plain 4-connectivity
+first (no ledge logic at all), then the ledges of the steps it reached, resolved
+from a queue. A hop that lands somewhere new opens a region, so its landing goes
+back through phase 1. Each reached step has its ledge checked exactly once.
+
+That two-step hop matters for the union: the camera is centred on the ledge step
+mid-hop, so `Reach` separates positions the player can **stand** on from
+positions the camera merely **passes over**. The union is taken over both, since
+"can the player see from here" is a camera question. (Measured across every
+overworld map, the mid-hop positions change the union by 0 cells today — a 320 px
+window is 20 steps wide and a hop is 2, so the midpoint window is already covered
+by the two end windows — but the model records them rather than relying on that.)
 
 Deliberate approximations, all in the *safe* direction (they over-mark, never
 under-mark): the flood is undirected ("can the player ever stand here", not "can

@@ -825,19 +825,43 @@ class ReachTest(unittest.TestCase):
         self.assertEqual(view.feet_tile(cm, 4, 4), 0x2C)
         self.assertEqual(view.feet_tile(cm, 5, 4), 0x37)
         self.assertFalse(view.step_walkable(cm, 5, 4), "a ledge is not a standing tile")
-        jumps = view.ledge_jumps(cm)
-        self.assertIn((6, 4), jumps.get((4, 4), []))
-        self.assertNotIn((4, 4), jumps.get((6, 4), []),
+        self.assertEqual(list(view._ledge_landings(cm, 4, 4)), [(6, 4)])
+        self.assertEqual(list(view._ledge_landings(cm, 6, 4)), [],
                          "a ledge hops down only; the reverse edge must not exist")
-        # And the flood must actually use it: the ledge is not passable, so the
-        # only way from (4,4) to (6,4) is the jump.
         reach = view.reachable_steps(cm, (4, 4))
-        self.assertIn((6, 4), reach)
+        self.assertIn((6, 4), reach.standing, "the landing is a standing position")
+        self.assertIn((5, 4), reach.traversed, "the hop passes over the ledge step")
+        self.assertNotIn((5, 4), reach.standing, "you cannot stop on a ledge")
+
+    def test_the_mid_hop_window_is_part_of_the_union(self):
+        """The camera is centred on the ledge step mid-hop, so it can see from it."""
+        cm = self.route1
+        reach = view.reachable_steps(cm, (4, 4))
+        dos = view.viewport_cells(sorted(reach.steps()), "dos")
+        mid_hop = view.viewport_cells([(5, 4)], "dos")
+        self.assertTrue(mid_hop, "fixture: the mid-hop step has a window")
+        self.assertLessEqual(mid_hop, dos,
+                             "everything visible from the ledge step must be in "
+                             "the union")
+
+    def test_a_ledge_needs_the_tile_behind_it(self):
+        """In play only when the tile behind is passable AND reachable.
+
+        The hop out of (4,4) exists; the same hop from the step BELOW the ledge
+        does not, and a seed on the ledge itself is not a standing position.
+        """
+        cm = self.route1
+        self.assertEqual(list(view._ledge_landings(cm, 4, 4)), [(6, 4)])
+        self.assertFalse(list(view._ledge_landings(cm, 5, 4)),
+                         "the ledge tile is not an approach")
+        self.assertEqual(view.reachable_steps(cm, (5, 4)).standing, set())
 
     def test_ledges_only_apply_to_the_overworld_tileset(self):
         """HandleLedges returns early unless wCurMapTileset == OVERWORLD."""
-        self.assertTrue(view.ledge_jumps(self.route1))
-        self.assertFalse(view.ledge_jumps(view.compose_padded("ROUTE_23")))
+        self.assertTrue(list(view._ledge_landings(self.route1, 4, 4)))
+        plateau = view.compose_padded("ROUTE_23")
+        self.assertEqual(plateau.info.tileset_name, "PLATEAU")
+        self.assertFalse(list(view._ledge_landings(plateau, 4, 4)))
 
     def test_flood_is_complete_and_bounded(self):
         """Every walkable neighbour of a reached step is reached, and nothing else."""
@@ -845,31 +869,32 @@ class ReachTest(unittest.TestCase):
         seed = (7, 4)
         self.assertTrue(view.step_walkable(cm, *seed))
         reach = view.reachable_steps(cm, seed)
-        self.assertIn(seed, reach)
+        self.assertIn(seed, reach.standing)
         h, w = cm.info.h * 2, cm.info.w * 2
-        self.assertTrue(all(0 <= y < h and 0 <= x < w for (y, x) in reach))
-        for (y, x) in reach:
+        self.assertTrue(all(0 <= y < h and 0 <= x < w for (y, x) in reach.standing))
+        for (y, x) in reach.standing:
             self.assertTrue(view.step_walkable(cm, y, x))
             for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
                 if 0 <= ny < h and 0 <= nx < w and view.step_walkable(cm, ny, nx):
-                    self.assertIn((ny, nx), reach,
+                    self.assertIn((ny, nx), reach.standing,
                                   f"flood stopped at a walkable neighbour "
                                   f"{(ny, nx)} of {(y, x)}")
         # A walled-off pocket stays out: Pallet Town's fenced north-west corner.
         pockets = {(y, x) for y in range(h) for x in range(w)
-                   if view.step_walkable(cm, y, x)} - reach
+                   if view.step_walkable(cm, y, x)} - reach.standing
         self.assertTrue(pockets, "fixture expects at least one isolated pocket")
 
     def test_unwalkable_seed_reaches_nothing(self):
-        self.assertEqual(view.reachable_steps(self.pallet, None), set())
+        empty = view.Reach(set(), set())
+        self.assertEqual(view.reachable_steps(self.pallet, None), empty)
         self.assertFalse(view.step_walkable(self.pallet, 1, 0), "fixture: a wall")
-        self.assertEqual(view.reachable_steps(self.pallet, (1, 0)), set())
-        self.assertEqual(view.reachable_steps(self.pallet, (999, 999)), set())
+        self.assertEqual(view.reachable_steps(self.pallet, (1, 0)), empty)
+        self.assertEqual(view.reachable_steps(self.pallet, (999, 999)), empty)
 
     def test_attention_is_dos_minus_gb_inside_real_map_data(self):
         cm = self.route1
         seed = (4, 4)
-        steps = view.reachable_steps(cm, seed)
+        steps = view.reachable_steps(cm, seed).steps()
         dos, gb, attention, border = view.viewable(cm, steps)
         self.assertTrue(dos and gb)
         self.assertTrue(attention)
@@ -885,7 +910,7 @@ class ReachTest(unittest.TestCase):
     def test_a_room_smaller_than_the_gb_window_reveals_no_attention(self):
         """REDS_HOUSE_1F is 4x4 blocks: the GB window already shows all of it."""
         cm = view.compose_padded("REDS_HOUSE_1F")
-        steps = view.reachable_steps(cm, (2, 2))
+        steps = view.reachable_steps(cm, (2, 2)).steps()
         self.assertTrue(steps)
         dos, gb, attention, border = view.viewable(cm, steps)
         self.assertEqual(attention, set(),
@@ -916,8 +941,9 @@ class ReachOverlayTest(ViewerTestBase):
         v.probe = [(4, 4)]
         v.toggle_reach()
         self.assertIsNotNone(v.reach_stats, v.save_error)
-        steps, dos, gb, attention, border = v.reach_stats
-        self.assertIn((4, 4), v.reach)
+        steps, hops, dos, gb, attention, border = v.reach_stats
+        self.assertIn((4, 4), v.reach.standing)
+        self.assertGreaterEqual(hops, 0)
         self.assertGreater(steps, 1)
         # DOS strictly contains GB per position, so its union must too.
         self.assertGreater(dos, gb)
@@ -936,7 +962,7 @@ class ReachOverlayTest(ViewerTestBase):
         self.assertIsNotNone(v.reach_stats)
         v.toggle_reach()
         self.assertIsNone(v.reach_stats)
-        self.assertEqual(v.reach, [])
+        self.assertIsNone(v.reach)
         self.assertEqual(v._reach_runs, [])
         self.assertEqual(v._reach_outline, {})
 
@@ -951,7 +977,7 @@ class ReachOverlayTest(ViewerTestBase):
         self.assertEqual(v.player, (8, 14))
         v.toggle_reach()
         self.assertIsNotNone(v.reach_stats, v.save_error)
-        self.assertIn((7, 4), v.reach)
+        self.assertIn((7, 4), v.reach.standing)
 
     def test_no_anchor_at_all_reports_instead_of_guessing(self):
         v = self.viewer("PALLET_TOWN")

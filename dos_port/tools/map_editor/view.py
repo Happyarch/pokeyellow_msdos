@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from typing import NamedTuple
 from functools import lru_cache
 from pathlib import Path
 
@@ -544,41 +545,91 @@ def step_walkable(cm, step_y: int, step_x: int) -> bool:
     return feet_tile(cm, step_y, step_x) in passable
 
 
-def ledge_jumps(cm) -> dict[tuple[int, int], list[tuple[int, int]]]:
-    """{step: [landing steps]} for the ledges this map can hop, OVERWORLD only.
+def _ledge_landings(cm, step_y: int, step_x: int):
+    """Landing steps for a hop out of this standing step, if any.
 
-    HandleLedges matches (facing, standing tile, tile in front) and then runs TWO
-    simulated steps with BIT_LEDGE_OR_FISHING set, which makes CollisionCheckOnLand
-    answer "passable" for the whole hop — so a ledge is a directed edge two steps
-    long that a plain passability flood cannot see.
+    A ledge is in play when the tile BEHIND it is passable and reachable — above
+    a downward ledge, to the right of a leftward one, to the left of a rightward
+    one — and the tile in front is the ledge tile pret lists for that facing.
+    Reachability is what the flood has already established, so this is only ever
+    asked about a step the player can actually stand on.
+
+    pret also pins the approach tile to $2C/$39, and measured across every
+    OVERWORLD map that pins exactly the same 756 transitions as "approach tile is
+    passable" (0 disagreements), so the two rules agree today. The table is kept
+    because it is what HandleLedges actually matches: paint a ledge whose
+    approach tile is not one of those two and the hop really will not happen
+    in-game, which is worth the editor telling you.
     """
     if (cm.info.tileset_name or "").upper() != "OVERWORLD":
-        return {}
-    passable = collision_tiles(cm.info.tileset_stem)
+        return
+    stand = feet_tile(cm, step_y, step_x)
     h, w = cm.info.h * 2, cm.info.w * 2
-    jumps: dict[tuple[int, int], list[tuple[int, int]]] = {}
-    for step_y in range(h):
-        for step_x in range(w):
-            standing = _tile_at(cm, step_y * 2 + 1, step_x * 2)
-            if standing not in passable:
+    for facing, stand_id, ledge_id in _ledge_table():
+        if stand_id != stand:
+            continue
+        dy, dx = LEDGE_DIRECTIONS[facing]
+        if not (0 <= step_y + dy < h and 0 <= step_x + dx < w):
+            continue
+        # the tile in front must BE the ledge tile for this facing
+        if _tile_at(cm, (step_y + dy) * 2 + 1, (step_x + dx) * 2) != ledge_id:
+            continue
+        land = (step_y + 2 * dy, step_x + 2 * dx)
+        if 0 <= land[0] < h and 0 <= land[1] < w:
+            yield land
+
+
+class Reach(NamedTuple):
+    """What the flood found.
+
+    standing  — positions the player can stop on, and turn from.
+    traversed — positions the camera passes over mid-hop. HandleLedges queues
+                TWO simulated steps, so the player's sprite sits ON the ledge
+                tile before clearing it: not a standing position (no stopping,
+                no turning, so the flood never expands from it), but the camera
+                is centred there and that viewport is real.
+    """
+
+    standing: set
+    traversed: set
+
+    def steps(self) -> set:
+        """Every position the camera occupies: standing plus mid-hop."""
+        return self.standing | self.traversed
+
+
+def _flood(cm, seed, standing: set) -> list:
+    """Plain 4-connectivity from `seed` into `standing`; returns what it added.
+
+    Deliberately knows nothing about ledges: this is the cheap part and it
+    answers most of the map, so ledge logic is kept out of its inner loop.
+    """
+    h, w = cm.info.h * 2, cm.info.w * 2
+    added = []
+    todo = [seed]
+    while todo:
+        y, x = todo.pop()
+        for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+            if (ny, nx) in standing or not (0 <= ny < h and 0 <= nx < w):
                 continue
-            for facing, stand, ledge in _ledge_table():
-                if stand != standing:
-                    continue
-                dy, dx = LEDGE_DIRECTIONS[facing]
-                if not (0 <= step_y + dy < h and 0 <= step_x + dx < w):
-                    continue
-                front = _tile_at(cm, (step_y + dy) * 2 + 1, (step_x + dx) * 2)
-                if front != ledge:
-                    continue
-                ty, tx = step_y + 2 * dy, step_x + 2 * dx
-                if 0 <= ty < h and 0 <= tx < w:
-                    jumps.setdefault((step_y, step_x), []).append((ty, tx))
-    return jumps
+            if step_walkable(cm, ny, nx):
+                standing.add((ny, nx))
+                added.append((ny, nx))
+                todo.append((ny, nx))
+    return added
 
 
-def reachable_steps(cm, seed) -> set[tuple[int, int]]:
-    """Flood every step the player can reach from `seed`, 4-connected.
+def reachable_steps(cm, seed) -> Reach:
+    """Flood every step the player can reach from `seed`.
+
+    Two phases per round, in the order that keeps the common case cheap:
+
+      1. plain 4-connectivity from every step reached so far — no ledge logic;
+      2. then resolve the ledges of those steps, from a queue. A hop that lands
+         somewhere new opens a region, so its landing goes back through phase 1.
+
+    Every reached step has its ledge checked exactly once, so the cost is
+    proportional to what the flood actually covers rather than to the whole map.
 
     Undirected on purpose: this answers "can the player ever stand here", not
     "can they get here from the map entrance". Sprites are ignored (they move),
@@ -587,29 +638,30 @@ def reachable_steps(cm, seed) -> set[tuple[int, int]]:
     the game forbids, which over-marks. Over-marking is the safe direction for an
     audit; under-marking would hide a seam.
     """
+    empty = Reach(set(), set())
     if seed is None:
-        return set()
+        return empty
     h, w = cm.info.h * 2, cm.info.w * 2
     if not (0 <= seed[0] < h and 0 <= seed[1] < w):
-        return set()
+        return empty
     if not step_walkable(cm, *seed):
-        return set()
-    jumps = ledge_jumps(cm)
-    seen = {seed}
-    todo = [seed]
-    while todo:
-        y, x = todo.pop()
-        for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
-            if not (0 <= ny < h and 0 <= nx < w) or (ny, nx) in seen:
-                continue
-            if step_walkable(cm, ny, nx):
-                seen.add((ny, nx))
-                todo.append((ny, nx))
-        for ny, nx in jumps.get((y, x), ()):
-            if (ny, nx) not in seen:
-                seen.add((ny, nx))
-                todo.append((ny, nx))
-    return seen
+        return empty
+    standing = {seed}
+    traversed: set = set()
+    queue = [seed]                     # reached steps whose ledge is unchecked
+    while queue:
+        fresh = []
+        for step in queue:             # phase 1: plain walking
+            fresh.extend(_flood(cm, step, standing))
+        batch, queue = queue + fresh, []
+        for (y, x) in batch:           # phase 2: the ledges of what we reached
+            for land in _ledge_landings(cm, y, x):
+                # The hop is two steps, so the camera passes over the midpoint.
+                traversed.add(((y + land[0]) // 2, (x + land[1]) // 2))
+                if land not in standing:
+                    standing.add(land)
+                    queue.append(land)
+    return Reach(standing, traversed - standing)
 
 
 def viewport_cells(steps, kind: str) -> set[tuple[int, int]]:

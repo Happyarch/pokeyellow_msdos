@@ -215,8 +215,8 @@ class Viewer:
         # places them. The overlay outlives the mode on purpose — it is an
         # annotation you keep while painting, not a transient cursor.
         self.probe = []
-        self.reach = []          # walkable flood from the probe: every position
-        self.reach_stats = None  # (steps, dos, gb, attention, border) cell counts
+        self.reach = None        # view.Reach from the probe: standing + mid-hop
+        self.reach_stats = None  # (steps, hops, dos, gb, attention, border)
         self._reach_runs = []    # merged attention cells, for the fill
         self._reach_outline = {} # kind -> (x0, y0, horizontal, vertical)
         self._reach_surf = None  # reusable translucent overlay
@@ -494,15 +494,18 @@ class Viewer:
         if seed is None:
             self.save_error = "reach: place the probe on a step first"
             return False
-        steps = sorted(view.reachable_steps(self.cm, seed))
-        if not steps:
+        reach = view.reachable_steps(self.cm, seed)
+        if not reach.standing:
             self.save_error = (f"reach: step {seed} is not walkable "
                                f"(impassable, or a ledge)")
             return False
+        # The union is over every position the CAMERA occupies, which includes
+        # the step a ledge hop passes through, not just where the player stops.
+        steps = reach.steps()
         dos, gb, attention, border = view.viewable(self.cm, steps)
-        self.reach = steps
-        self.reach_stats = (len(steps), len(dos), len(gb),
-                            len(attention), len(border))
+        self.reach = reach
+        self.reach_stats = (len(reach.standing), len(reach.traversed),
+                            len(dos), len(gb), len(attention), len(border))
         self._reach_runs = _cell_runs(attention)
         # Outlines are stored, not recomputed: a whole-map union is thousands of
         # 4 px cells and this must not run once per frame.
@@ -519,7 +522,7 @@ class Viewer:
         self.compute_reach()
 
     def clear_reach(self):
-        self.reach = []
+        self.reach = None
         self.reach_stats = None
         self._reach_runs = []
         self._reach_outline = {}
@@ -1280,7 +1283,7 @@ class Viewer:
         the part the GB's 160x144 window never showed is the seam-audit band.
         Border-clamp fill past the map edge is excluded — it is not a seam.
         """
-        if self.reach_stats is None or not self.reach:
+        if self.reach is None:
             return
         width, height = self.screen.get_size()
         if self._reach_surf is None or self._reach_surf.get_size() != (width, height):
@@ -1713,13 +1716,14 @@ class Viewer:
         elif self.probe_mode:
             lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
         if self.reach_stats is not None:
-            steps, dos, gb, attention, border = self.reach_stats
+            steps, hops, dos, gb, attention, border = self.reach_stats
             # Units are load-bearing: 4 px cells, not tiles, so nobody reads the
             # numbers as a tile count. The border remainder is reported rather
             # than dropped — it is the DOS-only area that is not real map data.
-            lines.append(f"Reach {steps} steps · DOS {dos} · GB {gb} · "
-                         f"DOS-only {attention} (+{border} border) 4px cells"
-                         f"  U clears")
+            # "+N hop" is the mid-hop positions a ledge carries the camera over.
+            lines.append(f"Reach {steps} steps (+{hops} hop) · DOS {dos} · "
+                         f"GB {gb} · DOS-only {attention} (+{border} border) "
+                         f"4px cells  U clears")
         elif self.probe_mode:
             lines.append("Reach: U floods the walkable area from the probe")
         if self.palette_warning:
