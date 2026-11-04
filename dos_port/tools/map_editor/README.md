@@ -172,6 +172,7 @@ I inspector      C palette              O cycle route preview
 X connections    assemble neighbouring maps at their real offsets; strip cells edit the owner
 U walkable reach flood from the probe; shade what only the port can show
 K look preview  render with the own look, then each neighbour's, then back
+O route preview outside paint mode; in paint mode it arms the tile picker
 click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
@@ -399,6 +400,28 @@ Route 1's border is `$0B` (tile `$52`, grass) and Viridian City's is `$0F`
 the walkable area into trees. Pallet Town shares Route 1's `$0B`, so that seam's
 fill is stable. The GB never showed this fill at all — its camera stops at the map
 edge, while the port's 320 px viewport is as wide as Route 1.
+
+### Tile picker (`O`) and the unused-block onion skin
+
+In paint mode, `O` arms the picker: the **next left click clones that cell's
+block into the palette** instead of painting it, then the picker disarms itself.
+`O` again cancels. It is left-click on purpose — the right-click eyedropper
+already exists, but in paint mode a stray left click paints, so picking needs to
+be armed explicitly to never be a mis-painted cell. It works on a connection
+strip too, and that pick is read-only (writing there goes through `_apply` to the
+map that owns the cell).
+
+While the palette is open, every block the **composed map does not place
+anywhere** is onion-skinned orange — the swatch stays readable underneath. "Anywhere"
+means the whole padded grid: the map's own blocks, the connection strips copied
+from the neighbours, and the border ring (the fill is on screen, so its block is
+in use). A block outside that set cannot change what this map looks like, which
+makes it a safe candidate to repurpose into a different graphic.
+
+It is a **per-map** answer, not a per-tileset one: the same block can be free
+here and load-bearing three maps away. The HUD says how many are free
+(`Palette: 79 of 128 blocks unused here`), and painting a free block uses it up
+immediately.
 
 ### Paint palette sizing
 

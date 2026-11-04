@@ -1157,5 +1157,87 @@ class LookSwapTest(ViewerTestBase):
         self.assertGreater(shape, 0, "PLATEAU reads these block ids differently")
 
 
+class TilePickerTest(ViewerTestBase):
+    """O in paint mode: the next left click clones a block instead of painting."""
+
+    def painting(self, const="ROUTE_1"):
+        v = self.viewer(const)
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.paint = True
+        return v
+
+    def cell_px(self, r, c):
+        return (c * 32 + 1, r * 32 + 1)
+
+    def test_pick_only_arms_in_paint_mode(self):
+        v = self.viewer("ROUTE_1")
+        self.assertFalse(v.toggle_pick(), "O outside paint mode is not the picker")
+        self.assertFalse(v.pick_mode)
+        v.paint = True
+        self.assertTrue(v.toggle_pick())
+        self.assertTrue(v.pick_mode)
+        self.assertTrue(v.toggle_pick(), "O again turns it off")
+        self.assertFalse(v.pick_mode)
+
+    def test_leaving_paint_mode_disarms_the_picker(self):
+        v = self.painting()
+        v.toggle_pick()
+        self.assertTrue(v.pick_mode)
+        v.paint = False
+        v.pick_mode = False          # what the P handler does
+        v.paint = True
+        self.assertFalse(v.pick_mode)
+
+    def test_click_clones_the_block_and_does_not_paint(self):
+        v = self.painting()
+        target = (10, 10)
+        idx = target[0] * v.cm.stride + target[1]
+        block = v.cm.grid[idx]
+        v.current_block = block ^ 0xFF if block ^ 0xFF < v.nblocks else 0
+        before = v.current_block
+        self.assertNotEqual(before, block)
+        v.toggle_pick()
+        v.pick_cell(self.cell_px(*target))
+        self.assertEqual(v.current_block, block, "the clicked block is cloned")
+        self.assertFalse(v.pick_mode, "picking disarms")
+        self.assertEqual(v.map_cells, {}, "picking must not paint")
+        self.assertEqual(v.cells, {})
+
+    def test_pick_reads_a_connection_strip_without_editing_it(self):
+        v = self.painting("ROUTE_1")
+        idx = next(i for i, o in v.cm.strip_owner.items() if o[0] == "PALLET_TOWN")
+        r, c = divmod(idx, v.cm.stride)
+        block = v.cm.grid[idx]
+        v.toggle_pick()
+        v.pick_cell(self.cell_px(r, c))
+        self.assertEqual(v.current_block, block)
+        self.assertEqual(v.map_cells, {})
+        self.assertEqual(v.cells, {})
+
+    def test_unused_blocks_are_the_ones_not_on_screen(self):
+        """Used = map + strips + border ring, because all three are visible."""
+        v = self.viewer("ROUTE_2")
+        unused = v.unused_blocks()
+        used = set(v.cm.grid)
+        self.assertEqual(sorted(unused),
+                         sorted(b for b in range(v.nblocks) if b not in used))
+        self.assertNotIn(v.cm.border_block, unused,
+                         "the border block is on screen as fill")
+        self.assertTrue(unused, "a 128-block tileset cannot all be in use")
+        for idx, (owner, _y, _x) in list(v.cm.strip_owner.items())[:5]:
+            self.assertNotIn(v.cm.grid[idx], unused,
+                             "a strip block is visible, so it is not free")
+
+    def test_painting_a_free_block_uses_it_up(self):
+        v = self.painting("ROUTE_2")
+        free = v.unused_blocks()[0]
+        self.assertIn(free, v.unused_blocks())
+        v.current_block = free
+        v.paint_cell(self.cell_px(12, 12))
+        self.assertNotIn(free, v.unused_blocks(),
+                         "placing a block makes it part of the map")
+
+
 if __name__ == "__main__":
     unittest.main()

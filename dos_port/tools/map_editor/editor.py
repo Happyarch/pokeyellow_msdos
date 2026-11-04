@@ -41,10 +41,14 @@ UI chrome (HUD font, side panels, bottom bar) scales with the window; set
 Paint mode (P toggles):
   left click/drag  paint the selected block (border ring or map interior)
   right click      eyedropper (pick block under cursor)
+  O                arm the picker: the next left click CLONES that cell's block
+                   into the palette instead of painting it; O again cancels
   click palette    select block                F  flood fill
   Ctrl+Z           undo                        Ctrl+S  save
-  Connection strips are locked (drawn dimmed); map blocks and the border ring
-  are editable. Connections always win at runtime.
+  Palette blocks this map does not place anywhere (own blocks, connection strips
+  or border fill) are onion-skinned orange: they cannot change what this map
+  looks like, so they are free to repurpose.
+  Connection strips are editable and write through to the map that owns them.
 
 The composition is runtime-faithful: border fill -> connection strips from
 the neighbours' real .blk (via gen_map_headers.get_connection) -> the map's own
@@ -78,6 +82,7 @@ PORT_VIEW = (255, 72, 72)      # red: the port's 320x200 window
 GB_VIEW = (90, 150, 255)       # blue: the GB's 160x144 window
 RENDER_REACH = (0, 220, 220)
 REACH_BAND = (255, 190, 40)    # amber: cells the port shows and the GB never did
+PALETTE_UNUSED = (255, 140, 0, 110)  # onion skin: block not placed anywhere here
 # Connection strips belong to the NEIGHBOUR, so they get their own tints rather
 # than the "locked" dim: the colour tells you whose edge you are looking at.
 STRIP_TINTS = ((255, 150, 0), (0, 200, 220), (200, 120, 255), (130, 220, 90))
@@ -222,6 +227,9 @@ class Viewer:
         self._reach_surf = None  # reusable translucent overlay
         self._reach_cells = set()  # the whole band, for the look comparison
         self._border_runs = []   # merged border-fill cells, drawn fainter
+        self.pick_mode = False   # O in paint mode: next click clones a block
+        self._unused_skin = None # cached onion-skin tile for the palette
+        self._unused_count = 0
         self.view_as = None      # const whose tileset+palette we render with
         self.look_stats = None   # (const, cells, changed, shape, colour)
         self.probe_mode = False
@@ -252,6 +260,7 @@ class Viewer:
         self.cm = view.compose_padded(const, self.cells, self.map_cells)
         self.editable = self.cm.editable_cells()
         self.view_as = None
+        self.pick_mode = False
         self.tiles = ts.load_tileset_2bpp(self.cm.info.tileset_stem)
         self.blocks = ts.load_blockset(self.cm.info.tileset_stem)
         self.nblocks = len(self.blocks) // ts.BLOCK_BYTES
@@ -902,6 +911,34 @@ class Viewer:
         self.touch_paint()
         self.invalidate_map_blocks()
 
+    def toggle_pick(self) -> bool:
+        """`O` in paint mode arms the picker; returns False outside paint mode.
+
+        Paint mode only, by request: outside it `O` keeps cycling the route
+        preview, so the picker never competes with the paint cursor.
+        """
+        if not self.paint:
+            return False
+        self.pick_mode = not self.pick_mode
+        return True
+
+    def pick_cell(self, pos):
+        """Clone the block under the cursor into the palette; disarm the picker.
+
+        Same target as the right-click eyedropper, but on the LEFT button and
+        explicitly armed, so a pick can never be a mis-painted cell. Works on a
+        connection strip too — that cell is the neighbour's block, and picking it
+        is read-only (the write path is `_apply`).
+        """
+        cell = self.cell_at(pos)
+        if cell is None:
+            return
+        r, c = cell
+        idx = r * self.cm.stride + c
+        self.current_block = self.cm.grid[idx]
+        self.pal_surf = None            # re-mark the selection in the palette
+        self.pick_mode = False
+
     def eyedrop(self, pos):
         cell = self.cell_at(pos)
         if cell:
@@ -996,6 +1033,21 @@ class Viewer:
             self.pal_surf = to_pygame(img, 1)
             self._pal_key = key
         return self.pal_surf
+
+    def unused_blocks(self):
+        """Block ids of this tileset that the composed map does not place anywhere.
+
+        "Anywhere" is the whole padded grid: the map's own blocks, the connection
+        strips copied from the neighbours, and the border ring. All three are on
+        screen, so a block outside that set cannot change what this map looks
+        like — which makes it a safe candidate to repurpose into a different
+        graphic when the tileset is full or a tile needs swapping.
+
+        It is a per-map answer, not a per-tileset one: the same block can be
+        unused here and load-bearing three maps away.
+        """
+        used = set(self.cm.grid)
+        return [b for b in range(self.nblocks) if b not in used]
 
     def palette_click(self, pos) -> bool:
         x0 = self.screen.get_width() - self.palette_width()
@@ -1751,10 +1803,23 @@ class Viewer:
             self.screen.blit(self.palette_surface(), (x0 + 6, 6))
             b = self.current_block
             cols = self.palette_cols()
+            # Onion-skin every block this map does not place: the swatch stays
+            # readable underneath, so the palette still works while telling you
+            # which ids are free to repurpose.
+            unused = self.unused_blocks()
+            if unused:
+                if self._unused_skin is None or self._unused_skin.get_size() != (cell, cell):
+                    self._unused_skin = pygame.Surface((cell, cell), pygame.SRCALPHA)
+                    self._unused_skin.fill(PALETTE_UNUSED)
+                for u in unused:
+                    self.screen.blit(self._unused_skin,
+                                     (x0 + 6 + (u % cols) * cell,
+                                      6 + (u // cols) * cell))
             pygame.draw.rect(
                 self.screen, SEL_BLOCK,
                 (x0 + 6 + (b % cols) * cell,
                  6 + (b // cols) * cell, cell, cell), 2)
+            self._unused_count = len(unused)
 
         self.draw_warp_drag_ghost(ox, oy, z)
         self.draw_hud()
@@ -1836,6 +1901,12 @@ class Viewer:
                 f"(${s['own_border']:02X} → ${s['other_border']:02X})")
         elif self.reach_stats is not None and self.view_as is None:
             lines.append("K: preview this map with a neighbour's tileset+palette")
+        if self.pick_mode:
+            lines.append(f"PICK: click a cell to clone block "
+                         f"${self.current_block:02X} into the palette  O cancels")
+        if self.paint:
+            lines.append(f"Palette: {self._unused_count} of {self.nblocks} blocks "
+                         f"unused here (orange = free to repurpose)")
         if self.reach_stats is not None:
             steps, hops, dos, gb, attention, border = self.reach_stats
             # Units are load-bearing: 4 px cells, not tiles, so nobody reads the
@@ -1975,6 +2046,8 @@ class Viewer:
                         if self.paint:
                             self.probe_mode = False
                             self.probe_drag = False
+                        else:
+                            self.pick_mode = False
                     elif ev.key == pygame.K_y:
                         self.probe_mode = not self.probe_mode
                         if self.probe_mode:
@@ -2017,10 +2090,11 @@ class Viewer:
                         self.palette_mode = 'dmg' if self.palette_mode == 'port-cgb' else 'port-cgb'
                         self.refresh_palette()
                     elif ev.key == pygame.K_o:
-                        self.route_index += 1
-                        if self.route_index >= len(self.route_options):
-                            self.route_index = -1
-                        self.route_step = 0
+                        if not self.toggle_pick():
+                            self.route_index += 1
+                            if self.route_index >= len(self.route_options):
+                                self.route_index = -1
+                            self.route_step = 0
                     elif ev.key in (pygame.K_LEFTBRACKET, pygame.K_RIGHTBRACKET) and self.route_index >= 0:
                         count = len(self.route_options[self.route_index]['operations'])
                         if count:
@@ -2064,6 +2138,8 @@ class Viewer:
                     elif self.probe_mode:
                         self.probe_click(
                             ev.pos, bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
+                    elif self.paint and self.pick_mode:
+                        self.pick_cell(ev.pos)
                     elif self.paint:
                         self.painting = True
                         self.stroke_anchor = self.cell_at(ev.pos)
