@@ -17,12 +17,25 @@ from gfx_core import pret_maps as pm
 from map_editor import schema, overrides, staging, view, commands
 
 
+DOCK_RECIPE = {"kind": "repeat_base_column", "edge": "east",
+               "source_x": 12, "count": 8, "row_overrides": [[1, 13]]}
+
+
 class MapDiffTest(unittest.TestCase):
     def test_dock_recipe_matches_legacy_widening(self):
+        """The sanctioned widening RULE, composed without the authored sidecar.
+
+        The committed sidecar also carries hand-painted cells over the generated
+        columns (deliberate aesthetic edits), so composing the sidecar would test
+        those, not the recipe. Build the recipe-only diff and compose that.
+        """
         info = pm.map_info("VERMILION_DOCK")
         raw = pm.load_blk(info)
-        composed, width, height, diff = schema.compose_layout(
-            "VermilionDock", raw, info.base_w, info.base_h)
+        recipe_only = schema.MapDiff("VermilionDock", schema.Extents(east=8),
+                                     recipes=[dict(DOCK_RECIPE)])
+        with patch.object(schema, "load", return_value=recipe_only):
+            composed, width, height, diff = schema.compose_layout(
+                "VermilionDock", raw, info.base_w, info.base_h)
         self.assertEqual((width, height), (22, 6))
         self.assertEqual(diff.extents.east, 8)
         expected = bytearray()
@@ -31,6 +44,23 @@ class MapDiffTest(unittest.TestCase):
             fill = 0x0D if y == 1 else row[12]
             expected += row[:13] + bytes([fill]) * 8 + row[13:]
         self.assertEqual(bytes(composed), bytes(expected))
+
+    def test_authored_cells_win_over_the_recipe(self):
+        """A hand-painted cell on a generated column overrides what the recipe fills.
+
+        The recipe widens the map; painting on the new columns afterwards is
+        allowed and takes precedence. schema.recipe_cells still stops the
+        EXPANDER from writing there, which is a different thing.
+        """
+        info = pm.map_info("VERMILION_DOCK")
+        raw = pm.load_blk(info)
+        authored = schema.load("VermilionDock").added_blocks
+        composed, width, _height, _diff = schema.compose_layout(
+            "VermilionDock", raw, info.base_w, info.base_h)
+        self.assertTrue(authored, "fixture: the dock sidecar carries painted cells")
+        for (y, x), block in authored.items():
+            self.assertEqual(composed[y * width + x], block,
+                             f"authored cell ({y},{x}) must survive composition")
 
     def test_absolute_extent_is_idempotent(self):
         diff = schema.MapDiff("Example")
