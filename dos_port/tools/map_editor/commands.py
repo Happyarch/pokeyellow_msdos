@@ -59,6 +59,7 @@ def inspect_map(ref: str) -> dict[str, Any]:
                   "tiles": "8x8 px"},
         "extent_blocks": asdict(diff.extents),
         "objects": (pm.objects(info) or (0, [], [], []))[3],
+        "warps": (pm.objects(info) or (0, [], [], []))[1],
         "overrides": {"base_blocks": len(diff.base_blocks),
                       "added_blocks": len(diff.added_blocks),
                       "recipes": len(diff.recipes), "objects": len(diff.objects)},
@@ -105,6 +106,56 @@ def set_object(ref: str, object_id: str, *, y: int | None = None,
     return {'schema': 1, 'written': write, 'map': _identity(const),
             'object': object_id, 'changes': override,
             'units': {'coordinate': 'tile [y,x]'}}
+
+
+def set_warp(ref: str, warp_id: str, *, y: int | None = None,
+             x: int | None = None, dest: str | None = None,
+             target_warp: int | None = None, kind: str | None = None,
+             write: bool = False) -> dict[str, Any]:
+    """Override a warp event. Positions are 8px tiles; warp ids are pret's 1-based."""
+    from map_editor import objects
+    const = resolve_map(ref)
+    info = pm.map_info(const)
+    if not info.label:
+        raise ValueError(f"{const}: no object file")
+    parsed = pm.objects(info)
+    if parsed is None:
+        raise ValueError(f"{const}: no object file")
+    warp = next((w for w in parsed[1] if w['stable_id'] == warp_id), None)
+    if warp is None:
+        raise ValueError(f"{const}: unknown warp {warp_id!r}")
+    if (y is None) != (x is None):
+        raise ValueError("--y and --x must be supplied together")
+    diff = schema.load(info.label)
+    override = dict(diff.warps.get(warp_id, {}))
+    if y is not None:
+        if not (0 <= y <= 510 and 0 <= x <= 510 and y % 2 == 0 and x % 2 == 0):
+            raise ValueError("warp tile coordinates must be even and fit in a byte")
+        by, bx = warp['trace']['base']
+        dy, dx = diff.extents.tile_delta()
+        override['manual_delta_tile'] = [y - by - dy, x - bx - dx]
+    if dest is not None:
+        if dest not in pm.all_map_consts() and dest != 'LAST_MAP':
+            raise ValueError(f"unknown destination map {dest!r}")
+        override['dest'] = dest
+    if target_warp is not None:
+        if not 1 <= target_warp <= 255:
+            raise ValueError("target warp id must be 1..255")
+        override['warp_id'] = target_warp
+    if kind is not None:
+        if kind not in objects.WARP_KINDS:
+            raise ValueError(f"kind must be one of {objects.WARP_KINDS}")
+        override['kind'] = kind
+    if not override:
+        raise ValueError("no warp changes specified")
+    diff.warps[warp_id] = override
+    if write:
+        schema.write(diff)
+    return {'schema': 1, 'written': write, 'map': _identity(const),
+            'warp': warp_id, 'changes': override,
+            'units': {'coordinate': 'tile [y,x]', 'warp_id': '1-based, as pret'},
+            'note': 'kind is editor metadata; pret has no warp-type field and it '
+                    'is not emitted into the map-header binary'}
 
 
 def scan_scripts(ref: str) -> dict[str, Any]:

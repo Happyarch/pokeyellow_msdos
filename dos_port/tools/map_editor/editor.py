@@ -7,15 +7,23 @@ Usage (from the repo root):
 `--zoom` defaults to the largest integer zoom that fits the composed map.
 
 View controls:
-  drag / arrows    pan                     + / -   zoom
+  left click       place: paint a block, pick/drag an NPC, set the staging tile
+  middle drag      pan                     arrows  pan too
+  wheel            smooth zoom (continuous scale)  Ctrl+wheel  other anchor
+  Ctrl + = / -     zoom in / out
   G  block grid    T  tile grid            W  warp + sign events
   N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
   I  coordinate inspector   C  toggle palette   O  cycle route preview
+  X  connections: assemble neighbouring maps at their real offsets (read-only)
+  click a W marker  select a warp; the panel edits dest / target warp / kind
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
-  click/drag NPC    move in 16px map squares; the side panel edits its fields
   Tab              cycle to the next map with a usable header
   Esc / close      quit (warns if unsaved paint)
+
+Zoom anchoring is set by `zoom_anchor` in config.json (`cursor` by default, or
+`center`). Ctrl is a held shift, not a toggle: while it is down the other anchor
+mode is used, and releasing it returns to the configured default.
 
 Paint mode (P toggles):
   left click/drag  paint the selected block (border ring or map interior)
@@ -46,9 +54,10 @@ from gfx_core import pret_maps as pm            # noqa: E402
 from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
-from map_editor import borders, overrides, view, palette, sprites, schema  # noqa: E402
+from map_editor import borders, overrides, view, palette, sprites, schema, config  # noqa: E402
+from map_editor import objects                                                  # noqa: E402
 
-MARK_WARP = (255, 60, 60)
+MARK_WARP = (0, 150, 170)      # teal: distinct from the cyan render-reach frame
 MARK_NPC = (60, 120, 255)
 MARK_TRAINER = (255, 160, 0)
 MARK_ITEM = (0, 200, 120)
@@ -60,6 +69,9 @@ RENDER_REACH = (0, 220, 220)
 NPCMV1 = (168, 92, 230)
 NPCMV2 = (120, 132, 240)
 NPCMV12 = (236, 120, 255)
+# Connection-assembly review view: this map vs its neighbours.
+CONN_SELF = (255, 60, 200)
+CONN_OTHER = (90, 190, 255)
 GRID_BLOCK = (0, 0, 0)
 GRID_TILE = (70, 70, 70)
 PAINTED = (255, 120, 220)
@@ -72,12 +84,16 @@ PAL_W = PAL_COLS * ts.BLOCK_PX + 12
 
 
 class Viewer:
-    def __init__(self, const: str, zoom: int):
-        self.zoom = zoom
+    def __init__(self, const: str, zoom: float | None = None, settings: dict | None = None):
+        self.settings = settings if settings is not None else config.load()
+        # Continuous scale, not an integer zoom: the wheel produces fractional
+        # steps so the zoom is smooth instead of snapping between 1x/2x.
+        self.scale = float(zoom) if zoom else 1.0
         self.pan = [0, 0]
         self.show = {"blocks": False, "tiles": False, "warps": True,
                      "npcs": True, "port_view": False, "gb_view": False,
-                     "render_reach": False, "inspector": False}
+                     "render_reach": False, "inspector": False,
+                     "connections": False}
         self.paint = False
         self.palette_mode = 'port-cgb'
         self.player = None          # map-local tile (x, y) for frame references
@@ -87,11 +103,17 @@ class Viewer:
         self.selected_object = None
         self.object_menu = None
         self.menu_offset = 0
+        self.selected_warp = None
+        self.warp_menu = None
+        self.warp_menu_offset = 0
         self.route_index = -1
         self.route_step = 0
         self.route_sha = None
         self.route_options = []
         self.painting = False
+        self.conn_view = None
+        self.conn_surf = None
+        self.conn_scale = None
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 700),
                                               pygame.RESIZABLE)
@@ -114,8 +136,7 @@ class Viewer:
         self.blocks = ts.load_blockset(self.cm.info.tileset_stem)
         self.nblocks = len(self.blocks) // ts.BLOCK_BYTES
         self.refresh_palette()
-        self.surf = None
-        self.pal_surf = None
+        self.invalidate_assembly()
         self.undo_stack = []
         self.dirty = False
         self.center_view()
@@ -124,6 +145,9 @@ class Viewer:
         self.selected_object = None
         self.object_drag = None
         self.object_menu = None
+        self.selected_warp = None
+        self.warp_menu = None
+        self.warp_menu_offset = 0
         self.route_index = -1
         self.route_step = 0
         try:
@@ -139,9 +163,83 @@ class Viewer:
             f" {self.cm.info.tileset_name})")
 
     def surface(self):
-        if self.surf is None:
-            self.surf = to_pygame(self.img, self.zoom)
+        """The map raster at the current scale, rebuilt only when the scale moves.
+
+        The PIL render stays at 1x and is nearest-neighbour scaled here, so pixel
+        art stays crisp while the zoom itself is continuous.
+        """
+        if self.surf is None or self._surf_scale != self.scale:
+            self.surf = to_pygame(self.img, self.scale)
+            self._surf_scale = self.scale
         return self.surf
+
+    def invalidate_assembly(self):
+        """Drop the connection assembly and every cached raster.
+
+        The assembly depends on THIS map's dimensions AND blocks: `get_connection`
+        is called with the current width/height, so expanding an edge moves every
+        neighbour's origin. Rebuilding it is therefore required after a load, an
+        expansion, or a palette change — otherwise the seam picture keeps showing
+        the pre-expansion geometry, which is worse than showing nothing.
+        """
+        self.conn_view = None
+        self.conn_surf = None
+        self.conn_scale = None
+        self._core_surf = None
+        self._core_scale = None
+        self.surf = None
+        self.pal_surf = None
+
+    def invalidate_map_blocks(self):
+        """Drop only what a block edit changes.
+
+        Painting rewrites this map's own blocks, so its core raster and the padded
+        raster go stale — but the neighbours have not moved, and recomposing them
+        (which re-reads every neighbour .blk) on each painted cell would stall a
+        paint drag. The assembly draws the current map UNDER map_core_surface(),
+        so its baked copy is always covered.
+        """
+        self._core_surf = None
+        self._core_scale = None
+        self.surf = None
+        self.pal_surf = None
+
+    def viewport_center(self) -> tuple[float, float]:
+        """Screen centre of the map area (the bottom bar is excluded)."""
+        return (self.screen.get_width() / 2.0,
+                (self.screen.get_height() - PANEL_H) / 2.0)
+
+    def zoom_anchor(self, ctrl: bool) -> str:
+        """Effective anchor mode.
+
+        Ctrl is a shift key, not a toggle: while it is held the OTHER mode is in
+        force, and releasing it returns to whatever the config says. So the
+        default stays what the config sets and Ctrl is a momentary override.
+        """
+        default = self.settings['zoom_anchor']
+        if not ctrl:
+            return default
+        return 'center' if default == 'cursor' else 'cursor'
+
+    def set_scale(self, new_scale: float, anchor: tuple[float, float]) -> None:
+        """Scale about a screen point, keeping the map point under it fixed."""
+        low, high = self.settings['zoom_min'], self.settings['zoom_max']
+        new_scale = max(low, min(high, new_scale))
+        if abs(new_scale - self.scale) < 1e-9:
+            return
+        # Image coords under the anchor, before and after.
+        img_x = (anchor[0] - self.pan[0]) / self.scale
+        img_y = (anchor[1] - self.pan[1]) / self.scale
+        self.scale = new_scale
+        self.pan = [anchor[0] - img_x * new_scale,
+                    anchor[1] - img_y * new_scale]
+        self.surf = None
+        self.conn_surf = None
+
+    def zoom_by(self, factor: float, ctrl: bool, cursor: tuple[int, int]) -> None:
+        mode = self.zoom_anchor(ctrl)
+        anchor = cursor if mode == 'cursor' else self.viewport_center()
+        self.set_scale(self.scale * factor, anchor)
 
     def center_view(self):
         """Frame the authored map, not the padding ring.
@@ -149,11 +247,21 @@ class Viewer:
         The render is the padded grid, so panning to (0, 0) shows only border
         blocks and the map sits off-screen. Centre the padded image instead: the
         border is symmetric, so its centre is the map's centre.
+
+        In connections mode the thing on screen is the ASSEMBLY, which extends
+        past the ring, so centre that instead or the neighbours fall off-screen.
         """
-        if self.surf is None:
-            self.surf = to_pygame(self.img, self.zoom)
-        self.pan = [(self.screen.get_width() - self.surf.get_width()) // 2,
-                    (self.screen.get_height() - PANEL_H - self.surf.get_height()) // 2]
+        if self.show["connections"]:
+            cv = self.conn_view or view.compose_connections(self.cm.info.const)
+            self.conn_view = cv
+            surf = self.connection_surface()
+            off_x, off_y = self.connection_offset(self.scale)
+            self.pan = [(self.screen.get_width() - surf.get_width()) // 2 - off_x,
+                        (self.screen.get_height() - PANEL_H - surf.get_height()) // 2 - off_y]
+            return
+        surf = self.surface()
+        self.pan = [(self.screen.get_width() - surf.get_width()) // 2,
+                    (self.screen.get_height() - PANEL_H - surf.get_height()) // 2]
 
     def refresh_palette(self):
         if self.palette_mode == 'port-cgb':
@@ -161,22 +269,28 @@ class Viewer:
         else:
             self.palette_name, self.colors, self.palette_warning = 'DMG', DMG_PAL, None
         self.img = view.render(self.cm, self.colors)
+        # Colours changed: every raster is stale, but the assembly's GEOMETRY is
+        # not, so only the surfaces are dropped here.
+        self.conn_surf = None
+        self.conn_scale = None
+        self._core_surf = None
+        self._core_scale = None
         self.surf = None
         self.pal_surf = None
 
     # ── painting ─────────────────────────────────────────────────────────────
 
     def cell_at(self, pos) -> tuple[int, int] | None:
-        bx = (pos[0] - self.pan[0]) // (ts.BLOCK_PX * self.zoom)
-        by = (pos[1] - self.pan[1]) // (ts.BLOCK_PX * self.zoom)
+        bx = (pos[0] - self.pan[0]) // (ts.BLOCK_PX * self.scale)
+        by = (pos[1] - self.pan[1]) // (ts.BLOCK_PX * self.scale)
         if 0 <= bx < self.cm.stride and 0 <= by < self.cm.rows:
             return int(by), int(bx)
         return None
 
     def tile_at(self, pos) -> tuple[int, int] | None:
         """Mouse pixel -> map-local (x, y) tile, excluding the padded ring."""
-        tx = (pos[0] - self.pan[0]) // (TILE * self.zoom)
-        ty = (pos[1] - self.pan[1]) // (TILE * self.zoom)
+        tx = (pos[0] - self.pan[0]) // (TILE * self.scale)
+        ty = (pos[1] - self.pan[1]) // (TILE * self.scale)
         x, y = int(tx - view.BORDER * 4), int(ty - view.BORDER * 4)
         if 0 <= x < self.cm.info.w * 4 and 0 <= y < self.cm.info.h * 4:
             return x, y
@@ -185,9 +299,17 @@ class Viewer:
     def _region(self, r, c) -> tuple[dict, tuple[int, int]] | None:
         """(target sidecar dict, its key) for a paintable cell, else None.
         Border ring -> map_borders cells (padded coords); real map area ->
-        map_overrides cells (map-local coords); strips are locked."""
+        map_overrides cells (map-local coords); strips are locked.
+
+        In CONNECTIONS mode the ring is deliberately not editable: the neighbour
+        maps are drawn there purely so the seam can be watched, and painting a
+        ring cell under a neighbour's pixels would silently edit something the
+        user is not looking at. Only this map's own blocks stay placeable.
+        """
         idx = r * self.cm.stride + c
         if idx in self.editable:
+            if self.show["connections"]:
+                return None
             return self.cells, (r, c)
         b = view.BORDER
         if b <= c < self.cm.stride - b and b <= r < self.cm.rows - b:
@@ -223,7 +345,7 @@ class Viewer:
         if rec:
             self.undo_stack.append([rec])
             self.dirty = True
-            self.surf = None
+            self.invalidate_map_blocks()
 
     def flood_fill(self, pos):
         cell = self.cell_at(pos)
@@ -253,7 +375,7 @@ class Viewer:
         if op:
             self.undo_stack.append(op)
             self.dirty = True
-            self.surf = None
+            self.invalidate_map_blocks()
 
     def undo(self):
         if not self.undo_stack:
@@ -273,7 +395,7 @@ class Viewer:
             ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
                            self.colors)
         self.dirty = True
-        self.surf = None
+        self.invalidate_map_blocks()
 
     def eyedrop(self, pos):
         cell = self.cell_at(pos)
@@ -508,26 +630,263 @@ class Viewer:
 
     # ── drawing ──────────────────────────────────────────────────────────────
 
+    def connection_surface(self):
+        """Neighbouring maps assembled at their real connection offsets.
+
+        Cached per scale: the assembly is static until the map or its sidecar
+        changes, so scrolling must not rebuild it.
+        """
+        if self.conn_view is None:
+            self.conn_view = view.compose_connections(self.cm.info.const)
+        if self.conn_surf is None or self.conn_scale != self.scale:
+            img = view.render_grid(self.conn_view.info, self.conn_view.grid,
+                                   self.conn_view.stride, self.conn_view.rows,
+                                   self.colors)
+            self.conn_surf = to_pygame(img, self.scale)
+            self.conn_scale = self.scale
+        return self.conn_surf
+
+    def connection_offset(self, z):
+        """Screen offset that puts the assembly on the map raster's padded coords.
+
+        The assembly canvas is shifted by however far a neighbour overflows the
+        border ring, so undo that shift. With this applied, the neighbour blocks
+        land exactly where compose_padded already put the connection strips —
+        which is the whole point: the seam can be inspected, not inferred.
+        """
+        cv = self.conn_view
+        return ((view.BORDER - cv.origin[1]) * ts.BLOCK_PX * z,
+                (view.BORDER - cv.origin[0]) * ts.BLOCK_PX * z)
+
+    def map_core_surface(self):
+        """The current map's own blocks only — no border ring.
+
+        In connections mode the ring is exactly what the neighbour maps are there
+        to fill, so drawing the padded raster (which paints border blocks over the
+        ring) would hide the seam being inspected.
+        """
+        if getattr(self, '_core_surf', None) is not None and self._core_scale == self.scale:
+            return self._core_surf
+        info = self.cm.info
+        core = bytearray(info.w * info.h)
+        for y in range(info.h):
+            src = (y + view.BORDER) * self.cm.stride + view.BORDER
+            core[y * info.w:(y + 1) * info.w] = self.cm.grid[src:src + info.w]
+        img = view.render_grid(info, core, info.w, info.h, self.colors)
+        self._core_surf = to_pygame(img, self.scale)
+        self._core_scale = self.scale
+        return self._core_surf
+
+    def connection_at_player(self):
+        """Which connected map the staged player tile is standing at the edge of.
+
+        A hint for watching a transition: the band is one block (4 tiles) inside
+        each edge, matching how the port's connection strips are laid out.
+        """
+        if self.player is None:
+            return None
+        x, y = self.player
+        info = self.cm.info
+        band = 4
+        edges = []
+        if y < band:
+            edges.append("NORTH")
+        if y >= info.h * 4 - band:
+            edges.append("SOUTH")
+        if x < band:
+            edges.append("WEST")
+        if x >= info.w * 4 - band:
+            edges.append("EAST")
+        for direction, nconst, offset in pm.CONNECTIONS.get(self.cm.info.const, []):
+            if direction in edges:
+                return f"{direction} -> {nconst} (offset {offset:+d})"
+        return None
+
+    def blit_connections(self, ox, oy, z):
+        """Neighbours under the map, then the map's own blocks over its footprint."""
+        cv = self.conn_view
+        if cv is None:
+            cv = self.conn_view = view.compose_connections(self.cm.info.const)
+        off_x, off_y = self.connection_offset(z)
+        self.screen.blit(self.connection_surface(), (ox + off_x, oy + off_y))
+        self.screen.blit(self.map_core_surface(),
+                         (ox + view.BORDER * ts.BLOCK_PX * z,
+                          oy + view.BORDER * ts.BLOCK_PX * z))
+
+    def draw_connection_outlines(self, ox, oy, z):
+        cv = self.conn_view
+        if cv is None:
+            return
+        off_x, off_y = self.connection_offset(z)
+        own = (int(round(ox + (cv.origin[1] * ts.BLOCK_PX) * z + off_x)),
+               int(round(oy + (cv.origin[0] * ts.BLOCK_PX) * z + off_y)),
+               int(round(cv.info.w * ts.BLOCK_PX * z)),
+               int(round(cv.info.h * ts.BLOCK_PX * z)))
+        pygame.draw.rect(self.screen, CONN_SELF, own, 2)
+        for entry in cv.neighbours:
+            r, c = entry['canvas_origin']
+            rect = (int(round(ox + (c * ts.BLOCK_PX) * z + off_x)),
+                    int(round(oy + (r * ts.BLOCK_PX) * z + off_y)),
+                    int(round(entry['w'] * ts.BLOCK_PX * z)),
+                    int(round(entry['h'] * ts.BLOCK_PX * z)))
+            pygame.draw.rect(self.screen, CONN_OTHER, rect, 1)
+            label = self.font.render(
+                f"{entry['direction']} {entry['const']} ({entry['offset']:+d})",
+                True, CONN_OTHER)
+            lx = max(0, rect[0] + max(3, (rect[2] - label.get_width()) // 2))
+            ly = max(0, min(self.screen.get_height() - PANEL_H - 18,
+                            rect[1] + 3))
+            chip = pygame.Surface((label.get_width() + 4, label.get_height()),
+                                  pygame.SRCALPHA)
+            chip.fill((0, 0, 0, 170))
+            chip.blit(label, (2, 0))
+            self.screen.blit(chip, (lx, ly))
+        for i, note in enumerate(cv.anomalies):
+            self.screen.blit(self.font.render(note[:96], True, (255, 170, 90)),
+                             (8, self.screen.get_height() - PANEL_H - 18 - i * 16))
+
+    def draw_warp_skin(self, px, py, z, ox, oy, selected):
+        """Translucent onion skin over a warp block with a centred W.
+
+        The fill marks the 2x2 map square the warp occupies; the letter is drawn
+        with the HUD font rather than scaled pixel art, so it stays legible at any
+        zoom.
+        """
+        w = max(1, int(round(TILE * 2 * z)))
+        h = max(1, int(round(TILE * 2 * z)))
+        sx, sy = int(round(ox + px * z)), int(round(oy + py * z))
+        skin = pygame.Surface((w, h), pygame.SRCALPHA)
+        skin.fill((*MARK_WARP, 110))
+        self.screen.blit(skin, (sx, sy))
+        pygame.draw.rect(self.screen, MARK_WARP, (sx, sy, w, h),
+                         2 if selected else 1)
+        # The glyph needs its own contrast: a plain white W vanishes over light
+        # tiles (doors, floors) and a plain dark one vanishes over dark tiles.
+        glyph = self.font.render('W', True, (255, 255, 255))
+        chip = pygame.Surface((glyph.get_width() + 2, glyph.get_height()),
+                              pygame.SRCALPHA)
+        chip.fill((10, 30, 36, 200))
+        chip.blit(glyph, (1, 0))
+        self.screen.blit(chip, (sx + (w - chip.get_width()) // 2,
+                                sy + (h - chip.get_height()) // 2))
+
+    def warp_at_tile(self, tile):
+        """The warp whose 2x2 map square contains an editor tile, if any."""
+        if tile is None:
+            return None
+        tx, ty = tile
+        for warp in self.cm.warps:
+            if (warp['x'] * 2 <= tx < warp['x'] * 2 + 2
+                    and warp['y'] * 2 <= ty < warp['y'] * 2 + 2):
+                return warp
+        return None
+
+    def warp_fields(self):
+        """Dropdown values for the warp properties panel."""
+        return {'dest': sorted(pm.all_map_consts()) + ['LAST_MAP'],
+                'warp_id': [str(i) for i in range(1, 17)],
+                'kind': list(objects.WARP_KINDS)}
+
+    def draw_warp_panel(self):
+        """Warp properties: destination map, target warp id and kind.
+
+        Same panel geometry as the NPC panel so the two read as one UI. `kind` is
+        labelled as editor metadata because pret has no warp-type byte — it is not
+        written into the generated map header.
+        """
+        if self.paint or not self.selected_warp:
+            return
+        warp = next((w for w in self.cm.warps
+                     if w['stable_id'] == self.selected_warp), None)
+        if not warp:
+            return
+        x = self.screen.get_width() - 290
+        panel = pygame.Surface((290, 400), pygame.SRCALPHA)
+        panel.fill((25, 25, 33, 225))
+        panel.blit(self.font.render('Warp properties (saved on select)', True,
+                                    (255, 255, 255)), (6, 2))
+        rows = (('dest', f"dest: {warp['dest']}"),
+                ('warp_id', f"target warp: {warp['warp_id']}"),
+                ('kind', f"kind: {warp['kind'] or '(unset)'}"))
+        for index, (field, text) in enumerate(rows):
+            pygame.draw.rect(panel, (65, 65, 78), (4, 20 + index * 22, 282, 20))
+            panel.blit(self.font.render(text + ' ▾', True, (235, 235, 235)),
+                       (8, 22 + index * 22))
+        panel.blit(self.font.render(f"at (Y:{warp['y']*2}, X:{warp['x']*2}) tiles",
+                                    True, (200, 200, 200)), (6, 88))
+        if self.warp_menu:
+            options = self.warp_fields()[self.warp_menu]
+            for i, name in enumerate(options[self.warp_menu_offset:
+                                             self.warp_menu_offset + 12]):
+                pygame.draw.rect(panel, (55, 60, 76), (4, 108 + i * 20, 282, 19))
+                panel.blit(self.font.render(name, True, (235, 235, 235)),
+                           (8, 109 + i * 20))
+            panel.blit(self.font.render('Mouse wheel: scroll', True,
+                                        (220, 220, 220)), (8, 356))
+        panel.blit(self.font.render('kind is editor metadata, not emitted',
+                                    True, (200, 190, 150)), (6, 380))
+        self.screen.blit(panel, (x, 0))
+
+    def warp_panel_click(self, pos) -> bool:
+        if self.paint or not self.selected_warp:
+            return False
+        left = self.screen.get_width() - 290
+        if pos[0] < left or pos[1] >= 400:
+            return False
+        options = self.warp_fields()
+        if self.warp_menu:
+            index = (pos[1] - 108) // 20 + self.warp_menu_offset
+            values = options[self.warp_menu]
+            if 108 <= pos[1] < 348 and 0 <= index < len(values):
+                self.apply_warp_field(self.warp_menu, values[index])
+                self.warp_menu = None
+                return True
+        if 20 <= pos[1] < 86:
+            self.warp_menu = ('dest', 'warp_id', 'kind')[(pos[1] - 20) // 22]
+            self.warp_menu_offset = 0
+        else:
+            self.warp_menu = None
+        return True
+
+    def apply_warp_field(self, field, value):
+        from map_editor import commands
+        kwargs = {'dest': 'dest', 'warp_id': 'target_warp', 'kind': 'kind'}[field]
+        if field == 'warp_id':
+            value = int(value)
+        try:
+            commands.set_warp(self.cm.info.const, self.selected_warp,
+                              write=True, **{kwargs: value})
+            self.cm.warps = pm.objects(self.cm.info)[1]
+            self.save_error = ''
+        except (ValueError, OSError) as exc:
+            self.save_error = str(exc)
+
     def draw(self):
         self.screen.fill((24, 24, 28))
-        z = self.zoom
-        self.screen.blit(self.surface(), self.pan)
+        z = self.scale
         ox, oy = self.pan
+        if self.show["connections"]:
+            # Neighbours first, so the current map's raster draws over the seam.
+            self.blit_connections(ox, oy, z)
+        else:
+            self.screen.blit(self.surface(), self.pan)
 
         def rect_px(x, y, w, h, color, width=1):
             pygame.draw.rect(self.screen, color,
-                             (ox + x * z, oy + y * z, w * z, h * z), width)
+                             (int(round(ox + x * z)), int(round(oy + y * z)),
+                              max(1, int(round(w * z))),
+                              max(1, int(round(h * z)))), width)
 
         if self.paint:
             # dim the locked connection strips; badge painted cells
             # (ring = pink, real-map overrides = cyan)
-            dim = pygame.Surface((ts.BLOCK_PX * z, ts.BLOCK_PX * z),
-                                 pygame.SRCALPHA)
+            dim_w = max(1, int(round(ts.BLOCK_PX * z)))
+            dim = pygame.Surface((dim_w, dim_w), pygame.SRCALPHA)
             dim.fill(LOCKED_DIM)
             for idx in self.cm.strip_cells:
                 bx, by = idx % self.cm.stride, idx // self.cm.stride
-                self.screen.blit(dim, (ox + bx * ts.BLOCK_PX * z,
-                                       oy + by * ts.BLOCK_PX * z))
+                self.screen.blit(dim, (int(round(ox + bx * ts.BLOCK_PX * z)),
+                                       int(round(oy + by * ts.BLOCK_PX * z))))
             for (r, c) in self.cells:
                 rect_px(c * ts.BLOCK_PX, r * ts.BLOCK_PX,
                         ts.BLOCK_PX, ts.BLOCK_PX, PAINTED, 2)
@@ -536,6 +895,8 @@ class Viewer:
                 rect_px((x + b) * ts.BLOCK_PX, (y + b) * ts.BLOCK_PX,
                         ts.BLOCK_PX, ts.BLOCK_PX, MAP_PAINTED, 2)
 
+        if self.show["connections"]:
+            self.draw_connection_outlines(ox, oy, z)
         if self.show["blocks"]:
             for bx in range(self.cm.stride + 1):
                 x = ox + bx * ts.BLOCK_PX * z
@@ -555,9 +916,10 @@ class Viewer:
                 pygame.draw.line(self.screen, GRID_TILE, (ox, y),
                                  (ox + self.img.width * z, y))
         if self.show["warps"]:
-            for (y, x, dest, wid) in self.cm.warps:
-                px, py = view.warp_px(self.cm, y, x)
-                rect_px(px, py, TILE * 2, TILE * 2, MARK_WARP, 2)
+            for warp in self.cm.warps:
+                px, py = view.warp_px(self.cm, warp['y'], warp['x'])
+                selected = warp['stable_id'] == self.selected_warp
+                self.draw_warp_skin(px, py, z, ox, oy, selected)
             for sign in self.cm.signs:
                 px, py = view.warp_px(self.cm, sign['y'], sign['x'])
                 rect_px(px, py, TILE * 2, TILE * 2, (255, 220, 80), 2)
@@ -608,11 +970,12 @@ class Viewer:
 
         self.draw_hud()
         self.draw_object_panel()
+        self.draw_warp_panel()
         state = "*UNSAVED*" if self.dirty else "saved"
         mode = (f"PAINT block 0x{self.current_block:02X} "
                 f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
                 if self.paint else
-                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route")
+                "[G]rid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
@@ -639,13 +1002,21 @@ class Viewer:
         layers = " ".join(name for name, enabled in (
             ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
             ("PV", self.show["port_view"]), ("GB", self.show["gb_view"]),
-            ("RR", self.show["render_reach"])) if enabled)
+            ("RR", self.show["render_reach"]),
+            ("CONN", self.show["connections"])) if enabled)
+        anchor = self.settings['zoom_anchor']
         lines = [f"{self.cm.info.const} id:${self.cm.info.map_id:02X}  {self.palette_name}",
                  f"Size W×H {self.cm.info.base_w}×{self.cm.info.base_h} → "
                  f"{self.cm.info.w}×{self.cm.info.h} B",
-                 f"{cursor}{block}", f"Layers: {layers or '—'}"]
+                 f"{cursor}{block}", f"Layers: {layers or '—'}",
+                 f"Zoom {self.scale:.2f}x  anchor:{anchor} (Ctrl inverts)"]
         if self.palette_warning:
             lines.append(self.palette_warning)
+        if self.show["connections"]:
+            lines.append("CONN: render-only — neighbours are not editable")
+            crossing = self.connection_at_player()
+            if crossing:
+                lines.append(f"At edge: {crossing}")
         if self.show["inspector"]:
             selected = next((s for s in self.cm.sprites
                              if s['stable_id'] == self.selected_object), None)
@@ -763,12 +1134,19 @@ class Viewer:
                         if self.dirty:
                             print("WARNING: switching map with unsaved paint")
                         self.next_map()
-                    elif ev.key in (pygame.K_PLUS, pygame.K_EQUALS):
-                        self.zoom = min(6, self.zoom + 1)
-                        self.surf = None
-                    elif ev.key == pygame.K_MINUS:
-                        self.zoom = max(1, self.zoom - 1)
-                        self.surf = None
+                    elif ev.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS) \
+                            and mods & pygame.KMOD_CTRL:
+                        self.zoom_by(self.settings['zoom_key_step'],
+                                     bool(mods & pygame.KMOD_CTRL),
+                                     pygame.mouse.get_pos())
+                    elif ev.key in (pygame.K_MINUS, pygame.K_KP_MINUS) \
+                            and mods & pygame.KMOD_CTRL:
+                        self.zoom_by(1.0 / self.settings['zoom_key_step'],
+                                     bool(mods & pygame.KMOD_CTRL),
+                                     pygame.mouse.get_pos())
+                    elif ev.key == pygame.K_x:
+                        self.show["connections"] = not self.show["connections"]
+                        self.center_view()
                     elif ev.key == pygame.K_LEFT:
                         self.pan[0] += 64
                     elif ev.key == pygame.K_RIGHT:
@@ -778,13 +1156,23 @@ class Viewer:
                     elif ev.key == pygame.K_DOWN:
                         self.pan[1] -= 64
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
-                    if self.object_panel_click(ev.pos):
+                    # LEFT CLICK PLACES. Panning lives on the middle button (see
+                    # the MOUSEBUTTONDOWN branch below) so a click never has to
+                    # mean "maybe drag the view".
+                    if self.warp_panel_click(ev.pos):
+                        pass
+                    elif self.object_panel_click(ev.pos):
                         pass
                     elif self.palette_click(ev.pos):
                         pass
                     elif self.paint:
                         self.painting = True
                         self.paint_cell(ev.pos)
+                    elif self.show["warps"] and self.warp_at_tile(self.tile_at(ev.pos)):
+                        warp = self.warp_at_tile(self.tile_at(ev.pos))
+                        self.selected_warp = warp['stable_id']
+                        self.warp_menu = None
+                        self.selected_object = None
                     elif self.show["npcs"] and self.tile_at(ev.pos) is not None and any(
                             (s['mapx'] - 4, s['mapy'] - 4) == tuple(v // 2 for v in self.tile_at(ev.pos))
                             for s in self.cm.sprites):
@@ -792,32 +1180,55 @@ class Viewer:
                                                 if (s['mapx'] - 4, s['mapy'] - 4)
                                                 == tuple(v // 2 for v in self.tile_at(ev.pos)))
                         self.selected_object = self.object_drag
+                        self.selected_warp = None
                     elif (self.show["port_view"] or self.show["gb_view"]
                           or self.show["render_reach"]):
                         self.player = self.tile_at(ev.pos)
                     else:
-                        self.drag = (ev.pos, tuple(self.pan))
+                        self.selected_object = None
+                        self.selected_warp = None
+                        self.warp_menu = None
+                        self.player = self.tile_at(ev.pos)
+                elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == self.settings['pan_button']:
+                    self.drag = (ev.pos, tuple(self.pan))
                 elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 3:
                     if self.paint:
                         self.eyedrop(ev.pos)
-                elif ev.type == pygame.MOUSEWHEEL and self.object_menu:
-                    count = len(self.object_fields()[self.object_menu])
-                    self.menu_offset = max(0, min(max(0, count - 12), self.menu_offset - ev.y))
-                elif ev.type == pygame.MOUSEBUTTONUP and ev.button == 1:
-                    if self.object_drag:
-                        tile = self.tile_at(ev.pos)
-                        if tile is not None:
-                            from map_editor import commands
-                            try:
-                                commands.set_object(self.cm.info.const, self.object_drag,
-                                                    y=tile[1] // 2 * 2, x=tile[0] // 2 * 2, write=True)
-                                self.cm.sprites = pm.objects(self.cm.info)[3]
-                                self.save_error = ""
-                            except (ValueError, OSError) as exc:
-                                self.save_error = str(exc)
-                        self.object_drag = None
-                    self.drag = None
-                    self.painting = False
+                elif ev.type == pygame.MOUSEWHEEL:
+                    if self.object_menu:
+                        count = len(self.object_fields()[self.object_menu])
+                        self.menu_offset = max(0, min(max(0, count - 12),
+                                                      self.menu_offset - ev.y))
+                    elif self.warp_menu:
+                        count = len(self.warp_fields()[self.warp_menu])
+                        self.warp_menu_offset = max(
+                            0, min(max(0, count - 12),
+                                   self.warp_menu_offset - ev.y))
+                    else:
+                        # Smooth zoom: one notch multiplies the scale, so the
+                        # zoom is continuous rather than snapping 1x/2x/3x.
+                        # Ctrl is a held shift, not a toggle — it swaps the
+                        # anchor mode for as long as it is down.
+                        ctrl = bool(pygame.key.get_mods() & pygame.KMOD_CTRL)
+                        self.zoom_by(self.settings['zoom_step'] ** ev.y, ctrl,
+                                     pygame.mouse.get_pos())
+                elif ev.type == pygame.MOUSEBUTTONUP:
+                    if ev.button == 1:
+                        if self.object_drag:
+                            tile = self.tile_at(ev.pos)
+                            if tile is not None:
+                                from map_editor import commands
+                                try:
+                                    commands.set_object(self.cm.info.const, self.object_drag,
+                                                        y=tile[1] // 2 * 2, x=tile[0] // 2 * 2, write=True)
+                                    self.cm.sprites = pm.objects(self.cm.info)[3]
+                                    self.save_error = ""
+                                except (ValueError, OSError) as exc:
+                                    self.save_error = str(exc)
+                            self.object_drag = None
+                        self.painting = False
+                    if ev.button == self.settings['pan_button']:
+                        self.drag = None
                 elif ev.type == pygame.MOUSEMOTION:
                     self.cursor_tile = self.tile_at(ev.pos)
                     if self.painting:
@@ -832,18 +1243,21 @@ class Viewer:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("map_const", nargs="?", default="PALLET_TOWN")
-    ap.add_argument("--zoom", type=int, default=None,
-                    help="tile zoom; default picks the largest that fits the window")
+    ap.add_argument("--zoom", type=float, default=None,
+                    help="initial scale; default picks the largest that fits the window")
+    ap.add_argument("--config", type=Path, default=None,
+                    help="settings JSON (default: map_editor/config.json if present)")
     args = ap.parse_args()
     from map_editor.commands import resolve_map
     try:
         const = resolve_map(args.map_const)
-    except ValueError as exc:
+        settings = config.load(args.config)
+    except (ValueError, OSError) as exc:
         print(f"map editor: {exc}", file=sys.stderr)
         return 2
     zoom = args.zoom if args.zoom else best_zoom(const)
     try:
-        Viewer(const, zoom).run()
+        Viewer(const, zoom, settings).run()
     except ValueError as exc:
         # e.g. a map whose pret .blk cannot be used as a standalone grid.
         print(f"map editor: {exc}", file=sys.stderr)
@@ -854,7 +1268,7 @@ def main():
 
 
 def best_zoom(const, size=(1024, 700)):
-    """Largest integer zoom that fits the padded map, capped at 2.
+    """Largest integer scale that fits the padded map, capped at 2.
 
     A fixed default of 2 cropped every map bigger than ~15 blocks; a fixed 1
     wasted space on small interiors. Fit the actual composed size instead.
@@ -862,10 +1276,10 @@ def best_zoom(const, size=(1024, 700)):
     info = pm.map_info(const)
     width = (info.w + 2 * view.BORDER) * ts.BLOCK_PX
     height = (info.h + 2 * view.BORDER) * ts.BLOCK_PX
-    for zoom in (2, 1):
+    for zoom in (2.0, 1.0):
         if width * zoom <= size[0] and height * zoom <= size[1] - PANEL_H:
             return zoom
-    return 1
+    return 1.0
 
 
 if __name__ == "__main__":

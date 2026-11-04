@@ -91,8 +91,11 @@ def load_frame_bin(path: str, pal_path: str | None = None) -> Image.Image:
     return img
 
 
-def to_pygame(img: Image.Image, zoom: int = 1):
-    """PIL RGB image -> pygame surface, integer-zoomed (editor blit helper).
+def to_pygame(img: Image.Image, zoom: float = 1):
+    """PIL RGB image -> pygame surface, scaled by `zoom` (editor blit helper).
+
+    `zoom` may be fractional: the map editor's zoom is continuous, so the scale is
+    rounded to whole pixels here (nearest-neighbour, so pixel art stays crisp).
 
     pygame is imported lazily so headless PIL-only consumers (gen_ui_layout
     --atlas, map render sweeps) never pull it in.
@@ -100,6 +103,7 @@ def to_pygame(img: Image.Image, zoom: int = 1):
     import pygame
     surf = pygame.image.fromstring(img.tobytes(), img.size, "RGB")
     if zoom != 1:
-        surf = pygame.transform.scale(
-            surf, (img.width * zoom, img.height * zoom))
+        size = (max(1, int(round(img.width * zoom))),
+                max(1, int(round(img.height * zoom))))
+        surf = pygame.transform.scale(surf, size)
     return surf

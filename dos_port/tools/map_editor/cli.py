@@ -40,6 +40,17 @@ def main(argv: list[str] | None = None) -> int:
     set_object.add_argument("--movement")
     set_object.add_argument("--facing")
     set_object.add_argument("--write", action="store_true")
+    warps = subs.add_parser("warps")
+    wsub = warps.add_subparsers(dest="warps_command", required=True)
+    set_warp = wsub.add_parser("set")
+    set_warp.add_argument("map")
+    set_warp.add_argument("--warp", required=True)
+    set_warp.add_argument("--y", type=int)
+    set_warp.add_argument("--x", type=int)
+    set_warp.add_argument("--dest")
+    set_warp.add_argument("--target-warp", type=int)
+    set_warp.add_argument("--kind")
+    set_warp.add_argument("--write", action="store_true")
     script = subs.add_parser("scripts")
     ssub = script.add_subparsers(dest="scripts_command", required=True)
     scan = ssub.add_parser("scan")
@@ -88,6 +99,10 @@ def main(argv: list[str] | None = None) -> int:
             result = commands.set_object(args.map, args.object, y=args.y, x=args.x,
                                          sprite=args.sprite, movement=args.movement,
                                          facing=args.facing, write=args.write)
+        elif args.command == "warps":
+            result = commands.set_warp(args.map, args.warp, y=args.y, x=args.x,
+                                       dest=args.dest, target_warp=args.target_warp,
+                                       kind=args.kind, write=args.write)
         elif args.command == "scripts":
             if args.scripts_command == "scan":
                 result = commands.scan_scripts(args.map)

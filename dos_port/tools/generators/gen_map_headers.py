@@ -611,6 +611,7 @@ def parse_object_file(label: str, debug_warps: bool = False):
     obj_file = MAP_OBJECTS_DIR / f"{label}.asm"
     if not obj_file.exists():
         return None
+    from map_editor import objects
     raw = obj_file.read_text()
     text = raw if debug_warps else strip_debug_blocks(raw)
 
@@ -622,9 +623,15 @@ def parse_object_file(label: str, debug_warps: bool = False):
 
     # Warp events: warp_event X, Y, DEST, WARP_ID
     warps = []
+    warp_occurrences: dict[str, int] = {}
     for wm in re.finditer(r"warp_event\s+(\d+),\s*(\d+),\s*(\w+),\s*(\d+)", text):
         x, y, dest_const, warp_id = int(wm.group(1)), int(wm.group(2)), wm.group(3), int(wm.group(4))
-        warps.append((y, x, dest_const, warp_id))
+        source = wm.group(0).strip()
+        occurrence = warp_occurrences.get(source, 0)
+        warp_occurrences[source] = occurrence + 1
+        warps.append({'stable_id': objects.source_id(label, source, occurrence),
+                      'source': source, 'y': y, 'x': x,
+                      'dest': dest_const, 'warp_id': warp_id, 'kind': None})
 
     # Sign (bg_event) events: bg_event X, Y, TEXT_ID  → binary record (Y, X, text_id).
     # The text id is resolved by NAME against the map's dw_const text-pointer list, not
@@ -651,7 +658,6 @@ def parse_object_file(label: str, debug_warps: bool = False):
     # Binary layout per macro:  sprite_id, y+4, x+4, mov, dir, text_byte [, extra...]
     # text_byte: plain text_id (std), ITEM|text_id (item, 7 args), TRAINER|text_id (trainer, 8 args)
     sprites = []
-    from map_editor import objects
     occurrences = {}
     for om in re.finditer(
             r"\bobject_event\b\s+"
@@ -863,11 +869,12 @@ def main(debug_warps=None):
             border, raw_warps, signs, sprites = 0, [], [], []
         sprite_count = len(sprites)
 
-        # Resolve warp dest bytes
+        # Resolve warp dest bytes. The editor's warp `kind` is deliberately NOT
+        # emitted: pret has no warp-type field, so it is authoring metadata only.
         warps_bytes = []
-        for (wy, wx, dest_const, warp_id) in raw_warps:
-            dest_id = const_to_id.get(dest_const, 0xFF)
-            warps_bytes.append((wy, wx, warp_id - 1, dest_id))
+        for warp in raw_warps:
+            dest_id = const_to_id.get(warp['dest'], 0xFF)
+            warps_bytes.append((warp['y'], warp['x'], warp['warp_id'] - 1, dest_id))
 
         maps_db[id_] = {
             "const":         const,

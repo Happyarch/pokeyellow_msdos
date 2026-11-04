@@ -39,13 +39,15 @@ class MapDiff:
     added_blocks: dict[tuple[int, int], int] = field(default_factory=dict)
     recipes: list[dict] = field(default_factory=list)
     objects: dict[str, dict] = field(default_factory=dict)
+    warps: dict[str, dict] = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
     schema_version: int = 1
 
     @property
     def is_v2(self) -> bool:
         return bool(self.schema_version == 2 or self.extents != Extents()
-                    or self.added_blocks or self.recipes or self.objects or self.extra)
+                    or self.added_blocks or self.recipes or self.objects
+                    or self.warps or self.extra)
 
 
 def path_for(pascal: str) -> Path:
@@ -90,6 +92,11 @@ def load(pascal: str) -> MapDiff:
     objects = raw.get("objects", {})
     if not isinstance(objects, dict):
         raise ValueError(f"{p}: objects must be an object")
+    warps = raw.get("warps", {})
+    if not isinstance(warps, dict):
+        raise ValueError(f"{p}: warps must be an object")
+    if any(not isinstance(v, dict) for v in warps.values()):
+        raise ValueError(f"{p}: every warps entry must be an object")
     return MapDiff(
         pascal,
         Extents(**{k: ext.get(k, 0) for k in keys}),
@@ -97,8 +104,10 @@ def load(pascal: str) -> MapDiff:
         _cells(raw.get("added_blocks", []), "added_blocks"),
         recipes,
         objects,
+        warps,
         {key: value for key, value in raw.items() if key not in
-         {"schema", "map", "extent_blocks", "base_blocks", "added_blocks", "recipes", "objects"}},
+         {"schema", "map", "extent_blocks", "base_blocks", "added_blocks",
+          "recipes", "objects", "warps"}},
         2,
     )
 
@@ -125,6 +134,7 @@ def write(diff: MapDiff) -> None:
             "added_blocks": [[y, x, b] for (y, x), b in sorted(diff.added_blocks.items())],
             "recipes": diff.recipes,
             "objects": diff.objects,
+            "warps": diff.warps,
         }
     p.write_text(json.dumps(out, indent=1) + "\n")
 

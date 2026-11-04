@@ -50,6 +50,8 @@ cannot be addressed at 8 px resolution.
   **final canvas block space**. Recipes run before `added_blocks`, so an explicit
   cell over a recipe cell overwrites it — `schema.recipe_cells()` exists to avoid
   exactly that.
+- Warp overrides live under `"warps"` with the same stable-id scheme and carry
+  `dest`, `warp_id` and `kind` (see "Warp events").
 - Object overrides are keyed by a **source-derived stable id**
   (`objects.source_id`: map label + object source line + occurrence), never by
   array index, and store only the *manual* delta. Automatic extent translation is
@@ -70,6 +72,7 @@ cli.py inspect MAP
 cli.py blocks set MAP --y 3 --x 5 --block 0x2a [--write]
 cli.py expand MAP --north-total 1 --west-total 0 --south-total 0 --east-total 8 [--write]
 cli.py objects set MAP --object ID [--y T --x T] [--sprite S] [--movement M] [--facing R] [--write]
+cli.py warps set MAP --warp ID [--y T --x T] [--dest MAP] [--target-warp N] [--kind K] [--write]
 cli.py scripts scan MAP
 cli.py scripts move MAP --index N --sha256 H --y T --x T [--write]
 cli.py route scan MAP
@@ -97,7 +100,29 @@ that matters because these commands write.
 That last point is the honest limit: expansion is safe for the classified forms
 and reports the rest. It is not a licence to assume every script coordinate moved.
 
+## Warp events
+
+Warps are drawn as a translucent **teal** onion skin with a centred **W** (teal
+because it stays distinct from the cyan render-reach frame and the other markers
+over both grass and water). Clicking one selects it and opens a properties panel
+with the same layout as the NPC panel:
+
+- **dest** — destination map constant;
+- **target warp** — the 1-based warp id on that map, exactly as pret numbers it;
+- **kind** — `door`, `hole`, `stairs`, `carpet`, `ledge`, `other`.
+
+`kind` is **editor metadata and is never emitted**. pret has no warp-type field:
+what a warp does is decided by the tiles it stands on and the destination map's
+scripts, not by the event record. Recording a kind is for authoring and review;
+writing it into the map-header binary would be inventing data the engine does not
+read. `commands.set_warp` returns that caveat in its `note` field, and
+`test_objects.py` asserts the generator never touches `warp['kind']`.
+
+Destinations, target ids and positions are real overrides and do reach the
+generated header, through the same sidecar mechanism as NPCs.
+
 ## Script adapters (`scripts.py`, `routes.py`)
+
 
 Only source forms that can be round-tripped are recognised:
 
@@ -122,15 +147,56 @@ keep the stream length, so comments and labels stay aligned.
 ## GUI controls
 
 ```
-drag / arrows    pan                    + / -   zoom
-G block grid     T tile grid            W warps + signs
+left click       place: paint a block, pick/drag an NPC, set the staging tile
+middle drag      pan                     arrows  pan too
+wheel            smooth zoom (continuous scale, not 1x/2x snapping)
+Ctrl + wheel     zoom using the OTHER anchor mode while Ctrl is held
+Ctrl + = / -     zoom in / out
+G block grid     T tile grid             W warps + signs
 N NPC markers    V/H/R port/GB/reach frames (click sets the staged player tile)
 I inspector      C palette              O cycle route preview
+X connections    assemble neighbouring maps at their real offsets (read-only)
+click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
 P paint mode     S save     Ctrl+Z undo     F fill     right-click eyedropper
 Tab next map     Esc quit
 ```
+
+### Zoom anchoring
+
+`zoom_anchor` picks what stays still when the scale changes: `cursor` (default)
+keeps the map point under the mouse fixed, `center` keeps the viewport centre
+fixed. **Ctrl is a shift key, not a toggle** — while it is held the *other* mode
+is in force, and releasing it returns to the configured default. So the setting
+is never mutated by a stray Ctrl+scroll; it is a momentary override.
+
+### Settings (`config.json`)
+
+Optional file next to this module; missing means defaults. Unknown keys are an
+error, so a typo fails loudly instead of silently doing nothing.
+
+| key | default | meaning |
+|---|---|---|
+| `zoom_anchor` | `"cursor"` | `cursor` or `center` |
+| `zoom_min` / `zoom_max` | `0.25` / `6.0` | scale bounds |
+| `zoom_step` | `1.1` | wheel multiplier per notch |
+| `zoom_key_step` | `1.25` | Ctrl+= / Ctrl+- multiplier |
+| `pan_button` | `2` | mouse button that pans (1 left, 2 middle, 3 right) |
+
+### Connections view (`X`)
+
+Draws every connected map assembled at the offset `get_connection` implies, under
+the current map, with this map outlined. In this mode the current map is drawn
+**without** its border ring, because the ring is exactly what the neighbours are
+there to fill — otherwise the padded raster would paint border blocks over the
+seam you are trying to inspect. Neighbours with a different tileset are reported
+in the status area instead of drawn, since their block IDs are not comparable.
+
+The geometry is not guessed: `view.neighbour_origin` derives each origin from the
+same indices the generator emits, and `test_connections.py` checks the assembled
+neighbours cell-for-cell against the strips `compose_padded` already reproduces
+from the runtime.
 
 `C` switches between the port's real overworld palette and the DMG ramp. The
 overworld palette is BG slot 0 only; interiors depend on `wLastMap`, which is

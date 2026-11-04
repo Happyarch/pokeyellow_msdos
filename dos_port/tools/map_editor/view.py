@@ -72,6 +72,123 @@ def can_compose(const: str) -> bool:
         return False
 
 
+def neighbour_origin(direction: str, offset: int, cur_w: int, cur_h: int,
+                     conn_w: int, conn_h: int) -> tuple[int, int]:
+    """Where a connected map's block (0,0) sits, in this map's padded block coords.
+
+    Derived from the same indices gen_map_headers.get_connection() emits, not
+    guessed: the strip's neighbour origin and its padded destination pin the two
+    grids together. For NORTH/SOUTH the `offset` slides the neighbour
+    horizontally, for WEST/EAST vertically, and `get_connection`'s clamp keeps the
+    relative placement identical when it rewrites `_tgt`/`_src`.
+
+    Returns (row, col) in padded block coordinates (the current map's own blocks
+    start at (BORDER, BORDER)).
+    """
+    if direction == "NORTH":
+        # The neighbour's BOTTOM BORDER rows sit in the ring's top BORDER rows,
+        # so neighbour row 0 is (conn_h - BORDER) rows above padded row 0.
+        return (BORDER - conn_h, BORDER + offset)
+    if direction == "SOUTH":
+        return (BORDER + cur_h, BORDER + offset)
+    if direction == "WEST":
+        return (BORDER + offset, BORDER - conn_w)
+    if direction == "EAST":
+        return (BORDER + offset, BORDER + cur_w)
+    raise ValueError(f"unknown connection direction {direction!r}")
+
+
+@dataclass
+class ConnectionView:
+    """The current map plus every connected map, assembled at its real offset."""
+    info: pm.MapInfo
+    grid: bytearray            # block IDs over the whole union canvas
+    stride: int
+    rows: int
+    origin: tuple[int, int]    # where this map's (0,0) block sits in the canvas
+    neighbours: list           # [{const, direction, offset, origin, w, h}]
+    anomalies: list
+
+
+def compose_connections(const: str) -> ConnectionView:
+    """Assemble the current map and its neighbours the way the runtime joins them.
+
+    This is a REVIEW view, not a runtime surface: the port never holds two maps'
+    full grids at once. It exists so a widened edge, a shifted object or a
+    re-tuned connection offset can be eyeballed as an actual seam rather than
+    inferred from a border ring.
+    """
+    info = pm.map_info(const)
+    if info.tileset_stem is None:
+        raise ValueError(f"{const}: no header/tileset")
+    own, w, h, _ = schema.compose_layout(
+        info.label or pm.gmh.const_to_pascal(const), pm.load_blk(info),
+        info.base_w, info.base_h)
+
+    entries = []
+    anomalies = []
+    for direction, nconst, offset in pm.CONNECTIONS.get(const, []):
+        ninfo = pm.map_info(nconst)
+        if ninfo.tileset_stem is None:
+            anomalies.append(f"{direction} -> {nconst}: no header/tileset")
+            continue
+        try:
+            nblk, nw, nh, _ = schema.compose_layout(
+                ninfo.label or pm.gmh.const_to_pascal(nconst), pm.load_blk(ninfo),
+                ninfo.base_w, ninfo.base_h)
+        except (OSError, ValueError) as exc:
+            anomalies.append(f"{direction} -> {nconst}: {exc}")
+            continue
+        if ninfo.tileset_stem != info.tileset_stem:
+            # The two maps do not share a tileset, so their block IDs are not
+            # comparable; drawing them on one canvas would be a lie.
+            anomalies.append(
+                f"{direction} -> {nconst}: tileset {ninfo.tileset_stem} differs "
+                f"from {info.tileset_stem}, assembly preview skipped")
+            continue
+        origin = neighbour_origin(direction, offset, info.w, info.h, nw, nh)
+        entries.append({'const': nconst, 'direction': direction, 'offset': offset,
+                        'origin': origin, 'w': nw, 'h': nh, 'blk': nblk})
+
+    own_origin = (BORDER, BORDER)
+    min_r = min([own_origin[0]] + [e['origin'][0] for e in entries])
+    min_c = min([own_origin[1]] + [e['origin'][1] for e in entries])
+    max_r = max([own_origin[0] + info.h] + [e['origin'][0] + e['h'] for e in entries])
+    max_c = max([own_origin[1] + info.w] + [e['origin'][1] + e['w'] for e in entries])
+    stride, rows = max_c - min_c, max_r - min_r
+    grid = bytearray(stride * rows)
+
+    for entry in entries:
+        r0, c0 = entry['origin'][0] - min_r, entry['origin'][1] - min_c
+        entry['canvas_origin'] = (r0, c0)
+        for y in range(entry['h']):
+            dst = (r0 + y) * stride + c0
+            src = y * entry['w']
+            grid[dst:dst + entry['w']] = entry['blk'][src:src + entry['w']]
+        entry.pop('blk')
+
+    own_r, own_c = own_origin[0] - min_r, own_origin[1] - min_c
+    for y in range(info.h):
+        dst = (own_r + y) * stride + own_c
+        grid[dst:dst + info.w] = own[y * w:(y + 1) * w]
+
+    return ConnectionView(info, grid, stride, rows, (own_r, own_c), entries,
+                          anomalies)
+
+
+def render_grid(info: pm.MapInfo, grid: bytearray, stride: int, rows: int,
+                palette=DMG_PAL) -> Image.Image:
+    """Block grid -> RGB image. Shared by the padded and connection renders."""
+    tiles = ts.load_tileset_2bpp(info.tileset_stem)
+    blocks = ts.load_blockset(info.tileset_stem)
+    img = Image.new("RGB", (stride * BLOCK_PX, rows * BLOCK_PX), palette[0])
+    for by in range(rows):
+        for bx in range(stride):
+            ts._blit_block(img, tiles, blocks, grid[by * stride + bx],
+                           bx, by, palette)
+    return img
+
+
 def compose_padded(const: str, overrides: dict | None = None,
                    map_overrides: dict | None = None) -> ComposedMap:
     """overrides: {(row, col): block} painted border-ring cells (map_borders
