@@ -218,6 +218,7 @@ error, so a typo fails loudly instead of silently doing nothing.
 | `ui_scale` | `"auto"` | `"auto"` (derive from the window) or a number to pin it |
 | `ui_scale_min` / `ui_scale_max` | `0.75` / `2.5` | bounds applied to either form |
 | `ui_reference` | `[1024, 700]` | the window size `"auto"` is measured against |
+| `palette_cell` | `16` | base px per paint-palette cell (16 = one step, 32 = one block); the UI scale multiplies it |
 
 `ui_scale` drives the HUD font, the properties panels and the bottom bar, so the
 chrome stays readable when the window is resized. `"auto"` uses
@@ -225,6 +226,18 @@ chrome stays readable when the window is resized. `"auto"` uses
 shrinks the chrome rather than letting it overflow the bottom bar. The scale is
 recomputed whenever the window size changes; pinning it with a number overrides
 the formula but still respects the bounds.
+
+### Paint palette sizing
+
+The paint palette's cells are **one movement step** (16 px) at 1× and are
+multiplied by the UI scale, so they stay the same size *relative to the chrome*
+at every window size instead of being a fixed 32 px slab. A block is 2×2 steps,
+so a 32 px cell was 2× too large — the same mistake the step grid had. Set
+`palette_cell: 32` for block-sized swatches, or any value in 4..128.
+
+The swatches are rendered at their true 32 px and then resized to the cell, so
+at `ui_scale` 2 (cell = 32 px) the preview is exact 1:1 pixels; smaller cells are
+a clean nearest-neighbour reduction, not a blur.
 
 ### Connections view (`X`)
 

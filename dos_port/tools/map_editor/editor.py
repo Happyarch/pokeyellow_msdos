@@ -91,7 +91,11 @@ LOCKED_DIM = (0, 0, 0, 110)
 SEL_BLOCK = (255, 64, 64)
 PANEL_H = 22
 PAL_COLS = 8
-PAL_W = PAL_COLS * ts.BLOCK_PX + 12
+# Default base size of one palette cell, before the UI scale: 16 px is ONE
+# MOVEMENT STEP (2x2 GB tiles), 32 px is a whole map block. Overridable with
+# `palette_cell` in config.json — a cell is not a block, and a 32 px default was
+# 2x too large for the step grid the map is edited on.
+PAL_CELL = TILE * 2
 
 
 class Viewer:
@@ -214,6 +218,7 @@ class Viewer:
         self._core_scale = None
         self.surf = None
         self.pal_surf = None
+        self._pal_key = None
 
     def invalidate_map_blocks(self):
         """Drop only what a block edit changes.
@@ -228,6 +233,7 @@ class Viewer:
         self._core_scale = None
         self.surf = None
         self.pal_surf = None
+        self._pal_key = None
 
     def viewport_center(self) -> tuple[float, float]:
         """Screen centre of the map area (the bottom bar is excluded)."""
@@ -302,6 +308,7 @@ class Viewer:
         self._core_scale = None
         self.surf = None
         self.pal_surf = None
+        self._pal_key = None
 
     # ── painting ─────────────────────────────────────────────────────────────
 
@@ -475,8 +482,25 @@ class Viewer:
 
     # ── palette panel ────────────────────────────────────────────────────────
 
+    def palette_cell(self) -> int:
+        """Pixel size of one palette cell: `palette_cell` base px, UI-scaled."""
+        base = self.settings.get('palette_cell', PAL_CELL)
+        return max(8, int(round(base * self.ui_scale())))
+
+    def palette_width(self) -> int:
+        return PAL_COLS * self.palette_cell() + 12
+
     def palette_surface(self):
-        if self.pal_surf is None:
+        """The block picker: one cell per block, sized by `palette_cell` x UI scale.
+
+        The blocks are rendered at their true 32 px first and then resized to the
+        cell, so at ui_scale 2 (where a cell is 32 px) the preview is exact 1:1
+        pixels; below that it is a clean nearest-neighbour reduction rather than
+        a blurry one.
+        """
+        cell = self.palette_cell()
+        key = (cell, self.palette_mode, self.nblocks)
+        if self.pal_surf is None or self._pal_key != key:
             rows = (self.nblocks + PAL_COLS - 1) // PAL_COLS
             from PIL import Image
             img = Image.new("RGB", (PAL_COLS * ts.BLOCK_PX,
@@ -484,15 +508,18 @@ class Viewer:
             for b in range(self.nblocks):
                 ts._blit_block(img, self.tiles, self.blocks, b,
                                b % PAL_COLS, b // PAL_COLS, self.colors)
+            if cell != ts.BLOCK_PX:
+                img = img.resize((PAL_COLS * cell, rows * cell), Image.NEAREST)
             self.pal_surf = to_pygame(img, 1)
+            self._pal_key = key
         return self.pal_surf
 
     def palette_click(self, pos) -> bool:
-        x0 = self.screen.get_width() - PAL_W
+        x0 = self.screen.get_width() - self.palette_width()
         if not self.paint or pos[0] < x0 + 6:
             return False
-        b = ((pos[1] - 6) // ts.BLOCK_PX) * PAL_COLS \
-            + (pos[0] - x0 - 6) // ts.BLOCK_PX
+        cell = self.palette_cell()
+        b = ((pos[1] - 6) // cell) * PAL_COLS + (pos[0] - x0 - 6) // cell
         if 0 <= b < self.nblocks:
             self.current_block = b
         return True
@@ -1150,16 +1177,17 @@ class Viewer:
                              (ox + px * z, oy + py * z))
 
         if self.paint:
-            x0 = self.screen.get_width() - PAL_W
+            width = self.palette_width()
+            cell = self.palette_cell()
+            x0 = self.screen.get_width() - width
             pygame.draw.rect(self.screen, (40, 40, 48),
-                             (x0, 0, PAL_W, self.screen.get_height()))
+                             (x0, 0, width, self.screen.get_height()))
             self.screen.blit(self.palette_surface(), (x0 + 6, 6))
             b = self.current_block
             pygame.draw.rect(
                 self.screen, SEL_BLOCK,
-                (x0 + 6 + (b % PAL_COLS) * ts.BLOCK_PX,
-                 6 + (b // PAL_COLS) * ts.BLOCK_PX,
-                 ts.BLOCK_PX, ts.BLOCK_PX), 2)
+                (x0 + 6 + (b % PAL_COLS) * cell,
+                 6 + (b // PAL_COLS) * cell, cell, cell), 2)
 
         self.draw_warp_drag_ghost(ox, oy, z)
         self.draw_hud()

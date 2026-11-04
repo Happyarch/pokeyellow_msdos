@@ -33,6 +33,9 @@ DEFAULTS = {
     "ui_scale_max": 2.5,
     # The window size "auto" is measured against.
     "ui_reference": [1024, 700],
+    # Base pixel size of one paint-palette cell, before the UI scale. 16 is one
+    # movement step (2x2 GB tiles); 32 is one whole map block.
+    "palette_cell": 16,
 }
 
 _ALLOWED_ANCHORS = ("cursor", "center")
@@ -76,3 +79,6 @@ def validate(settings: dict, where: object = "config") -> None:
     if (not isinstance(ref, (list, tuple)) or len(ref) != 2
             or any(not isinstance(v, int) or v <= 0 for v in ref)):
         raise ValueError(f"{where}: ui_reference must be [width, height]")
+    cell = settings["palette_cell"]
+    if not isinstance(cell, int) or isinstance(cell, bool) or not 4 <= cell <= 128:
+        raise ValueError(f"{where}: palette_cell must be an integer in 4..128")

@@ -285,6 +285,49 @@ class ZoomTest(unittest.TestCase):
         # The branch that arms `drag` is keyed on settings['pan_button'].
         self.assertNotEqual(v.settings["pan_button"], 1)
 
+    # ── paint palette: one cell per block, sized in steps, UI-scaled ─────────
+
+    def test_palette_cell_is_step_sized_and_follows_the_window(self):
+        from map_editor.editor import PAL_COLS
+        v = self.viewer()
+        v.screen = self.pygame.display.set_mode((1024, 700))
+        self.assertEqual(v.palette_cell(), 16, "a cell is one movement step at 1x")
+        v.screen = self.pygame.display.set_mode((1600, 1000))
+        cell = v.palette_cell()
+        self.assertGreater(cell, 16, "the palette must scale with the UI")
+        self.assertEqual(v.palette_width(), PAL_COLS * cell + 12)
+        rows = (v.nblocks + PAL_COLS - 1) // PAL_COLS
+        self.assertEqual(v.palette_surface().get_size(),
+                         (PAL_COLS * cell, rows * cell))
+
+    def test_palette_cell_can_be_set_to_a_block(self):
+        v = self.viewer(palette_cell=32)
+        v.screen = self.pygame.display.set_mode((1024, 700))
+        self.assertEqual(v.palette_cell(), 32, "palette_cell is the base size")
+
+    def test_palette_click_uses_the_scaled_cell(self):
+        """The hit test must follow the drawn size, not a hard-coded 32 px."""
+        from map_editor.editor import PAL_COLS
+        v = self.viewer()
+        v.screen = self.pygame.display.set_mode((1600, 1000))
+        v.paint = True
+        cell = v.palette_cell()
+        x0 = v.screen.get_width() - v.palette_width()
+        for block in (0, 9, PAL_COLS + 3):
+            col, row = block % PAL_COLS, block // PAL_COLS
+            pos = (x0 + 6 + col * cell + cell // 2, 6 + row * cell + cell // 2)
+            self.assertTrue(v.palette_click(pos))
+            self.assertEqual(v.current_block, block, f"block {block} at {pos}")
+
+    def test_palette_cell_config_is_validated(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(json.dumps({"palette_cell": 0}))
+            with self.assertRaisesRegex(ValueError, "palette_cell"):
+                config.load(path)
+            path.write_text(json.dumps({"palette_cell": 24}))
+            self.assertEqual(config.load(path)["palette_cell"], 24)
+
     # ── save semantics: Ctrl+S commits, an edit never does ───────────────────
 
     def tree(self, rel):
