@@ -13,7 +13,8 @@ View controls:
   Ctrl + = / -     zoom in / out
   G  step grid (16px, one movement step)   B  block grid (32px)   T  tile grid (8px)
   W  warp + sign events
-  N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
+  N  NPC markers   J  trigger tiles (where ArePlayerCoordsInArray fires)
+  V/H/R port/GB/reach frames (click sets the staged player tile)
   I  coordinate inspector   C  toggle palette   O  cycle route preview
   X  connections: assemble neighbouring maps at their real offsets (read-only)
   Y  viewport probe: click a step to box what the DOS (V, red) and GB (H, blue)
@@ -91,6 +92,9 @@ STRIP_TINTS = ((255, 150, 0), (0, 200, 220), (200, 120, 255), (130, 220, 90))
 NPCMV1 = (168, 92, 230)
 NPCMV2 = (120, 132, 240)
 NPCMV12 = (236, 120, 255)
+# Encounter/trigger tiles from an ArePlayerCoordsInArray table. Yellow so it
+# reads as "standing here fires something", not as an object.
+TRIGGER_TILE = (255, 235, 60)
 # Connection-assembly review view: this map vs its neighbours.
 CONN_SELF = (255, 60, 200)
 CONN_OTHER = (90, 190, 255)
@@ -192,7 +196,7 @@ class Viewer:
         self.show = {"steps": False, "blocks": False, "tiles": False, "warps": True,
                      "npcs": True, "port_view": False, "gb_view": False,
                      "render_reach": False, "inspector": False,
-                     "connections": False}
+                     "connections": False, "triggers": True}
         self.paint = False
         self.palette_mode = 'port-cgb'
         self.player = None          # map-local tile (x, y) for frame references
@@ -228,6 +232,7 @@ class Viewer:
         self._reach_cells = set()  # the whole band, for the look comparison
         self._border_runs = []   # merged border-fill cells, drawn fainter
         self.pick_mode = False   # O in paint mode: next click clones a block
+        self.triggers = []       # ArePlayerCoordsInArray tables for this map
         self._unused_skin = None # cached onion-skin tile for the palette
         self._unused_count = 0
         self.view_as = None      # const whose tileset+palette we render with
@@ -293,6 +298,11 @@ class Viewer:
         except (ValueError, OSError):
             self.route_options = []
             self.route_sha = None
+        try:
+            from map_editor import commands
+            self.triggers = commands.scan_triggers(const)['triggers']
+        except (ValueError, OSError):
+            self.triggers = []
         pygame.display.set_caption(
             f"map_editor — {const} ({self.cm.info.w}x{self.cm.info.h} blocks,"
             f" {self.cm.info.tileset_name})")
@@ -1427,6 +1437,30 @@ class Viewer:
         self.screen.blit(chip, (sx + (w - chip.get_width()) // 2,
                                 sy + (h - chip.get_height()) // 2))
 
+    def draw_triggers(self, ox, oy, z):
+        """Mark the tiles that fire a script when the player stands on them.
+
+        Source coords are game map squares (16 px); the editor draws in 8 px
+        tiles, so they double here — the same conversion every other adapter
+        does. A marker is one map square, not a block: the player triggers it by
+        standing on that square.
+        """
+        if not self.triggers:
+            return
+        side = max(2, int(round(TILE * 2 * z)))
+        for trigger in self.triggers:
+            for coord in trigger['coords']:
+                px, py = view.warp_px(self.cm, coord['y'] * 2, coord['x'] * 2)
+                sx, sy = int(round(ox + px * z)), int(round(oy + py * z))
+                pygame.draw.rect(self.screen, TRIGGER_TILE, (sx, sy, side, side), 2)
+                glyph = self.font.render('T', True, TRIGGER_TILE)
+                chip = pygame.Surface((glyph.get_width() + 2, glyph.get_height()),
+                                      pygame.SRCALPHA)
+                chip.fill((10, 20, 30, 190))
+                chip.blit(glyph, (1, 0))
+                self.screen.blit(chip, (sx + (side - chip.get_width()) // 2,
+                                        sy + (side - chip.get_height()) // 2))
+
     def draw_reach(self, ox, oy, z):
         """The viewable union: amber = DOS-only cells showing real map data.
 
@@ -1789,6 +1823,8 @@ class Viewer:
                 rect_px(px, py, TILE * 2, TILE * 2, color, 2)
                 if s['stable_id'] == self.selected_object:
                     rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
+        if self.show["triggers"]:
+            self.draw_triggers(ox, oy, z)
         if self.route_index >= 0:
             self.draw_route_overlay(ox, oy, z)
         self.draw_reach(ox, oy, z)
@@ -1865,6 +1901,7 @@ class Viewer:
             ("STEP", self.show["steps"]), ("BLK", self.show["blocks"]),
             ("TILE", self.show["tiles"]),
             ("EVT", self.show["warps"]), ("NPC", self.show["npcs"]),
+            ("TRG", self.show["triggers"]),
             ("PV", self.show["port_view"]), ("GB", self.show["gb_view"]),
             ("RR", self.show["render_reach"]),
             ("CONN", self.show["connections"])) if enabled)
@@ -1901,6 +1938,13 @@ class Viewer:
                 f"(${s['own_border']:02X} → ${s['other_border']:02X})")
         elif self.reach_stats is not None and self.view_as is None:
             lines.append("K: preview this map with a neighbour's tileset+palette")
+        if self.triggers:
+            # Squares, because that is what the source says; say so rather than
+            # letting them be read as tiles or blocks.
+            parts = [f"{t['label']} " + " ".join(f"({c['x']},{c['y']})"
+                                                 for c in t['coords'])
+                     for t in self.triggers]
+            lines.append("Triggers (map squares): " + " | ".join(parts))
         if self.pick_mode:
             lines.append(f"PICK: click a cell to clone block "
                          f"${self.current_block:02X} into the palette  O cancels")
@@ -2078,6 +2122,11 @@ class Viewer:
                         self.show["warps"] = not self.show["warps"]
                     elif ev.key == pygame.K_n:
                         self.show["npcs"] = not self.show["npcs"]
+                    elif ev.key == pygame.K_j:
+                        # Encounter/trigger tiles: where ArePlayerCoordsInArray
+                        # fires for this map. Not a block or an object, so it
+                        # gets its own layer.
+                        self.show["triggers"] = not self.show["triggers"]
                     elif ev.key == pygame.K_v:
                         self.show["port_view"] = not self.show["port_view"]
                     elif ev.key == pygame.K_h:

@@ -140,6 +140,17 @@ def scan(path: Path) -> list[RouteBinding]:
         if match:
             labels[match.group(1)] = i
 
+    # The script's own `NAME equ N` table names the sprite slot a call arms, e.g.
+    # `mov al, CERULEANCITY_RIVAL` right before `call MoveSprite`. Without this the
+    # slot is unresolvable and the path has no anchor, which is why the rival's
+    # walk preview drew from nowhere.
+    equates: dict[str, int] = {}
+    for line in lines:
+        m = re.match(r'^\s*([A-Za-z_]\w*)\s+equ\s+(\d+)\s*(?:;.*)?$',
+                     line.rstrip('\r\n'))
+        if m:
+            equates[m.group(1)] = int(m.group(2))
+
     direct: dict[str, set[str]] = {}
     # label -> (pair id, channel, slot).  A MoveSprite2 call arms TWO streams from
     # one call site: EDI/AL for the first walker, EDX/BL for the second.  That is
@@ -175,6 +186,8 @@ def scan(path: Path) -> list[RouteBinding]:
                 if register in ('al', 'bl'):
                     if re.fullmatch(r'\d+', value):
                         slots[register] = int(value)
+                    elif value in equates:
+                        slots[register] = equates[value]
                 elif register == 'edi' or driver == 'MoveSprite2':
                     if re.fullmatch(r'[A-Za-z_]\w*', value):
                         found[register] = value

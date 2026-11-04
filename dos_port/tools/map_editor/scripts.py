@@ -21,6 +21,92 @@ class TileYX:
 
 
 @dataclass(frozen=True)
+class TriggerBinding:
+    """A coordinate table checked with ArePlayerCoordsInArray.
+
+    `coords` are (x, y) in GAME MAP SQUARES (16 px), which is the unit
+    `dbmapcoord` writes and `wXCoord`/`wYCoord` compare — NOT editor tiles. The
+    editor doubles them when it draws, exactly like every other adapter.
+    """
+
+    label: str
+    coords: tuple[tuple[int, int], ...]
+    line: int
+
+
+_TRIGGER_CALL = re.compile(r'^\s*(?:call|predef)\s+ArePlayerCoordsInArray\b')
+_TRIGGER_PTR = re.compile(r'^\s*(?:mov\s+esi|ld\s+hl)\s*,\s*([A-Za-z_]\w*)\s*(?:;.*)?$')
+_DB_PAIR = re.compile(r'^\s*db\s+([^;\s]+)\s*,\s*([^;\s]+)\s*(?:;.*)?$', re.IGNORECASE)
+_DBMAPCOORD = re.compile(r'^\s*dbmapcoord\s+([^;\s]+)\s*,\s*([^;\s]+)\s*(?:;.*)?$',
+                         re.IGNORECASE)
+
+
+def _number(token: str) -> int | None:
+    token = token.strip()
+    if re.fullmatch(r'-?\d+', token):
+        return int(token)
+    if re.fullmatch(r'\$[0-9a-fA-F]+', token):
+        return int(token[1:], 16)
+    if re.fullmatch(r'0x[0-9a-fA-F]+', token):
+        return int(token, 16)
+    return None
+
+
+def scan_triggers(path: Path) -> list[TriggerBinding]:
+    """Coordinate tables an `ArePlayerCoordsInArray` call tests the player against.
+
+    These are the encounter/trigger tiles: standing on one runs that script. They
+    are plain (Y, X) byte pairs in the source, so they are read here rather than
+    inferred from anything at runtime. Computed pointers are not followed.
+    """
+    lines = path.read_text().splitlines()
+    labels = {}
+    for i, line in enumerate(lines):
+        match = re.match(r'^\s*([A-Za-z_]\w*):\s*(?:;.*)?$', line)
+        if match:
+            labels[match.group(1)] = i
+
+    wanted: dict[str, int] = {}
+    for i, line in enumerate(lines):
+        if not _TRIGGER_CALL.match(line):
+            continue
+        for previous in reversed(lines[max(0, i - 4):i]):
+            if re.match(r'^\s*[A-Za-z_]\w*:', previous):
+                break
+            m = _TRIGGER_PTR.match(previous)
+            if m and m.group(1) in labels:
+                wanted.setdefault(m.group(1), i)
+                break
+
+    out = []
+    for label, site in wanted.items():
+        coords = []
+        for line in lines[labels[label] + 1:]:
+            s = line.split(';', 1)[0].strip()
+            if not s:
+                continue
+            mc = _DBMAPCOORD.match(s)
+            if mc:                                  # pret source form: x, y
+                x, y = _number(mc.group(1)), _number(mc.group(2))
+                if x is None or y is None:
+                    break
+                coords.append((x, y))
+                continue
+            m = _DB_PAIR.match(s)
+            if not m:
+                break
+            y, x = _number(m.group(1)), _number(m.group(2))
+            if y is None or x is None:
+                break
+            if y < 0:                               # db -1 terminator
+                break
+            coords.append((x, y))
+        if coords:
+            out.append(TriggerBinding(label, tuple(coords), site))
+    return out
+
+
+@dataclass(frozen=True)
 class SourceSpan:
     path: Path
     start: int

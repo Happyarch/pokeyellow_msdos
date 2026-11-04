@@ -22,13 +22,20 @@ events:
 
 | unit | size | where |
 |---|---|---|
-| editor tile | 8×8 px | `TileYX`, GUI cursor, `manual_delta_tile`, script `dbmapcoord` |
-| game map square | 16×16 px | `object_event` / `warp_event` / `bg_event`, `MAPY`/`MAPX`, `wXCoord`/`wYCoord` |
+| editor tile | 8×8 px | `TileYX`, GUI cursor, `manual_delta_tile` |
+| game map square | 16×16 px | `object_event` / `warp_event` / `bg_event`, `MAPY`/`MAPX`, `wXCoord`/`wYCoord`, **script `dbmapcoord`** |
 | map block | 32×32 px | `.blk` bytes, extents, map dimensions |
 
 So one block is **2 game map squares** or **4 editor tiles**. Convert only at
 adapter boundaries (`objects.py`, `scripts.py`, `view.py`). `MAPY`/`MAPX` also
 carry pret's `+4` bias; never change that, it is part of the binary format.
+
+**`dbmapcoord` is written in game map squares, not tiles.** It used to be listed
+under editor tiles above, which is a 2× trap: `dbmapcoord 20, 6` means square
+(x=20, y=6), and `ArePlayerCoordsInArray` compares it against `wXCoord`/`wYCoord`
+directly. The editor stores script coordinates as 8 px `TileYX` internally, so it
+**doubles on read and halves on write** — type a tile value into a coordinate
+field and you will be wrong by 2×.
 
 Game positions must land on even editor-tile coordinates, because a map square
 cannot be addressed at 8 px resolution.
@@ -172,7 +179,8 @@ I inspector      C palette              O cycle route preview
 X connections    assemble neighbouring maps at their real offsets; strip cells edit the owner
 U walkable reach flood from the probe; shade what only the port can show
 K look preview  render with the own look, then each neighbour's, then back
-O route preview outside paint mode; in paint mode it arms the tile picker
+O scripted movement paths; in paint mode it arms the tile picker instead
+J trigger tiles (ArePlayerCoordsInArray tables) on/off
 click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
@@ -400,6 +408,35 @@ Route 1's border is `$0B` (tile `$52`, grass) and Viridian City's is `$0F`
 the walkable area into trees. Pallet Town shares Route 1's `$0B`, so that seam's
 fill is stable. The GB never showed this fill at all — its camera stops at the map
 edge, while the port's 320 px viewport is as wide as Route 1.
+
+### Trigger tiles (`J`)
+
+Yellow **T** markers on the tiles that fire a script when the player stands on
+them — the `ArePlayerCoordsInArray` tables (`CeruleanCityCoords2`, …). They are
+read straight from the map's script (`scripts.scan_triggers`), and the HUD lists
+each table with its coordinates **in map squares**, labelled as such:
+
+```
+Triggers (map squares): CeruleanCityCoords2 (20,6) (21,6) | CeruleanCityCoords1 (30,7) (30,9)
+```
+
+A marker is one 16 px map square, not a block: the player triggers it by standing
+on that square. `commands.scan_triggers MAP` gives the same data as JSON for
+scripting. Only a direct `mov esi, Label` / `ld hl, Label` at an
+`ArePlayerCoordsInArray` call is followed — computed pointers are not inferred.
+
+### Scripted movement paths (`O`)
+
+`O` cycles the movement streams bound to `MoveSprite`/`MoveSprite2` and draws the
+walk as a polyline from the NPC it is armed for. One `db NPC_MOVEMENT_*` byte is
+**one 16 px map square** (`routes.preview` translates 2 editor tiles per byte), and
+the trace stops at any byte it cannot predict rather than inventing a position.
+
+The anchor is the sprite slot the call site arms — `mov al, CERULEANCITY_RIVAL`
+next to `call MoveSprite` resolves through the script's own `NAME equ N` table
+(`routes.scan` reads it). Without that the slot was unresolvable and a stream like
+`CeruleanCityMovement1` drew from nowhere; it now anchors on the rival. If no slot
+is named, the selected NPC is used instead.
 
 ### Tile picker (`O`) and the unused-block onion skin
 

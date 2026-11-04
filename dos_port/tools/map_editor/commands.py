@@ -223,6 +223,24 @@ def scan_routes(ref: str) -> dict[str, Any]:
                        for b in bindings]}
 
 
+def scan_triggers(ref: str) -> dict[str, Any]:
+    """Read-only: the coordinate tables an ArePlayerCoordsInArray call tests.
+
+    Coordinates are GAME MAP SQUARES (16 px), the unit `dbmapcoord` and
+    wXCoord/wYCoord use. Nothing is written and nothing is inferred beyond a
+    direct `mov esi, Label` / `ld hl, Label` at the call site.
+    """
+    from map_editor import scripts as scripts_mod
+    script = scan_scripts(ref)
+    found = scripts_mod.scan_triggers(Path(script['path']))
+    return {'schema': 1, 'written': False, 'map': script['map'],
+            'path': script['path'], 'sha256': script['sha256'],
+            'units': {'coordinate': 'game map square (16 px), x then y'},
+            'triggers': [{'label': b.label, 'line': b.line + 1,
+                          'coords': [{'x': x, 'y': y} for x, y in b.coords]}
+                         for b in found]}
+
+
 def set_route(ref: str, label: str, digest: str, values: list[int],
               write: bool = False) -> dict[str, Any]:
     from map_editor import routes

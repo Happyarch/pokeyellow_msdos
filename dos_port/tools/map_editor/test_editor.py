@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from map_editor import config  # noqa: E402
 from map_editor import staging  # noqa: E402
 from map_editor import view  # noqa: E402
+from map_editor import routes, scripts  # noqa: E402
 from gfx_core import tilesets as ts  # noqa: E402
 from gfx_core.tiles import DMG_PAL  # noqa: E402
 
@@ -1237,6 +1238,85 @@ class TilePickerTest(ViewerTestBase):
         v.paint_cell(self.cell_px(12, 12))
         self.assertNotIn(free, v.unused_blocks(),
                          "placing a block makes it part of the map")
+
+
+class TriggerTest(ViewerTestBase):
+    """Encounter tiles: the ArePlayerCoordsInArray tables, and the route anchor."""
+
+    SCRIPT = (
+        "Coords2:\n"
+        "    db 6, 20\n"
+        "    db 6, 21\n"
+        "    db -1\n"
+        "Movement1:\n"
+        "    db NPC_MOVEMENT_DOWN\n"
+        "    db NPC_MOVEMENT_DOWN\n"
+        "    db -1\n"
+        "Start:\n"
+        "    mov esi, Coords2\n"
+        "    call ArePlayerCoordsInArray\n"
+        "    mov edi, Movement1\n"
+        "    mov al, RIVAL_SLOT\n"
+        "    call MoveSprite\n"
+    )
+
+    def seed_script(self, const, text=None):
+        path = self.tree(f"dos_port/src/scripts/{const.title().replace('_', '')}.asm")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text if text is not None else
+                        "RIVAL_SLOT equ 1\n" + self.SCRIPT)
+        return path
+
+    def test_scan_triggers_reads_the_real_cerulean_tables(self):
+        """The rival's encounter tiles are squares, not tiles or blocks."""
+        path = Path(__file__).resolve().parents[3] / "dos_port/src/scripts/CeruleanCity.asm"
+        found = {b.label: b.coords for b in scripts.scan_triggers(path)}
+        self.assertEqual(found["CeruleanCityCoords2"], ((20, 6), (21, 6)))
+        self.assertIn("CeruleanCityCoords1", found)
+
+    def test_scan_triggers_ignores_an_unrelated_db_table(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "x.asm"
+            path.write_text("NotCoords:\n    db 1, 2\n    db -1\n"
+                            "Start:\n    mov esi, NotCoords\n    call SomethingElse\n")
+            self.assertEqual(scripts.scan_triggers(path), [])
+
+    def test_viewer_loads_trigger_tiles(self):
+        self.seed_script("CERULEAN_CITY")
+        v = self.viewer("CERULEAN_CITY")
+        self.assertEqual([t["label"] for t in v.triggers], ["Coords2"])
+        self.assertEqual([(c["x"], c["y"]) for c in v.triggers[0]["coords"]],
+                         [(20, 6), (21, 6)])
+
+    def test_trigger_layer_draws_and_toggles(self):
+        self.seed_script("CERULEAN_CITY")
+        v = self.viewer("CERULEAN_CITY")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        self.assertTrue(v.show["triggers"])
+        v.draw()
+        v.show["triggers"] = False
+        v.draw()
+        self.assertEqual(len(v.triggers), 1, "the table survives the toggle")
+
+    def test_route_slot_resolves_from_the_equ_table(self):
+        """`mov al, CERULEANCITY_RIVAL` + `NAME equ 1` anchors the walk preview."""
+        path = self.seed_script("CERULEAN_CITY")
+        bindings = routes.scan(path)
+        self.assertEqual([b.label for b in bindings], ["Movement1"])
+        self.assertEqual(bindings[0].slot, 1, "slot comes from the equ table")
+
+    def test_route_preview_starts_at_the_named_sprite(self):
+        self.seed_script("CERULEAN_CITY")
+        v = self.viewer("CERULEAN_CITY")
+        route = next(r for r in v.route_options if r["label"] == "Movement1")
+        anchor = v.route_anchor(route)
+        self.assertIsNotNone(anchor, "a resolvable slot must give an anchor")
+        self.assertEqual(tuple(anchor), tuple(v.cm.sprites[0]["trace"]["final"]))
+        trace = routes.preview(scripts.TileYX(anchor[0], anchor[1]),
+                               routes.decode(bytes(route["bytes"])))
+        self.assertEqual(len(trace), 3, "anchor + two steps")
+        self.assertEqual(trace[1].y - trace[0].y, 2, "one byte = one 16px square")
 
 
 if __name__ == "__main__":
