@@ -174,8 +174,22 @@ click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
 Ctrl+S save       Ctrl+Z undo             F fill        right-click eyedropper
+shift-drag       lock a paint stroke or probe sweep to one axis
 P paint mode      Tab next map            Esc quit (without saving)
 ```
+
+### Axis lock
+
+Hold **shift** when a paint or probe drag starts and the stroke is constrained to
+one axis: the dominant direction from the anchor decides which, and the axis
+re-evaluates as you move, so you can switch from a row to a column without
+releasing. The cells between motion samples are filled, so a locked line is
+solid rather than the handful of cells the mouse happened to sample. The status
+bar shows `LOCK H` / `LOCK V` while it is active.
+
+In probe mode shift does double duty, like most editors: a shift **click** (no
+movement) still clears the probe, a shift **drag** sweeps a straight path. The
+difference is only known on release, so the press itself decides nothing.
 
 ### Saving: edits are staged, Ctrl+S commits
 

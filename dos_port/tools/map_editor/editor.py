@@ -18,6 +18,7 @@ View controls:
   X  connections: assemble neighbouring maps at their real offsets (read-only)
   Y  viewport probe: click a step to box what the DOS (V, red) and GB (H, blue)
      camera sees from there; drag to sweep a path; shift-click clears
+  shift-drag       lock a paint stroke or a probe sweep to one axis
   click a W marker  select a warp; drag it to move; panel edits dest / target / kind
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
@@ -100,8 +101,26 @@ PAL_CELL = ts.BLOCK_PX
 PAL_MAX_COLS = 16
 
 
-def _step_line(a, b):
-    """Steps from `a` (exclusive) to `b` (inclusive), Bresenham on the step grid."""
+def _axis_lock(anchor, target):
+    """Project `target` onto the dominant axis from `anchor` (shift-drag).
+
+    Returns (point, axis) with axis "H" or "V". This is the constraint every
+    other pixel editor has: hold shift and the stroke stays on one axis instead
+    of following the pointer.
+    """
+    ay, ax = anchor
+    ty, tx = target
+    if abs(tx - ax) >= abs(ty - ay):
+        return (ay, tx), "H"
+    return (ty, ax), "V"
+
+
+def _grid_line(a, b):
+    """Points from `a` (exclusive) to `b` (inclusive), Bresenham on a 2D grid.
+
+    Used for both map steps and padded paint cells, so a fast drag draws an
+    unbroken line instead of the cells the mouse happened to sample.
+    """
     y0, x0 = a
     y1, x1 = b
     dx, dy = abs(x1 - x0), -abs(y1 - y0)
@@ -157,6 +176,13 @@ class Viewer:
         self.route_sha = None
         self.route_options = []
         self.painting = False
+        # One drag = one stroke. The anchor is where it started; `stroke_locked`
+        # is shift at that moment, which constrains the stroke to one axis.
+        self.stroke_anchor = None
+        self.stroke_locked = False
+        self.stroke_last = None
+        self.lock_axis = None
+        self.shift_clear_pending = False
         # Viewport probe: steps whose camera window is drawn, and the mode that
         # places them. The overlay outlives the mode on purpose — it is an
         # annotation you keep while painting, not a transient cursor.
@@ -415,18 +441,22 @@ class Viewer:
 
         Only meaningful in probe mode: outside it a left click still belongs to
         warp/NPC/paint selection, so the mode guard lives here as well as in the
-        event routing.
+        event routing. Shift means two things — clear on a CLICK, lock the sweep
+        to one axis on a DRAG — and which one it is is only known on release.
         """
         if not self.probe_mode:
             return False
-        if shift:
-            self.clear_probe()
-            return True
         step = self.step_at(pos)
         if step is None:
             return False
-        self.probe = [step]
+        self.stroke_anchor = step
+        self.stroke_locked = shift
+        self.lock_axis = None
         self.probe_drag = True
+        if shift:
+            self.shift_clear_pending = True
+            return True
+        self.probe = [step]
         self.sync_player()
         self._probe_cache = {}
         return True
@@ -436,16 +466,38 @@ class Viewer:
 
         MOUSEMOTION can skip several steps between events, so consecutive samples
         are joined with a straight line; otherwise a fast drag would leave holes
-        and the union would be wrong exactly where the path is fastest.
+        and the union would be wrong exactly where the path is fastest. With an
+        axis lock the path is recomputed from the anchor, so pulling back toward
+        it shortens the sweep instead of growing a branch.
         """
         step = self.step_at(pos)
-        if step is None or not self.probe:
+        if step is None or self.stroke_anchor is None:
             return
-        for s in _step_line(self.probe[-1], step):
-            if s != self.probe[-1]:
-                self.probe.append(s)
+        if self.stroke_locked:
+            step, self.lock_axis = _axis_lock(self.stroke_anchor, step)
+            if step != self.stroke_anchor:
+                self.shift_clear_pending = False
+            self.probe = [self.stroke_anchor] + _grid_line(self.stroke_anchor, step)
+        else:
+            if not self.probe:
+                self.probe = [self.stroke_anchor]
+            for s in _grid_line(self.probe[-1], step):
+                if s != self.probe[-1]:
+                    self.probe.append(s)
         self.sync_player()
         self._probe_cache = {}
+
+    def end_stroke(self):
+        """Finish a paint/probe drag: the axis lock lasts one stroke only."""
+        if self.probe_mode and self.shift_clear_pending:
+            self.clear_probe()          # a shift CLICK (no drag) is still a clear
+        self.shift_clear_pending = False
+        self.painting = False
+        self.probe_drag = False
+        self.stroke_anchor = None
+        self.stroke_locked = False
+        self.stroke_last = None
+        self.lock_axis = None
 
     def clear_probe(self):
         self.probe = []
@@ -505,14 +557,29 @@ class Viewer:
         self.painted = True
 
     def paint_cell(self, pos):
+        """Paint at `pos`; with an axis lock, paint the straight line instead.
+
+        Freehand by default. Shift at the start of the stroke locks it to the
+        dominant axis, and the cells between motion samples are filled in, so a
+        fast drag still draws an unbroken line rather than a dotted one.
+        """
         cell = self.cell_at(pos)
         if cell is None:
             return
-        rec = self._apply(*cell, self.current_block)
-        if rec:
-            self.undo_stack.append([rec])
-            self.touch_paint()
-            self.invalidate_map_blocks()
+        if self.stroke_locked and self.stroke_anchor is not None:
+            cell, self.lock_axis = _axis_lock(self.stroke_anchor, cell)
+            start = self.stroke_last if self.stroke_last is not None \
+                else self.stroke_anchor
+            cells = [start] + _grid_line(start, cell)
+        else:
+            cells = [cell]
+        for r, c in cells:
+            rec = self._apply(r, c, self.current_block)
+            if rec:
+                self.undo_stack.append([rec])
+                self.touch_paint()
+        self.stroke_last = cell
+        self.invalidate_map_blocks()
 
     def flood_fill(self, pos):
         cell = self.cell_at(pos)
@@ -1375,8 +1442,9 @@ class Viewer:
         self.draw_object_panel()
         self.draw_warp_panel()
         state = "*UNSAVED* Ctrl+S" if self.dirty else "saved"
+        lock = f" LOCK {self.lock_axis}" if self.lock_axis else ""
         mode = (f"PAINT block 0x{self.current_block:02X} "
-                f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z"
+                f"{len(self.cells)} cells {state}{lock} | [F]ill Ctrl+Z"
                 if self.paint else
                 f"{state} | [G]step grid [B]lock grid [T]iles [W]arps [N]pcs "
                 "[V/H/R] frames [Y]probe [I]nspect [C]olor [O] route [X]conn")
@@ -1421,9 +1489,11 @@ class Viewer:
             sy, sx = self.probe[-1]
             span = (f"Y:{sy} X:{sx}" if len(self.probe) == 1
                     else f"Y:{sy} X:{sx} sweep:{len(self.probe)}")
-            lines.append(f"Probe {span}  V:DOS H:GB  shift-click clears")
+            lines.append(f"Probe {span}  V:DOS H:GB  shift-drag locks"
+                         + (f" [{self.lock_axis}]" if self.lock_axis else ""))
         elif self.probe_mode:
-            lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
+            lines.append("Probe: click a step, shift-drag locks an axis, "
+                         "shift-click clears  V:DOS H:GB")
         if self.palette_warning:
             lines.append(self.palette_warning)
         if self.show["connections"]:
@@ -1519,8 +1589,13 @@ class Viewer:
         """
         changed = self.stage.changed()
         if self.dirty or changed:
+            bits = []
+            if changed:
+                bits.append(f"{len(changed)} staged file(s)")
+            if self.painted:
+                bits.append("in-memory paint")
             print(f"WARNING: quit with unsaved changes "
-                  f"({len(changed)} staged file(s) discarded, Ctrl+S saves)")
+                  f"({', '.join(bits) or 'edits'} discarded, Ctrl+S saves)")
             for rel in changed:
                 print(f"  discarded {rel}")
         staging.end()
@@ -1628,6 +1703,11 @@ class Viewer:
                             ev.pos, bool(pygame.key.get_mods() & pygame.KMOD_SHIFT))
                     elif self.paint:
                         self.painting = True
+                        self.stroke_anchor = self.cell_at(ev.pos)
+                        self.stroke_last = None
+                        self.lock_axis = None
+                        self.stroke_locked = bool(
+                            pygame.key.get_mods() & pygame.KMOD_SHIFT)
                         self.paint_cell(ev.pos)
                     elif self.show["warps"] and self.warp_at_tile(self.tile_at(ev.pos)):
                         warp = self.warp_at_tile(self.tile_at(ev.pos))
@@ -1692,8 +1772,7 @@ class Viewer:
                                 except (ValueError, OSError) as exc:
                                     self.save_error = str(exc)
                             self.object_drag = None
-                        self.painting = False
-                        self.probe_drag = False
+                        self.end_stroke()
                     if ev.button == self.settings['pan_button']:
                         self.drag = None
                 elif ev.type == pygame.MOUSEMOTION:
@@ -1702,7 +1781,7 @@ class Viewer:
                         # A lost button-up must not leave the sweep armed: the
                         # motion event carries the real button state.
                         if not ev.buttons[0]:
-                            self.probe_drag = False
+                            self.end_stroke()
                         else:
                             self.probe_extend(ev.pos)
                     elif self.painting:

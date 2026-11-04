@@ -484,6 +484,10 @@ class ProbeTest(ViewerTestBase):
         return (step_x * 16 + view.BORDER * 4 * 8 + dx,
                 step_y * 16 + view.BORDER * 4 * 8 + dy)
 
+    def cell_px(self, r, c):
+        """Screen pixel in the middle of padded block cell (r, c) at 1:1."""
+        return (c * 32 + 1, r * 32 + 1)
+
     def test_click_snaps_to_a_legal_player_step(self):
         v = self.viewer()
         v.probe_mode = True
@@ -519,11 +523,65 @@ class ProbeTest(ViewerTestBase):
         v.probe_mode = False
         self.assertFalse(v.probe_click(self.placed(v, 2, 2), shift=True))
         self.assertEqual(v.probe, [(2, 2)])
-        # Inside it, it is a clear.
+        # Inside it a shift CLICK is a clear — but only once the button is
+        # released, because a shift DRAG is an axis-locked sweep instead.
         v.probe_mode = True
         v.probe_click(self.placed(v, 2, 2), shift=True)
+        self.assertEqual(v.probe, [(2, 2)], "the press alone decides nothing")
+        v.end_stroke()
         self.assertEqual(v.probe, [])
         self.assertIsNone(v.player, "clearing must remove the box entirely")
+
+    def test_shift_drag_locks_the_sweep_to_one_axis(self):
+        """Shift sweeps a straight line instead of following the pointer."""
+        v = self.viewer()
+        v.probe_mode = True
+        v.probe_click(self.placed(v, 2, 2), shift=True)
+        v.probe_extend(self.placed(v, 8, 5))          # mostly vertical
+        self.assertTrue(v.probe)
+        self.assertEqual(v.probe[0], (2, 2))
+        self.assertEqual(v.probe[-1], (8, 2), "projected onto the anchor column")
+        self.assertEqual({x for _y, x in v.probe}, {2}, "one column only")
+        self.assertEqual(v.lock_axis, "V")
+        # Pulling back toward the anchor shortens the sweep, no branch.
+        v.probe_extend(self.placed(v, 5, 3))          # still mostly vertical
+        self.assertEqual(v.probe[-1], (5, 2))
+        # The other axis is chosen by the dominant direction.
+        v.probe_extend(self.placed(v, 3, 9))
+        self.assertEqual(v.probe[-1], (2, 9), "mostly horizontal")
+        self.assertEqual({y for y, _x in v.probe}, {2})
+        self.assertEqual(v.lock_axis, "H")
+        v.end_stroke()
+        self.assertEqual(v.probe, [(2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
+                                   (2, 7), (2, 8), (2, 9)],
+                         "a drag must not clear")
+
+    def test_shift_drag_paints_a_straight_line(self):
+        """A locked paint stroke stays on one row/column, with no gaps."""
+        v = self.viewer()
+        v.paint = True
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.stroke_anchor = (8, 8)
+        v.stroke_locked = True
+        v.stroke_last = None
+        v.paint_cell(self.cell_px(8, 8))
+        v.paint_cell(self.cell_px(12, 15))            # mostly horizontal
+        # Padded cell (8,8) is map-local (1,1) — cells are stored per sidecar.
+        painted = set(v.map_cells)
+        self.assertEqual({r for r, _c in painted}, {1}, "one row only")
+        self.assertIn((1, 8), painted)
+        self.assertNotIn((5, 8), painted)
+        # The cells between the two samples are filled, not dotted.
+        self.assertEqual({c for _r, c in painted}, set(range(1, 9)))
+
+        v.stroke_anchor = (8, 8)
+        v.stroke_last = None
+        v.paint_cell(self.cell_px(8, 8))
+        v.paint_cell(self.cell_px(13, 9))             # mostly vertical
+        painted = set(v.map_cells)
+        self.assertEqual({c for _r, c in painted if c == 2}, {2})
+        self.assertIn((6, 1), painted, "the vertical leg reached row 13")
 
     def test_probe_survives_leaving_the_mode(self):
         v = self.viewer()
