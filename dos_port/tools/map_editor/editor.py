@@ -77,6 +77,7 @@ MARK_ITEM = (0, 200, 120)
 PORT_VIEW = (255, 72, 72)      # red: the port's 320x200 window
 GB_VIEW = (90, 150, 255)       # blue: the GB's 160x144 window
 RENDER_REACH = (0, 220, 220)
+REACH_BAND = (255, 190, 40)    # amber: cells the port shows and the GB never did
 # Connection strips belong to the NEIGHBOUR, so they get their own tints rather
 # than the "locked" dim: the colour tells you whose edge you are looking at.
 STRIP_TINTS = ((255, 150, 0), (0, 200, 220), (200, 120, 255), (130, 220, 90))
@@ -123,6 +124,25 @@ def _axis_lock(anchor, target):
     if abs(tx - ax) >= abs(ty - ay):
         return (ay, tx), "H"
     return (ty, ax), "V"
+
+
+def _cell_runs(cells):
+    """Merge 4 px cells into horizontal runs: [(x, y, width)] for cheap fills."""
+    by_row: dict[int, list[int]] = {}
+    for x, y in cells:
+        by_row.setdefault(y, []).append(x)
+    runs = []
+    for y, xs in by_row.items():
+        xs.sort()
+        start = prev = xs[0]
+        for x in xs[1:]:
+            if x == prev + view.SWEEP_CELL:
+                prev = x
+                continue
+            runs.append((start, y, prev - start + view.SWEEP_CELL))
+            start = prev = x
+        runs.append((start, y, prev - start + view.SWEEP_CELL))
+    return runs
 
 
 def _grid_line(a, b):
@@ -195,6 +215,11 @@ class Viewer:
         # places them. The overlay outlives the mode on purpose — it is an
         # annotation you keep while painting, not a transient cursor.
         self.probe = []
+        self.reach = []          # walkable flood from the probe: every position
+        self.reach_stats = None  # (steps, dos, gb, attention, border) cell counts
+        self._reach_runs = []    # merged attention cells, for the fill
+        self._reach_outline = {} # kind -> (x0, y0, horizontal, vertical)
+        self._reach_surf = None  # reusable translucent overlay
         self.probe_mode = False
         self.probe_drag = False
         self._probe_cache = {}
@@ -229,6 +254,7 @@ class Viewer:
         self.invalidate_assembly()
         self.undo_stack = []
         self._probe_cache = {}
+        self.clear_reach()
         self.painted = False
         # "Unsaved" covers both layers: an in-memory paint stroke, and a staged
         # sidecar/script edit from an earlier action in this session.
@@ -430,6 +456,74 @@ class Viewer:
             return [(self.player[1] // 2, self.player[0] // 2)]
         return []
 
+    def outline(self, steps, kind):
+        """(x0, y0, horizontal, vertical) outline of the viewport union, in px.
+
+        Only the boundary is kept, so a 400-step sweep costs one outline rather
+        than 400 overlapping rectangles.
+        """
+        mask, x0, y0, cols, rows = view.viewport_sweep(list(steps), kind)
+        horizontal, vertical = view.mask_edges(mask, cols, rows)
+        cell = view.SWEEP_CELL
+        return (x0, y0,
+                [(r * cell, c0 * cell, c1 * cell) for (r, c0, c1) in horizontal],
+                [(c * cell, r0 * cell, r1 * cell) for (c, r0, r1) in vertical])
+
+    def sweep_outline(self, steps, kind):
+        """Cached outline for the probe path; only one path is live at a time."""
+        key = (kind, tuple(steps))
+        hit = self._probe_cache.get(key)
+        if hit is None:
+            hit = self.outline(steps, kind)
+            self._probe_cache = {key: hit}
+        return hit
+
+    def compute_reach(self, seed=None):
+        """Flood the walkable area from the probe; cache the viewable union.
+
+        Everything the map can ever put on screen is the union of the camera
+        window over every position the player can stand on. The DOS window is
+        40x25 tiles and the GB's is 20x18, so their difference is exactly the
+        area the port reveals and the original hardware never did — masked to
+        real map data, because past the map edge the port paints its border
+        clamp block and that is not a seam.
+        """
+        if seed is None:
+            steps = self.probe_steps()
+            seed = steps[-1] if steps else None
+        if seed is None:
+            self.save_error = "reach: place the probe on a step first"
+            return False
+        steps = sorted(view.reachable_steps(self.cm, seed))
+        if not steps:
+            self.save_error = (f"reach: step {seed} is not walkable "
+                               f"(impassable, or a ledge)")
+            return False
+        dos, gb, attention, border = view.viewable(self.cm, steps)
+        self.reach = steps
+        self.reach_stats = (len(steps), len(dos), len(gb),
+                            len(attention), len(border))
+        self._reach_runs = _cell_runs(attention)
+        # Outlines are stored, not recomputed: a whole-map union is thousands of
+        # 4 px cells and this must not run once per frame.
+        self._reach_outline = {kind: self.outline(steps, kind)
+                               for kind in ("dos", "gb")}
+        self.save_error = ""
+        return True
+
+    def toggle_reach(self):
+        """`U`: flood from the probe, or clear the overlay if it is showing."""
+        if self.reach_stats is not None:
+            self.clear_reach()
+            return
+        self.compute_reach()
+
+    def clear_reach(self):
+        self.reach = []
+        self.reach_stats = None
+        self._reach_runs = []
+        self._reach_outline = {}
+
     def probe_sweep(self, kind):
         """Cached (x0, y0, horizontal, vertical) outline for one channel, in px."""
         key = (kind, tuple(self.probe_steps()))
@@ -606,6 +700,9 @@ class Viewer:
         """
         self.dirty = True
         self.painted = True
+        # The reach is derived from the live grid, so any edit invalidates it —
+        # a stale overlay would claim the port shows cells it no longer does.
+        self.clear_reach()
 
     def paint_cell(self, pos, locked=False):
         """Paint at `pos`; while the lock modifier is held, paint a straight line.
@@ -1175,6 +1272,44 @@ class Viewer:
         self.screen.blit(chip, (sx + (w - chip.get_width()) // 2,
                                 sy + (h - chip.get_height()) // 2))
 
+    def draw_reach(self, ox, oy, z):
+        """The viewable union: amber = DOS-only cells showing real map data.
+
+        `U` floods the walkable area from the probe. The union of the camera
+        window over those steps is everything the map can ever put on screen;
+        the part the GB's 160x144 window never showed is the seam-audit band.
+        Border-clamp fill past the map edge is excluded — it is not a seam.
+        """
+        if self.reach_stats is None or not self.reach:
+            return
+        width, height = self.screen.get_size()
+        if self._reach_surf is None or self._reach_surf.get_size() != (width, height):
+            self._reach_surf = pygame.Surface((width, height), pygame.SRCALPHA)
+        surf = self._reach_surf
+        surf.fill((0, 0, 0, 0))
+        colour = (*REACH_BAND, 90)
+        span = max(1, int(round(view.SWEEP_CELL * z)))
+        for (x, y, run) in self._reach_runs:
+            surf.fill(colour, (int(round(ox + x * z)), int(round(oy + y * z)),
+                               max(1, int(round(run * z))), span))
+        self.screen.blit(surf, (0, 0))
+        # The two unions the band is derived from, as their shared boundary.
+        for kind, colour in (("dos", PORT_VIEW), ("gb", GB_VIEW)):
+            hit = self._reach_outline.get(kind)
+            if hit is None:
+                continue
+            x0, y0, horizontal, vertical = hit
+            for (r, c0, c1) in horizontal:
+                pygame.draw.line(
+                    self.screen, colour,
+                    (int(round(ox + (x0 + c0) * z)), int(round(oy + (y0 + r) * z))),
+                    (int(round(ox + (x0 + c1) * z)), int(round(oy + (y0 + r) * z))), 1)
+            for (c, r0, r1) in vertical:
+                pygame.draw.line(
+                    self.screen, colour,
+                    (int(round(ox + (x0 + c) * z)), int(round(oy + (y0 + r0) * z))),
+                    (int(round(ox + (x0 + c) * z)), int(round(oy + (y0 + r1) * z))), 1)
+
     def draw_probe(self, ox, oy, z):
         """Box what the camera shows from the probed step(s).
 
@@ -1499,6 +1634,7 @@ class Viewer:
                     rect_px(px - 1, py - 1, TILE * 2 + 2, TILE * 2 + 2, (255, 255, 255), 1)
         if self.route_index >= 0:
             self.draw_route_overlay(ox, oy, z)
+        self.draw_reach(ox, oy, z)
         self.draw_probe(ox, oy, z)
 
         if self.paint:
@@ -1576,10 +1712,21 @@ class Viewer:
                          + (f"  LOCK {self.lock_axis}" if self.lock_axis else ""))
         elif self.probe_mode:
             lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
+        if self.reach_stats is not None:
+            steps, dos, gb, attention, border = self.reach_stats
+            # Units are load-bearing: 4 px cells, not tiles, so nobody reads the
+            # numbers as a tile count. The border remainder is reported rather
+            # than dropped — it is the DOS-only area that is not real map data.
+            lines.append(f"Reach {steps} steps · DOS {dos} · GB {gb} · "
+                         f"DOS-only {attention} (+{border} border) 4px cells"
+                         f"  U clears")
+        elif self.probe_mode:
+            lines.append("Reach: U floods the walkable area from the probe")
         if self.palette_warning:
             lines.append(self.palette_warning)
         if self.show["connections"]:
-            lines.append("CONN: render-only — neighbours are not editable")
+            lines.append("CONN: neighbours drawn around the edge — strip cells "
+                         "edit the neighbour")
             crossing = self.connection_at_player()
             if crossing:
                 lines.append(f"At edge: {crossing}")
@@ -1708,6 +1855,11 @@ class Viewer:
                         if self.probe_mode:
                             self.paint = False
                         self.probe_drag = False
+                    elif ev.key == pygame.K_u:
+                        # Flood the walkable area from the probe anchor and show
+                        # what the port reveals; a second U clears it. The click
+                        # still places a single step, so the point probe works.
+                        self.toggle_reach()
                     elif ev.key == pygame.K_s and mods & pygame.KMOD_CTRL:
                         self.save()
                     elif ev.key == pygame.K_z and mods & pygame.KMOD_CTRL:

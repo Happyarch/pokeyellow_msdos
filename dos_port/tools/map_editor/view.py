@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image
@@ -410,6 +411,248 @@ def viewport_sweep(steps, kind: str):
             start = r * cols + c0
             mask[start:start + cw] = run
     return mask, x0, y0, cols, rows
+
+
+# ── walkable reach + the viewable union ─────────────────────────────────────
+#
+# The player only exists on 16 px steps: _AdvancePlayerSprite adds a +-1 step
+# vector to wXCoord/wYCoord and GetTileSpriteStandsOn turns a map-coord delta
+# into tile rows with `* 2`, so a step is 2x2 tiles and no odd position exists.
+#
+# Collision is a SINGLE tile, not the four under the sprite. The player's
+# standing tile is the LOWER-LEFT of its 2x2 (`lda_coord 8, 9` is x=8, y=9 ->
+# row 9, col 8, and GetTileSpriteStandsOn says so outright: "this is always the
+# lower left tile of the 2x2 tile blocks all sprites are snapped to"), and
+# _GetTileAndCoordsInFrontOfPlayer reads exactly one tile two tiles ahead, which
+# CheckTilePassable hands to IsTilePassable. So a step is walkable when its
+# LOWER-LEFT tile is passable — which is why the player can stand at a water's
+# edge with the sprite overlapping the water. Maps are enclosed by impassable
+# tiles or the map edge, so a flood fill from any walkable step enumerates every
+# position the player can occupy, and the union of the camera window over those
+# steps is everything the map can ever put on screen.
+
+COLLISION_SRC = schema.ROOT / "data" / "tilesets" / "collision_tile_ids.asm"
+LEDGE_SRC = schema.ROOT / "data" / "tilesets" / "ledge_tiles.asm"
+
+# SPRITE_FACING_* -> the step delta the jump travels.
+LEDGE_DIRECTIONS = {
+    "SPRITE_FACING_DOWN": (1, 0),
+    "SPRITE_FACING_UP": (-1, 0),
+    "SPRITE_FACING_LEFT": (0, -1),
+    "SPRITE_FACING_RIGHT": (0, 1),
+}
+
+
+@lru_cache(maxsize=None)
+def _collision_lists() -> dict[str, frozenset[int]]:
+    """{Label: {passable tile ids}} from pret's collision_tile_ids.asm.
+
+    pret stacks ALIASED labels on one `coll_tiles` line::
+
+        RedsHouse1_Coll::
+        RedsHouse2_Coll::
+            coll_tiles $01, $02, ...
+
+    so every label seen since the last list is pending until the line arrives and
+    the set belongs to ALL of them. Assigning it to the last label only left
+    RedsHouse1, Mart, Dojo, ForestGate and Museum empty — and `reds_house`
+    (REDS_HOUSE_1F/2F, COPYCATS_HOUSE) then reported zero walkable steps.
+    """
+    lists: dict[str, set[int]] = {}
+    pending: list[str] = []
+    for line in COLLISION_SRC.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()      # trailing comments are not data
+        if s.endswith("_Coll::"):
+            pending.append(s[:-2])
+        elif pending and s.startswith("coll_tiles"):
+            args = s.split("coll_tiles", 1)[1]
+            ids = {int(token.strip().replace("$", "0x"), 16)
+                   for token in args.split(",") if token.strip()}
+            for name in pending:
+                lists[name] = set(ids)
+            pending = []
+    for name in pending:                       # label with no list at all
+        lists.setdefault(name, set())
+    return {name: frozenset(ids) for name, ids in lists.items()}
+
+
+@lru_cache(maxsize=None)
+def collision_tiles(stem: str | None) -> frozenset[int]:
+    """Passable tile ids for a tileset stem (e.g. "overworld" -> Overworld_Coll)."""
+    if not stem:
+        return frozenset()
+    lists = _collision_lists()
+    want = "".join(ch for ch in stem.lower() if ch.isalnum())
+    for name, ids in lists.items():
+        if "".join(ch for ch in name.lower() if ch.isalnum()) == want:
+            return ids
+    for name, ids in lists.items():
+        if "".join(ch for ch in name.lower() if ch.isalnum()).startswith(want):
+            return ids
+    return frozenset()
+
+
+@lru_cache(maxsize=None)
+def _ledge_table() -> tuple[tuple[str, int, int], ...]:
+    """(facing, standing tile, ledge tile) from pret's ledge_tiles.asm."""
+    entries = []
+    for line in LEDGE_SRC.read_text().splitlines():
+        s = line.split(";", 1)[0].strip()
+        if not s.startswith("db "):
+            continue
+        tokens = [t.strip() for t in s[3:].split(",")]
+        if len(tokens) != 4 or tokens[0] not in LEDGE_DIRECTIONS:
+            continue
+        entries.append((tokens[0],
+                        int(tokens[1].replace("$", "0x"), 16),
+                        int(tokens[2].replace("$", "0x"), 16)))
+    return tuple(entries)
+
+
+@lru_cache(maxsize=None)
+def _expanded_block(stem: str, block: int) -> tuple[tuple[int, ...], ...]:
+    """4x4 tile ids of one block, cached — the flood reads this per step."""
+    return tuple(tuple(row) for row in ts.expand_block(
+        ts.load_blockset(stem), block))
+
+
+def _tile_at(cm, tile_y: int, tile_x: int) -> int:
+    """Tile id of one map-local tile, or -1 outside the map.
+
+    -1 is never a valid tile id, so an out-of-range read can never be mistaken
+    for a passable tile; indexing a negative coordinate into the padded grid
+    would otherwise wrap into an unrelated block.
+    """
+    if not (0 <= tile_y < cm.info.h * 4 and 0 <= tile_x < cm.info.w * 4):
+        return -1
+    block = cm.grid[(tile_y // 4 + BORDER) * cm.stride + tile_x // 4 + BORDER]
+    return _expanded_block(cm.info.tileset_stem, block)[tile_y % 4][tile_x % 4]
+
+
+def feet_tile(cm, step_y: int, step_x: int) -> int:
+    """The tile the player stands on: the LOWER-LEFT of the 2x2 step."""
+    return _tile_at(cm, step_y * 2 + 1, step_x * 2)
+
+
+def step_walkable(cm, step_y: int, step_x: int) -> bool:
+    """True when the player's standing (lower-left) tile here is passable."""
+    passable = collision_tiles(cm.info.tileset_stem)
+    if not passable:
+        return False
+    if not (0 <= step_y < cm.info.h * 2 and 0 <= step_x < cm.info.w * 2):
+        return False
+    return feet_tile(cm, step_y, step_x) in passable
+
+
+def ledge_jumps(cm) -> dict[tuple[int, int], list[tuple[int, int]]]:
+    """{step: [landing steps]} for the ledges this map can hop, OVERWORLD only.
+
+    HandleLedges matches (facing, standing tile, tile in front) and then runs TWO
+    simulated steps with BIT_LEDGE_OR_FISHING set, which makes CollisionCheckOnLand
+    answer "passable" for the whole hop — so a ledge is a directed edge two steps
+    long that a plain passability flood cannot see.
+    """
+    if (cm.info.tileset_name or "").upper() != "OVERWORLD":
+        return {}
+    passable = collision_tiles(cm.info.tileset_stem)
+    h, w = cm.info.h * 2, cm.info.w * 2
+    jumps: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    for step_y in range(h):
+        for step_x in range(w):
+            standing = _tile_at(cm, step_y * 2 + 1, step_x * 2)
+            if standing not in passable:
+                continue
+            for facing, stand, ledge in _ledge_table():
+                if stand != standing:
+                    continue
+                dy, dx = LEDGE_DIRECTIONS[facing]
+                if not (0 <= step_y + dy < h and 0 <= step_x + dx < w):
+                    continue
+                front = _tile_at(cm, (step_y + dy) * 2 + 1, (step_x + dx) * 2)
+                if front != ledge:
+                    continue
+                ty, tx = step_y + 2 * dy, step_x + 2 * dx
+                if 0 <= ty < h and 0 <= tx < w:
+                    jumps.setdefault((step_y, step_x), []).append((ty, tx))
+    return jumps
+
+
+def reachable_steps(cm, seed) -> set[tuple[int, int]]:
+    """Flood every step the player can reach from `seed`, 4-connected.
+
+    Undirected on purpose: this answers "can the player ever stand here", not
+    "can they get here from the map entrance". Sprites are ignored (they move),
+    warps are ordinary passable tiles, and tile-pair collisions (CAVERN/FOREST
+    elevation edges) are unmodelled — ignoring them lets the flood cross an edge
+    the game forbids, which over-marks. Over-marking is the safe direction for an
+    audit; under-marking would hide a seam.
+    """
+    if seed is None:
+        return set()
+    h, w = cm.info.h * 2, cm.info.w * 2
+    if not (0 <= seed[0] < h and 0 <= seed[1] < w):
+        return set()
+    if not step_walkable(cm, *seed):
+        return set()
+    jumps = ledge_jumps(cm)
+    seen = {seed}
+    todo = [seed]
+    while todo:
+        y, x = todo.pop()
+        for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+            if not (0 <= ny < h and 0 <= nx < w) or (ny, nx) in seen:
+                continue
+            if step_walkable(cm, ny, nx):
+                seen.add((ny, nx))
+                todo.append((ny, nx))
+        for ny, nx in jumps.get((y, x), ()):
+            if (ny, nx) not in seen:
+                seen.add((ny, nx))
+                todo.append((ny, nx))
+    return seen
+
+
+def viewport_cells(steps, kind: str) -> set[tuple[int, int]]:
+    """Union of the camera window over `steps`, as absolute 4 px cells."""
+    mask, x0, y0, cols, rows = viewport_sweep(steps, kind)
+    if not mask:
+        return set()
+    cell = SWEEP_CELL
+    return {(x0 + c * cell, y0 + r * cell)
+            for r in range(rows)
+            for c in range(cols) if mask[r * cols + c]}
+
+
+def cell_meaningful(cm, x: int, y: int) -> bool:
+    """True when this 4 px cell shows real map data: the map or a strip.
+
+    Everything else inside the window is the port's border clamp block
+    (`LoadCurrentMapView`), which is a rendering decision, not a seam. An
+    unmasked attention band is mostly border noise on any reach that touches an
+    edge, so the band is masked — and the excluded count is reported instead of
+    being dropped silently.
+    """
+    tx = x // TILE - BORDER * 4
+    ty = y // TILE - BORDER * 4
+    if 0 <= tx < cm.info.w * 4 and 0 <= ty < cm.info.h * 4:
+        return True
+    idx = (ty // 4 + BORDER) * cm.stride + (tx // 4 + BORDER)
+    return idx in cm.strip_cells
+
+
+def viewable(cm, steps):
+    """(dos, gb, attention, border) as absolute 4 px-cell sets.
+
+    Both windows are centred on the same step and DOS strictly contains GB, so
+    the per-position difference is the frame and the union difference is
+    "ever on DOS, never on GB". `attention` is that set restricted to real map
+    data; `border` is the remainder past the map edge.
+    """
+    dos = viewport_cells(steps, "dos")
+    gb = viewport_cells(steps, "gb")
+    only = dos - gb
+    attention = {cell for cell in only if cell_meaningful(cm, *cell)}
+    return dos, gb, attention, only - attention
 
 
 def mask_edges(mask: bytearray, cols: int, rows: int):

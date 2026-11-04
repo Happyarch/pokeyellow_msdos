@@ -169,7 +169,8 @@ W warps + signs
 N NPC markers    V/H/R port/GB/reach frames (click sets the staged player tile)
 Y viewport probe click a step to box what the camera sees; drag to sweep a path
 I inspector      C palette              O cycle route preview
-X connections    assemble neighbouring maps at their real offsets (read-only)
+X connections    assemble neighbouring maps at their real offsets; strip cells edit the owner
+U walkable reach flood from the probe; shade what only the port can show
 click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
@@ -282,6 +283,52 @@ The GB box is a size reference, not an emulation of the original camera's edge
 scroll rules, and neither box is clamped at the map edge — a box hanging off the
 map is telling you exactly how much of the view is out of bounds.
 
+### Walkable reach + the attention band (`U`)
+
+Answers "what can the port ever put on screen, and what did the GB never show?"
+Place the probe on a walkable step and press `U`:
+
+- the map is flooded 4-connected from that step over every position the player
+  can stand on;
+- the camera window is unioned over all of them, once for DOS (320x200) and once
+  for GB (160x144);
+- **DOS minus GB** is shaded amber: cells the port reveals and the original
+  hardware never displayed. That is the seam-audit band.
+
+`U` again clears it. The HUD reports
+`Reach N steps · DOS X · GB Y · DOS-only Z (+B border) 4px cells` — the unit is
+**4 px cells**, not tiles, because the DOS window is 12.5 tiles tall. `+B border`
+is the DOS-only area outside the map and its connection strips: the port paints
+its border clamp block there, which is a rendering decision rather than a seam,
+so it is excluded from the band and reported instead of being dropped silently.
+
+Walkability is the engine's own rule, not an approximation of it: the player
+stands on the **lower-left** tile of its 2x2 sprite (`lda_coord 8, 9`; and
+`GetTileSpriteStandsOn` says so outright), and collision tests exactly that one
+tile two tiles ahead (`_GetTileAndCoordsInFrontOfPlayer` → `CheckTilePassable` →
+`IsTilePassable`). So a step is walkable when its lower-left tile is in the
+tileset's passable list — the sprite may overlap a wall, and a step wedged into a
+corner still counts. Requiring all four tiles would under-approximate the walkable
+area and hide seams.
+
+Ledges are **directed edges two steps long**, read from
+`data/tilesets/ledge_tiles.asm`: standing on `$2C`/`$39` with the matching ledge
+tile in front hops over it, never back. Ignoring them would put a wall where the
+game jumps and hide everything below it. `HandleLedges` returns early for every
+non-OVERWORLD tileset, so only overworld maps get them.
+
+Deliberate approximations, all in the *safe* direction (they over-mark, never
+under-mark): the flood is undirected ("can the player ever stand here", not "can
+they get here from the entrance"), sprites are ignored because they move, warps
+are ordinary passable tiles, tile-pair collisions (`CAVERN`/`FOREST` elevation
+edges) are unmodelled, and water/surfing is out of scope. The GB box is a size
+reference rather than the real edge-clamped camera, so near a map edge the band
+over-marks too.
+
+The reach is derived from the live grid, so any edit (paint, fill, undo,
+expansion, map switch) drops it — a stale overlay would claim the port shows
+cells it no longer does.
+
 ### Paint palette sizing
 
 The swatches are one map block each, drawn at **1:1 pixels** by default (32 px at
@@ -317,6 +364,14 @@ The geometry is not guessed: `view.neighbour_origin` derives each origin from th
 same indices the generator emits, and `test_connections.py` checks the assembled
 neighbours cell-for-cell against the strips `compose_padded` already reproduces
 from the runtime.
+
+A **strip cell is the neighbour's data**, not this map's: the runtime copies
+MAP_BORDER rows or columns of the connected map's `.blk` into `wOverworldMap`, so
+editing one here writes to the map that owns it (`commands.set_block(owner, ...)`)
+and both sides of the seam update at once. Undo writes back to the owner too, the
+paint overlay tints each neighbour's cells separately, and the HUD names the owner
+under the cursor (`B(Y:0,X:0)=$52 ← PALLET_TOWN(Y:0,X:0)`). A fill stops at an
+ownership boundary, so a flood fill can never start editing another map.
 
 `C` switches between the port's real overworld palette and the DMG ramp. The
 overworld palette is BG slot 0 only; interiors depend on `wLastMap`, which is

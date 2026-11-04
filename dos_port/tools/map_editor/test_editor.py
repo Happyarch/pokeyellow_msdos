@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from map_editor import config  # noqa: E402
 from map_editor import staging  # noqa: E402
 from map_editor import view  # noqa: E402
+from gfx_core import tilesets as ts  # noqa: E402
 
 
 def pygame_surfarray(surface):
@@ -733,6 +734,273 @@ class ConnectorTest(ViewerTestBase):
         for idx, entry in v.cm.strip_owner.items():
             rr, cc = divmod(idx, v.cm.stride)
             self.assertEqual(v._region(rr, cc), ("neighbour", entry))
+
+
+class ReachTest(unittest.TestCase):
+    """Walkable reach + the viewable union, against the real pret data.
+
+    Pure `view.*` functions on composed maps: no pygame, no staging, no writes.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.pallet = view.compose_padded("PALLET_TOWN")
+        cls.route1 = view.compose_padded("ROUTE_1")
+
+    def test_collision_lists_assign_stacked_alias_labels(self):
+        """pret stacks aliased labels above one coll_tiles line; all get the set."""
+        lists = view._collision_lists()
+        for first, second in (("RedsHouse1_Coll", "RedsHouse2_Coll"),
+                              ("Mart_Coll", "Pokecenter_Coll"),
+                              ("Dojo_Coll", "Gym_Coll"),
+                              ("ForestGate_Coll", "Gate_Coll"),
+                              ("Gate_Coll", "Museum_Coll")):
+            self.assertTrue(lists[first], f"{first} parsed as empty")
+            self.assertEqual(lists[first], lists[second],
+                             f"{first} and {second} share one coll_tiles line")
+        # The regression this guards: REDS_HOUSE_1F/2F are the player's house.
+        self.assertTrue(view.collision_tiles("reds_house"))
+
+    def test_every_composable_tileset_resolves_a_collision_list(self):
+        from gfx_core import pret_maps as pm
+        stems = set()
+        for const in pm._constants():
+            try:
+                info = pm.map_info(const)
+            except (OSError, ValueError):
+                continue
+            if info.tileset_stem:
+                stems.add(info.tileset_stem)
+        missing = sorted(s for s in stems if not view.collision_tiles(s))
+        self.assertEqual(missing, [], "tileset stem with no passable tile list")
+
+    def test_standing_tile_is_the_lower_left_of_the_step(self):
+        """lda_coord 8, 9 is x=8,y=9 -> row 9 col 8: the LOWER-LEFT of the 2x2."""
+        cm = self.pallet
+        for step_y, step_x in ((3, 4), (7, 9), (12, 2)):
+            self.assertEqual(view.feet_tile(cm, step_y, step_x),
+                             view._tile_at(cm, step_y * 2 + 1, step_x * 2))
+        # Find a step where the two bottom tiles differ, and prove which one the
+        # walkability rule reads. (14,7) on Pallet Town: lower-left $33 is
+        # passable, lower-right $54 is passable too, upper row is water.
+        differing = [(y, x) for y in range(cm.info.h * 2)
+                     for x in range(cm.info.w * 2)
+                     if view._tile_at(cm, y * 2 + 1, x * 2)
+                     != view._tile_at(cm, y * 2 + 1, x * 2 + 1)]
+        self.assertTrue(differing, "map has no step with differing bottom tiles")
+
+    def test_a_step_is_walkable_when_its_lower_left_tile_is(self):
+        """The engine checks ONE tile, so a sprite may overlap a wall."""
+        cm = self.pallet
+        passable = view.collision_tiles(cm.info.tileset_stem)
+        checked = 0
+        for step_y in range(cm.info.h * 2):
+            for step_x in range(cm.info.w * 2):
+                expected = view.feet_tile(cm, step_y, step_x) in passable
+                self.assertEqual(view.step_walkable(cm, step_y, step_x), expected,
+                                 f"step {(step_y, step_x)}")
+                checked += 1
+        self.assertGreater(checked, 300)
+
+    def test_a_step_wedged_against_a_wall_is_still_walkable(self):
+        """Pallet Town (5,5): lower-left $1B is passable, the other three are not.
+
+        An all-four-tiles rule calls this a wall — the under-approximation that
+        hides seams, and the reason the sprite may overlap a wall.
+        """
+        cm = self.pallet
+        step_y, step_x = 5, 5
+        self.assertEqual(view.feet_tile(cm, step_y, step_x), 0x1B)
+        others = [view._tile_at(cm, step_y * 2, step_x * 2),
+                  view._tile_at(cm, step_y * 2, step_x * 2 + 1),
+                  view._tile_at(cm, step_y * 2 + 1, step_x * 2 + 1)]
+        passable = view.collision_tiles(cm.info.tileset_stem)
+        self.assertTrue(all(tile not in passable for tile in others),
+                        "fixture: the other three tiles are impassable")
+        self.assertTrue(view.step_walkable(cm, step_y, step_x))
+
+    def test_ledge_is_a_directed_two_step_edge(self):
+        """Route 1 (4,4) -> (6,4): standing $2C, ledge $37 at (5,4), landing $2C."""
+        cm = self.route1
+        self.assertEqual(view.feet_tile(cm, 4, 4), 0x2C)
+        self.assertEqual(view.feet_tile(cm, 5, 4), 0x37)
+        self.assertFalse(view.step_walkable(cm, 5, 4), "a ledge is not a standing tile")
+        jumps = view.ledge_jumps(cm)
+        self.assertIn((6, 4), jumps.get((4, 4), []))
+        self.assertNotIn((4, 4), jumps.get((6, 4), []),
+                         "a ledge hops down only; the reverse edge must not exist")
+        # And the flood must actually use it: the ledge is not passable, so the
+        # only way from (4,4) to (6,4) is the jump.
+        reach = view.reachable_steps(cm, (4, 4))
+        self.assertIn((6, 4), reach)
+
+    def test_ledges_only_apply_to_the_overworld_tileset(self):
+        """HandleLedges returns early unless wCurMapTileset == OVERWORLD."""
+        self.assertTrue(view.ledge_jumps(self.route1))
+        self.assertFalse(view.ledge_jumps(view.compose_padded("ROUTE_23")))
+
+    def test_flood_is_complete_and_bounded(self):
+        """Every walkable neighbour of a reached step is reached, and nothing else."""
+        cm = self.pallet
+        seed = (7, 4)
+        self.assertTrue(view.step_walkable(cm, *seed))
+        reach = view.reachable_steps(cm, seed)
+        self.assertIn(seed, reach)
+        h, w = cm.info.h * 2, cm.info.w * 2
+        self.assertTrue(all(0 <= y < h and 0 <= x < w for (y, x) in reach))
+        for (y, x) in reach:
+            self.assertTrue(view.step_walkable(cm, y, x))
+            for ny, nx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= ny < h and 0 <= nx < w and view.step_walkable(cm, ny, nx):
+                    self.assertIn((ny, nx), reach,
+                                  f"flood stopped at a walkable neighbour "
+                                  f"{(ny, nx)} of {(y, x)}")
+        # A walled-off pocket stays out: Pallet Town's fenced north-west corner.
+        pockets = {(y, x) for y in range(h) for x in range(w)
+                   if view.step_walkable(cm, y, x)} - reach
+        self.assertTrue(pockets, "fixture expects at least one isolated pocket")
+
+    def test_unwalkable_seed_reaches_nothing(self):
+        self.assertEqual(view.reachable_steps(self.pallet, None), set())
+        self.assertFalse(view.step_walkable(self.pallet, 1, 0), "fixture: a wall")
+        self.assertEqual(view.reachable_steps(self.pallet, (1, 0)), set())
+        self.assertEqual(view.reachable_steps(self.pallet, (999, 999)), set())
+
+    def test_attention_is_dos_minus_gb_inside_real_map_data(self):
+        cm = self.route1
+        seed = (4, 4)
+        steps = view.reachable_steps(cm, seed)
+        dos, gb, attention, border = view.viewable(cm, steps)
+        self.assertTrue(dos and gb)
+        self.assertTrue(attention)
+        self.assertTrue(attention <= dos)
+        self.assertFalse(attention & gb, "attention is by definition DOS-only")
+        self.assertTrue(attention.isdisjoint(border))
+        self.assertEqual(attention | border, dos - gb)
+        for cell in attention:
+            self.assertTrue(view.cell_meaningful(cm, *cell))
+        for cell in border:
+            self.assertFalse(view.cell_meaningful(cm, *cell))
+
+    def test_a_room_smaller_than_the_gb_window_reveals_no_attention(self):
+        """REDS_HOUSE_1F is 4x4 blocks: the GB window already shows all of it."""
+        cm = view.compose_padded("REDS_HOUSE_1F")
+        steps = view.reachable_steps(cm, (2, 2))
+        self.assertTrue(steps)
+        dos, gb, attention, border = view.viewable(cm, steps)
+        self.assertEqual(attention, set(),
+                         "the port's extra cells here are border fill, not seams")
+        self.assertTrue(border, "the DOS window overhangs the room on every side")
+
+    def test_cell_meaningful_covers_the_map_and_its_strips(self):
+        cm = self.route1
+        inside = (view.BORDER * 4 * view.TILE, view.BORDER * 4 * view.TILE)
+        self.assertTrue(view.cell_meaningful(cm, *inside))
+        self.assertFalse(view.cell_meaningful(cm, -4000, -4000))
+        # A strip cell's pixels are real data (the neighbour's blocks).
+        idx = next(iter(cm.strip_cells))
+        row, col = divmod(idx, cm.stride)
+        x = col * ts.BLOCK_PX
+        y = row * ts.BLOCK_PX
+        self.assertTrue(view.cell_meaningful(cm, x, y))
+
+
+class ReachOverlayTest(ViewerTestBase):
+    """`U`: flood from the probe, draw the DOS-only band, invalidate on edits."""
+
+    def test_u_floods_from_the_probe_anchor(self):
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        self.assertIsNotNone(v.reach_stats, v.save_error)
+        steps, dos, gb, attention, border = v.reach_stats
+        self.assertIn((4, 4), v.reach)
+        self.assertGreater(steps, 1)
+        # DOS strictly contains GB per position, so its union must too.
+        self.assertGreater(dos, gb)
+        self.assertGreater(attention, 0, "Route 1 has cells only the port shows")
+        self.assertEqual(attention + border, dos - gb,
+                         "nothing is dropped: the band is attention + border")
+        self.assertTrue(v._reach_runs, "the band has drawable runs")
+        self.assertIn("dos", v._reach_outline)
+        self.assertIn("gb", v._reach_outline)
+
+    def test_u_again_clears_the_overlay(self):
+        v = self.viewer("ROUTE_1")
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        self.assertIsNotNone(v.reach_stats)
+        v.toggle_reach()
+        self.assertIsNone(v.reach_stats)
+        self.assertEqual(v.reach, [])
+        self.assertEqual(v._reach_runs, [])
+        self.assertEqual(v._reach_outline, {})
+
+    def test_reach_falls_back_to_the_staged_player_step(self):
+        """With no probe, the flood starts where the staged player tile is."""
+        v = self.viewer("PALLET_TOWN")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        self.assertEqual(v.probe, [])
+        v.set_player_tile((4 * 16 + view.BORDER * 32 + 1,
+                           7 * 16 + view.BORDER * 32 + 1))
+        self.assertEqual(v.player, (8, 14))
+        v.toggle_reach()
+        self.assertIsNotNone(v.reach_stats, v.save_error)
+        self.assertIn((7, 4), v.reach)
+
+    def test_no_anchor_at_all_reports_instead_of_guessing(self):
+        v = self.viewer("PALLET_TOWN")
+        self.assertIsNone(v.player)
+        self.assertFalse(v.compute_reach())
+        self.assertIn("probe", v.save_error)
+
+    def test_unwalkable_anchor_reports_and_shows_nothing(self):
+        v = self.viewer("PALLET_TOWN")
+        v.probe_mode = True
+        v.probe = [(1, 0)]                   # a wall row on Pallet Town
+        self.assertFalse(v.compute_reach())
+        self.assertIn("not walkable", v.save_error)
+        self.assertIsNone(v.reach_stats)
+
+    def test_an_edit_invalidates_the_reach(self):
+        """A stale overlay would claim the port shows cells it no longer does."""
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        self.assertIsNotNone(v.reach_stats)
+        v.paint = True
+        v.current_block = 0x2A
+        v.paint_cell((32 * 10 + 1, 32 * 10 + 1))
+        self.assertIsNone(v.reach_stats, "painting must drop the reach")
+        self.assertEqual(v._reach_runs, [])
+
+    def test_the_overlay_draws_and_survives_mode_changes(self):
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        before = v.reach_stats
+        v.draw()                              # amber fill + both union outlines
+        self.assertEqual(v.reach_stats, before)
+        # The overlay is independent of the probe frames: turning V/H off keeps
+        # the band, which is the point of a persistent attention area.
+        v.show["port_view"] = False
+        v.show["gb_view"] = False
+        v.draw()
+        self.assertEqual(v.reach_stats, before)
+        v.paint = True                        # mode change alone must not clear
+        v.paint = False
+        self.assertEqual(v.reach_stats, before)
 
 
 if __name__ == "__main__":
