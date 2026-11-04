@@ -113,6 +113,21 @@ class WarpTest(unittest.TestCase):
         self.assertIn("warp['y'], warp['x'], warp['warp_id'] - 1", text)
         self.assertNotIn("warp['kind']", text)
 
+    def test_position_override_moves_the_generated_warp(self):
+        """Dragging a warp must change the emitted Y/X bytes, not just the sidecar."""
+        before = pm.gmh.parse_object_file(self.info.label)[1][0]
+        with TemporaryDirectory() as directory, \
+             patch.object(schema, 'OVERRIDES', Path(directory)):
+            # editor tiles (22, 12) -> pret map square (Y 6, X 11)
+            commands.set_warp('PALLET_TOWN', self.warp['stable_id'],
+                              y=22, x=12, write=True)
+            after = pm.gmh.parse_object_file(self.info.label)[1][0]
+        self.assertEqual((after["y"], after["x"]), (11, 6))
+        self.assertNotEqual((after['y'], after['x']), (before['y'], before['x']))
+        # Destination untouched by a position-only edit.
+        self.assertEqual(after['dest'], before['dest'])
+        self.assertEqual(after['warp_id'], before['warp_id'])
+
 
 
 if __name__ == '__main__':

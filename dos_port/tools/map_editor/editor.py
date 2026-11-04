@@ -15,7 +15,7 @@ View controls:
   N  NPC markers   V/H/R port/GB/reach frames (click sets the staged player tile)
   I  coordinate inspector   C  toggle palette   O  cycle route preview
   X  connections: assemble neighbouring maps at their real offsets (read-only)
-  click a W marker  select a warp; the panel edits dest / target warp / kind
+  click a W marker  select a warp; drag it to move; panel edits dest / target / kind
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
   Tab              cycle to the next map with a usable header
@@ -104,6 +104,7 @@ class Viewer:
         self.object_menu = None
         self.menu_offset = 0
         self.selected_warp = None
+        self.warp_drag = None
         self.warp_menu = None
         self.warp_menu_offset = 0
         self.route_index = -1
@@ -146,6 +147,7 @@ class Viewer:
         self.object_drag = None
         self.object_menu = None
         self.selected_warp = None
+        self.warp_drag = None
         self.warp_menu = None
         self.warp_menu_offset = 0
         self.route_index = -1
@@ -745,6 +747,24 @@ class Viewer:
             self.screen.blit(self.font.render(note[:96], True, (255, 170, 90)),
                              (8, self.screen.get_height() - PANEL_H - 18 - i * 16))
 
+    def finish_warp_drag(self, pos):
+        """Drop a dragged warp on the tile under the cursor.
+
+        Warps address 16px map squares, so the landing tile is snapped to an even
+        tile coordinate; `set_warp` re-checks that and the byte range.
+        """
+        from map_editor import commands
+        tile = self.tile_at(pos)
+        if tile is None:
+            return
+        try:
+            commands.set_warp(self.cm.info.const, self.warp_drag, write=True,
+                              y=tile[1] // 2 * 2, x=tile[0] // 2 * 2)
+            self.cm.warps = pm.objects(self.cm.info)[1]
+            self.save_error = ''
+        except (ValueError, OSError) as exc:
+            self.save_error = str(exc)
+
     def draw_warp_skin(self, px, py, z, ox, oy, selected):
         """Translucent onion skin over a warp block with a centred W.
 
@@ -769,6 +789,21 @@ class Viewer:
         chip.blit(glyph, (1, 0))
         self.screen.blit(chip, (sx + (w - chip.get_width()) // 2,
                                 sy + (h - chip.get_height()) // 2))
+
+    def draw_warp_drag_ghost(self, ox, oy, z):
+        """Show where a dragged warp would land (snapped to its 2x2 map square)."""
+        if not self.warp_drag or not self.cursor_tile:
+            return
+        tx, ty = self.cursor_tile
+        px = (tx // 2 * 2 + view.BORDER * 4) * TILE
+        py = (ty // 2 * 2 + view.BORDER * 4) * TILE
+        w = max(1, int(round(TILE * 2 * z)))
+        h = max(1, int(round(TILE * 2 * z)))
+        rect = (int(round(ox + px * z)), int(round(oy + py * z)), w, h)
+        ghost = pygame.Surface((w, h), pygame.SRCALPHA)
+        ghost.fill((*MARK_WARP, 60))
+        self.screen.blit(ghost, rect[:2])
+        pygame.draw.rect(self.screen, MARK_WARP, rect, 2)
 
     def warp_at_tile(self, tile):
         """The warp whose 2x2 map square contains an editor tile, if any."""
@@ -968,6 +1003,7 @@ class Viewer:
                  6 + (b // PAL_COLS) * ts.BLOCK_PX,
                  ts.BLOCK_PX, ts.BLOCK_PX), 2)
 
+        self.draw_warp_drag_ghost(ox, oy, z)
         self.draw_hud()
         self.draw_object_panel()
         self.draw_warp_panel()
@@ -1171,6 +1207,7 @@ class Viewer:
                     elif self.show["warps"] and self.warp_at_tile(self.tile_at(ev.pos)):
                         warp = self.warp_at_tile(self.tile_at(ev.pos))
                         self.selected_warp = warp['stable_id']
+                        self.warp_drag = warp['stable_id']
                         self.warp_menu = None
                         self.selected_object = None
                     elif self.show["npcs"] and self.tile_at(ev.pos) is not None and any(
@@ -1214,6 +1251,9 @@ class Viewer:
                                      pygame.mouse.get_pos())
                 elif ev.type == pygame.MOUSEBUTTONUP:
                     if ev.button == 1:
+                        if self.warp_drag:
+                            self.finish_warp_drag(ev.pos)
+                            self.warp_drag = None
                         if self.object_drag:
                             tile = self.tile_at(ev.pos)
                             if tile is not None:

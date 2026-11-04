@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 import unittest
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -48,10 +49,22 @@ class ZoomTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import pygame
+        from map_editor import schema
         from map_editor.editor import Viewer
         pygame.init()
         cls.pygame = pygame
         cls.Viewer = Viewer
+        # NEVER write the real sidecar tree from a test: the Viewer's edit paths
+        # (warp drag, NPC drop) call commands.* with write=True.
+        cls._tmp = TemporaryDirectory()
+        cls._overrides = patch.object(schema, "OVERRIDES",
+                                      Path(cls._tmp.name) / "overrides")
+        cls._overrides.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._overrides.stop()
+        cls._tmp.cleanup()
 
     def viewer(self, **overrides):
         settings = dict(config.DEFAULTS)
@@ -140,6 +153,29 @@ class ZoomTest(unittest.TestCase):
         # And a click over a neighbour is outside the current map entirely.
         v.show["connections"] = False
         self.assertIsNone(v.tile_at((-5000, -5000)))
+
+    def test_warp_drag_repositions_and_snaps_to_the_map_square(self):
+        v = self.viewer()
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        warp = v.cm.warps[0]
+        v.warp_drag = warp['stable_id']
+        v.selected_warp = warp['stable_id']
+
+        def drop(tx, ty):
+            screen = ((tx + view.BORDER * 4) * 8 + 1,
+                      (ty + view.BORDER * 4) * 8 + 1)
+            self.assertEqual(v.tile_at(screen), (tx, ty))
+            v.cursor_tile = (tx, ty)
+            v.draw()                      # drag ghost must render
+            v.finish_warp_drag(screen)
+            moved = v.cm.warps[0]
+            return (moved['y'], moved['x'])
+
+        self.assertEqual(drop(22, 12), (6, 11))     # map squares = tiles / 2
+        self.assertEqual(drop(30, 18), (9, 15))
+        # An odd tile belongs to the 16px square that contains it.
+        self.assertEqual(drop(31, 19), (9, 15))
 
     def test_connection_hint_tracks_the_staged_tile(self):
         v = self.viewer()

@@ -111,6 +111,16 @@ with the same layout as the NPC panel:
 - **target warp** — the 1-based warp id on that map, exactly as pret numbers it;
 - **kind** — `door`, `hole`, `stairs`, `carpet`, `ledge`, `other`.
 
+Warps can also be **dragged** on the map like NPCs; the landing tile snaps to the
+16 px map square that contains the cursor, because that is the unit a warp byte
+addresses.
+
+Editing `dest` or `target warp` genuinely changes where the warp goes: the emitted
+record is `db Y, X, target-1, dest_map_id`. Measured, Pallet Town warp 1:
+`db 5, 5, 0, 0x25` → `db 5, 5, 2, 0x0C` for dest ROUTE_1 / target 3, and
+`db 5, 5, 0, 0x25` → `db 11, 6, 0, 0x25` for a move to editor tile (Y 22, X 12).
+Dragging likewise rewrites Y/X in the header.
+
 `kind` is **editor metadata and is never emitted**. pret has no warp-type field:
 what a warp does is decided by the tiles it stands on and the destination map's
 scripts, not by the event record. Recording a kind is for authoring and review;
