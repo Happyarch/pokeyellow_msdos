@@ -105,11 +105,18 @@ translation, not inferred:
   - `view.viewport_cells`: union of the camera window over a step set, as
     absolute 4 px cells (already written; the grids align because every origin
     is a multiple of 4).
-  - `view.cell_meaningful` / `view.viewable`: the DOS-only band **masked to real
-    map data** (the map's own blocks plus connection strips). Outside that the
-    port paints its border clamp block, which is a rendering decision, not a
-    seam; without the mask every edge-adjacent reach drowns the band in border
-    noise. Report the excluded border count rather than dropping it silently.
+  - `view.cell_meaningful` / `view.viewable`: the DOS-only band split into two
+    classes, **both kept**. An earlier version masked the band to real map data
+    and reported the border remainder as an aside — that was backwards. The
+    border class is the one that actually changes at a transition: the port clamps
+    out-of-map reads to `wMapBackgroundTile`, so the fill shows *this* map's
+    border block, and the neighbour has its own. Measured: Route 1's border is
+    `$0B` (tile `$52`, grass) and Viridian City's is `$0F` (tiles `$40/$50`,
+    trees), so crossing Route 1 → Viridian turns the grass outside the walkable
+    area into trees — exactly the "tile swap" this work exists to find. Pallet
+    Town shares `$0B`, so that seam's fill is stable. The GB never showed this
+    fill at all: its camera stops at the map edge, while the port's 320 px
+    viewport is as wide as Route 1.
 - [ ] **2. Probe integration.** `U` in probe mode computes the reach from the
   probe anchor (the last `probe_steps()` entry, which falls back to the player's
   own step), draws the DOS-only band as an **amber** translucent fill, outlines
@@ -127,9 +134,9 @@ translation, not inferred:
   the neighbour's own byte in both cases, so **a world cell can only change
   appearance across a seam if the tileset or the palette differs.**
   `K` now previews the map through each connected neighbour's tileset + palette
-  and reports `Swap at X: N of M band cells change (shape S, colour C)`, where
-  `shape` compares the two tilesets under one palette and `colour` the two
-  palettes under one tileset. Measured on Route 1: shape **0**, colour **2668**
+  and reports `Swap at X: real A/B (shape S, colour C) · border N/M ($xx → $yy)`,
+  where `shape` compares the two tilesets under one palette, `colour` the two
+  palettes under one tileset, and `border` the two maps' border blocks. Measured on Route 1: shape **0**, colour **2668**
   for both neighbours (shared `OVERWORLD`, different town palettes). The genuine
   shape change needs a cross-tileset pair — `ROUTE_22` vs `ROUTE_23` — which the
   port does not connect, so **no live seam can change graphics today**.

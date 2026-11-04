@@ -1069,13 +1069,62 @@ class LookSwapTest(ViewerTestBase):
         v.probe = [(4, 4)]
         v.toggle_reach()
         v.apply_view_as("VIRIDIAN_CITY")
-        const, cells, both, shape, colour = v.look_stats
-        self.assertEqual(const, "VIRIDIAN_CITY")
-        self.assertGreater(cells, 0)
-        self.assertEqual(shape, 0, "same tileset: no block can change graphic")
-        self.assertEqual(colour, both,
-                         "every changed cell changed by palette alone")
-        self.assertGreater(both, 0)
+        s = v.look_stats
+        self.assertEqual(s["const"], "VIRIDIAN_CITY")
+        self.assertGreater(s["real"], 0)
+        self.assertEqual(s["shape"], 0, "same tileset: no block can change graphic")
+        self.assertEqual(s["colour"], s["real_changed"],
+                         "every changed real cell changed by palette alone")
+        self.assertGreater(s["real_changed"], 0)
+
+    def test_border_fill_is_the_class_that_swaps(self):
+        """Route 1's border is grass $0B, Viridian City's is trees $0F."""
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        v.apply_view_as("VIRIDIAN_CITY")
+        s = v.look_stats
+        self.assertGreater(s["border"], 0, "the band includes border fill")
+        self.assertEqual(s["own_border"], 0x0B, "Route 1 border = grass")
+        self.assertEqual(s["other_border"], 0x0F, "Viridian border = trees")
+        self.assertEqual(s["border_changed"], s["border"],
+                         "every border cell changes when the border blocks differ")
+
+    def test_a_shared_border_block_does_not_swap(self):
+        """Pallet Town and Route 1 both use $0B, so that seam keeps its fill."""
+        v = self.viewer("PALLET_TOWN")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(7, 4)]
+        v.toggle_reach()
+        v.apply_view_as("ROUTE_1")
+        s = v.look_stats
+        self.assertEqual(s["own_border"], s["other_border"])
+        self.assertEqual(s["border_changed"], 0)
+
+    def test_band_reports_both_classes(self):
+        v = self.viewer("ROUTE_1")
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.probe_mode = True
+        v.probe = [(4, 4)]
+        v.toggle_reach()
+        steps, hops, dos, gb, real, border = v.reach_stats
+        self.assertGreater(real, 0)
+        self.assertGreater(border, 0, "border fill is part of the band")
+        self.assertEqual(len(v._reach_runs) > 0, True)
+        self.assertEqual(len(v._border_runs) > 0, True)
+        # the comparison covers the whole band, not just the real half
+        self.assertEqual(len(v._reach_cells), real + border)
+
+    def test_out_of_grid_cells_show_the_border_block(self):
+        cm = view.compose_padded("ROUTE_1")
+        self.assertEqual(view.block_at_cell(cm, -100000, -100000),
+                         cm.border_block)
 
     def test_no_band_means_no_swap_report(self):
         v = self.viewer("ROUTE_1")

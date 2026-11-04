@@ -293,15 +293,22 @@ Place the probe on a walkable step and press `U`:
   can stand on;
 - the camera window is unioned over all of them, once for DOS (320x200) and once
   for GB (160x144);
-- **DOS minus GB** is shaded amber: cells the port reveals and the original
-  hardware never displayed. That is the seam-audit band.
+- **DOS minus GB** is the seam-audit band: cells the port reveals and the
+  original hardware never displayed. It is shaded amber in two strengths, and
+  both classes are part of it:
+  - **solid amber = real map data** — the map's own blocks plus the connection
+    strips. The strip is the neighbour's own byte, so these do *not* change when
+    the player crosses; only the palette can recolour them.
+  - **faint amber = border fill** past the map edge. The port clamps out-of-map
+    reads to `wMapBackgroundTile`, so these cells show *this* map's border block,
+    and the neighbouring map has its own. **This is the class that swaps a tile.**
 
 `U` again clears it. The HUD reports
-`Reach N steps · DOS X · GB Y · DOS-only Z (+B border) 4px cells` — the unit is
-**4 px cells**, not tiles, because the DOS window is 12.5 tiles tall. `+B border`
-is the DOS-only area outside the map and its connection strips: the port paints
-its border clamp block there, which is a rendering decision rather than a seam,
-so it is excluded from the band and reported instead of being dropped silently.
+`Reach N steps (+K hop) · DOS X · GB Y · band Z = A real + B border fill (4px
+cells)` — the unit is **4 px cells**, not tiles, because the DOS window is 12.5
+tiles tall. The split is reported, never truncated: an earlier version masked the
+band to real data and treated border fill as noise, which hid the one class that
+actually changes at a transition.
 
 Walkability is the engine's own rule, not an approximation of it: the player
 stands on the **lower-left** tile of its 2x2 sprite (`lda_coord 8, 9`; and
@@ -371,22 +378,27 @@ is shown exactly as the neighbour would show it. The HUD says
 `View as VIRIDIAN_CITY (OVERWORLD · PAL_VIRIDIAN)`, and that it is a preview —
 edits still belong to the map you have open.
 
-With the reach showing, `K` also measures it:
+With the reach showing, `K` also measures it, by class:
 
 ```
-Swap at VIRIDIAN_CITY: 2668 of 2668 band cells change (shape 0, colour 2668)
+Swap at VIRIDIAN_CITY: real 2668/2668 (shape 0, colour 2668) · border 6220/6220 ($0B → $0F)
 ```
 
-- **shape** — the two tilesets under the *same* palette: a different tileset turns
-  these block ids into different graphics. This is the tree→grass case.
-- **colour** — the two palettes under the same tileset: the per-map palette
-  recolours them. A route↔city seam is colour-only.
+- **real / shape** — the two tilesets under the *same* palette: a different
+  tileset turns these block ids into different graphics.
+- **real / colour** — the two palettes under the same tileset: the per-map
+  palette recolours them.
+- **border** — the two maps' border blocks (`wMapBackgroundTile`). The port paints
+  this map's border block across the fill and the neighbour has its own, so every
+  border cell changes on crossing. This is the one that actually swaps a tile.
 
-Measured on Route 1: both neighbours are `OVERWORLD`, so shape is **0** and every
-band cell changes colour only (Viridian and Pallet each have their own palette).
-The genuine shape change needs a cross-tileset pair — `ROUTE_22` (OVERWORLD) vs
-`ROUTE_23` (PLATEAU) — which the port does not connect, so no live seam can
-change graphics today.
+Measured on Route 1: both neighbours are `OVERWORLD`, so shape is **0** and the
+real cells change colour only. The border class is where the tile change lives —
+Route 1's border is `$0B` (tile `$52`, grass) and Viridian City's is `$0F`
+(tiles `$40/$50`, trees), so crossing Route 1 → Viridian turns the grass outside
+the walkable area into trees. Pallet Town shares Route 1's `$0B`, so that seam's
+fill is stable. The GB never showed this fill at all — its camera stops at the map
+edge, while the port's 320 px viewport is as wide as Route 1.
 
 ### Paint palette sizing
 

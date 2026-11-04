@@ -673,12 +673,18 @@ def reachable_steps(cm, seed) -> Reach:
 
 
 def block_at_cell(cm, x: int, y: int) -> int:
-    """Block id under a 4 px cell (works for strip cells, unlike _tile_at)."""
+    """Block id shown under a 4 px cell (works for strip cells too).
+
+    Past the padded grid the port's LoadCurrentMapView clamp yields
+    wMapBackgroundTile, so an out-of-grid cell shows the BORDER block — which is
+    the whole point of the border class: it is the map's border block, not
+    nothing, and it changes when the neighbouring map's border block differs.
+    """
     tx = x // TILE - BORDER * 4
     ty = y // TILE - BORDER * 4
     idx = (ty // 4 + BORDER) * cm.stride + (tx // 4 + BORDER)
     if not (0 <= idx < len(cm.grid)):
-        return 0
+        return cm.border_block
     return cm.grid[idx]
 
 
@@ -758,8 +764,22 @@ def viewable(cm, steps):
 
     Both windows are centred on the same step and DOS strictly contains GB, so
     the per-position difference is the frame and the union difference is
-    "ever on DOS, never on GB". `attention` is that set restricted to real map
-    data; `border` is the remainder past the map edge.
+    "ever on DOS, never on GB". The band splits into two classes, and BOTH are
+    part of it:
+
+      attention  real map data — the map's own blocks or a connection strip.
+                 Measured: the strip is the neighbour's own byte, so these cells
+                 do NOT change when the player crosses (same tileset).
+      border     border fill past the map edge. The port clamps out-of-map reads
+                 to wMapBackgroundTile, so these cells show THIS map's border
+                 block — and the neighbouring map has its own. Route 1's border
+                 is $0B (grass) and Viridian City's is $0F (trees), so crossing
+                 swaps the picture across the whole band. The GB never showed
+                 this fill at all; the port's wider viewport does.
+
+    An earlier version masked the band to real data and reported the border
+    remainder as an aside. That was backwards: the border class is the one that
+    actually changes at a transition.
     """
     dos = viewport_cells(steps, "dos")
     gb = viewport_cells(steps, "gb")

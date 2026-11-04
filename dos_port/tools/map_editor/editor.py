@@ -220,7 +220,8 @@ class Viewer:
         self._reach_runs = []    # merged attention cells, for the fill
         self._reach_outline = {} # kind -> (x0, y0, horizontal, vertical)
         self._reach_surf = None  # reusable translucent overlay
-        self._reach_cells = set()  # the amber band, for the look comparison
+        self._reach_cells = set()  # the whole band, for the look comparison
+        self._border_runs = []   # merged border-fill cells, drawn fainter
         self.view_as = None      # const whose tileset+palette we render with
         self.look_stats = None   # (const, cells, changed, shape, colour)
         self.probe_mode = False
@@ -530,7 +531,8 @@ class Viewer:
         self.reach_stats = (len(reach.standing), len(reach.traversed),
                             len(dos), len(gb), len(attention), len(border))
         self._reach_runs = _cell_runs(attention)
-        self._reach_cells = attention
+        self._border_runs = _cell_runs(border)
+        self._reach_cells = attention | border
         self.look_stats = self.measure_look()
         # Outlines are stored, not recomputed: a whole-map union is thousands of
         # 4 px cells and this must not run once per frame.
@@ -576,20 +578,51 @@ class Viewer:
         self.refresh_palette()
         self.look_stats = self.measure_look()
 
+    @staticmethod
+    def border_block_of(info):
+        """A map's border block (wMapBackgroundTile) without composing it."""
+        obj = pm.objects(info)
+        return obj[0] if obj else 0
+
     def measure_look(self):
-        """How many amber-band cells change appearance under the viewed look."""
+        """What changes in the band under the viewed look — by class.
+
+        Two independent effects, and only one of them is about the tileset:
+
+          real    the map's own blocks and the connection strip. The strip IS the
+                  neighbour's own byte, so with a shared tileset these cannot
+                  change graphic (measured: 0 of 6825 strip cells). The palette
+                  can change, and it is per map.
+          border  border fill past the map edge. The port clamps out-of-map reads
+                  to wMapBackgroundTile, so it shows THIS map's border block and
+                  the neighbour has its own — Route 1 $0B (grass) vs Viridian
+                  City $0F (trees). Every border cell changes on crossing, and
+                  the GB never showed that fill at all.
+        """
         if self.view_as is None or not self._reach_cells:
             return None
+        other_info = pm.map_info(self.view_as)
         own = self.look_of(self.cm.info)
-        other = self.look_of(pm.map_info(self.view_as))
-        both, shape, colour = view.look_changes(
-            self.cm, self._reach_cells, own, other)
-        return (self.view_as, len(self._reach_cells), both, shape, colour)
+        other = self.look_of(other_info)
+        real = {c for c in self._reach_cells if view.cell_meaningful(self.cm, *c)}
+        border = self._reach_cells - real
+        both, shape, colour = view.look_changes(self.cm, real, own, other)
+        own_border = self.cm.border_block
+        other_border = self.border_block_of(other_info)
+        return {
+            "const": self.view_as,
+            "real": len(real), "real_changed": both,
+            "shape": shape, "colour": colour,
+            "border": len(border),
+            "border_changed": len(border) if own_border != other_border else 0,
+            "own_border": own_border, "other_border": other_border,
+        }
 
     def clear_reach(self):
         self.reach = None
         self.reach_stats = None
         self._reach_runs = []
+        self._border_runs = []
         self._reach_cells = set()
         self.look_stats = None
         self._reach_outline = {}
@@ -1357,11 +1390,13 @@ class Viewer:
             self._reach_surf = pygame.Surface((width, height), pygame.SRCALPHA)
         surf = self._reach_surf
         surf.fill((0, 0, 0, 0))
-        colour = (*REACH_BAND, 90)
         span = max(1, int(round(view.SWEEP_CELL * z)))
-        for (x, y, run) in self._reach_runs:
-            surf.fill(colour, (int(round(ox + x * z)), int(round(oy + y * z)),
-                               max(1, int(round(run * z))), span))
+        for runs, alpha in ((self._border_runs, 45), (self._reach_runs, 90)):
+            colour = (*REACH_BAND, alpha)
+            for (x, y, run) in runs:
+                surf.fill(colour, (int(round(ox + x * z)),
+                                   int(round(oy + y * z)),
+                                   max(1, int(round(run * z))), span))
         self.screen.blit(surf, (0, 0))
         # The two unions the band is derived from, as their shared boundary.
         for kind, colour in (("dos", PORT_VIEW), ("gb", GB_VIEW)):
@@ -1789,12 +1824,16 @@ class Viewer:
                          f"  K cycles  — this is a PREVIEW, edits still belong "
                          f"to {self.cm.info.const}")
         if self.look_stats is not None:
-            const, cells, both, shape, colour = self.look_stats
-            # The decomposition is the answer: shape = a different tileset turns
-            # these block ids into different graphics, colour = the per-map
-            # palette recolours them. A route/city seam is colour-only.
-            lines.append(f"Swap at {const}: {both} of {cells} band cells change "
-                         f"(shape {shape}, colour {colour})")
+            s = self.look_stats
+            # Two separate answers, because they have different causes: `real`
+            # cells can only recolour (the strip is the neighbour's own bytes),
+            # `border` cells change outright because each map has its own border
+            # block and the port paints that fill across the whole band.
+            lines.append(
+                f"Swap at {s['const']}: real {s['real_changed']}/{s['real']} "
+                f"(shape {s['shape']}, colour {s['colour']}) · "
+                f"border {s['border_changed']}/{s['border']} "
+                f"(${s['own_border']:02X} → ${s['other_border']:02X})")
         elif self.reach_stats is not None and self.view_as is None:
             lines.append("K: preview this map with a neighbour's tileset+palette")
         if self.reach_stats is not None:
@@ -1804,8 +1843,8 @@ class Viewer:
             # than dropped — it is the DOS-only area that is not real map data.
             # "+N hop" is the mid-hop positions a ledge carries the camera over.
             lines.append(f"Reach {steps} steps (+{hops} hop) · DOS {dos} · "
-                         f"GB {gb} · DOS-only {attention} (+{border} border) "
-                         f"4px cells  U clears")
+                         f"GB {gb} · band {attention + border} = {attention} "
+                         f"real + {border} border fill (4px cells)  U clears")
         elif self.probe_mode:
             lines.append("Reach: U floods the walkable area from the probe")
         if self.palette_warning:
