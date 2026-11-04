@@ -40,6 +40,10 @@ DEFAULTS = {
     # Tiles per palette row, or "auto": fit the window height, so a bigger cell
     # makes the column longer instead of a wider strip.
     "palette_cols": "auto",
+    # Modifier HELD during a paint/probe drag to lock the stroke to one axis.
+    # Ctrl by default: shift is already "clear the probe" in probe mode, and a
+    # modifier that means two things is a mis-click waiting to happen.
+    "axis_lock": "ctrl",
 }
 
 _ALLOWED_ANCHORS = ("cursor", "center")
@@ -90,3 +94,5 @@ def validate(settings: dict, where: object = "config") -> None:
     if cols != "auto" and (not isinstance(cols, int) or isinstance(cols, bool)
                            or not 1 <= cols <= 32):
         raise ValueError(f"{where}: palette_cols must be \"auto\" or an integer in 1..32")
+    if settings["axis_lock"] not in ("ctrl", "shift", "alt", "none"):
+        raise ValueError(f"{where}: axis_lock must be ctrl, shift, alt or none")

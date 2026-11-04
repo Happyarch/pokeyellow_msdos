@@ -18,7 +18,7 @@ View controls:
   X  connections: assemble neighbouring maps at their real offsets (read-only)
   Y  viewport probe: click a step to box what the DOS (V, red) and GB (H, blue)
      camera sees from there; drag to sweep a path; shift-click clears
-  shift-drag       lock a paint stroke or a probe sweep to one axis
+  Ctrl-drag (hold) lock a paint stroke or a probe sweep to one axis
   click a W marker  select a warp; drag it to move; panel edits dest / target / kind
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
@@ -101,6 +101,13 @@ PAL_CELL = ts.BLOCK_PX
 PAL_MAX_COLS = 16
 
 
+# Modifier held during a drag to constrain the stroke to one axis. Ctrl by
+# default: shift already clears the probe, and one modifier doing two jobs is how
+# a mis-click clears an overlay you were still using.
+AXIS_LOCK_MODS = {"ctrl": pygame.KMOD_CTRL, "shift": pygame.KMOD_SHIFT,
+                  "alt": pygame.KMOD_ALT, "none": 0}
+
+
 def _axis_lock(anchor, target):
     """Project `target` onto the dominant axis from `anchor` (shift-drag).
 
@@ -176,13 +183,11 @@ class Viewer:
         self.route_sha = None
         self.route_options = []
         self.painting = False
-        # One drag = one stroke. The anchor is where it started; `stroke_locked`
-        # is shift at that moment, which constrains the stroke to one axis.
+        # One drag = one stroke. The anchor is where it started; whether the
+        # stroke is axis-locked is asked of the live modifier on every motion.
         self.stroke_anchor = None
-        self.stroke_locked = False
         self.stroke_last = None
         self.lock_axis = None
-        self.shift_clear_pending = False
         # Viewport probe: steps whose camera window is drawn, and the mode that
         # places them. The overlay outlives the mode on purpose — it is an
         # annotation you keep while painting, not a transient cursor.
@@ -446,22 +451,22 @@ class Viewer:
         """
         if not self.probe_mode:
             return False
+        if shift:
+            self.clear_probe()
+            return True
         step = self.step_at(pos)
         if step is None:
             return False
         self.stroke_anchor = step
-        self.stroke_locked = shift
+        self.stroke_last = None
         self.lock_axis = None
         self.probe_drag = True
-        if shift:
-            self.shift_clear_pending = True
-            return True
         self.probe = [step]
         self.sync_player()
         self._probe_cache = {}
         return True
 
-    def probe_extend(self, pos):
+    def probe_extend(self, pos, locked=False):
         """Grow the swept path to the step under the cursor, filling the gap.
 
         MOUSEMOTION can skip several steps between events, so consecutive samples
@@ -473,12 +478,11 @@ class Viewer:
         step = self.step_at(pos)
         if step is None or self.stroke_anchor is None:
             return
-        if self.stroke_locked:
+        if locked:
             step, self.lock_axis = _axis_lock(self.stroke_anchor, step)
-            if step != self.stroke_anchor:
-                self.shift_clear_pending = False
             self.probe = [self.stroke_anchor] + _grid_line(self.stroke_anchor, step)
         else:
+            self.lock_axis = None
             if not self.probe:
                 self.probe = [self.stroke_anchor]
             for s in _grid_line(self.probe[-1], step):
@@ -488,14 +492,10 @@ class Viewer:
         self._probe_cache = {}
 
     def end_stroke(self):
-        """Finish a paint/probe drag: the axis lock lasts one stroke only."""
-        if self.probe_mode and self.shift_clear_pending:
-            self.clear_probe()          # a shift CLICK (no drag) is still a clear
-        self.shift_clear_pending = False
+        """Finish a paint/probe drag; the axis lock is only ever held."""
         self.painting = False
         self.probe_drag = False
         self.stroke_anchor = None
-        self.stroke_locked = False
         self.stroke_last = None
         self.lock_axis = None
 
@@ -546,6 +546,15 @@ class Viewer:
                        self.colors)
         return rec
 
+    def axis_lock_held(self) -> bool:
+        """True while the axis-lock modifier is down — a HOLD, never a toggle.
+
+        Read at every motion event, not latched at mouse-down, so pressing the
+        modifier mid-stroke starts constraining and releasing it stops.
+        """
+        mask = AXIS_LOCK_MODS.get(self.settings.get('axis_lock', 'ctrl'), 0)
+        return bool(mask and pygame.key.get_mods() & mask)
+
     def touch_paint(self):
         """Mark an in-memory paint edit.
 
@@ -556,22 +565,24 @@ class Viewer:
         self.dirty = True
         self.painted = True
 
-    def paint_cell(self, pos):
-        """Paint at `pos`; with an axis lock, paint the straight line instead.
+    def paint_cell(self, pos, locked=False):
+        """Paint at `pos`; while the lock modifier is held, paint a straight line.
 
-        Freehand by default. Shift at the start of the stroke locks it to the
-        dominant axis, and the cells between motion samples are filled in, so a
-        fast drag still draws an unbroken line rather than a dotted one.
+        Freehand by default. The caller passes the LIVE modifier state on every
+        motion, so holding it mid-stroke starts constraining and releasing it
+        stops. The cells between motion samples are filled in, so a fast drag
+        draws an unbroken line rather than a dotted one.
         """
         cell = self.cell_at(pos)
         if cell is None:
             return
-        if self.stroke_locked and self.stroke_anchor is not None:
+        if locked and self.stroke_anchor is not None:
             cell, self.lock_axis = _axis_lock(self.stroke_anchor, cell)
             start = self.stroke_last if self.stroke_last is not None \
                 else self.stroke_anchor
             cells = [start] + _grid_line(start, cell)
         else:
+            self.lock_axis = None       # released mid-stroke: stop advertising
             cells = [cell]
         for r, c in cells:
             rec = self._apply(r, c, self.current_block)
@@ -1489,11 +1500,10 @@ class Viewer:
             sy, sx = self.probe[-1]
             span = (f"Y:{sy} X:{sx}" if len(self.probe) == 1
                     else f"Y:{sy} X:{sx} sweep:{len(self.probe)}")
-            lines.append(f"Probe {span}  V:DOS H:GB  shift-drag locks"
-                         + (f" [{self.lock_axis}]" if self.lock_axis else ""))
+            lines.append(f"Probe {span}  V:DOS H:GB  shift-click clears"
+                         + (f"  LOCK {self.lock_axis}" if self.lock_axis else ""))
         elif self.probe_mode:
-            lines.append("Probe: click a step, shift-drag locks an axis, "
-                         "shift-click clears  V:DOS H:GB")
+            lines.append("Probe: click a step (shift-click clears)  V:DOS H:GB")
         if self.palette_warning:
             lines.append(self.palette_warning)
         if self.show["connections"]:
@@ -1706,9 +1716,7 @@ class Viewer:
                         self.stroke_anchor = self.cell_at(ev.pos)
                         self.stroke_last = None
                         self.lock_axis = None
-                        self.stroke_locked = bool(
-                            pygame.key.get_mods() & pygame.KMOD_SHIFT)
-                        self.paint_cell(ev.pos)
+                        self.paint_cell(ev.pos, self.axis_lock_held())
                     elif self.show["warps"] and self.warp_at_tile(self.tile_at(ev.pos)):
                         warp = self.warp_at_tile(self.tile_at(ev.pos))
                         self.selected_warp = warp['stable_id']
@@ -1783,9 +1791,9 @@ class Viewer:
                         if not ev.buttons[0]:
                             self.end_stroke()
                         else:
-                            self.probe_extend(ev.pos)
+                            self.probe_extend(ev.pos, self.axis_lock_held())
                     elif self.painting:
-                        self.paint_cell(ev.pos)
+                        self.paint_cell(ev.pos, self.axis_lock_held())
                     elif self.drag:
                         (sx, sy), (px, py) = self.drag
                         self.pan = [px + ev.pos[0] - sx, py + ev.pos[1] - sy]

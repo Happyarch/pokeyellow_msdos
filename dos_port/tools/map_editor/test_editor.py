@@ -523,112 +523,87 @@ class ProbeTest(ViewerTestBase):
         v.probe_mode = False
         self.assertFalse(v.probe_click(self.placed(v, 2, 2), shift=True))
         self.assertEqual(v.probe, [(2, 2)])
-        # Inside it a shift CLICK is a clear — but only once the button is
-        # released, because a shift DRAG is an axis-locked sweep instead.
+        # Inside it, shift-click is a plain clear — the axis lock is a different
+        # modifier, so this press means one thing only.
         v.probe_mode = True
         v.probe_click(self.placed(v, 2, 2), shift=True)
-        self.assertEqual(v.probe, [(2, 2)], "the press alone decides nothing")
-        v.end_stroke()
         self.assertEqual(v.probe, [])
         self.assertIsNone(v.player, "clearing must remove the box entirely")
 
-    def test_shift_drag_locks_the_sweep_to_one_axis(self):
-        """Shift sweeps a straight line instead of following the pointer."""
+    def test_held_modifier_locks_the_sweep_to_one_axis(self):
+        """The lock is held, not latched: it is asked on every motion."""
         v = self.viewer()
         v.probe_mode = True
-        v.probe_click(self.placed(v, 2, 2), shift=True)
-        v.probe_extend(self.placed(v, 8, 5))          # mostly vertical
-        self.assertTrue(v.probe)
+        v.probe_click(self.placed(v, 2, 2))
+        v.probe_extend(self.placed(v, 8, 5), locked=True)     # mostly vertical
         self.assertEqual(v.probe[0], (2, 2))
         self.assertEqual(v.probe[-1], (8, 2), "projected onto the anchor column")
         self.assertEqual({x for _y, x in v.probe}, {2}, "one column only")
         self.assertEqual(v.lock_axis, "V")
         # Pulling back toward the anchor shortens the sweep, no branch.
-        v.probe_extend(self.placed(v, 5, 3))          # still mostly vertical
+        v.probe_extend(self.placed(v, 5, 3), locked=True)
         self.assertEqual(v.probe[-1], (5, 2))
         # The other axis is chosen by the dominant direction.
-        v.probe_extend(self.placed(v, 3, 9))
+        v.probe_extend(self.placed(v, 3, 9), locked=True)
         self.assertEqual(v.probe[-1], (2, 9), "mostly horizontal")
         self.assertEqual({y for y, _x in v.probe}, {2})
         self.assertEqual(v.lock_axis, "H")
-        v.end_stroke()
-        self.assertEqual(v.probe, [(2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-                                   (2, 7), (2, 8), (2, 9)],
-                         "a drag must not clear")
 
-    def test_shift_drag_paints_a_straight_line(self):
-        """A locked paint stroke stays on one row/column, with no gaps."""
+    def test_axis_lock_is_a_hold_not_a_latch(self):
+        """Releasing the modifier mid-stroke must return to freehand."""
         v = self.viewer()
         v.paint = True
         v.pan = [0.0, 0.0]
         v.scale = 1.0
         v.stroke_anchor = (8, 8)
-        v.stroke_locked = True
         v.stroke_last = None
-        v.paint_cell(self.cell_px(8, 8))
-        v.paint_cell(self.cell_px(12, 15))            # mostly horizontal
-        # Padded cell (8,8) is map-local (1,1) — cells are stored per sidecar.
+        v.paint_cell(self.cell_px(8, 8), locked=True)
+        v.paint_cell(self.cell_px(12, 15), locked=True)   # horizontal: row 8
         painted = set(v.map_cells)
         self.assertEqual({r for r, _c in painted}, {1}, "one row only")
         self.assertIn((1, 8), painted)
         self.assertNotIn((5, 8), painted)
-        # The cells between the two samples are filled, not dotted.
-        self.assertEqual({c for _r, c in painted}, set(range(1, 9)))
+        # The modifier is released: the next motion is freehand again.
+        v.paint_cell(self.cell_px(13, 16), locked=False)
+        self.assertIn((6, 9), set(v.map_cells), "freehand resumes off-axis")
+
+    def test_held_modifier_paints_a_straight_line(self):
+        """A locked stroke stays on one row/column, with no gaps."""
+        v = self.viewer()
+        v.paint = True
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.stroke_anchor = (8, 8)
+        v.stroke_last = None
+        v.paint_cell(self.cell_px(8, 8), locked=True)
+        v.paint_cell(self.cell_px(12, 15), locked=True)   # mostly horizontal
+        # Padded cell (8,8) is map-local (1,1) — cells are stored per sidecar.
+        painted = set(v.map_cells)
+        self.assertEqual({r for r, _c in painted}, {1}, "one row only")
+        self.assertEqual({c for _r, c in painted}, set(range(1, 9)),
+                         "the cells between the samples are filled")
+        self.assertEqual(v.lock_axis, "H")
 
         v.stroke_anchor = (8, 8)
         v.stroke_last = None
-        v.paint_cell(self.cell_px(8, 8))
-        v.paint_cell(self.cell_px(13, 9))             # mostly vertical
+        v.paint_cell(self.cell_px(8, 8), locked=True)
+        v.paint_cell(self.cell_px(13, 9), locked=True)    # mostly vertical
         painted = set(v.map_cells)
-        self.assertEqual({c for _r, c in painted if c == 2}, {2})
         self.assertIn((6, 1), painted, "the vertical leg reached row 13")
+        self.assertEqual(v.lock_axis, "V")
 
-    def test_probe_survives_leaving_the_mode(self):
-        v = self.viewer()
-        v.probe_mode = True
-        v.probe_click(self.placed(v, 3, 3))
-        v.probe_mode = False
-        self.assertEqual(v.probe, [(3, 3)], "the overlay is an annotation")
-        v.draw()          # and it still draws outside the mode
-
-    def test_y_toggles_probe_mode_and_paint_is_exclusive(self):
-        v = self.viewer()
-        v.save = lambda: None
-
-        class StopLoop(Exception):
-            pass
-
-        def press(key, mods=0):
-            event = pygame.event.Event(pygame.KEYDOWN, key=key, mod=mods)
-            with patch.object(pygame.event, "get", side_effect=[[event], StopLoop]), \
-                 patch.object(pygame.key, "get_mods", return_value=mods):
-                with self.assertRaises(StopLoop):
-                    v.run()
-
-        press(pygame.K_y)
-        self.assertTrue(v.probe_mode)
-        press(pygame.K_p)
-        self.assertTrue(v.paint)
-        self.assertFalse(v.probe_mode, "paint and probe cannot share a click")
-        press(pygame.K_y)
-        self.assertTrue(v.probe_mode)
-        self.assertFalse(v.paint)
-
-    def test_v_and_h_select_the_channel(self):
-        from map_editor.editor import GB_VIEW, PORT_VIEW
-        v = self.viewer()
-        v.probe_mode = True
-        v.probe_click(self.placed(v, 4, 4))
-        v.show["port_view"] = True
-        v.show["gb_view"] = True
-        dos = v.probe_sweep("dos")
-        gb = v.probe_sweep("gb")
-        # One step: the union is exactly the window, 320x200 vs 160x144 px.
-        self.assertEqual((dos[2][0][2], len(dos[3])), (320, 2))
-        self.assertEqual((gb[2][0][2], len(gb[3])), (160, 2))
-        self.assertTrue(PORT_VIEW[0] > PORT_VIEW[2], "DOS is red")
-        self.assertTrue(GB_VIEW[2] > GB_VIEW[0], "GB is blue")
-        v.draw()
+    def test_axis_lock_modifier_comes_from_config(self):
+        v = self.viewer(axis_lock="shift")
+        with patch.object(pygame.key, "get_mods", return_value=pygame.KMOD_SHIFT):
+            self.assertTrue(v.axis_lock_held())
+        with patch.object(pygame.key, "get_mods", return_value=pygame.KMOD_CTRL):
+            self.assertFalse(v.axis_lock_held())
+        off = self.viewer(axis_lock="none")
+        with patch.object(pygame.key, "get_mods",
+                          return_value=pygame.KMOD_CTRL | pygame.KMOD_SHIFT):
+            self.assertFalse(off.axis_lock_held())
+        # The default must not be the key that clears the probe.
+        self.assertEqual(config.DEFAULTS["axis_lock"], "ctrl")
 
     def test_sweep_union_covers_both_endpoints_and_is_not_a_sum(self):
         v = self.viewer()

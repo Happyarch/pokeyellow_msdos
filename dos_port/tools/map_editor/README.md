@@ -174,22 +174,33 @@ click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
 Ctrl+S save       Ctrl+Z undo             F fill        right-click eyedropper
-shift-drag       lock a paint stroke or probe sweep to one axis
+Ctrl-drag (hold) lock a paint stroke or probe sweep to one axis
 P paint mode      Tab next map            Esc quit (without saving)
 ```
 
 ### Axis lock
 
-Hold **shift** when a paint or probe drag starts and the stroke is constrained to
-one axis: the dominant direction from the anchor decides which, and the axis
-re-evaluates as you move, so you can switch from a row to a column without
-releasing. The cells between motion samples are filled, so a locked line is
-solid rather than the handful of cells the mouse happened to sample. The status
+Hold **Ctrl** during a paint or probe drag and the stroke is constrained to one
+axis. It is a HOLD, not a toggle: the modifier is read on every motion, so
+pressing it mid-stroke starts constraining and releasing it returns to freehand.
+The dominant direction from the anchor picks the axis and re-evaluates as you
+move, so a stroke can turn from a row into a column without releasing. The status
 bar shows `LOCK H` / `LOCK V` while it is active.
 
-In probe mode shift does double duty, like most editors: a shift **click** (no
-movement) still clears the probe, a shift **drag** sweeps a straight path. The
-difference is only known on release, so the press itself decides nothing.
+| key | default | meaning |
+|---|---|---|
+| `axis_lock` | `"ctrl"` | modifier held during a drag: `ctrl`, `shift`, `alt` or `none` |
+
+Ctrl is the default because **shift already clears the probe** in probe mode; one
+modifier doing two jobs is how a mis-click clears an overlay you were still
+using. `shift` is available if you prefer the GIMP binding, at the cost of that
+overlap.
+
+A locked paint stroke paints the straight line from the anchor and fills the
+cells between motion samples, so a fast drag is solid rather than the handful of
+cells the mouse happened to sample. A locked probe sweep is recomputed from the
+anchor each motion, so pulling back toward the start shortens the path instead of
+growing a branch.
 
 ### Saving: edits are staged, Ctrl+S commits
 

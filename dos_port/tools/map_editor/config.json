@@ -2,5 +2,6 @@
   "zoom_anchor": "cursor",
   "ui_scale": "auto",
   "palette_cell": 32,
-  "palette_cols": "auto"
+  "palette_cols": "auto",
+  "axis_lock": "ctrl"
 }
