@@ -7,6 +7,8 @@ either a sidecar under `dos_port/assets/map_overrides/` or a port script under
 
 Two front ends over one core. `commands.py` is the only mutation surface; the
 CLI and the pygame UI both call it and neither writes JSON or assembly itself.
+The CLI writes immediately with `--write`; the GUI stages every write and commits
+on Ctrl+S (`staging.py` is the path layer that makes that one rule true).
 
 ```sh
 python3 dos_port/tools/map_editor/editor.py VERMILION_DOCK      # GUI
@@ -170,9 +172,28 @@ X connections    assemble neighbouring maps at their real offsets (read-only)
 click W marker   select a warp; panel edits dest / target warp / kind
 [ / ] route step 1-4 down/up/left/right (edits the port script)
 Ctrl+Shift+arrow expand that edge by one block
-P paint mode     S save     Ctrl+Z undo     F fill     right-click eyedropper
-Tab next map     Esc quit
+Ctrl+S save       Ctrl+Z undo             F fill        right-click eyedropper
+P paint mode      Tab next map            Esc quit (without saving)
 ```
+
+### Saving: edits are staged, Ctrl+S commits
+
+Nothing is written as you edit. A paint stroke, an NPC drag, a warp move, a route
+byte and an expansion all land in a scratch copy of the three trees the editor
+owns (`assets/map_overrides/`, `assets/map_borders/`, `src/scripts/`), and reach
+the repository only when you press **Ctrl+S**. Quitting discards them.
+
+That is what makes an accidental drag harmless and what keeps a 30-second
+exploratory click from leaving a sidecar in the tree. A plain `S` does nothing:
+the save gesture is unambiguous, and it works from any mode rather than only
+paint mode. The status bar reads `*UNSAVED* Ctrl+S` while anything is pending —
+in-memory paint, staged sidecars, or staged script rewrites.
+
+Switching maps (Tab) keeps staged edits — they live in the session — and flushes
+the in-memory paint first, so a stroke is never lost by navigating. Saving writes
+every staged file for every map touched in the session, not just the current one.
+`staging.py` is the whole mechanism; the commands keep their `write=True`
+contract and the CLI, which never opens a session, still writes directly.
 
 ### Zoom anchoring
 

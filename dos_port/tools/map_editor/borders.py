@@ -6,7 +6,8 @@ One JSON per map: dos_port/assets/map_borders/<MAP_CONST>.json
 Coordinates are PADDED-grid blocks (col 0..w+11, row 0..h+11). Only cells in
 the editable ring — the 6-block border minus connection strips — are legal;
 connections always win (the runtime applies overrides before strip copies).
-Sidecars are editor-owned: save only via map_editor/editor.py paint mode.
+Sidecars are editor-owned: written only on Ctrl+S in map_editor/editor.py
+(edits are staged in a scratch tree — see map_editor/staging.py).
 Stable (row, col) sort keeps diffs reviewable.
 """
 from __future__ import annotations
@@ -14,17 +15,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from map_editor import staging
+
 BORDERS_DIR = Path(__file__).resolve().parent.parent.parent \
     / "assets" / "map_borders"
 
 
 def path_for(const: str) -> Path:
+    """The tree path — display and the generators; reads/writes go via staging."""
     return BORDERS_DIR / f"{const}.json"
 
 
 def load(const: str) -> dict[tuple[int, int], int]:
-    p = path_for(const)
-    if not p.exists():
+    p = staging.current().read_path(staging.borders_rel(const))
+    if p is None:
         return {}
     raw = json.loads(p.read_text())
     return {(r, c): b for r, c, b in raw["cells"]}
@@ -51,15 +55,13 @@ def save(const: str, cells: dict[tuple[int, int], int], cm) -> None:
     errs = validate(cells, cm)
     if errs:
         raise ValueError("; ".join(errs))
-    BORDERS_DIR.mkdir(parents=True, exist_ok=True)
-    p = path_for(const)
+    rel = staging.borders_rel(const)
     if not cells:
-        if p.exists():
-            p.unlink()          # empty override set = no sidecar
+        staging.current().remove(rel)     # empty override set = no sidecar
         return
     out = {"map": const,
            "cells": [[r, c, b] for (r, c), b in sorted(cells.items())]}
-    p.write_text(json.dumps(out, indent=1) + "\n")
+    staging.current().write_path(rel).write_text(json.dumps(out, indent=1) + "\n")
 
 
 def _blockset_len(cm) -> int:

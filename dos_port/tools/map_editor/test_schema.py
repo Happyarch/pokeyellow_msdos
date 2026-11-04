@@ -14,7 +14,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from gfx_core import pret_maps as pm
-from map_editor import schema, overrides, view, commands
+from map_editor import schema, overrides, staging, view, commands
 
 
 class MapDiffTest(unittest.TestCase):
@@ -49,8 +49,7 @@ class MapDiffTest(unittest.TestCase):
         self.assertEqual(diff.added_blocks, {(4, 4): 9})
 
     def test_paint_save_preserves_recipe_and_other_fields(self):
-        with TemporaryDirectory() as directory, patch.object(schema, "OVERRIDES", Path(directory)), \
-             patch.object(overrides, "MAP_OVERRIDES_DIR", Path(directory)):
+        with TemporaryDirectory() as directory, patch.object(staging, "ROOT", Path(directory)):
             diff = schema.MapDiff("Test", schema.Extents(east=2),
                                   recipes=[{"kind": "repeat_base_column", "edge": "east",
                                             "source_x": 0, "count": 2}],
@@ -97,8 +96,7 @@ class MapDiffTest(unittest.TestCase):
         border = pm.objects(info)[0]
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            with patch.object(schema, "OVERRIDES", root / "overrides"), \
-                 patch.object(schema, "ROOT", root):
+            with patch.object(staging, "ROOT", root):
                 commands.set_extents("PALLET_TOWN", north=1, west=0,
                                      south=0, east=0, write=True)
                 diff = schema.load("PalletTown")
@@ -120,8 +118,7 @@ class MapDiffTest(unittest.TestCase):
         npc_before = pm.gmh.parse_object_file(info.label)[3][0]
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            with patch.object(schema, "OVERRIDES", root / "overrides"), \
-                 patch.object(schema, "ROOT", root):
+            with patch.object(staging, "ROOT", root):
                 commands.set_extents("PALLET_TOWN", north=1, west=2,
                                      south=0, east=0, write=True)
                 dims = pm.gmh.parse_map_constants()
@@ -135,13 +132,40 @@ class MapDiffTest(unittest.TestCase):
         pm._constants.cache_clear()
         pm.map_info.cache_clear()
 
+    def test_expansion_script_edit_is_staged_until_commit(self):
+        """A script rewrite is the riskiest write: it must not land until saved."""
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'dos_port/src/scripts/PalletTown.asm'
+            path.parent.mkdir(parents=True)
+            path.write_text('db 8, 10 ; dbmapcoord 10, 8\n')
+            with patch.object(staging, 'ROOT', root):
+                staging.begin()
+                try:
+                    commands.set_extents('PALLET_TOWN', north=1, west=2,
+                                         south=0, east=0, write=True)
+                    self.assertEqual(path.read_text(),
+                                     'db 8, 10 ; dbmapcoord 10, 8\n',
+                                     'the tree script must be untouched before save')
+                    staged = staging.current().read_path(
+                        'dos_port/src/scripts/PalletTown.asm')
+                    self.assertIn('db 10, 14', staged.read_text())
+                    written = staging.current().commit()
+                    self.assertIn('dos_port/src/scripts/PalletTown.asm', written)
+                    self.assertEqual(path.read_text(),
+                                     'db 10, 14 ; dbmapcoord 14, 10\n')
+                finally:
+                    staging.end()
+            pm._constants.cache_clear()
+            pm.map_info.cache_clear()
+
     def test_north_west_expansion_moves_classified_script_once(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
             path = root / 'dos_port/src/scripts/PalletTown.asm'
             path.parent.mkdir(parents=True)
             path.write_text('db 8, 10 ; dbmapcoord 10, 8\n; dbmapcoord 9, 9\n')
-            with patch.object(schema, 'ROOT', root), patch.object(schema, 'OVERRIDES', root / 'overrides'):
+            with patch.object(staging, 'ROOT', root):
                 result = commands.set_extents('PALLET_TOWN', north=1, west=2,
                                               south=0, east=0, write=True)
                 self.assertEqual(result['automatic_delta'], [4, 8])

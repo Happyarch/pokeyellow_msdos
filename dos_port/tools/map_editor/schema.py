@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 import json
 from pathlib import Path
 
+from map_editor import staging
+
 
 ROOT = Path(__file__).resolve().parents[3]
 ASSETS = ROOT / "dos_port" / "assets"
@@ -51,6 +53,11 @@ class MapDiff:
 
 
 def path_for(pascal: str) -> Path:
+    """The tree path of a sidecar — for display and for the generators.
+
+    Reads and writes go through `staging`, which may serve a scratch copy; this
+    is the repository file a commit would land in.
+    """
     return OVERRIDES / f"{pascal}.json"
 
 
@@ -70,33 +77,34 @@ def _cells(raw: object, field_name: str) -> dict[tuple[int, int], int]:
 
 
 def load(pascal: str) -> MapDiff:
-    p = path_for(pascal)
-    if not p.exists():
+    p = staging.current().read_path(staging.overrides_rel(pascal))
+    if p is None:
         return MapDiff(pascal)
+    name = path_for(pascal)
     raw = json.loads(p.read_text())
     if raw.get("schema") != 2:
         # Existing map overrides are a v1 subset, retained verbatim.
         return MapDiff(pascal, base_blocks=_cells(raw.get("cells", []), "cells"))
     if raw.get("map") != pascal:
-        raise ValueError(f"{p}: map is {raw.get('map')!r}, expected {pascal!r}")
+        raise ValueError(f"{name}: map is {raw.get('map')!r}, expected {pascal!r}")
     ext = raw.get("extent_blocks", {})
     if not isinstance(ext, dict):
-        raise ValueError(f"{p}: extent_blocks must be an object")
+        raise ValueError(f"{name}: extent_blocks must be an object")
     keys = ("north", "west", "south", "east")
     if any(k not in keys for k in ext) or any(
             not isinstance(ext.get(k, 0), int) or ext.get(k, 0) < 0 for k in keys):
-        raise ValueError(f"{p}: extents must be non-negative integer block counts")
+        raise ValueError(f"{name}: extents must be non-negative integer block counts")
     recipes = raw.get("recipes", [])
     if not isinstance(recipes, list):
-        raise ValueError(f"{p}: recipes must be a list")
+        raise ValueError(f"{name}: recipes must be a list")
     objects = raw.get("objects", {})
     if not isinstance(objects, dict):
-        raise ValueError(f"{p}: objects must be an object")
+        raise ValueError(f"{name}: objects must be an object")
     warps = raw.get("warps", {})
     if not isinstance(warps, dict):
-        raise ValueError(f"{p}: warps must be an object")
+        raise ValueError(f"{name}: warps must be an object")
     if any(not isinstance(v, dict) for v in warps.values()):
-        raise ValueError(f"{p}: every warps entry must be an object")
+        raise ValueError(f"{name}: every warps entry must be an object")
     return MapDiff(
         pascal,
         Extents(**{k: ext.get(k, 0) for k in keys}),
@@ -114,12 +122,10 @@ def load(pascal: str) -> MapDiff:
 
 def write(diff: MapDiff) -> None:
     """Write a stable schema-2 document, deleting an empty legacy-equivalent one."""
-    OVERRIDES.mkdir(parents=True, exist_ok=True)
-    p = path_for(diff.pascal)
+    rel = staging.overrides_rel(diff.pascal)
     if not diff.is_v2:
         if not diff.base_blocks:
-            if p.exists():
-                p.unlink()
+            staging.current().remove(rel)
             return
         out = {"map": diff.pascal,
                "cells": [[y, x, b] for (y, x), b in sorted(diff.base_blocks.items())]}
@@ -136,7 +142,7 @@ def write(diff: MapDiff) -> None:
             "objects": diff.objects,
             "warps": diff.warps,
         }
-    p.write_text(json.dumps(out, indent=1) + "\n")
+    staging.current().write_path(rel).write_text(json.dumps(out, indent=1) + "\n")
 
 
 def expanded_dims(pascal: str, width: int, height: int) -> tuple[int, int]:

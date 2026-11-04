@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from map_editor import routes, scripts, commands, schema
+from map_editor import routes, scripts, commands, schema, staging
 
 
 class RouteTest(unittest.TestCase):
@@ -17,7 +17,7 @@ class RouteTest(unittest.TestCase):
                          [scripts.TileYX(10, 10), scripts.TileYX(10, 12), scripts.TileYX(8, 12)])
 
     def test_bound_route_edit_preserves_labels_and_comments(self):
-        with TemporaryDirectory() as directory, patch.object(schema, 'ROOT', Path(directory)):
+        with TemporaryDirectory() as directory, patch.object(staging, 'ROOT', Path(directory)):
             path = Path(directory) / 'dos_port/src/scripts/PalletTown.asm'
             path.parent.mkdir(parents=True)
             path.write_text('PathA:\nAlias:\n    db 0x06 ; left\n    db 0xFF\n'

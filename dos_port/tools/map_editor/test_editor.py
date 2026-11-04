@@ -18,6 +18,7 @@ import pygame  # noqa: E402  (after the SDL driver env vars)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from map_editor import config  # noqa: E402
+from map_editor import staging  # noqa: E402
 from map_editor import view  # noqa: E402
 
 
@@ -56,22 +57,28 @@ class ConfigTest(unittest.TestCase):
 class ZoomTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from map_editor import schema
         from map_editor.editor import Viewer
         pygame.init()
         cls.pygame = pygame
         cls.Viewer = Viewer
-        # NEVER write the real sidecar tree from a test: the Viewer's edit paths
-        # (warp drag, NPC drop) call commands.* with write=True.
-        cls._tmp = TemporaryDirectory()
-        cls._overrides = patch.object(schema, "OVERRIDES",
-                                      Path(cls._tmp.name) / "overrides")
-        cls._overrides.start()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls._overrides.stop()
-        cls._tmp.cleanup()
+    def setUp(self):
+        # NEVER write the real sidecar tree from a test: the Viewer's edit paths
+        # (warp drag, NPC drop, expansion) call commands.* with write=True. Each
+        # test gets its own tree so a save in one cannot leak into the next.
+        self._tmp = TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self._root = patch.object(staging, "ROOT", Path(self._tmp.name))
+        self._root.start()
+        self.addCleanup(self._root.stop)
+        # The Viewer opens a staging session; leaving it open would redirect the
+        # next test's writes into this one's scratch tree.
+        self.addCleanup(staging.end)
+        # An expansion changes the port dimensions, and pret_maps caches them.
+        # Clear it or the next test composes against the expanded header.
+        from gfx_core import pret_maps as pm
+        self.addCleanup(pm.map_info.cache_clear)
+        self.addCleanup(pm._constants.cache_clear)
 
     def viewer(self, **overrides):
         settings = dict(config.DEFAULTS)
@@ -277,6 +284,121 @@ class ZoomTest(unittest.TestCase):
         v.palette_click = lambda pos: False
         # The branch that arms `drag` is keyed on settings['pan_button'].
         self.assertNotEqual(v.settings["pan_button"], 1)
+
+    # ── save semantics: Ctrl+S commits, an edit never does ───────────────────
+
+    def tree(self, rel):
+        return Path(self._tmp.name) / rel
+
+    def drag_warp(self, v):
+        """Move the selected warp one map square: a real sidecar edit."""
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.warp_drag = v.cm.warps[0]['stable_id']
+        v.selected_warp = v.warp_drag
+        v.finish_warp_drag(((22 + view.BORDER * 4) * 8 + 1,
+                            (12 + view.BORDER * 4) * 8 + 1))
+        v.warp_drag = None
+        return v.cm.warps[0]
+
+    def test_a_warp_move_is_staged_not_written(self):
+        v = self.viewer()
+        sidecar = self.tree("dos_port/assets/map_overrides/PalletTown.json")
+        self.assertFalse(sidecar.exists(), "nothing should exist before an edit")
+        self.drag_warp(v)
+        self.assertTrue(v.dirty, "an edit must mark the session unsaved")
+        self.assertIn("dos_port/assets/map_overrides/PalletTown.json",
+                      v.stage.changed())
+        self.assertFalse(sidecar.exists(),
+                         "an edit must not write the tree — Ctrl+S does that")
+
+    def test_save_commits_the_staged_edit(self):
+        v = self.viewer()
+        moved = self.drag_warp(v)
+        v.save()
+        sidecar = self.tree("dos_port/assets/map_overrides/PalletTown.json")
+        self.assertTrue(sidecar.exists(), "Ctrl+S must commit the sidecar")
+        self.assertFalse(v.dirty)
+        self.assertEqual(v.stage.changed(), [], "commit must clear the staging")
+        self.assertIn(f'"warps"', sidecar.read_text())
+        # The committed warp really moved (the drag targets map square 6,11).
+        self.assertEqual((moved['y'], moved['x']), (6, 11))
+
+    def test_quit_discards_staged_edits(self):
+        v = self.viewer()
+        self.drag_warp(v)
+        scratch = Path(v.stage.tmp)
+        v.quit()
+        self.assertFalse(
+            self.tree("dos_port/assets/map_overrides/PalletTown.json").exists(),
+            "quitting must not save")
+        self.assertFalse(scratch.exists(), "scratch tree must be gone")
+        staging.end()
+
+    def test_paint_is_staged_until_saved(self):
+        v = self.viewer()
+        v.paint = True
+        v.pan = [0.0, 0.0]
+        v.scale = 1.0
+        v.current_block = v.cm.grid[0] ^ 1        # a different block than the cell
+        self.assertIsNotNone(v._region(0, 0), "ring cell should be paintable")
+        v.paint_cell((1, 1))                      # padded block (0, 0)
+        border = self.tree("dos_port/assets/map_borders/PALLET_TOWN.json")
+        self.assertTrue(v.dirty)
+        self.assertFalse(border.exists(), "paint must not write the tree")
+        v.save()
+        self.assertTrue(border.exists(), "Ctrl+S must commit the paint")
+        self.assertIn('"cells"', border.read_text())
+
+    def test_expansion_is_staged_and_commits_with_save(self):
+        """Expansion rewrites a sidecar AND a port script — both must be staged."""
+        v = self.viewer()
+        before = v.cm.info.h
+        v.expand_edge('north')
+        self.assertEqual(v.cm.info.h, before + 1, "the view must grow immediately")
+        sidecar = self.tree("dos_port/assets/map_overrides/PalletTown.json")
+        self.assertFalse(sidecar.exists(), "expansion must not write the tree")
+        self.assertTrue(v.stage.changed())
+        v.save()
+        self.assertTrue(sidecar.exists(), "Ctrl+S must commit the expansion")
+        self.assertIn('"north": 1', sidecar.read_text())
+
+    def test_a_save_with_no_edits_writes_nothing(self):
+        """Ctrl+S with nothing staged must not rewrite (and churn) a sidecar."""
+        repo = Path(__file__).resolve().parents[3]
+        rel = "dos_port/assets/map_overrides/VermilionDock.json"
+        committed = repo / rel
+        target = self.tree(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(committed.read_text())
+        before = target.read_text()
+        v = self.Viewer("VERMILION_DOCK", 1.0, dict(config.DEFAULTS))
+        self.assertFalse(v.dirty)
+        v.save()
+        self.assertEqual(v.stage.changed(), [])
+        self.assertEqual(target.read_text(), before,
+                         "an untouched save must not rewrite the sidecar")
+
+    def test_ctrl_s_is_the_save_key_and_plain_s_is_not(self):
+        """The binding is the requirement: no bare `S` save may come back."""
+        v = self.viewer()
+        saved = []
+        v.save = lambda: saved.append(1)
+
+        class StopLoop(Exception):
+            pass
+
+        def press(key, mods):
+            event = pygame.event.Event(pygame.KEYDOWN, key=key, mod=mods)
+            with patch.object(pygame.event, "get", side_effect=[[event], StopLoop]), \
+                 patch.object(pygame.key, "get_mods", return_value=mods):
+                with self.assertRaises(StopLoop):
+                    v.run()
+
+        press(pygame.K_s, 0)
+        self.assertEqual(saved, [], "a bare S must not save")
+        press(pygame.K_s, pygame.KMOD_CTRL)
+        self.assertEqual(saved, [1], "Ctrl+S must save")
 
 
 if __name__ == "__main__":

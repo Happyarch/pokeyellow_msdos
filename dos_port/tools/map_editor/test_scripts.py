@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from map_editor import scripts, commands, schema
+from map_editor import scripts, commands, schema, staging
 
 
 class ScriptTest(unittest.TestCase):
@@ -34,7 +34,7 @@ class ScriptTest(unittest.TestCase):
                 scripts.scan_coordinate_macros(path)
 
     def test_cli_command_checks_file_revision(self):
-        with TemporaryDirectory() as directory, patch.object(schema, 'ROOT', Path(directory)):
+        with TemporaryDirectory() as directory, patch.object(staging, 'ROOT', Path(directory)):
             path = Path(directory) / 'dos_port/src/scripts/PalletTown.asm'
             path.parent.mkdir(parents=True)
             path.write_text('db 8, 10 ; dbmapcoord 10, 8\n')

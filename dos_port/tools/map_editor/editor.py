@@ -20,7 +20,13 @@ View controls:
   [ / ] select route step; 1-4 set down/up/left/right (edits the port script)
   Ctrl+Shift+arrow  expand that edge by one 32px block
   Tab              cycle to the next map with a usable header
-  Esc / close      quit (warns if unsaved paint)
+  Ctrl+S           save: commit every staged edit to the tree
+  Esc / close      quit without saving (discards staged edits)
+
+Edits are STAGED, never written as you go: a paint stroke, an NPC drag, a warp
+move, a route byte or an expansion lands in a scratch copy and reaches the
+repository only when you press Ctrl+S (see staging.py). That makes an accidental
+drag harmless, and it is why quitting never saves anything.
 
 Zoom anchoring is set by `zoom_anchor` in config.json (`cursor` by default, or
 `center`). Ctrl is a held shift, not a toggle: while it is down the other anchor
@@ -33,7 +39,7 @@ Paint mode (P toggles):
   left click/drag  paint the selected block (border ring or map interior)
   right click      eyedropper (pick block under cursor)
   click palette    select block                F  flood fill
-  Ctrl+Z           undo                        S  save sidecar
+  Ctrl+Z           undo                        Ctrl+S  save
   Connection strips are locked (drawn dimmed); map blocks and the border ring
   are editable. Connections always win at runtime.
 
@@ -59,7 +65,7 @@ from gfx_core import tilesets as ts             # noqa: E402
 from gfx_core.surface import to_pygame          # noqa: E402
 from gfx_core.tiles import DMG_PAL, TILE        # noqa: E402
 from map_editor import borders, overrides, view, palette, sprites, schema, config  # noqa: E402
-from map_editor import objects                                                  # noqa: E402
+from map_editor import objects, staging                                         # noqa: E402
 
 MARK_WARP = (0, 150, 170)      # teal: distinct from the cyan render-reach frame
 MARK_NPC = (60, 120, 255)
@@ -91,6 +97,10 @@ PAL_W = PAL_COLS * ts.BLOCK_PX + 12
 class Viewer:
     def __init__(self, const: str, zoom: float | None = None, settings: dict | None = None):
         self.settings = settings if settings is not None else config.load()
+        # Every edit lands in a scratch tree until Ctrl+S (see map_editor/
+        # staging.py). Opening the session here means nothing below can reach the
+        # repository by accident — a command that writes is staged, not committed.
+        self.stage = staging.begin()
         # Continuous scale, not an integer zoom: the wheel produces fractional
         # steps so the zoom is smooth instead of snapping between 1x/2x.
         self.scale = float(zoom) if zoom else 1.0
@@ -149,7 +159,10 @@ class Viewer:
         self.refresh_palette()
         self.invalidate_assembly()
         self.undo_stack = []
-        self.dirty = False
+        self.painted = False
+        # "Unsaved" covers both layers: an in-memory paint stroke, and a staged
+        # sidecar/script edit from an earlier action in this session.
+        self.dirty = self.stage.pending() > 0
         self.center_view()
         self.current_block = self.cm.border_block
         self.save_error = ""
@@ -349,6 +362,16 @@ class Viewer:
                        self.colors)
         return rec
 
+    def touch_paint(self):
+        """Mark an in-memory paint edit.
+
+        Kept apart from `dirty` because `stage_paint` is not free: it re-derives
+        the whole block sidecar from `self.map_cells`, so a save that only
+        committed an NPC move must not rewrite a block document it never touched.
+        """
+        self.dirty = True
+        self.painted = True
+
     def paint_cell(self, pos):
         cell = self.cell_at(pos)
         if cell is None:
@@ -356,7 +379,7 @@ class Viewer:
         rec = self._apply(*cell, self.current_block)
         if rec:
             self.undo_stack.append([rec])
-            self.dirty = True
+            self.touch_paint()
             self.invalidate_map_blocks()
 
     def flood_fill(self, pos):
@@ -386,7 +409,7 @@ class Viewer:
                     todo.append((nr, nc))
         if op:
             self.undo_stack.append(op)
-            self.dirty = True
+            self.touch_paint()
             self.invalidate_map_blocks()
 
     def undo(self):
@@ -406,7 +429,7 @@ class Viewer:
             self.cm.grid[idx] = block
             ts._blit_block(self.img, self.tiles, self.blocks, block, c, r,
                            self.colors)
-        self.dirty = True
+        self.touch_paint()
         self.invalidate_map_blocks()
 
     def eyedrop(self, pos):
@@ -416,22 +439,38 @@ class Viewer:
                                               + cell[1]]
             self.pal_surf = None
 
+    def stage_paint(self):
+        """Flush in-memory paint into the staged sidecars (no commit).
+
+        Paint lives in `self.cells` / `self.map_cells` so it renders immediately;
+        this is what turns it into the same staged JSON an object or warp edit
+        produces. Called before a commit, and before anything that reloads the
+        map (expansion, switching maps) so the stroke is not lost.
+        """
+        borders.save(self.cm.info.const, self.cells, self.cm)
+        if self.cm.info.label:
+            overrides.save(self.cm.info.label, self.map_cells,
+                           self.cm.info, self.nblocks)
+
     def save(self):
+        """Ctrl+S: commit every staged edit (sidecars and port scripts) to the tree."""
         try:
-            borders.save(self.cm.info.const, self.cells, self.cm)
-            if self.cm.info.label:
-                overrides.save(self.cm.info.label, self.map_cells,
-                               self.cm.info, self.nblocks)
+            if self.painted:
+                self.stage_paint()
         except ValueError as e:
             self.save_error = str(e)
             print(f"SAVE REFUSED: {e}")
             return
+        written = self.stage.commit()
         self.save_error = ""
         self.dirty = False
-        print(f"saved {borders.path_for(self.cm.info.const)} "
-              f"({len(self.cells)} ring cells) + "
-              f"{overrides.path_for(self.cm.info.label or '?')} "
-              f"({len(self.map_cells)} map cells)")
+        self.painted = False
+        if not written:
+            print("nothing to save")
+            return
+        for rel in written:
+            print(f"saved {self.stage.root / rel}")
+        print(f"{len(written)} file(s) written")
         print("regenerate with: make -C dos_port assets")
 
     # ── palette panel ────────────────────────────────────────────────────────
@@ -482,6 +521,7 @@ class Viewer:
                     commands.set_object(self.cm.info.const, self.selected_object,
                                         write=True, **{self.object_menu: options[index]})
                     self.cm.sprites = pm.objects(self.cm.info)[3]
+                    self.dirty = True
                     self.save_error = ''
                 except (ValueError, OSError) as exc:
                     self.save_error = str(exc)
@@ -658,6 +698,7 @@ class Viewer:
             self.route_options, self.route_sha = scanned['routes'], scanned['sha256']
             self.route_index = next(i for i, item in enumerate(self.route_options)
                                     if item['label'] == route['label'])
+            self.dirty = True
             self.save_error = ''
         except (ValueError, OSError, StopIteration) as exc:
             self.save_error = str(exc)
@@ -793,6 +834,7 @@ class Viewer:
             commands.set_warp(self.cm.info.const, self.warp_drag, write=True,
                               y=tile[1] // 2 * 2, x=tile[0] // 2 * 2)
             self.cm.warps = pm.objects(self.cm.info)[1]
+            self.dirty = True
             self.save_error = ''
         except (ValueError, OSError) as exc:
             self.save_error = str(exc)
@@ -938,6 +980,7 @@ class Viewer:
             commands.set_warp(self.cm.info.const, self.selected_warp,
                               write=True, **{kwargs: value})
             self.cm.warps = pm.objects(self.cm.info)[1]
+            self.dirty = True
             self.save_error = ''
         except (ValueError, OSError) as exc:
             self.save_error = str(exc)
@@ -1122,11 +1165,12 @@ class Viewer:
         self.draw_hud()
         self.draw_object_panel()
         self.draw_warp_panel()
-        state = "*UNSAVED*" if self.dirty else "saved"
+        state = "*UNSAVED* Ctrl+S" if self.dirty else "saved"
         mode = (f"PAINT block 0x{self.current_block:02X} "
-                f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z [S]ave"
+                f"{len(self.cells)} cells {state} | [F]ill Ctrl+Z"
                 if self.paint else
-                "[G]step grid [B]lock grid [T]iles [W]arps [N]pcs [V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
+                f"{state} | [G]step grid [B]lock grid [T]iles [W]arps [N]pcs "
+                "[V/H/R] frames [I]nspect [C]olor [O] route [X]conn")
         info = (f"{self.cm.info.const}  warps:{len(self.cm.warps)} "
                 f"npcs:{len(self.cm.sprites)}  [P]aint  {mode}")
         if self.save_error:
@@ -1203,13 +1247,28 @@ class Viewer:
                   if pm.map_info(c).tileset_stem is not None
                   and view.can_compose(c)]
         i = consts.index(self.cm.info.const)
+        # Staged sidecar edits survive a switch (they live in the session); the
+        # in-memory paint does not, so flush it into the staging tree first.
+        if self.painted:
+            try:
+                self.stage_paint()
+                self.painted = False
+            except ValueError as exc:
+                self.save_error = str(exc)
+                return
         self.load(consts[(i + 1) % len(consts)])
 
     def expand_edge(self, edge):
         from map_editor import commands
-        if self.dirty:
-            self.save()
-            if self.save_error:
+        # Expansion reads the staged sidecar, so an uncommitted paint stroke has
+        # to be flushed into it first — otherwise the growth would be applied to
+        # a stale layout and the new cells would land in the wrong place.
+        if self.painted:
+            try:
+                self.stage_paint()
+                self.painted = False
+            except ValueError as exc:
+                self.save_error = str(exc)
                 return
         info = self.cm.info
         diff = schema.load(info.label or pm.gmh.const_to_pascal(info.const))
@@ -1228,19 +1287,31 @@ class Viewer:
 
     # ── event loop ───────────────────────────────────────────────────────────
 
+    def quit(self):
+        """Close WITHOUT saving: leaving the editor is not a save.
+
+        Anything staged is discarded, which is the whole point of the staging
+        layer — an edit never commits itself.
+        """
+        changed = self.stage.changed()
+        if self.dirty or changed:
+            print(f"WARNING: quit with unsaved changes "
+                  f"({len(changed)} staged file(s) discarded, Ctrl+S saves)")
+            for rel in changed:
+                print(f"  discarded {rel}")
+        staging.end()
+
     def run(self):
         clock = pygame.time.Clock()
         while True:
             for ev in pygame.event.get():
                 if ev.type == pygame.QUIT:
-                    if self.dirty:
-                        print("WARNING: quit with unsaved paint")
+                    self.quit()
                     return
                 if ev.type == pygame.KEYDOWN:
                     mods = pygame.key.get_mods()
                     if ev.key == pygame.K_ESCAPE:
-                        if self.dirty:
-                            print("WARNING: quit with unsaved paint")
+                        self.quit()
                         return
                     elif (mods & pygame.KMOD_CTRL and mods & pygame.KMOD_SHIFT
                           and ev.key in (pygame.K_UP, pygame.K_DOWN, pygame.K_LEFT, pygame.K_RIGHT)):
@@ -1248,9 +1319,8 @@ class Viewer:
                                           pygame.K_LEFT: 'west', pygame.K_RIGHT: 'east'}[ev.key])
                     elif ev.key == pygame.K_p:
                         self.paint = not self.paint
-                    elif ev.key == pygame.K_s:
-                        if self.paint:
-                            self.save()
+                    elif ev.key == pygame.K_s and mods & pygame.KMOD_CTRL:
+                        self.save()
                     elif ev.key == pygame.K_z and mods & pygame.KMOD_CTRL:
                         self.undo()
                     elif ev.key == pygame.K_f and self.paint:
@@ -1289,8 +1359,6 @@ class Viewer:
                     elif ev.key in (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4) and self.route_index >= 0:
                         self.edit_route_step(ev.key - pygame.K_1)
                     elif ev.key == pygame.K_TAB:
-                        if self.dirty:
-                            print("WARNING: switching map with unsaved paint")
                         self.next_map()
                     elif ev.key in (pygame.K_PLUS, pygame.K_EQUALS, pygame.K_KP_PLUS) \
                             and mods & pygame.KMOD_CTRL:
@@ -1384,6 +1452,7 @@ class Viewer:
                                     commands.set_object(self.cm.info.const, self.object_drag,
                                                         y=tile[1] // 2 * 2, x=tile[0] // 2 * 2, write=True)
                                     self.cm.sprites = pm.objects(self.cm.info)[3]
+                                    self.dirty = True
                                     self.save_error = ""
                                 except (ValueError, OSError) as exc:
                                     self.save_error = str(exc)

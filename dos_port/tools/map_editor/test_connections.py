@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from gfx_core import pret_maps as pm
-from map_editor import view, schema, commands
+from map_editor import view, schema, staging, commands
 
 MAPS = ("PALLET_TOWN", "ROUTE_1", "VIRIDIAN_CITY", "ROUTE_2")
 
@@ -109,8 +109,7 @@ class ConnectionAssemblyTest(unittest.TestCase):
                             if e['direction'] == "SOUTH")
         with TemporaryDirectory() as directory:
             root = Path(directory)
-            with patch.object(schema, "OVERRIDES", root / "overrides"), \
-                 patch.object(schema, "ROOT", root):
+            with patch.object(staging, "ROOT", root):
                 commands.set_extents("PALLET_TOWN", north=0, west=0,
                                      south=3, east=0, write=True)
                 grown = view.compose_connections("PALLET_TOWN")

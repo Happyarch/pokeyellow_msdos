@@ -8,7 +8,7 @@ import re
 from typing import Any
 
 from gfx_core import pret_maps as pm
-from map_editor import schema, view
+from map_editor import schema, staging, view
 
 
 def resolve_map(ref: str) -> str:
@@ -158,19 +158,29 @@ def set_warp(ref: str, warp_id: str, *, y: int | None = None,
                     'is not emitted into the map-header binary'}
 
 
+def _script_rel(const: str) -> str:
+    """Repo-relative path of the port script that owns `const`'s map data."""
+    info = pm.map_info(const)
+    if not info.label:
+        raise ValueError(f"{const}: no script label")
+    return staging.script_rel(info.label)
+
+
 def scan_scripts(ref: str) -> dict[str, Any]:
     from map_editor import scripts
     import hashlib
     const = resolve_map(ref)
-    info = pm.map_info(const)
-    if not info.label:
-        raise ValueError(f"{const}: no script label")
-    path = schema.ROOT / 'dos_port' / 'src' / 'scripts' / f'{info.label}.asm'
-    if not path.is_file():
-        raise ValueError(f"{const}: script file not found: {path}")
+    rel = _script_rel(const)
+    # `path` is the file that was actually read: the staged copy while an editor
+    # session is open, the tree file otherwise. Callers that WRITE resolve their
+    # own write path through staging (a read path may still be the tree file).
+    path = staging.current().read_path(rel)
+    if path is None:
+        raise ValueError(f"{const}: script file not found: {staging.ROOT / rel}")
     bindings = scripts.scan_coordinate_macros(path)
     return {'schema': 1, 'written': False, 'map': _identity(const),
-            'path': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'path': str(path),
+            'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'coverage': {'adapter': 'coordinate macros and annotated dbmapcoord bytes',
             'complete': False}, 'bindings': [
                 {'index': i, 'kind': b.kind, 'coordinate': [b.tile.y, b.tile.x],
@@ -182,7 +192,10 @@ def move_script_coordinate(ref: str, index: int, digest: str, y: int, x: int,
                            write: bool = False) -> dict[str, Any]:
     from map_editor import scripts
     scan = scan_scripts(ref)
-    bindings = scripts.scan_coordinate_macros(Path(scan['path']))
+    # The edit path, not the read path: a write must land in the staged copy so
+    # the session can commit it later (see map_editor/staging.py).
+    path = staging.current().write_path(_script_rel(scan['map']['const']))
+    bindings = scripts.scan_coordinate_macros(path)
     if index < 0 or index >= len(bindings):
         raise ValueError(f"binding index {index} is out of range")
     binding = bindings[index]
@@ -216,7 +229,7 @@ def set_route(ref: str, label: str, digest: str, values: list[int],
     result = scan_routes(ref)
     if result['sha256'] != digest:
         raise ValueError('script changed since scan; rescan before writing')
-    path = Path(result['path'])
+    path = staging.current().write_path(_script_rel(result['map']['const']))
     binding = next((b for b in routes.scan(path) if b.label == label), None)
     if binding is None:
         raise ValueError(f'no recognized direct route {label!r}')
@@ -298,16 +311,17 @@ def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
             if not in_old and (y, x) not in covered:
                 diff.added_blocks.setdefault((y, x), border_block)
 
-    script_path = schema.ROOT / 'dos_port' / 'src' / 'scripts' / f'{pascal}.asm'
+    script_rel = staging.script_rel(pascal)
+    script_read = staging.current().read_path(script_rel)
     original = replacement = None
     source_hash = None
     changes = []
     diagnostics = []
     if tile_delta != (0, 0):
-        if script_path.exists():
-            original = script_path.read_text()
+        if script_read is not None:
+            original = script_read.read_text()
             source_hash = hashlib.sha256(original.encode()).hexdigest()
-            bindings = scripts.scan_coordinate_macros(script_path)
+            bindings = scripts.scan_coordinate_macros(script_read)
             replacement = original
             for binding in reversed(bindings):
                 edited = scripts.translate_binding(binding, dy=tile_delta[0], dx=tile_delta[1])
@@ -324,6 +338,7 @@ def set_extents(ref: str, *, north: int, west: int, south: int, east: int,
     if pm.CONNECTIONS.get(const):
         diagnostics.append('Connection seams are not automatically rewritten.')
     if write:
+        script_path = staging.current().write_path(script_rel)
         if original is not None and replacement != original:
             if hashlib.sha256(script_path.read_bytes()).hexdigest() != source_hash:
                 raise ValueError('script changed since scan; expansion was not written')

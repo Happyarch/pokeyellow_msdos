@@ -6,7 +6,7 @@ from unittest.mock import patch
 from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from map_editor import objects, schema, commands
+from map_editor import objects, schema, staging, commands
 from gfx_core import pret_maps as pm
 
 
@@ -47,7 +47,7 @@ class ObjectTest(unittest.TestCase):
 
     def test_write_then_generator_parser_reads_same_object(self):
         info = pm.map_info('PALLET_TOWN')
-        with TemporaryDirectory() as directory, patch.object(schema, 'OVERRIDES', Path(directory)):
+        with TemporaryDirectory() as directory, patch.object(staging, 'ROOT', Path(directory)):
             npc = pm.objects(info)[3][0]
             commands.set_object('PALLET_TOWN', npc['stable_id'], y=18, x=22,
                                 sprite='SPRITE_ROCKET', write=True)
@@ -96,7 +96,7 @@ class WarpTest(unittest.TestCase):
     def test_override_reaches_the_generated_warp_bytes(self):
         before = pm.gmh.parse_object_file(self.info.label)[1][0]
         with TemporaryDirectory() as directory, \
-             patch.object(schema, 'OVERRIDES', Path(directory)):
+             patch.object(staging, 'ROOT', Path(directory)):
             commands.set_warp('PALLET_TOWN', self.warp['stable_id'],
                               dest='ROUTE_1', target_warp=4, kind='hole', write=True)
             after = pm.gmh.parse_object_file(self.info.label)[1][0]
@@ -117,7 +117,7 @@ class WarpTest(unittest.TestCase):
         """Dragging a warp must change the emitted Y/X bytes, not just the sidecar."""
         before = pm.gmh.parse_object_file(self.info.label)[1][0]
         with TemporaryDirectory() as directory, \
-             patch.object(schema, 'OVERRIDES', Path(directory)):
+             patch.object(staging, 'ROOT', Path(directory)):
             # editor tiles (22, 12) -> pret map square (Y 6, X 11)
             commands.set_warp('PALLET_TOWN', self.warp['stable_id'],
                               y=22, x=12, write=True)

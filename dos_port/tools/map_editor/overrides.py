@@ -6,25 +6,29 @@ One JSON per map: dos_port/assets/map_overrides/<Pascal>.json
 Coordinates are MAP-LOCAL blocks (x 0..w-1, y 0..h-1). gen_all_assets.py
 merges these into the emitted assets/<snake>_blk.inc — the pret maps/*.blk
 stay untouched (read-only spec), and regen is idempotent because the sidecar
-is an explicit committed file (two-tier rule). Editor-owned: save only via
-map_editor/editor.py paint mode. Stable (y, x) sort keeps diffs reviewable.
+is an explicit committed file (two-tier rule). Editor-owned: written only on
+Ctrl+S in map_editor/editor.py (edits are staged — see map_editor/staging.py).
+Stable (y, x) sort keeps diffs reviewable.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
+from map_editor import staging
+
 MAP_OVERRIDES_DIR = Path(__file__).resolve().parent.parent.parent \
     / "assets" / "map_overrides"
 
 
 def path_for(pascal: str) -> Path:
+    """The tree path — display only; reads/writes go via staging."""
     return MAP_OVERRIDES_DIR / f"{pascal}.json"
 
 
 def load(pascal: str, info=None) -> dict[tuple[int, int], int]:
-    p = path_for(pascal)
-    if not p.exists():
+    p = staging.current().read_path(staging.overrides_rel(pascal))
+    if p is None:
         return {}
     raw = json.loads(p.read_text())
     if raw.get("schema") == 2:
@@ -67,12 +71,10 @@ def save(pascal: str, cells: dict[tuple[int, int], int], info,
                 diff.base_blocks[base] = block
         schema.write(diff)
         return
-    MAP_OVERRIDES_DIR.mkdir(parents=True, exist_ok=True)
-    p = path_for(pascal)
+    rel = staging.overrides_rel(pascal)
     if not cells:
-        if p.exists():
-            p.unlink()          # no overrides = no sidecar
+        staging.current().remove(rel)     # no overrides = no sidecar
         return
     out = {"map": pascal,
            "cells": [[y, x, b] for (y, x), b in sorted(cells.items())]}
-    p.write_text(json.dumps(out, indent=1) + "\n")
+    staging.current().write_path(rel).write_text(json.dumps(out, indent=1) + "\n")
