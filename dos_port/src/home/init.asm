@@ -590,7 +590,8 @@ SetupPlayerSprite:
     mov byte [ebp + W_SPRITE_PLAYER_GRASS_PRIORITY],  0
     mov byte [ebp + wGrassTile],    0xFF
     mov byte [ebp + wFontLoaded],   0
-    mov byte [ebp + wMovementFlags], 0
+    ; Do NOT wipe wMovementFlags here: continue loads wMovementFlags from SRAM
+    ; (which holds BIT_STANDING_ON_WARP). Wiping it breaks door/warp entry on continue.
     mov byte [ebp + hAutoBGTransferEnabled],        0
     ret
 

@@ -1357,6 +1357,8 @@ EnterMap:
 .mapEntryAfterBattle:
     call MapEntryAfterBattle                               ; nz: post-battle re-entry
 .afterBattleReturnCheck:
+    ; Ensure BIT_STANDING_ON_WARP is initialized if Red spawns or continues on a warp tile
+    call IsPlayerStandingOnWarp
 
     ; ld hl, wStatusFlags6 / ld a, [hl] / and (1<<FLY_WARP)|(1<<DUNGEON_WARP)
     ; jr z, .didNot... / farcall EnterMapAnim / call UpdateSprites
