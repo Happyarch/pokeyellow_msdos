@@ -107,22 +107,22 @@ BillsHousePC:
 .doCellSeparator:
     mov byte [ebp + wDoNotWaitForButtonPressAfterDisplayingText], 1
     tx_pre BillsHouseInitiatedText
-    mov cl, 32
+    mov bl, 32
     call DelayFrames
     mov al, SFX_TINK
     call PlaySound
     call WaitForSoundToFinish
-    mov cl, 80
+    mov bl, 80
     call DelayFrames
     mov al, SFX_SHRINK
     call PlaySound
     call WaitForSoundToFinish
-    mov cl, 48
+    mov bl, 48
     call DelayFrames
     mov al, SFX_TINK
     call PlaySound
     call WaitForSoundToFinish
-    mov cl, 32
+    mov bl, 32
     call DelayFrames
     mov al, SFX_GET_ITEM_1
     call PlaySound
@@ -155,12 +155,12 @@ BillsHouseInitiatedText:
     text_asm
 .hook:
     call StopAllMusic
-    mov cl, 16
+    mov bl, 16
     call DelayFrames
     mov al, SFX_SWITCH
     call PlaySound
     call WaitForSoundToFinish
-    mov cl, 60
+    mov bl, 60
     call DelayFrames
     jmp TextScriptEnd
 
