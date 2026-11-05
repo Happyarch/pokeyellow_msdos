@@ -41,6 +41,7 @@ extern DelayFrame                ; src/home/vblank.asm
 extern g_row_xoff                ; src/ppu/ppu.asm — per-scanline BG X displacement
 extern g_row_xoff_on             ; src/ppu/ppu.asm — arms the per-row HAL
 extern bg_scy                    ; src/ppu/ppu.asm — surface px row that screen row 0 samples
+extern spr_dos_sx                ; src/ppu/ppu.asm — 32-bit canvas X coordinates for OAM entries
 extern CopyScreenTileBufferToVRAM
 extern CopyVideoData
 extern Delay3
@@ -150,7 +151,7 @@ VermilionDockSSAnneLeavesScript:
     mov al, PAD_BUTTONS | PAD_CTRL_PAD
     mov [ebp + wJoyIgnore], al
     call StopAllMusic
-    mov bl, 0                                ; ld c, BANK(Music_Surfing) — flat, no-op
+    mov bl, MUSIC_SURFING_BANK               ; ld c, BANK(Music_Surfing)
     mov al, MUSIC_SURFING
     call PlayMusic
     call LoadSmokeTileFourTimes              ; farcall — flat address space
@@ -256,22 +257,35 @@ VermilionDockSSAnneLeavesScript:
 VermilionDock_AnimSmokePuffDriftRight:
     push ebx                                 ; push bc
     push edx                                 ; push de
+    push ecx
+    push esi
     mov esi, wShadowOAMSprite04XCoord
     mov al, [ebp + wSSAnneSmokeDriftAmount]
-    ror al, 4                                ; swap a — nibble swap
-    mov bl, al                               ; ld c, a
-    mov edx, OAM_ENTRY_SIZE                  ; ld de, OBJ_SIZE
+    ; In pret: swap a; ld c, a; ld de, OBJ_SIZE.
+    ; Each puff is 4 sprites. Max 36 sprites fit in OAM (sprites 4..39).
+    ; We clamp the count to 36 so it never runs past wShadowOAM into wTileMap.
+    movzx ecx, al
+    shl ecx, 2                               ; 4 sprites per puff
+    cmp ecx, (OAM_COUNT - 4)
+    jbe .count_ok
+    mov ecx, (OAM_COUNT - 4)
+.count_ok:
+    test ecx, ecx
+    jz .done
+    mov edx, 4                               ; sprite index 4
 .drift_loop:
     inc byte [ebp + esi]
     inc byte [ebp + esi]
-    ; add hl, de. EDX's upper 16 bits are zero (the `mov` above), so this is
-    ; exactly SM83's 16-bit add; no wrap is reachable — ESI runs from 0xC311 and
-    ; the largest count below is 0x80 entries, i.e. up to 0xC511.
-    add esi, edx
-    ; 8-BIT counter, deliberately: pret is `dec c / jr nz` on the 8-bit C, so a
-    ; count of 0 runs 256 times and stops. See the "Preserve Counter WIDTH" rule.
-    dec bl
+    inc byte [ebp + esi - wShadowOAM + GB_OAM]
+    inc byte [ebp + esi - wShadowOAM + GB_OAM]
+    add dword [spr_dos_sx + edx*4], 2
+    inc edx
+    add esi, OAM_ENTRY_SIZE
+    dec ecx
     jnz .drift_loop
+.done:
+    pop esi
+    pop ecx
     pop edx
     pop ebx
     ret
@@ -322,13 +336,16 @@ VermilionDockOAMBlock:
 ; DEVIATION{class=projection; pret=scripts/VermilionDock.asm:VermilionDockSSAnneLeavesScript; behavior=the eastward view walk is realised by re-decoding the scrolling band's rows of wSurroundingTiles from wOverworldMap at an advancing block offset plus a 0..31 px per-row displacement, instead of advancing wMapViewVRAMPointer and letting ScheduleEastColumnRedraw feed a 32-tile VRAM torus, and the walk is 8 blocks instead of pret's 4; evidence=render_bg's overworld path decodes wSurroundingTiles and never reads GB_TILEMAP0 or wMapViewVRAMPointer so a ported ScheduleEastColumnRedraw would have no consumer, and the port's 40-tile viewport places the ship 8 blocks from the left screen edge against the GB's 0 so twice the walk is needed for it to clear; lifetime=permanent, a consequence of the native-surface renderer and the widened viewport}
 ; ===========================================================================
 
-; The band is the six tile rows starting at the row the player's feet occupy.
-; NOT a transplant of pret's literal scanlines 80 and 128: those are anchored to
-; the GB camera, whose vertical origin is not the port's, and an earlier version
-; of this file copied them across with a comment claiming the numbers coincided.
-; They do not. What DOES carry is the relationship — pret's 80 is its own feet
-; row (10) times 8, and its 128 is six rows below that.
-DOCK_BAND_TOP_PY  equ PLAYER_STANDING_ROW * 8
+; The ship on Vermilion Dock spans the bottom two tile rows of map block row 1
+; (upper masts/funnels) and all four tile rows of map block row 2 (hull), while
+; the top two tile rows of map block row 1 are the dock wall and the wooden pier
+; planks under Red's feet. With Red at (14, 2), bg_scy is 32, placing map block
+; row 1 on screen tile rows 12..15 (y = 96..127) and map block row 2 on screen
+; tile rows 16..19 (y = 128..159). The scrolling band therefore covers screen
+; tile rows 14..19 (scanlines 112..159, 6 tile rows = 48 px) — the exact port
+; counterpart of pret's rLY = $50..$7F band shifted by the +32 px camera offset,
+; moving the entire ship while keeping the pier planks in rows 12..13 stationary.
+DOCK_BAND_TOP_PY  equ 14 * 8
 DOCK_BAND_ROWS    equ 6
 DOCK_BAND_BOT_PY  equ DOCK_BAND_TOP_PY + DOCK_BAND_ROWS * 8
 
@@ -527,7 +544,7 @@ VermilionDock_EraseSSAnne:
     mov al, 0x14                             ; water tile
     call FillMemory
     hlbgcoord 0, 10
-    mov edx, wVermilionDockTileMapBuffer     ; ld de — CopyVideoData takes the source in EDX
+    lea edx, [ebp + wVermilionDockTileMapBuffer] ; flat pointer to buffer
     mov bx, ((0) << 8) | (12)                ; lb bc, BANK(wVermilionDockTileMapBuffer), 12 — bank is a flat no-op
     call CopyVideoData
 
