@@ -25,6 +25,7 @@ bits 32
 
 %include "gb_memmap.inc"
 %include "gb_constants.inc"
+%include "coords.inc"
 %include "assets/script_constants.inc"   ; species ids (VICTREEBEL) — %define only, no COFF symbols
 %include "assets/audio_constants.inc"   ; SFX_GET_ITEM_2
 ; Pret-name aliases for HRAM / WRAM symbols that use the H_ / W_ prefix in our
@@ -51,6 +52,8 @@ global GetMonLearnset_Evo_BlobStart
 
 ; From engine/movie/evolution.asm (the animation half, still in its own file):
 extern EvolveMon                ; src/engine/movie/evolution.asm — evo animation, CF = cancelled
+extern evo_canvas_enter         ; port-only: take flat-canvas ownership for evolution
+extern evo_canvas_exit          ; port-only: restore canvas on completion/cancel
 
 ; From pokemon_data.asm:
 extern EvosMovesPointerTable
@@ -262,6 +265,7 @@ Evolution_PartyMonLoop:
     jmp .checkLevel                 ; correct item → read min_level, then species
 
 .doEvolution:
+    call evo_canvas_enter           ; PORT-ONLY: take flat-canvas ownership for evolution scene
     ; ESI now points to the target species byte in the blob
     mov al, [ebp + wLoadedMonLevel]
     mov [ebp + wCurEnemyLevel], al  ; save current level (used by LearnMoveFromLevelUp)
@@ -287,7 +291,7 @@ Evolution_PartyMonLoop:
     ; Clear the message area + sprites for the animation.
     xor al, al
     mov [ebp + hAutoBGTransferEnabled], al
-    mov esi, wTileMap
+    mov esi, BCOORD(0, 0)
     mov bh, 12                      ; pret lb bc, 12, 20 (B = rows, C = width)
     mov bl, 20
     call ClearScreenArea
@@ -336,6 +340,8 @@ Evolution_PartyMonLoop:
     mov bl, 40
     call DelayFrames
     call ClearScreen
+    call evo_canvas_exit            ; PORT-ONLY: restore canvas ownership
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     call RenameEvolvedMon           ; keep the nickname, else adopt the new name
 
     ; predef IndexToPokedex: species → dex number (1-based; the `inc al` that
@@ -722,6 +728,8 @@ CancelledEvolution:
     mov dword [text_msgbox], msgbox_centered   ; centered box: keep this screen's window list
     call PrintText
     call ClearScreen
+    call evo_canvas_exit            ; PORT-ONLY: restore canvas ownership
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     ; Reached from `jc CancelledEvolution` right after EvolveMon: the [C] blob
     ; re-push has not happened yet, so the stack top is [B] (pushed at
     ; .doEvolution before the intro text). Discard it, matching pret's `pop hl`.

@@ -1351,7 +1351,8 @@ StartMenu_Item:
     call LoadTilesetTilePatternData     ; reload map tileset overwritten by HP bars
     call LoadGBPal                      ; un-white the palette
     pop eax
-    mov [ebp + wUpdateSpritesEnabled], al
+    mov byte [ebp + wUpdateSpritesEnabled], 1
+    call UpdateSprites
     jmp StartMenu_Item                  ; jp StartMenu_Item — redraw the bag
 .partyMenuNotDisplayed:
     pop eax

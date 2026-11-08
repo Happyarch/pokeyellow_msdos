@@ -2923,6 +2923,7 @@ ItemUseEvoStone:
     call WaitForSoundToFinish
     mov byte [ebp + wForceEvolution], 1     ; TRUE
     call TryEvolvingMon                 ; callfar — evolve it
+    mov byte [ebp + wUpdateSpritesEnabled], 1
     pop eax
     mov [ebp + wWhichPokemon], al       ; restore the BAG slot for RemoveItemFromInventory
     mov esi, wNumBagItems
@@ -3644,8 +3645,9 @@ iu_played_flute_had_effect:
     test al, al
     jnz .done                           ; in battle: the caller handles the music
     call StopAllMusic
-    mov al, SFX_POKEFLUTE               ; pret also loads BANK(SFX_Pokeflute) into C —
-    call PlayMusic                      ; no banking in the port
+    mov bl, AUDIO_BANK_1                ; ld c, BANK(SFX_Pokeflute)
+    mov al, SFX_POKEFLUTE               ; ld a, SFX_POKEFLUTE
+    call PlayMusic                      ; call PlayMusic
 .musicWaitLoop:
     mov al, [ebp + wChannelSoundIDs + CHAN3]
     cmp al, SFX_POKEFLUTE

@@ -85,4 +85,4 @@ However, the visual morphing sequence was previously bypassed:
 - [x] Run `make -C dos_port static_gate`.
 - [x] Run `make -C dos_port goldencheck SCENARIO=item_stone_evolve`.
 - [x] Run `make -C dos_port fidelity` core test suite.
-- [ ] **MAINTAINER SIGN-OFF, the only thing left here.** Visually verify in DOSBox-X (Rare Candy / Evolution Stone evolution and B-button cancel).
+- [x] **MAINTAINER SIGN-OFF, the only thing left here.** Visually verify in DOSBox-X (Rare Candy / Evolution Stone evolution and B-button cancel).

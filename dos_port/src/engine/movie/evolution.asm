@@ -63,6 +63,8 @@ global EvolutionSetWholeScreenPalette
 global Evolution_LoadPic
 global Evolution_BackAndForthAnim
 global Evolution_ChangeMonPic
+global evo_canvas_enter
+global evo_canvas_exit
 
 ; Text/display/input helpers (Stage 2 — evolution now shows text + allows B-cancel):
 extern DelayFrames              ; (BL = frame count)
@@ -125,8 +127,6 @@ EvolveMon:
     push eax                        ; push af
     mov al, [ebp + wCurSpecies]
     push eax                        ; push af
-
-    call evo_canvas_enter           ; PORT-ONLY: make wTileMap the live surface
 
     xor al, al                      ; xor a
     mov [ebp + wLowHealthAlarm], al ; ld [wLowHealthAlarm], a
@@ -216,8 +216,6 @@ EvolveMon:
     call PlayCry
     mov bl, 0                       ; ld c, 0 — back to the resolved mon's colour
     call EvolutionSetWholeScreenPalette
-
-    call evo_canvas_exit            ; PORT-ONLY: hand the screen back to the caller
 
     pop eax                         ; pop af
     mov [ebp + wCurSpecies], al
@@ -418,8 +416,7 @@ evo_canvas_exit:
     pushad
     mov eax, [evo_saved_view_ptr]
     mov [ebp + W_CURRENT_TILE_BLOCK_MAP_VIEW_PTR], ax
-    mov eax, [evo_saved_whiteout]
-    mov [g_bg_whiteout], eax
+    mov dword [g_bg_whiteout], 0
     mov eax, [evo_saved_stride]
     mov [text_row_stride], eax
     popad

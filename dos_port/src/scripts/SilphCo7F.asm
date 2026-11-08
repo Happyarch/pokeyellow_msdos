@@ -311,7 +311,7 @@ SilphCo7FDefaultScript:
     mov [ebp + wSavedCoordIndex], al
     cmp al, 1
     jz .full_rival_movement
-    inc dx
+    inc edi                     ; pret: inc de — advance EDI past first step
 .full_rival_movement:
     mov al, 9
     mov [ebp + hSpriteIndex], al

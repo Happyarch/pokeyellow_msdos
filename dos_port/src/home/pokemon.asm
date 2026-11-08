@@ -348,10 +348,17 @@ PartyMenuInit:
 
 HandlePartyMenuInput:
 %ifdef DEBUG_ITEMTM
-    ; Headless TM teach: DisplayPartyMenu would hang waiting for A via
+%define HEADLESS_PARTY_AUTO_ANSWER
+%elifdef DEBUG_ITEMSTONE
+%define HEADLESS_PARTY_AUTO_ANSWER
+%endif
+%ifdef HEADLESS_PARTY_AUTO_ANSWER
+    ; Headless TM / Stone teach: DisplayPartyMenu would hang waiting for A via
     ; HandleMenuInput_ (same hang as the YES/NO above). Auto-answer with the
     ; target mon ITEMTM_MON (default 0) — the wram golden only checks the
-    ; resulting party move list + bag, not the cursor.
+    ; resulting party data, not the cursor.
+    pop eax                                     ; pop af — saved hTileAnimations from DisplayPartyMenu
+    mov [ebp + hTileAnimations], al             ; ldh [hTileAnimations],a
 %ifndef ITEMTM_MON
 %define ITEMTM_MON 0
 %endif

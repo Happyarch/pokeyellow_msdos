@@ -160,7 +160,7 @@ Route22MoveRivalRightScript:
     mov al, [ebp + wSavedCoordIndex]
     cmp al, 0x1
     jz .skip_first_right
-    inc dx
+    inc edi                             ; pret: inc de — advance EDI past first step
 .skip_first_right:
     call MoveSprite
     mov al, SPRITE_FACING_RIGHT

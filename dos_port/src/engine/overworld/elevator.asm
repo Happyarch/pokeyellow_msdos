@@ -9,7 +9,7 @@
 ; Register map (SM83 -> x86): A->AL, B->BH, C->BL, D->DH, E->DL. GB memory is
 ; [ebp+offset]. hSCY -> [ebp+hSCY], the native renderer's fine-scroll shadow
 ; (honored directly — the shake is visible). PlayMusic: AL=sound id, BL=audio ROM
-; bank (vestigial under the single flat engine — passed as 0).
+; bank (live: selects which audio bank's header table PlayMusic dispatches to).
 ;
 ; DIVERGENCE (bounded audio wait): the port has no VBlank audio ISR, so pret's
 ; bare `.musicLoop` spin on wChannelSoundIDs+CHAN5 (advanced only on the
@@ -73,7 +73,7 @@ ShakeElevator:
     add al, dh                                  ; add d
     mov [ebp + hSCY], al                       ; ldh [hSCY], a
     push ebx                                    ; push bc
-    xor bl, bl                                  ; ld c, BANK(SFX_Collision_1) — flat: irrelevant
+    mov bl, AUDIO_BANK_1                        ; ld c, BANK(SFX_Collision_1)
     mov al, SFX_COLLISION
     call PlayMusic
     pop ebx                                     ; pop bc
@@ -84,7 +84,7 @@ ShakeElevator:
     mov al, dh                                  ; ld a, d
     mov [ebp + hSCY], al                       ; ldh [hSCY], a
     call StopAllMusic
-    xor bl, bl                                  ; ld c, BANK(SFX_Safari_Zone_PA) — flat: irrelevant
+    mov bl, AUDIO_BANK_1                        ; ld c, BANK(SFX_Safari_Zone_PA)
     mov al, SFX_SAFARI_ZONE_PA
     call PlayMusic
     ; DEVIATION{class=timing; pret=engine/overworld/elevator.asm:ShakeElevator; behavior=the sound-channel active wait is bounded by a 600-iteration CPU loop rather than polling audio register hardware directly; evidence=audio channel state on DOS is driven asynchronously by the PIT mixer; lifetime=permanent}

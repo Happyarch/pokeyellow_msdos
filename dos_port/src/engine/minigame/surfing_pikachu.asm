@@ -2933,7 +2933,7 @@ SurfingPikachuMinigameIntro:
     call UpdateCGBPal_OBP1
     call DelayFrame
     mov al, MUSIC_SURFING_PIKACHU
-    mov cl, 0x1F
+    mov bl, MUSIC_SURFING_PIKACHU_BANK
     call PlayMusic
     xor al, al
     mov [ebp + wSurfingMinigameIntroAnimationFinished], al
